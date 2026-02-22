@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon/icon.png" width="120" alt="RowMate icon" />
+</p>
+
 # RowMate 🚣
 
 **RowMate** is an open-source Flutter app that connects your rowing machine via Bluetooth BLE (using the **FTMS** standard) and helps you manage interval training routines.
@@ -119,16 +123,54 @@ flutter devices
 
 ---
 
-## Interval Step Types
+## Routines & Interval Steps
 
-| Type | Color | Description |
-|------|-------|-------------|
+A **routine** is a sequence of steps. Each step has a type, a duration (by time or distance), and optional performance targets.
+
+| Step Type | Color | Description |
+|-----------|-------|-------------|
 | Warmup | 🟡 Yellow | Easy opening phase |
 | Work | 🔴 Red | Effort interval |
 | Rest | 🟢 Green | Recovery |
 | Cooldown | 🔵 Blue | Easy closing phase |
 
-Each step is configured **by time** (min:sec) or **by distance** (meters), with optional watts and SPM targets.
+Each step is configured **by time** (min:sec) or **by distance** (meters), with optional **watts** and **SPM** targets that highlight in red during the workout if you fall short.
+
+### Building a Series
+
+You can stack steps to build full training series. A typical interval session looks like this:
+
+```
+Warmup (5 min)
+  Work (2 min @ 150W+) ─┐
+  Rest (1 min)          ├─ repeat × N
+  Work (2 min @ 150W+) ─┘
+  ...
+Cooldown (3 min)
+```
+
+Example: a **4×2000m** pyramid might be:
+
+```mermaid
+gantt
+    title 4×2000m Routine (example)
+    dateFormat  mm:ss
+    axisFormat  %M:%S
+    section Warmup
+    Warmup        :warmup,  00:00, 5m
+    section Intervals
+    Work 2000m    :work1,   after warmup, 8m
+    Rest 90s      :rest1,   after work1,  1m30s
+    Work 2000m    :work2,   after rest1,  8m
+    Rest 90s      :rest2,   after work2,  1m30s
+    Work 2000m    :work3,   after rest2,  8m
+    Rest 90s      :rest3,   after work3,  1m30s
+    Work 2000m    :work4,   after rest3,  8m
+    section Cooldown
+    Cooldown      :cool,    after work4,  3m
+```
+
+Each step in the editor can have an individual watts/SPM target, so the app warns you in real time when you drop below your goal.
 
 ---
 
