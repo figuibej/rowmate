@@ -16,9 +16,9 @@ class SessionDetailScreen extends StatefulWidget {
 class _SessionDetailScreenState extends State<SessionDetailScreen> {
   List<DataPoint> _points = [];
   bool _loading = true;
-  int _chartMetric = 0; // 0=watts, 1=spm, 2=split, 3=hr
+  int _chartMetric = 0; // 0=watts, 1=spm, 2=split, 3=distancia, 4=hr
 
-  static const _metricLabels = ['Vatios', 'SPM', 'Split 500m', 'Pulso'];
+  static const _metricLabels = ['Vatios', 'SPM', 'Split 500m', 'Distancia', 'Pulso'];
 
   @override
   void initState() {
@@ -213,7 +213,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         0 => p.powerWatts.toDouble(),
         1 => p.strokeRate,
         2 => p.pace500mSeconds.toDouble(),
-        3 => p.heartRate.toDouble(),
+        3 => p.distanceMeters.toDouble(),
+        4 => p.heartRate.toDouble(),
         _ => 0.0,
       };
       return FlSpot(x, y);
@@ -242,10 +243,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
 
     final lineColor = switch (_chartMetric) {
-      0 => const Color(0xFF00B4D8),
-      1 => const Color(0xFF48CAE4),
-      2 => const Color(0xFFFF6B6B),
-      3 => const Color(0xFFFF4444),
+      0 => MetricColors.watts,
+      1 => MetricColors.spm,
+      2 => MetricColors.split,
+      3 => MetricColors.distance,
+      4 => MetricColors.heartRate,
       _ => Colors.white,
     };
 
@@ -253,7 +255,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       0 => 'W',
       1 => 'spm',
       2 => 's',
-      3 => 'bpm',
+      3 => 'm',
+      4 => 'bpm',
       _ => '',
     };
 

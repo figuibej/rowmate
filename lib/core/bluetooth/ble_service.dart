@@ -14,21 +14,39 @@ class BleService {
   BluetoothCharacteristic? _controlPointChar;
   StreamSubscription<List<int>>? _notifySub;
   StreamSubscription<BluetoothConnectionState>? _connSub;
+  StreamSubscription<BluetoothAdapterState>? _adapterSub;
   Timer? _keepAliveTimer;
   Timer? _reconnectTimer;
+  bool _isDisconnecting = false; // evita reconexión durante desconexión manual/watchdog
 
   final _statusController = StreamController<BleStatus>.broadcast();
   final _dataController = StreamController<RowingData>.broadcast();
   final _devicesController = StreamController<List<ScanResult>>.broadcast();
   final _rawBytesController = StreamController<List<int>>.broadcast();
+  final _adapterStateController = StreamController<BluetoothAdapterState>.broadcast();
 
   Stream<BleStatus> get statusStream => _statusController.stream;
   Stream<RowingData> get dataStream => _dataController.stream;
   Stream<List<ScanResult>> get devicesStream => _devicesController.stream;
   Stream<List<int>> get rawBytesStream => _rawBytesController.stream;
+  Stream<BluetoothAdapterState> get adapterStateStream => _adapterStateController.stream;
+
+  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
+  BluetoothAdapterState get adapterState => _adapterState;
 
   BleStatus _status = BleStatus.disconnected;
   BleStatus get status => _status;
+
+  BleService() {
+    _adapterSub = FlutterBluePlus.adapterState.listen((state) {
+      debugPrint('[BLE] Adapter state: $state');
+      _adapterState = state;
+      _adapterStateController.add(state);
+      if (state == BluetoothAdapterState.off) {
+        _setStatus(BleStatus.off);
+      }
+    });
+  }
 
   String? get connectedDeviceName => _device?.platformName;
 
@@ -41,6 +59,23 @@ class BleService {
   Future<void> startScan({Duration timeout = const Duration(seconds: 10)}) async {
     final supported = await FlutterBluePlus.isSupported;
     if (!supported) return;
+
+    // Esperar a que el adaptador Bluetooth esté encendido (máx 5 segundos)
+    // En iOS la primera llamada BLE dispara el diálogo de permisos del sistema
+    if (_adapterState != BluetoothAdapterState.on) {
+      debugPrint('[BLE] Adaptador no listo ($_adapterState), esperando...');
+      try {
+        await FlutterBluePlus.adapterState
+            .where((s) => s == BluetoothAdapterState.on)
+            .first
+            .timeout(const Duration(seconds: 5));
+        debugPrint('[BLE] Adaptador listo');
+      } on TimeoutException {
+        debugPrint('[BLE] Timeout esperando adaptador');
+        _setStatus(BleStatus.off);
+        return;
+      }
+    }
 
     _setStatus(BleStatus.scanning);
     final found = <String, ScanResult>{};
@@ -58,7 +93,11 @@ class BleService {
     );
 
     await Future.delayed(timeout);
-    _setStatus(BleStatus.disconnected);
+    // Solo volver a disconnected si seguimos en scanning.
+    // Si el usuario ya conectó durante el scan, no sobreescribir el estado.
+    if (_status == BleStatus.scanning) {
+      _setStatus(BleStatus.disconnected);
+    }
   }
 
   Future<void> stopScan() async {
@@ -74,17 +113,19 @@ class BleService {
     _device = device;
     _lastDevice = device; // guardar para auto-reconexión
 
-    _connSub = device.connectionState.listen((state) async {
-      if (state == BluetoothConnectionState.disconnected) {
-        _setStatus(BleStatus.disconnected);
-        await _cleanup();
-        _scheduleReconnect(); // intentar reconectar automáticamente
-      }
-    });
-
+    _isDisconnecting = false;
     try {
       await device.connect(autoConnect: false, timeout: const Duration(seconds: 15));
       await _discoverFtms(device);
+      // Registrar el listener DESPUÉS de conectar para no capturar estados residuales.
+      await _connSub?.cancel();
+      _connSub = device.connectionState.listen((state) async {
+        if (state == BluetoothConnectionState.disconnected && !_isDisconnecting) {
+          _setStatus(BleStatus.disconnected);
+          await _cleanup();
+          _scheduleReconnect(); // intentar reconectar automáticamente
+        }
+      });
       _setStatus(BleStatus.connected);
     } catch (e) {
       _setStatus(BleStatus.disconnected);
@@ -107,15 +148,18 @@ class BleService {
       try {
         _setStatus(BleStatus.connecting);
         _device = device;
+        _isDisconnecting = false;
+        await device.connect(autoConnect: false, timeout: const Duration(seconds: 10));
+        await _discoverFtms(device);
+        // Registrar el listener DESPUÉS de conectar para no capturar estados residuales.
+        await _connSub?.cancel();
         _connSub = device.connectionState.listen((state) async {
-          if (state == BluetoothConnectionState.disconnected) {
+          if (state == BluetoothConnectionState.disconnected && !_isDisconnecting) {
             _setStatus(BleStatus.disconnected);
             await _cleanup();
             _scheduleReconnect();
           }
         });
-        await device.connect(autoConnect: false, timeout: const Duration(seconds: 10));
-        await _discoverFtms(device);
         _setStatus(BleStatus.connected);
         _reconnectTimer?.cancel();
         _reconnectTimer = null;
@@ -206,14 +250,12 @@ class BleService {
     }
 
     // Keepalive: enviar 0x07 cada 2 segundos para que el monitor no salga del modo BT.
-    // withoutResponse: true → fire-and-forget, no bloquea ni genera errores GATT.
     _keepAliveTimer?.cancel();
     _keepAliveTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       final cp = _controlPointChar;
       if (cp == null) return;
       try {
-        await cp.write([0x07], withoutResponse: true);
-        debugPrint('[BLE] Keepalive enviado (0x07)');
+        await cp.write([0x07], withoutResponse: false);
       } catch (e) {
         debugPrint('[BLE] Keepalive error: $e');
       }
@@ -234,11 +276,13 @@ class BleService {
   }
 
   Future<void> disconnect() async {
+    _isDisconnecting = true;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _lastDevice = null; // desconexión manual: no reconectar
     await _device?.disconnect();
     await _cleanup();
+    _isDisconnecting = false;
     _setStatus(BleStatus.disconnected);
   }
 
@@ -249,10 +293,12 @@ class BleService {
     _reconnectTimer = null;
     await _notifySub?.cancel();
     await _connSub?.cancel();
-    for (final sub in _allNotifySubs) {
+    // Copiar la lista antes de iterar para evitar ConcurrentModificationError
+    final subsToCancel = List<StreamSubscription<List<int>>>.from(_allNotifySubs);
+    _allNotifySubs.clear();
+    for (final sub in subsToCancel) {
       await sub.cancel();
     }
-    _allNotifySubs.clear();
     _notifySub = null;
     _connSub = null;
     _rowerDataChar = null;
@@ -262,9 +308,11 @@ class BleService {
 
   void dispose() {
     _cleanup();
+    _adapterSub?.cancel();
     _statusController.close();
     _dataController.close();
     _devicesController.close();
     _rawBytesController.close();
+    _adapterStateController.close();
   }
 }

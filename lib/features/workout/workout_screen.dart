@@ -447,14 +447,14 @@ class _FullscreenMetrics extends StatelessWidget {
     final hasSplitTarget = currentStep?.targetSplitSeconds != null;
 
     final all = <({Widget widget, bool hasTarget})>[
-      (widget: _FullMetric(label: 'TIEMPO', value: _elapsedFormatted, color: Colors.white), hasTarget: false),
-      (widget: _FullMetric(label: 'SPLIT 500m', value: data.pace500mFormatted, color: _splitColor), hasTarget: hasSplitTarget),
-      (widget: _FullMetric(label: 'DISTANCIA', value: '${data.distanceMeters}', unit: 'm', color: Colors.white), hasTarget: false),
-      (widget: _FullMetric(label: 'VATIOS', value: '${data.powerWatts}', unit: 'W', color: _wattsColor), hasTarget: hasWattsTarget),
-      (widget: _FullMetric(label: 'SPM', value: data.strokeRate.toStringAsFixed(1), color: _spmColor), hasTarget: hasSpmTarget),
-      (widget: _FullMetric(label: 'CALORÍAS', value: '${data.totalCalories}', unit: 'kcal', color: Colors.white), hasTarget: false),
+      (widget: _FullMetric(label: 'TIEMPO', value: _elapsedFormatted, color: MetricColors.time), hasTarget: false),
+      (widget: _FullMetric(label: 'SPLIT 500m', value: data.pace500mFormatted, color: hasSplitTarget ? _splitColor : MetricColors.split), hasTarget: hasSplitTarget),
+      (widget: _FullMetric(label: 'DISTANCIA', value: '${data.distanceMeters}', unit: 'm', color: MetricColors.distance), hasTarget: false),
+      (widget: _FullMetric(label: 'VATIOS', value: '${data.powerWatts}', unit: 'W', color: hasWattsTarget ? _wattsColor : MetricColors.watts), hasTarget: hasWattsTarget),
+      (widget: _FullMetric(label: 'SPM', value: data.strokeRate.toStringAsFixed(1), color: hasSpmTarget ? _spmColor : MetricColors.spm), hasTarget: hasSpmTarget),
+      (widget: _FullMetric(label: 'CALORÍAS', value: '${data.totalCalories}', unit: 'kcal', color: MetricColors.calories), hasTarget: false),
       if (data.heartRate > 0)
-        (widget: _FullMetric(label: 'PULSO', value: '${data.heartRate}', unit: 'bpm', color: Colors.white), hasTarget: false),
+        (widget: _FullMetric(label: 'PULSO', value: '${data.heartRate}', unit: 'bpm', color: MetricColors.heartRate), hasTarget: false),
     ];
 
     final targeted = all.where((m) => m.hasTarget).map((m) => m.widget).toList();
@@ -468,7 +468,7 @@ class _FullscreenMetrics extends StatelessWidget {
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: 6,
           mainAxisSpacing: 6,
-          childAspectRatio: orientation == Orientation.landscape ? 2.0 : 1.6,
+          childAspectRatio: orientation == Orientation.landscape ? 1.8 : 1.3,
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
           children: all.map((m) => m.widget).toList(),
@@ -502,7 +502,7 @@ class _FullscreenMetrics extends StatelessWidget {
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 6,
               mainAxisSpacing: 6,
-              childAspectRatio: orientation == Orientation.landscape ? 2.0 : 1.6,
+              childAspectRatio: orientation == Orientation.landscape ? 1.8 : 1.3,
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               children: rest,
@@ -531,47 +531,60 @@ class _FullMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2E45),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 9,
-                  color: Colors.white38,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(value,
-                      style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w800,
-                          color: color,
-                          height: 1)),
-                  if (unit != null)
-                    Text(' $unit',
-                        style: const TextStyle(
-                            fontSize: 14, color: Colors.white38)),
-                ],
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final h = constraints.maxHeight;
+        final labelSize = (h * 0.12).clamp(10.0, 16.0);
+        final valueSize = (h * 0.45).clamp(28.0, 72.0);
+        final unitSize = (h * 0.16).clamp(12.0, 22.0);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A2E45),
+            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              top: BorderSide(color: color.withOpacity(0.6), width: 3),
             ),
           ),
-        ],
-      ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(label,
+                  style: TextStyle(
+                      fontSize: labelSize,
+                      color: color.withOpacity(0.7),
+                      letterSpacing: 1,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(value,
+                          style: TextStyle(
+                              fontSize: valueSize,
+                              fontWeight: FontWeight.w800,
+                              color: color,
+                              height: 1)),
+                      if (unit != null)
+                        Text(' $unit',
+                            style: TextStyle(
+                                fontSize: unitSize, color: Colors.white38)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

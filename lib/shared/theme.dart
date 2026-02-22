@@ -26,6 +26,17 @@ ThemeData buildTheme() => ThemeData(
       ),
     );
 
+// Colores por métrica — usar en toda la app para consistencia
+class MetricColors {
+  static const split = Color(0xFFFF9F1C);     // naranja ámbar
+  static const spm = Color(0xFF00B4D8);        // cian
+  static const watts = Color(0xFFFFD60A);      // amarillo eléctrico
+  static const distance = Color(0xFF4CC9F0);   // celeste
+  static const heartRate = Color(0xFFEF476F);  // rosa/rojo
+  static const time = Color(0xFFE0E0E0);       // gris claro
+  static const calories = Color(0xFF06D6A0);   // verde menta
+}
+
 // Colores por tipo de paso
 Color stepColor(String typeName) {
   switch (typeName) {

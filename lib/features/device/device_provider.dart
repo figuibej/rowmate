@@ -11,6 +11,7 @@ class DeviceProvider extends ChangeNotifier {
   final BleService _ble;
 
   BleStatus _status = BleStatus.disconnected;
+  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
   List<ScanResult> _scanResults = [];
   RowingData _data = const RowingData();
   String? _error;
@@ -27,8 +28,13 @@ class DeviceProvider extends ChangeNotifier {
   StreamSubscription<List<ScanResult>>? _devicesSub;
   StreamSubscription<RowingData>? _dataSub;
   StreamSubscription<List<int>>? _rawBytesSub;
+  StreamSubscription<BluetoothAdapterState>? _adapterSub;
 
   DeviceProvider(this._ble) {
+    _adapterSub = _ble.adapterStateStream.listen((state) {
+      _adapterState = state;
+      notifyListeners();
+    });
     _statusSub = _ble.statusStream.listen((s) {
       _status = s;
       if (s == BleStatus.connected) {
@@ -80,6 +86,8 @@ class DeviceProvider extends ChangeNotifier {
   }
 
   BleStatus get status => _status;
+  BluetoothAdapterState get adapterState => _adapterState;
+  bool get isBluetoothOn => _adapterState == BluetoothAdapterState.on;
   List<ScanResult> get scanResults => _scanResults;
   RowingData get data => _data;
   String? get error => _error;
@@ -123,6 +131,7 @@ class DeviceProvider extends ChangeNotifier {
   @override
   void dispose() {
     _stopWatchdog();
+    _adapterSub?.cancel();
     _statusSub?.cancel();
     _devicesSub?.cancel();
     _dataSub?.cancel();

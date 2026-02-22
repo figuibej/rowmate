@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:provider/provider.dart';
 import '../../core/bluetooth/ble_service.dart';
+import '../../shared/theme.dart';
 import 'device_provider.dart';
 
 class DeviceScreen extends StatelessWidget {
@@ -80,26 +81,38 @@ class _ConnectedViewState extends State<_ConnectedView> {
     final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       controller: _scrollController,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         children: [
-          const SizedBox(height: 16),
-          Icon(Icons.rowing, size: 72, color: cs.primary),
-          const SizedBox(height: 16),
-          Text(p.connectedDeviceName ?? 'Rower',
-              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          Chip(
-            avatar: const Icon(Icons.bluetooth_connected, size: 14),
-            label: const Text('Conectado'),
-            backgroundColor: Colors.green.withOpacity(0.2),
-            labelStyle: const TextStyle(color: Colors.greenAccent),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.rowing, size: 32, color: cs.primary),
+              const SizedBox(width: 12),
+              Text(p.connectedDeviceName ?? 'Rower',
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bluetooth_connected, size: 12, color: Colors.greenAccent),
+                    SizedBox(width: 4),
+                    Text('Conectado',
+                        style: TextStyle(color: Colors.greenAccent, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
-          const Text('Métricas en tiempo real:',
-              style: TextStyle(color: Colors.white54)),
-          const SizedBox(height: 16),
-          _LiveMetricsRow(p: p),
+          _LiveMetricsGrid(p: p),
           const SizedBox(height: 32),
           // Botón debug: aparece tras 3 scrolls hacia abajo
           if (_scrollDownCount >= 3 && !_showDebug)
@@ -222,51 +235,93 @@ class _DebugRow extends StatelessWidget {
   }
 }
 
-class _LiveMetricsRow extends StatelessWidget {
+class _LiveMetricsGrid extends StatelessWidget {
   final DeviceProvider p;
-  const _LiveMetricsRow({required this.p});
+  const _LiveMetricsGrid({required this.p});
 
   @override
   Widget build(BuildContext context) {
     final d = p.data;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        alignment: WrapAlignment.center,
-        children: [
-          _Pill(label: 'Spl', value: d.pace500mFormatted),
-          _Pill(label: 'SPM', value: d.strokeRate.toStringAsFixed(1)),
-          _Pill(label: 'W', value: d.powerWatts.toString()),
-          _Pill(label: 'Dist', value: '${d.distanceMeters}m'),
-          if (d.heartRate > 0) _Pill(label: 'BPM', value: d.heartRate.toString()),
-        ],
-      ),
+    final metrics = <_MetricData>[
+      _MetricData('SPLIT /500m', d.pace500mFormatted, Icons.timer_outlined, MetricColors.split),
+      _MetricData('SPM', d.strokeRate.toStringAsFixed(1), Icons.speed, MetricColors.spm),
+      _MetricData('WATTS', d.powerWatts.toString(), Icons.bolt, MetricColors.watts),
+      _MetricData('DISTANCIA', '${d.distanceMeters}m', Icons.straighten, MetricColors.distance),
+      if (d.heartRate > 0)
+        _MetricData('BPM', d.heartRate.toString(), Icons.favorite, MetricColors.heartRate),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossCount = width > 600 ? 3 : 2;
+        // Aspect ratio más bajo = tarjetas más altas
+        final aspectRatio = width > 600 ? 1.6 : 1.3;
+        return GridView.count(
+          crossAxisCount: crossCount,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: aspectRatio,
+          children: metrics.map((m) => _MetricCard(data: m)).toList(),
+        );
+      },
     );
   }
 }
 
-class _Pill extends StatelessWidget {
+class _MetricData {
   final String label;
   final String value;
-  const _Pill({required this.label, required this.value});
+  final IconData icon;
+  final Color color;
+  const _MetricData(this.label, this.value, this.icon, this.color);
+}
+
+class _MetricCard extends StatelessWidget {
+  final _MetricData data;
+  const _MetricCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A2E45),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
+        border: Border(
+          top: BorderSide(color: data.color.withOpacity(0.6), width: 3),
+        ),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-          Text(label,
-              style: const TextStyle(fontSize: 11, color: Colors.white54)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(data.icon, size: 14, color: data.color.withOpacity(0.7)),
+              const SizedBox(width: 6),
+              Text(data.label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: data.color.withOpacity(0.7),
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8)),
+            ],
+          ),
+          const Spacer(),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(data.value,
+                style: TextStyle(
+                    fontSize: 52,
+                    fontWeight: FontWeight.w800,
+                    color: data.color,
+                    height: 1)),
+          ),
+          const Spacer(),
         ],
       ),
     );
@@ -281,6 +336,8 @@ class _ScanView extends StatelessWidget {
   Widget build(BuildContext context) {
     final isScanning = p.status == BleStatus.scanning;
     final isConnecting = p.status == BleStatus.connecting;
+    final btOff = p.adapterState == BluetoothAdapterState.off;
+    final btUnauthorized = p.adapterState == BluetoothAdapterState.unauthorized;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -299,80 +356,116 @@ class _ScanView extends StatelessWidget {
                   style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
             ),
 
-          FilledButton.icon(
-            onPressed: isScanning || isConnecting ? null : p.startScan,
-            icon: isScanning
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.bluetooth_searching),
-            label: Text(isScanning ? 'Buscando...' : 'Buscar dispositivos'),
-          ),
-
-          const SizedBox(height: 12),
-
-          if (isScanning)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Buscando dispositivos FTMS con servicio 0x1826...',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-          if (p.scanResults.isEmpty && !isScanning)
-            const Expanded(
+          if (btOff || btUnauthorized)
+            Expanded(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.bluetooth_disabled, size: 48, color: Colors.white24),
-                    SizedBox(height: 12),
-                    Text('No se encontraron dispositivos',
-                        style: TextStyle(color: Colors.white54)),
-                    SizedBox(height: 8),
+                    const Icon(Icons.bluetooth_disabled, size: 64, color: Colors.redAccent),
+                    const SizedBox(height: 16),
                     Text(
-                      'Asegurate que el rower esté encendido\ny el Bluetooth activado',
+                      btUnauthorized
+                          ? 'Permiso de Bluetooth denegado'
+                          : 'Bluetooth apagado',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      btUnauthorized
+                          ? 'Habilitá el permiso de Bluetooth en\nAjustes > Privacidad > Bluetooth'
+                          : 'Activá el Bluetooth desde el Centro de Control\no Ajustes para buscar el rower',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                      style: const TextStyle(color: Colors.white54, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        await FlutterBluePlus.turnOn();
+                      },
+                      icon: const Icon(Icons.bluetooth),
+                      label: const Text('Activar Bluetooth'),
                     ),
                   ],
                 ),
               ),
+            )
+          else ...[
+            FilledButton.icon(
+              onPressed: isScanning || isConnecting ? null : p.startScan,
+              icon: isScanning
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.bluetooth_searching),
+              label: Text(isScanning ? 'Buscando...' : 'Buscar dispositivos'),
             ),
 
-          if (p.scanResults.isNotEmpty)
-            Expanded(
-              child: ListView.builder(
-                itemCount: p.scanResults.length,
-                itemBuilder: (context, i) {
-                  final r = p.scanResults[i];
-                  final name = r.device.platformName.isNotEmpty
-                      ? r.device.platformName
-                      : 'Dispositivo desconocido';
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: ListTile(
-                      leading: const Icon(Icons.rowing, color: Color(0xFF00B4D8)),
-                      title: Text(name),
-                      subtitle: Text(r.device.remoteId.str,
-                          style: const TextStyle(fontSize: 11, color: Colors.white38)),
-                      trailing: isConnecting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.chevron_right),
-                      onTap: isConnecting
-                          ? null
-                          : () => p.connect(r.device),
-                    ),
-                  );
-                },
+            const SizedBox(height: 12),
+
+            if (isScanning)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Buscando dispositivos FTMS con servicio 0x1826...',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
+
+            if (p.scanResults.isEmpty && !isScanning)
+              const Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.bluetooth_disabled, size: 48, color: Colors.white24),
+                      SizedBox(height: 12),
+                      Text('No se encontraron dispositivos',
+                          style: TextStyle(color: Colors.white54)),
+                      SizedBox(height: 8),
+                      Text(
+                        'Asegurate que el rower esté encendido\ny el Bluetooth activado',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white38, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            if (p.scanResults.isNotEmpty)
+              Expanded(
+                child: ListView.builder(
+                  itemCount: p.scanResults.length,
+                  itemBuilder: (context, i) {
+                    final r = p.scanResults[i];
+                    final name = r.device.platformName.isNotEmpty
+                        ? r.device.platformName
+                        : 'Dispositivo desconocido';
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: ListTile(
+                        leading: const Icon(Icons.rowing, color: Color(0xFF00B4D8)),
+                        title: Text(name),
+                        subtitle: Text(r.device.remoteId.str,
+                            style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                        trailing: isConnecting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.chevron_right),
+                        onTap: isConnecting
+                            ? null
+                            : () => p.connect(r.device),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
         ],
       ),
     );

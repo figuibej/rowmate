@@ -1,5 +1,5 @@
-name: rower_app
-description: Monitor de rower AMS-670B con rutinas de entrenamiento
+name: rowmate
+description: RowMate — Monitor de rower AMS-670B con rutinas de entrenamiento
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -31,6 +31,19 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  macos:
+    generate: true
+    image_path: assets/icon/icon.png
+  image_path: assets/icon/icon.png
+  min_sdk_android: 21
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/
