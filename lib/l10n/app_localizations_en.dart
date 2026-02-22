@@ -217,4 +217,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get delete => 'Delete';
+
+  @override
+  String get hrmTitle => 'Heart Rate Monitor';
+
+  @override
+  String get hrmAdd => 'Add HR Monitor';
+
+  @override
+  String get hrmSearching => 'Searching for HR monitors...';
+
+  @override
+  String get hrmConnected => 'HR Monitor connected';
+
+  @override
+  String get hrmDisconnect => 'Disconnect HR';
+
+  @override
+  String get hrmNoDevices => 'No HR monitors found';
+
+  @override
+  String get hrmNoDevicesHint => 'Enable HR broadcast on your device';
 }

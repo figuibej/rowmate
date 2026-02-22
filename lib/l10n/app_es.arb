@@ -85,5 +85,13 @@
   "stepTypeCooldown": "Enfriamiento",
 
   "cancel": "Cancelar",
-  "delete": "Eliminar"
+  "delete": "Eliminar",
+
+  "hrmTitle": "Monitor de frecuencia cardíaca",
+  "hrmAdd": "Agregar HR Monitor",
+  "hrmSearching": "Buscando monitores de pulso...",
+  "hrmConnected": "HR Monitor conectado",
+  "hrmDisconnect": "Desconectar HR",
+  "hrmNoDevices": "No se encontraron monitores",
+  "hrmNoDevicesHint": "Activá el broadcast de pulso en tu dispositivo"
 }

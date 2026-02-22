@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'core/bluetooth/ble_service.dart';
+import 'core/bluetooth/hrm_service.dart';
 import 'core/database/database_service.dart';
 import 'features/device/device_provider.dart';
 import 'features/device/device_screen.dart';
@@ -28,6 +29,7 @@ class RowerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ble = BleService();
+    final hrm = HrmService();
     final db = DatabaseService();
 
     return MultiProvider(
@@ -36,11 +38,15 @@ class RowerApp extends StatelessWidget {
           create: (_) => ble,
           dispose: (_, s) => s.dispose(),
         ),
+        Provider<HrmService>(
+          create: (_) => hrm,
+          dispose: (_, s) => s.dispose(),
+        ),
         Provider<DatabaseService>(
           create: (_) => db,
           dispose: (_, s) => s.close(),
         ),
-        ChangeNotifierProvider(create: (_) => DeviceProvider(ble)),
+        ChangeNotifierProvider(create: (_) => DeviceProvider(ble, hrm)),
         ChangeNotifierProvider(create: (_) => WorkoutProvider(ble, db)),
         ChangeNotifierProvider(create: (_) => RoutinesProvider(db)),
         ChangeNotifierProvider(create: (_) => HistoryProvider(db)),

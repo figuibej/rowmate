@@ -3,6 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:rowmate/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../core/bluetooth/ble_service.dart';
+import '../../core/bluetooth/hrm_service.dart';
 import '../../shared/theme.dart';
 import 'device_provider.dart';
 
@@ -116,7 +117,9 @@ class _ConnectedViewState extends State<_ConnectedView> {
           ),
           const SizedBox(height: 24),
           _LiveMetricsGrid(p: p),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          _HrmCard(p: p),
+          const SizedBox(height: 16),
           if (_scrollDownCount >= 3 && !_showDebug)
             TextButton.icon(
               onPressed: () => setState(() => _showDebug = true),
@@ -460,6 +463,145 @@ class _ScanView extends StatelessWidget {
                   },
                 ),
               ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── HRM Companion Card ────────────────────────────────────────────────────
+
+class _HrmCard extends StatelessWidget {
+  final DeviceProvider p;
+  const _HrmCard({required this.p});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final hrmColor = const Color(0xFFFF6B9D); // pink for heart rate
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2E45),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.favorite, size: 16, color: hrmColor),
+              const SizedBox(width: 8),
+              Text(l10n.hrmTitle,
+                  style: TextStyle(
+                      color: hrmColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5)),
+              const Spacer(),
+              if (p.hrmIsConnected)
+                TextButton.icon(
+                  onPressed: p.disconnectHrm,
+                  icon: const Icon(Icons.bluetooth_disabled, size: 14),
+                  label: Text(l10n.hrmDisconnect,
+                      style: const TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 28),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // ── Connected ──────────────────────────────────────────────────
+          if (p.hrmIsConnected) ...[
+            Row(
+              children: [
+                const Icon(Icons.bluetooth_connected,
+                    size: 14, color: Colors.greenAccent),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(p.hrmDeviceName ?? '',
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13)),
+                ),
+                if (p.externalHr > 0) ...[
+                  Icon(Icons.favorite, size: 16, color: hrmColor),
+                  const SizedBox(width: 4),
+                  Text('${p.externalHr}',
+                      style: TextStyle(
+                          color: hrmColor,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800)),
+                  const Text(' bpm',
+                      style: TextStyle(
+                          color: Colors.white38, fontSize: 12)),
+                ],
+              ],
+            ),
+          ]
+
+          // ── Scanning ───────────────────────────────────────────────────
+          else if (p.hrmIsScanning) ...[
+            Row(
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white54),
+                ),
+                const SizedBox(width: 10),
+                Text(l10n.hrmSearching,
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 13)),
+              ],
+            ),
+            if (p.hrmScanResults.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              ...p.hrmScanResults.map((r) {
+                final name = r.device.platformName.isNotEmpty
+                    ? r.device.platformName
+                    : r.device.remoteId.str;
+                return ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.favorite, color: hrmColor, size: 18),
+                  title: Text(name,
+                      style: const TextStyle(fontSize: 13)),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => p.connectHrm(r.device),
+                );
+              }),
+            ],
+          ]
+
+          // ── No HR monitor yet ──────────────────────────────────────────
+          else ...[
+            if (p.hrmScanResults.isEmpty)
+              Text(p.hrmStatus == HrmStatus.disconnected
+                      ? l10n.hrmAdd
+                      : l10n.hrmNoDevices,
+                  style: const TextStyle(
+                      color: Colors.white38, fontSize: 12)),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: p.startHrmScan,
+              icon: Icon(Icons.favorite_border, size: 16, color: hrmColor),
+              label: Text(l10n.hrmAdd,
+                  style: TextStyle(color: hrmColor, fontSize: 13)),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: hrmColor.withOpacity(0.4)),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+              ),
+            ),
           ],
         ],
       ),

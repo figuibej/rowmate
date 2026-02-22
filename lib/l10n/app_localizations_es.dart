@@ -217,4 +217,26 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get delete => 'Eliminar';
+
+  @override
+  String get hrmTitle => 'Monitor de frecuencia cardíaca';
+
+  @override
+  String get hrmAdd => 'Agregar HR Monitor';
+
+  @override
+  String get hrmSearching => 'Buscando monitores de pulso...';
+
+  @override
+  String get hrmConnected => 'HR Monitor conectado';
+
+  @override
+  String get hrmDisconnect => 'Desconectar HR';
+
+  @override
+  String get hrmNoDevices => 'No se encontraron monitores';
+
+  @override
+  String get hrmNoDevicesHint =>
+      'Activá el broadcast de pulso en tu dispositivo';
 }

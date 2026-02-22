@@ -85,5 +85,13 @@
   "stepTypeCooldown": "Cooldown",
 
   "cancel": "Cancel",
-  "delete": "Delete"
+  "delete": "Delete",
+
+  "hrmTitle": "Heart Rate Monitor",
+  "hrmAdd": "Add HR Monitor",
+  "hrmSearching": "Searching for HR monitors...",
+  "hrmConnected": "HR Monitor connected",
+  "hrmDisconnect": "Disconnect HR",
+  "hrmNoDevices": "No HR monitors found",
+  "hrmNoDevicesHint": "Enable HR broadcast on your device"
 }

@@ -499,6 +499,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get delete;
+
+  /// No description provided for @hrmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Heart Rate Monitor'**
+  String get hrmTitle;
+
+  /// No description provided for @hrmAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add HR Monitor'**
+  String get hrmAdd;
+
+  /// No description provided for @hrmSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for HR monitors...'**
+  String get hrmSearching;
+
+  /// No description provided for @hrmConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'HR Monitor connected'**
+  String get hrmConnected;
+
+  /// No description provided for @hrmDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect HR'**
+  String get hrmDisconnect;
+
+  /// No description provided for @hrmNoDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No HR monitors found'**
+  String get hrmNoDevices;
+
+  /// No description provided for @hrmNoDevicesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable HR broadcast on your device'**
+  String get hrmNoDevicesHint;
 }
 
 class _AppLocalizationsDelegate
