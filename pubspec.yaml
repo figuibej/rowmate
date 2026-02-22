@@ -1,0 +1,36 @@
+name: rower_app
+description: Monitor de rower AMS-670B con rutinas de entrenamiento
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Bluetooth BLE
+  flutter_blue_plus: ^1.31.15
+
+  # Base de datos
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+
+  # Estado y navegación
+  provider: ^6.1.2
+  go_router: ^13.2.4
+
+  # Utilidades
+  path_provider: ^2.1.3
+  intl: ^0.19.0
+  wakelock_plus: ^1.2.5
+  fl_chart: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
