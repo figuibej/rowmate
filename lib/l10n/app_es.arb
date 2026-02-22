@@ -1,0 +1,89 @@
+{
+  "@@locale": "es",
+
+  "navDevice": "Dispositivo",
+  "navWorkout": "Workout",
+  "navRoutines": "Rutinas",
+  "navHistory": "Historial",
+
+  "deviceTitle": "Dispositivo",
+  "deviceDisconnect": "Desconectar",
+  "deviceConnected": "Conectado",
+  "deviceSearching": "Buscando...",
+  "deviceSearch": "Buscar dispositivos",
+  "deviceSearchHint": "Buscando dispositivos FTMS con servicio 0x1826...",
+  "deviceNoResults": "No se encontraron dispositivos",
+  "deviceNoResultsHint": "Asegurate que el rower esté encendido\ny el Bluetooth activado",
+  "deviceBtOff": "Bluetooth apagado",
+  "deviceBtOffHint": "Activá el Bluetooth desde el Centro de Control\no Ajustes para buscar el rower",
+  "deviceBtDenied": "Permiso de Bluetooth denegado",
+  "deviceBtDeniedHint": "Habilitá el permiso de Bluetooth en\nAjustes > Privacidad > Bluetooth",
+  "deviceBtEnable": "Activar Bluetooth",
+
+  "workoutTitle": "Entrenamiento",
+  "workoutFree": "Entrenamiento libre",
+  "workoutRowerNotConnected": "Rower no conectado — los datos no se registrarán",
+  "workoutOrPickRoutine": "  O elegí una rutina:",
+  "workoutNoRoutines": "Creá una rutina en la pestaña \"Rutinas\"",
+  "workoutInProgress": "Entrenamiento en curso...",
+  "workoutFinish": "Terminar",
+  "workoutFinishTitle": "Terminar entrenamiento",
+  "workoutFinishContent": "Se guardará la sesión. ¿Continuar?",
+  "workoutPause": "Pausa",
+  "workoutResume": "Reanudar",
+  "workoutStartTitle": "Iniciar entrenamiento?",
+  "workoutStartContent": "{summary}\n\nIniciar el entrenamiento?",
+  "@workoutStartContent": {
+    "placeholders": {
+      "summary": { "type": "String" }
+    }
+  },
+  "workoutStart": "Iniciar",
+
+  "metricTime": "TIEMPO",
+  "metricSplit": "SPLIT 500m",
+  "metricDistance": "DISTANCIA",
+  "metricWatts": "VATIOS",
+  "metricSpm": "SPM",
+  "metricCalories": "CALORÍAS",
+  "metricHeartRate": "PULSO",
+  "metricFreeLabel": "Entrenamiento libre",
+
+  "routinesTitle": "Rutinas",
+  "routinesEmpty": "No hay rutinas todavía",
+  "routinesEmptyHint": "Presioná + para crear una",
+  "routineEdit": "Editar",
+  "routineDelete": "Eliminar",
+  "routineDeleteTitle": "Eliminar rutina",
+  "routineDeleteContent": "¿Eliminar \"{name}\"?",
+  "@routineDeleteContent": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "historyTitle": "Historial",
+  "historyEmpty": "No hay sesiones guardadas",
+  "historyFree": "Libre",
+  "historyStatTime": "Tiempo",
+  "historyStatDistance": "Distancia",
+  "historyStatWatts": "Vatios",
+  "historyStatCalories": "kcal",
+
+  "sessionNoTelemetry": "No hay datos de telemetría",
+  "sessionSummary": "Resumen",
+  "sessionStepBreakdown": "Rendimiento por paso",
+  "sessionChartWatts": "Vatios",
+  "sessionChartSpm": "SPM",
+  "sessionChartSplit": "Split 500m",
+  "sessionChartDistance": "Distancia",
+  "sessionChartHr": "Pulso",
+
+  "stepTypeWarmup": "Calentamiento",
+  "stepTypeWork": "Trabajo",
+  "stepTypeRest": "Descanso",
+  "stepTypeCooldown": "Enfriamiento",
+
+  "cancel": "Cancelar",
+  "delete": "Eliminar"
+}

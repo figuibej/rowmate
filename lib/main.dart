@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -16,7 +18,7 @@ import 'shared/theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  WakelockPlus.enable(); // pantalla siempre activa durante el remo
+  WakelockPlus.enable();
   runApp(const RowerApp());
 }
 
@@ -44,9 +46,19 @@ class RowerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => HistoryProvider(db)),
       ],
       child: MaterialApp(
-        title: 'Rower Monitor',
+        title: 'RowMate',
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('es'),
+        ],
         home: const MainShell(),
       ),
     );
@@ -72,35 +84,35 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: IndexedStack(index: _tab, children: _screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) {
-          // Recarga el historial al abrir la pestaña
           if (i == 3) context.read<HistoryProvider>().load();
           setState(() => _tab = i);
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.bluetooth),
-            selectedIcon: Icon(Icons.bluetooth_connected),
-            label: 'Dispositivo',
+            icon: const Icon(Icons.bluetooth),
+            selectedIcon: const Icon(Icons.bluetooth_connected),
+            label: l10n.navDevice,
           ),
           NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer),
-            label: 'Workout',
+            icon: const Icon(Icons.timer_outlined),
+            selectedIcon: const Icon(Icons.timer),
+            label: l10n.navWorkout,
           ),
           NavigationDestination(
-            icon: Icon(Icons.fitness_center),
-            selectedIcon: Icon(Icons.fitness_center),
-            label: 'Rutinas',
+            icon: const Icon(Icons.fitness_center),
+            selectedIcon: const Icon(Icons.fitness_center),
+            label: l10n.navRoutines,
           ),
           NavigationDestination(
-            icon: Icon(Icons.history),
-            selectedIcon: Icon(Icons.history),
-            label: 'Historial',
+            icon: const Icon(Icons.history),
+            selectedIcon: const Icon(Icons.history),
+            label: l10n.navHistory,
           ),
         ],
       ),

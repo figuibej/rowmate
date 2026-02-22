@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/database/database_service.dart';
@@ -12,20 +13,21 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<HistoryProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historial')),
+      appBar: AppBar(title: Text(l10n.historyTitle)),
       body: p.loading
           ? const Center(child: CircularProgressIndicator())
           : p.sessions.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.history, size: 56, color: Colors.white12),
-                      SizedBox(height: 12),
-                      Text('No hay sesiones guardadas',
-                          style: TextStyle(color: Colors.white38)),
+                      const Icon(Icons.history, size: 56, color: Colors.white12),
+                      const SizedBox(height: 12),
+                      Text(l10n.historyEmpty,
+                          style: const TextStyle(color: Colors.white38)),
                     ],
                   ),
                 )
@@ -59,6 +61,7 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dateStr = DateFormat('dd/MM/yyyy  HH:mm').format(s.startedAt);
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
@@ -76,7 +79,7 @@ class _SessionCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      s.routineName ?? 'Libre',
+                      s.routineName ?? l10n.historyFree,
                       style: const TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 15),
                     ),
@@ -91,11 +94,11 @@ class _SessionCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _Stat(label: 'Tiempo', value: s.durationFormatted),
-                  _Stat(label: 'Distancia', value: '${s.totalDistanceMeters}m'),
-                  _Stat(label: 'Vatios', value: '${s.avgPowerWatts}W'),
+                  _Stat(label: l10n.historyStatTime, value: s.durationFormatted),
+                  _Stat(label: l10n.historyStatDistance, value: '${s.totalDistanceMeters}m'),
+                  _Stat(label: l10n.historyStatWatts, value: '${s.avgPowerWatts}W'),
                   _Stat(label: 'SPM', value: s.avgStrokeRate.toStringAsFixed(1)),
-                  _Stat(label: 'kcal', value: '${s.totalCalories}'),
+                  _Stat(label: l10n.historyStatCalories, value: '${s.totalCalories}'),
                 ],
               ),
             ],
@@ -126,4 +129,3 @@ class _Stat extends StatelessWidget {
     );
   }
 }
-

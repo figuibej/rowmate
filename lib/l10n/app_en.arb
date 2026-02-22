@@ -1,0 +1,89 @@
+{
+  "@@locale": "en",
+
+  "navDevice": "Device",
+  "navWorkout": "Workout",
+  "navRoutines": "Routines",
+  "navHistory": "History",
+
+  "deviceTitle": "Device",
+  "deviceDisconnect": "Disconnect",
+  "deviceConnected": "Connected",
+  "deviceSearching": "Searching...",
+  "deviceSearch": "Search devices",
+  "deviceSearchHint": "Searching for FTMS devices with service 0x1826...",
+  "deviceNoResults": "No devices found",
+  "deviceNoResultsHint": "Make sure the rower is on\nand Bluetooth is enabled",
+  "deviceBtOff": "Bluetooth is off",
+  "deviceBtOffHint": "Turn on Bluetooth from Control Center\nor Settings to search for the rower",
+  "deviceBtDenied": "Bluetooth permission denied",
+  "deviceBtDeniedHint": "Enable Bluetooth permission in\nSettings > Privacy > Bluetooth",
+  "deviceBtEnable": "Enable Bluetooth",
+
+  "workoutTitle": "Workout",
+  "workoutFree": "Free workout",
+  "workoutRowerNotConnected": "Rower not connected — data will not be recorded",
+  "workoutOrPickRoutine": "  Or pick a routine:",
+  "workoutNoRoutines": "Create a routine in the \"Routines\" tab",
+  "workoutInProgress": "Workout in progress...",
+  "workoutFinish": "Finish",
+  "workoutFinishTitle": "Finish workout",
+  "workoutFinishContent": "The session will be saved. Continue?",
+  "workoutPause": "Pause",
+  "workoutResume": "Resume",
+  "workoutStartTitle": "Start workout?",
+  "workoutStartContent": "{summary}\n\nStart the workout?",
+  "@workoutStartContent": {
+    "placeholders": {
+      "summary": { "type": "String" }
+    }
+  },
+  "workoutStart": "Start",
+
+  "metricTime": "TIME",
+  "metricSplit": "SPLIT 500m",
+  "metricDistance": "DISTANCE",
+  "metricWatts": "WATTS",
+  "metricSpm": "SPM",
+  "metricCalories": "CALORIES",
+  "metricHeartRate": "HR",
+  "metricFreeLabel": "Free workout",
+
+  "routinesTitle": "Routines",
+  "routinesEmpty": "No routines yet",
+  "routinesEmptyHint": "Press + to create one",
+  "routineEdit": "Edit",
+  "routineDelete": "Delete",
+  "routineDeleteTitle": "Delete routine",
+  "routineDeleteContent": "Delete \"{name}\"?",
+  "@routineDeleteContent": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "historyTitle": "History",
+  "historyEmpty": "No saved sessions",
+  "historyFree": "Free",
+  "historyStatTime": "Time",
+  "historyStatDistance": "Distance",
+  "historyStatWatts": "Watts",
+  "historyStatCalories": "kcal",
+
+  "sessionNoTelemetry": "No telemetry data",
+  "sessionSummary": "Summary",
+  "sessionStepBreakdown": "Step Performance",
+  "sessionChartWatts": "Watts",
+  "sessionChartSpm": "SPM",
+  "sessionChartSplit": "Split 500m",
+  "sessionChartDistance": "Distance",
+  "sessionChartHr": "HR",
+
+  "stepTypeWarmup": "Warmup",
+  "stepTypeWork": "Work",
+  "stepTypeRest": "Rest",
+  "stepTypeCooldown": "Cooldown",
+
+  "cancel": "Cancel",
+  "delete": "Delete"
+}

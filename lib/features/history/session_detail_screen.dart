@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
 import '../../core/database/database_service.dart';
 import '../../core/models/workout_session.dart';
 import '../../shared/theme.dart';
@@ -16,9 +17,7 @@ class SessionDetailScreen extends StatefulWidget {
 class _SessionDetailScreenState extends State<SessionDetailScreen> {
   List<DataPoint> _points = [];
   bool _loading = true;
-  int _chartMetric = 0; // 0=watts, 1=spm, 2=split, 3=distancia, 4=hr
-
-  static const _metricLabels = ['Vatios', 'SPM', 'Split 500m', 'Distancia', 'Pulso'];
+  int _chartMetric = 0; // 0=watts, 1=spm, 2=split, 3=distance, 4=hr
 
   @override
   void initState() {
@@ -37,26 +36,34 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
+    final l10n = AppLocalizations.of(context)!;
+    final metricLabels = [
+      l10n.sessionChartWatts,
+      l10n.sessionChartSpm,
+      l10n.sessionChartSplit,
+      l10n.sessionChartDistance,
+      l10n.sessionChartHr,
+    ];
     return Scaffold(
       appBar: AppBar(
-        title: Text(s.routineName ?? 'Entrenamiento libre'),
+        title: Text(s.routineName ?? l10n.workoutFree),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _points.isEmpty
-              ? const Center(
-                  child: Text('No hay datos de telemetría',
-                      style: TextStyle(color: Colors.white38)))
+              ? Center(
+                  child: Text(l10n.sessionNoTelemetry,
+                      style: const TextStyle(color: Colors.white38)))
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _buildSummary(s),
+                    _buildSummary(s, l10n),
                     const SizedBox(height: 20),
                     if (_hasStepData) ...[
-                      _buildStepBreakdown(),
+                      _buildStepBreakdown(l10n),
                       const SizedBox(height: 20),
                     ],
-                    _buildChartSelector(),
+                    _buildChartSelector(metricLabels),
                     const SizedBox(height: 8),
                     _buildChart(),
                   ],
@@ -68,23 +75,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   // ─── Resumen general ───────────────────────────────────────────────────
 
-  Widget _buildSummary(WorkoutSession s) {
+  Widget _buildSummary(WorkoutSession s, AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Resumen',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            Text(l10n.sessionSummary,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 12),
             Row(
               children: [
-                _StatChip(label: 'Tiempo', value: s.durationFormatted),
-                _StatChip(label: 'Distancia', value: '${s.totalDistanceMeters}m'),
-                _StatChip(label: 'Vatios', value: '${s.avgPowerWatts}W'),
+                _StatChip(label: l10n.historyStatTime, value: s.durationFormatted),
+                _StatChip(label: l10n.historyStatDistance, value: '${s.totalDistanceMeters}m'),
+                _StatChip(label: l10n.historyStatWatts, value: '${s.avgPowerWatts}W'),
                 _StatChip(label: 'SPM', value: s.avgStrokeRate.toStringAsFixed(1)),
-                _StatChip(label: 'kcal', value: '${s.totalCalories}'),
+                _StatChip(label: l10n.historyStatCalories, value: '${s.totalCalories}'),
               ],
             ),
           ],
@@ -95,8 +102,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   // ─── Desglose por paso ────────────────────────────────────────────────
 
-  Widget _buildStepBreakdown() {
-    // Agrupar data points por stepIndex
+  Widget _buildStepBreakdown(AppLocalizations l10n) {
     final Map<int, List<DataPoint>> grouped = {};
     for (final p in _points) {
       if (p.stepIndex != null) {
@@ -114,8 +120,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Rendimiento por paso',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            Text(l10n.sessionStepBreakdown,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 12),
             ...sortedKeys.map((idx) {
               final pts = grouped[idx]!;
@@ -187,11 +193,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   // ─── Selector de métrica para gráfico ─────────────────────────────────
 
-  Widget _buildChartSelector() {
+  Widget _buildChartSelector(List<String> metricLabels) {
     return SegmentedButton<int>(
       segments: List.generate(
-        _metricLabels.length,
-        (i) => ButtonSegment(value: i, label: Text(_metricLabels[i], style: const TextStyle(fontSize: 11))),
+        metricLabels.length,
+        (i) => ButtonSegment(value: i, label: Text(metricLabels[i], style: const TextStyle(fontSize: 11))),
       ),
       selected: {_chartMetric},
       onSelectionChanged: (v) => setState(() => _chartMetric = v.first),

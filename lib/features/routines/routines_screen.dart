@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'routine_editor_screen.dart';
 import 'routines_provider.dart';
@@ -9,9 +10,10 @@ class RoutinesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<RoutinesProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rutinas')),
+      appBar: AppBar(title: Text(l10n.routinesTitle)),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
@@ -22,17 +24,17 @@ class RoutinesScreen extends StatelessWidget {
       body: p.loading
           ? const Center(child: CircularProgressIndicator())
           : p.routines.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.fitness_center, size: 56, color: Colors.white12),
-                      SizedBox(height: 12),
-                      Text('No hay rutinas todavía',
-                          style: TextStyle(color: Colors.white38)),
-                      SizedBox(height: 8),
-                      Text('Presioná + para crear una',
-                          style: TextStyle(color: Colors.white24, fontSize: 13)),
+                      const Icon(Icons.fitness_center, size: 56, color: Colors.white12),
+                      const SizedBox(height: 12),
+                      Text(l10n.routinesEmpty,
+                          style: const TextStyle(color: Colors.white38)),
+                      const SizedBox(height: 8),
+                      Text(l10n.routinesEmptyHint,
+                          style: const TextStyle(color: Colors.white24, fontSize: 13)),
                     ],
                   ),
                 )
@@ -62,20 +64,19 @@ class RoutinesScreen extends StatelessWidget {
                         trailing: PopupMenuButton<_Action>(
                           onSelected: (action) =>
                               _onAction(context, action, r, p),
-                          itemBuilder: (_) => const [
+                          itemBuilder: (_) => [
                             PopupMenuItem(
-                                value: _Action.edit, child: Text('Editar')),
+                                value: _Action.edit, child: Text(l10n.routineEdit)),
                             PopupMenuItem(
                                 value: _Action.delete,
-                                child: Text('Eliminar',
-                                    style: TextStyle(color: Colors.redAccent))),
+                                child: Text(l10n.routineDelete,
+                                    style: const TextStyle(color: Colors.redAccent))),
                           ],
                         ),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) =>
-                                  RoutineEditorScreen(existing: r)),
+                              builder: (_) => RoutineEditorScreen(existing: r)),
                         ),
                       ),
                     );
@@ -85,6 +86,7 @@ class RoutinesScreen extends StatelessWidget {
   }
 
   void _onAction(BuildContext context, _Action action, routine, p) async {
+    final l10n = AppLocalizations.of(context)!;
     switch (action) {
       case _Action.edit:
         Navigator.push(
@@ -96,17 +98,17 @@ class RoutinesScreen extends StatelessWidget {
         final ok = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Eliminar rutina'),
-            content: Text('¿Eliminar "${routine.name}"?'),
+            title: Text(l10n.routineDeleteTitle),
+            content: Text(l10n.routineDeleteContent(routine.name)),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancelar')),
+                  child: Text(l10n.cancel)),
               FilledButton(
                   style: FilledButton.styleFrom(
                       backgroundColor: Colors.red.shade700),
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Eliminar')),
+                  child: Text(l10n.delete)),
             ],
           ),
         );

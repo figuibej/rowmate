@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/interval_step.dart';
 import '../../core/models/routine.dart';
@@ -37,9 +38,10 @@ class _IdleView extends StatelessWidget {
     final device = context.read<DeviceProvider>();
     final routines = context.watch<RoutinesProvider>().routines;
     final workout = context.read<WorkoutProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Entrenamiento')),
+      appBar: AppBar(title: Text(l10n.workoutTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -53,12 +55,12 @@ class _IdleView extends StatelessWidget {
                   color: Colors.orange.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.warning_amber, color: Colors.orange, size: 18),
-                    SizedBox(width: 8),
-                    Text('Rower no conectado — los datos no se registrarán',
-                        style: TextStyle(color: Colors.orange, fontSize: 13)),
+                    const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                    const SizedBox(width: 8),
+                    Text(l10n.workoutRowerNotConnected,
+                        style: const TextStyle(color: Colors.orange, fontSize: 13)),
                   ],
                 ),
               ),
@@ -69,14 +71,14 @@ class _IdleView extends StatelessWidget {
                 _openFullscreen(context);
               },
               icon: const Icon(Icons.play_arrow),
-              label: const Text('Entrenamiento libre'),
+              label: Text(l10n.workoutFree),
             ),
 
             const SizedBox(height: 24),
 
             if (routines.isNotEmpty) ...[
-              const Text('  O elegí una rutina:',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+              Text(l10n.workoutOrPickRoutine,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.builder(
@@ -101,11 +103,11 @@ class _IdleView extends StatelessWidget {
             ],
 
             if (routines.isEmpty)
-              const Expanded(
+              Expanded(
                 child: Center(
                   child: Text(
-                    'Creá una rutina en la pestaña "Rutinas"',
-                    style: TextStyle(color: Colors.white38),
+                    l10n.workoutNoRoutines,
+                    style: const TextStyle(color: Colors.white38),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -118,18 +120,19 @@ class _IdleView extends StatelessWidget {
 
   void _confirmStart(
       BuildContext context, Routine r, WorkoutProvider workout) async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(r.name),
-        content: Text('${r.summary}\n\nIniciar el entrenamiento?'),
+        content: Text(l10n.workoutStartContent(r.summary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+              child: Text(l10n.cancel)),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Iniciar')),
+              child: Text(l10n.workoutStart)),
         ],
       ),
     );
@@ -157,10 +160,19 @@ class _ActiveView extends StatelessWidget {
     // Este widget queda debajo en el IndexedStack y no debe hacer nada.
     return const Scaffold(
       body: Center(
-        child: Text('Entrenamiento en curso...',
-            style: TextStyle(color: Colors.white38)),
+        child: _WorkoutInProgressPlaceholder(),
       ),
     );
+  }
+}
+
+class _WorkoutInProgressPlaceholder extends StatelessWidget {
+  const _WorkoutInProgressPlaceholder();
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.workoutInProgress,
+        style: const TextStyle(color: Colors.white38));
   }
 }
 
@@ -270,6 +282,7 @@ class _CompactTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
@@ -278,7 +291,7 @@ class _CompactTopBar extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              w.routine?.name ?? 'Entrenamiento libre',
+              w.routine?.name ?? l10n.metricFreeLabel,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -294,7 +307,7 @@ class _CompactTopBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: const Size(0, 32),
             ),
-            child: const Text('Terminar', style: TextStyle(fontSize: 12)),
+            child: Text(l10n.workoutFinish, style: const TextStyle(fontSize: 12)),
           ),
         ],
       ),
@@ -302,18 +315,19 @@ class _CompactTopBar extends StatelessWidget {
   }
 
   void _confirmFinish(BuildContext context, WorkoutProvider w) async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Terminar entrenamiento'),
-        content: const Text('Se guardará la sesión. ¿Continuar?'),
+        title: Text(l10n.workoutFinishTitle),
+        content: Text(l10n.workoutFinishContent),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+              child: Text(l10n.cancel)),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Terminar')),
+              child: Text(l10n.workoutFinish)),
         ],
       ),
     );
@@ -440,6 +454,7 @@ class _FullscreenMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final crossAxisCount = orientation == Orientation.landscape ? 4 : 2;
+    final l10n = AppLocalizations.of(context)!;
 
     // Construimos la lista de métricas con flag de si tiene objetivo activo
     final hasWattsTarget = currentStep?.targetWattsMin != null;
@@ -447,14 +462,14 @@ class _FullscreenMetrics extends StatelessWidget {
     final hasSplitTarget = currentStep?.targetSplitSeconds != null;
 
     final all = <({Widget widget, bool hasTarget})>[
-      (widget: _FullMetric(label: 'TIEMPO', value: _elapsedFormatted, color: MetricColors.time), hasTarget: false),
-      (widget: _FullMetric(label: 'SPLIT 500m', value: data.pace500mFormatted, color: hasSplitTarget ? _splitColor : MetricColors.split), hasTarget: hasSplitTarget),
-      (widget: _FullMetric(label: 'DISTANCIA', value: '${data.distanceMeters}', unit: 'm', color: MetricColors.distance), hasTarget: false),
-      (widget: _FullMetric(label: 'VATIOS', value: '${data.powerWatts}', unit: 'W', color: hasWattsTarget ? _wattsColor : MetricColors.watts), hasTarget: hasWattsTarget),
-      (widget: _FullMetric(label: 'SPM', value: data.strokeRate.toStringAsFixed(1), color: hasSpmTarget ? _spmColor : MetricColors.spm), hasTarget: hasSpmTarget),
-      (widget: _FullMetric(label: 'CALORÍAS', value: '${data.totalCalories}', unit: 'kcal', color: MetricColors.calories), hasTarget: false),
+      (widget: _FullMetric(label: l10n.metricTime, value: _elapsedFormatted, color: MetricColors.time), hasTarget: false),
+      (widget: _FullMetric(label: l10n.metricSplit, value: data.pace500mFormatted, color: hasSplitTarget ? _splitColor : MetricColors.split), hasTarget: hasSplitTarget),
+      (widget: _FullMetric(label: l10n.metricDistance, value: '${data.distanceMeters}', unit: 'm', color: MetricColors.distance), hasTarget: false),
+      (widget: _FullMetric(label: l10n.metricWatts, value: '${data.powerWatts}', unit: 'W', color: hasWattsTarget ? _wattsColor : MetricColors.watts), hasTarget: hasWattsTarget),
+      (widget: _FullMetric(label: l10n.metricSpm, value: data.strokeRate.toStringAsFixed(1), color: hasSpmTarget ? _spmColor : MetricColors.spm), hasTarget: hasSpmTarget),
+      (widget: _FullMetric(label: l10n.metricCalories, value: '${data.totalCalories}', unit: 'kcal', color: MetricColors.calories), hasTarget: false),
       if (data.heartRate > 0)
-        (widget: _FullMetric(label: 'PULSO', value: '${data.heartRate}', unit: 'bpm', color: MetricColors.heartRate), hasTarget: false),
+        (widget: _FullMetric(label: l10n.metricHeartRate, value: '${data.heartRate}', unit: 'bpm', color: MetricColors.heartRate), hasTarget: false),
     ];
 
     final targeted = all.where((m) => m.hasTarget).map((m) => m.widget).toList();
@@ -597,6 +612,7 @@ class _CompactControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: Row(
@@ -606,7 +622,7 @@ class _CompactControls extends StatelessWidget {
             FilledButton.icon(
               onPressed: w.resume,
               icon: const Icon(Icons.play_arrow),
-              label: const Text('Reanudar'),
+              label: Text(l10n.workoutResume),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(140, 44),
               ),
@@ -615,7 +631,7 @@ class _CompactControls extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: w.pause,
               icon: const Icon(Icons.pause),
-              label: const Text('Pausa'),
+              label: Text(l10n.workoutPause),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(140, 44),
               ),
