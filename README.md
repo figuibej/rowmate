@@ -54,9 +54,9 @@ Parsed metrics: **Split /500m · SPM · Watts · Distance · Calories · Heart R
 ## Screenshots
 
 <img src="docs/image-01.png" />
-<img src="docs/image-02.jpg" />
+<img src="docs/image-02.png" />
 <img src="docs/image-03.png" />
-<img src="docs/image-04.jpg" />
+<img src="docs/image-04.png" />
 <img src="docs/image-05.png" />
 
 
