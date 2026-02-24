@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
 import '../../core/models/interval_step.dart';
 import '../../core/models/routine.dart';
 import '../../shared/theme.dart';
@@ -37,15 +38,16 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_nameCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El nombre no puede estar vacío')),
+        SnackBar(content: Text(l10n.editorNameEmpty)),
       );
       return;
     }
     if (_steps.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Agregá al menos un paso')),
+        SnackBar(content: Text(l10n.editorNoSteps)),
       );
       return;
     }
@@ -144,28 +146,29 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
   }
 
   void _changeRepeatCount(String groupId) async {
+    final l10n = AppLocalizations.of(context)!;
     final current = _steps.firstWhere((s) => s.groupId == groupId).groupRepeatCount ?? 1;
     final ctrl = TextEditingController(text: current.toString());
     final result = await showDialog<int>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Repeticiones'),
+        title: Text(l10n.editorRepetitions),
         content: TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Cantidad',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.editorAmount,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
+              child: Text(l10n.cancel)),
           FilledButton(
               onPressed: () => Navigator.pop(context, int.tryParse(ctrl.text.trim()) ?? 1),
-              child: const Text('OK')),
+              child: Text(l10n.ok)),
         ],
       ),
     );
@@ -195,11 +198,12 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existing == null ? 'Nueva rutina' : 'Editar rutina'),
+        title: Text(widget.existing == null ? l10n.editorNewRoutine : l10n.editorEditRoutine),
         actions: [
-          TextButton(onPressed: _save, child: const Text('Guardar')),
+          TextButton(onPressed: _save, child: Text(l10n.save)),
         ],
       ),
       body: Column(
@@ -210,18 +214,18 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
               children: [
                 TextField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre de la rutina',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.editorRoutineName,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _descCtrl,
                   maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Descripción (opcional)',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.editorDescription,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ],
@@ -234,19 +238,19 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Text('Pasos (${_steps.length})',
+                Text(l10n.editorStepsCount(_steps.length),
                     style: const TextStyle(fontWeight: FontWeight.w600)),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () => _addStep(),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Paso'),
+                  label: Text(l10n.editorStep),
                 ),
                 const SizedBox(width: 4),
                 TextButton.icon(
                   onPressed: _addSeries,
                   icon: const Icon(Icons.repeat, size: 18),
-                  label: const Text('Serie'),
+                  label: Text(l10n.editorSeries),
                 ),
               ],
             ),
@@ -254,10 +258,10 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
 
           Expanded(
             child: _steps.isEmpty
-                ? const Center(
-                    child: Text('Todavía no hay pasos.\nPresioná "Paso" o "Serie".',
+                ? Center(
+                    child: Text(l10n.editorEmptySteps,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white38)))
+                        style: const TextStyle(color: Colors.white38)))
                 : _buildStepsList(),
           ),
         ],
@@ -333,7 +337,7 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
           ),
           child: Icon(_stepIcon(step.type), size: 14, color: color),
         ),
-        title: Text(step.type.label,
+        title: Text(stepTypeLocalized(step.type, AppLocalizations.of(context)!),
             style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
         subtitle: Text(
           step.targetLabel.isEmpty
@@ -378,13 +382,12 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
         children: [
           const Icon(Icons.repeat, size: 16, color: Color(0xFF00B4D8)),
           const SizedBox(width: 6),
-          const Text('Serie',
-              style: TextStyle(
+          Text(AppLocalizations.of(context)!.editorSeries,
+              style: const TextStyle(
                   color: Color(0xFF00B4D8),
                   fontWeight: FontWeight.w700,
                   fontSize: 13)),
           const SizedBox(width: 8),
-          // Badge ×N (editable)
           InkWell(
             onTap: () => _changeRepeatCount(groupId),
             borderRadius: BorderRadius.circular(12),
@@ -407,7 +410,7 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
             color: Colors.red.shade300,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32),
-            tooltip: 'Eliminar serie',
+            tooltip: AppLocalizations.of(context)!.editorDeleteSeries,
             onPressed: () => _deleteGroup(groupId),
           ),
         ],
@@ -428,7 +431,7 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
       child: TextButton.icon(
         onPressed: () => _addStepToGroup(groupId),
         icon: const Icon(Icons.add, size: 14),
-        label: const Text('Agregar paso a serie', style: TextStyle(fontSize: 12)),
+        label: Text(AppLocalizations.of(context)!.editorAddStepToSeries, style: const TextStyle(fontSize: 12)),
         style: TextButton.styleFrom(
           foregroundColor: const Color(0xFF00B4D8),
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -547,30 +550,29 @@ class _StepDialogState extends State<_StepDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: Text(widget.existing == null ? 'Nuevo paso' : 'Editar paso'),
+      title: Text(widget.existing == null ? l10n.editorNewStep : l10n.editorEditStep),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Tipo
             DropdownButtonFormField<StepType>(
               value: _type,
-              decoration: const InputDecoration(labelText: 'Tipo', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: l10n.editorStepType, border: const OutlineInputBorder()),
               items: StepType.values
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
+                  .map((t) => DropdownMenuItem(value: t, child: Text(stepTypeLocalized(t, l10n))))
                   .toList(),
               onChanged: (v) => setState(() => _type = v!),
             ),
 
             const SizedBox(height: 12),
 
-            // Modo duración vs distancia
             SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Por tiempo')),
-                ButtonSegment(value: true, label: Text('Por distancia')),
+              segments: [
+                ButtonSegment(value: false, label: Text(l10n.editorByTime)),
+                ButtonSegment(value: true, label: Text(l10n.editorByDistance)),
               ],
               selected: {_useDistance},
               onSelectionChanged: (v) => setState(() => _useDistance = v.first),
@@ -585,8 +587,8 @@ class _StepDialogState extends State<_StepDialog> {
                     child: TextField(
                       controller: _minCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          labelText: 'Min', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: l10n.editorMinutes, border: const OutlineInputBorder()),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -594,8 +596,8 @@ class _StepDialogState extends State<_StepDialog> {
                     child: TextField(
                       controller: _secCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          labelText: 'Seg', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: l10n.editorSeconds, border: const OutlineInputBorder()),
                     ),
                   ),
                 ],
@@ -605,14 +607,14 @@ class _StepDialogState extends State<_StepDialog> {
               TextField(
                 controller: _distCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    labelText: 'Metros', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: l10n.editorMeters, border: const OutlineInputBorder()),
               ),
 
             const SizedBox(height: 12),
             const Divider(),
-            const Text('Objetivos opcionales',
-                style: TextStyle(fontSize: 12, color: Colors.white54)),
+            Text(l10n.editorOptionalTargets,
+                style: const TextStyle(fontSize: 12, color: Colors.white54)),
             const SizedBox(height: 8),
 
             Row(
@@ -621,8 +623,8 @@ class _StepDialogState extends State<_StepDialog> {
                   child: TextField(
                     controller: _wMinCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                        labelText: 'W mín', border: OutlineInputBorder()),
+                    decoration: InputDecoration(
+                        labelText: l10n.editorWattsMin, border: const OutlineInputBorder()),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -630,8 +632,8 @@ class _StepDialogState extends State<_StepDialog> {
                   child: TextField(
                     controller: _wMaxCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                        labelText: 'W máx', border: OutlineInputBorder()),
+                    decoration: InputDecoration(
+                        labelText: l10n.editorWattsMax, border: const OutlineInputBorder()),
                   ),
                 ),
               ],
@@ -642,8 +644,8 @@ class _StepDialogState extends State<_StepDialog> {
             TextField(
               controller: _spmCtrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'SPM objetivo', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: l10n.editorTargetSpm, border: const OutlineInputBorder()),
             ),
 
             const SizedBox(height: 8),
@@ -654,8 +656,8 @@ class _StepDialogState extends State<_StepDialog> {
                   child: TextField(
                     controller: _splitMinCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                        labelText: 'Split min', border: OutlineInputBorder()),
+                    decoration: InputDecoration(
+                        labelText: l10n.editorSplitMin, border: const OutlineInputBorder()),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -663,8 +665,8 @@ class _StepDialogState extends State<_StepDialog> {
                   child: TextField(
                     controller: _splitSecCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                        labelText: 'Split seg', border: OutlineInputBorder()),
+                    decoration: InputDecoration(
+                        labelText: l10n.editorSplitSec, border: const OutlineInputBorder()),
                   ),
                 ),
               ],
@@ -675,10 +677,10 @@ class _StepDialogState extends State<_StepDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar')),
+            child: Text(l10n.cancel)),
         FilledButton(
             onPressed: () => Navigator.pop(context, _build()),
-            child: const Text('Confirmar')),
+            child: Text(l10n.confirm)),
       ],
     );
   }

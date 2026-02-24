@@ -122,6 +122,12 @@ abstract class AppLocalizations {
   /// **'History'**
   String get navHistory;
 
+  /// No description provided for @navProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get navProfile;
+
   /// No description provided for @deviceTitle.
   ///
   /// In en, this message translates to:
@@ -215,7 +221,7 @@ abstract class AppLocalizations {
   /// No description provided for @workoutRowerNotConnected.
   ///
   /// In en, this message translates to:
-  /// **'Rower not connected — data will not be recorded'**
+  /// **'Connect the rower to start a workout'**
   String get workoutRowerNotConnected;
 
   /// No description provided for @workoutOrPickRoutine.
@@ -499,6 +505,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get delete;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @editorNewRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'New routine'**
+  String get editorNewRoutine;
+
+  /// No description provided for @editorEditRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit routine'**
+  String get editorEditRoutine;
+
+  /// No description provided for @editorRoutineName.
+  ///
+  /// In en, this message translates to:
+  /// **'Routine name'**
+  String get editorRoutineName;
+
+  /// No description provided for @editorDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get editorDescription;
+
+  /// No description provided for @editorStepsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps ({count})'**
+  String editorStepsCount(int count);
+
+  /// No description provided for @editorStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step'**
+  String get editorStep;
+
+  /// No description provided for @editorSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get editorSeries;
+
+  /// No description provided for @editorEmptySteps.
+  ///
+  /// In en, this message translates to:
+  /// **'No steps yet.\nPress \"Step\" or \"Series\".'**
+  String get editorEmptySteps;
+
+  /// No description provided for @editorDeleteSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete series'**
+  String get editorDeleteSeries;
+
+  /// No description provided for @editorAddStepToSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Add step to series'**
+  String get editorAddStepToSeries;
+
+  /// No description provided for @editorRepetitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Repetitions'**
+  String get editorRepetitions;
+
+  /// No description provided for @editorAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get editorAmount;
+
+  /// No description provided for @editorNameEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Name cannot be empty'**
+  String get editorNameEmpty;
+
+  /// No description provided for @editorNoSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one step'**
+  String get editorNoSteps;
+
+  /// No description provided for @editorNewStep.
+  ///
+  /// In en, this message translates to:
+  /// **'New step'**
+  String get editorNewStep;
+
+  /// No description provided for @editorEditStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit step'**
+  String get editorEditStep;
+
+  /// No description provided for @editorStepType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get editorStepType;
+
+  /// No description provided for @editorByTime.
+  ///
+  /// In en, this message translates to:
+  /// **'By time'**
+  String get editorByTime;
+
+  /// No description provided for @editorByDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'By distance'**
+  String get editorByDistance;
+
+  /// No description provided for @editorMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Min'**
+  String get editorMinutes;
+
+  /// No description provided for @editorSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Sec'**
+  String get editorSeconds;
+
+  /// No description provided for @editorMeters.
+  ///
+  /// In en, this message translates to:
+  /// **'Meters'**
+  String get editorMeters;
+
+  /// No description provided for @editorOptionalTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional targets'**
+  String get editorOptionalTargets;
+
+  /// No description provided for @editorWattsMin.
+  ///
+  /// In en, this message translates to:
+  /// **'W min'**
+  String get editorWattsMin;
+
+  /// No description provided for @editorWattsMax.
+  ///
+  /// In en, this message translates to:
+  /// **'W max'**
+  String get editorWattsMax;
+
+  /// No description provided for @editorTargetSpm.
+  ///
+  /// In en, this message translates to:
+  /// **'Target SPM'**
+  String get editorTargetSpm;
+
+  /// No description provided for @editorSplitMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Split min'**
+  String get editorSplitMin;
+
+  /// No description provided for @editorSplitSec.
+  ///
+  /// In en, this message translates to:
+  /// **'Split sec'**
+  String get editorSplitSec;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// No description provided for @profileConnectStrava.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect with Strava'**
+  String get profileConnectStrava;
+
+  /// No description provided for @profileConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get profileConnected;
+
+  /// No description provided for @profileConnectedToStrava.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected to Strava'**
+  String get profileConnectedToStrava;
+
+  /// No description provided for @profileDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get profileDisconnect;
+
+  /// No description provided for @profileDisconnectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect Strava'**
+  String get profileDisconnectTitle;
+
+  /// No description provided for @profileDisconnectContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sessions won\'t be uploaded automatically. Continue?'**
+  String get profileDisconnectContent;
+
+  /// No description provided for @profileUploadSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Settings'**
+  String get profileUploadSettings;
+
+  /// No description provided for @profileAutoUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-upload'**
+  String get profileAutoUpload;
+
+  /// No description provided for @profileAutoUploadDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload sessions to Strava automatically after finishing'**
+  String get profileAutoUploadDesc;
+
+  /// No description provided for @profileAskUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask me each time'**
+  String get profileAskUpload;
+
+  /// No description provided for @profileAskUploadDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a dialog after each workout'**
+  String get profileAskUploadDesc;
+
+  /// No description provided for @profileManualUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual only'**
+  String get profileManualUpload;
+
+  /// No description provided for @profileManualUploadDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload sessions manually from History'**
+  String get profileManualUploadDesc;
+
+  /// No description provided for @profileSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync'**
+  String get profileSync;
+
+  /// No description provided for @profileSyncDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Download your rowing activities from Strava'**
+  String get profileSyncDesc;
+
+  /// No description provided for @profileSyncFromStrava.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync from Strava'**
+  String get profileSyncFromStrava;
+
+  /// No description provided for @profileSyncToStrava.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync to Strava'**
+  String get profileSyncToStrava;
+
+  /// No description provided for @profileSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing...'**
+  String get profileSyncing;
+
+  /// No description provided for @profileUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading...'**
+  String get profileUploading;
+
+  /// No description provided for @profileSyncResult.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sessions synced'**
+  String profileSyncResult(int count);
+
+  /// No description provided for @profileUploadResult.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sessions uploaded'**
+  String profileUploadResult(int count);
+
+  /// No description provided for @profileSyncToDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload all unsynced local sessions to Strava'**
+  String get profileSyncToDesc;
+
+  /// No description provided for @profilePendingUploads.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Uploads'**
+  String get profilePendingUploads;
+
+  /// No description provided for @profileUploadToStrava.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload to Strava'**
+  String get profileUploadToStrava;
+
+  /// No description provided for @profileUploadingToStrava.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading to Strava...'**
+  String get profileUploadingToStrava;
+
+  /// No description provided for @profileUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded to Strava'**
+  String get profileUploaded;
+
+  /// No description provided for @profileUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed'**
+  String get profileUploadFailed;
+
+  /// No description provided for @profileAskUploadDialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload this session to Strava?'**
+  String get profileAskUploadDialog;
 }
 
 class _AppLocalizationsDelegate

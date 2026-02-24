@@ -1,9 +1,13 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:rowmate/l10n/app_localizations.dart';
 import '../../core/database/database_service.dart';
+import '../../core/models/interval_step.dart';
 import '../../core/models/workout_session.dart';
+import '../../core/strava/strava_config.dart';
 import '../../shared/theme.dart';
+import '../profile/profile_provider.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final WorkoutSession session;
@@ -16,26 +20,44 @@ class SessionDetailScreen extends StatefulWidget {
 
 class _SessionDetailScreenState extends State<SessionDetailScreen> {
   List<DataPoint> _points = [];
+  List<IntervalStep> _flatSteps = [];
   bool _loading = true;
   int _chartMetric = 0; // 0=watts, 1=spm, 2=split, 3=distance, 4=hr
+  late WorkoutSession _session;
 
   @override
   void initState() {
     super.initState();
+    _session = widget.session;
     _load();
   }
 
   Future<void> _load() async {
     final pts = await widget.db.getDataPointsForSession(widget.session.id!);
+    List<IntervalStep> flatSteps = [];
+    if (widget.session.routineId != null) {
+      final routine = await widget.db.getRoutineById(widget.session.routineId!);
+      if (routine != null) {
+        flatSteps = routine.flattenedSteps;
+      }
+    }
     setState(() {
       _points = pts;
+      _flatSteps = flatSteps;
       _loading = false;
     });
   }
 
+  Future<void> _refreshSession() async {
+    final updated = await widget.db.getSessionById(widget.session.id!);
+    if (updated != null && mounted) {
+      setState(() => _session = updated);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final s = widget.session;
+    final s = _session;
     final l10n = AppLocalizations.of(context)!;
     final metricLabels = [
       l10n.sessionChartWatts,
@@ -44,9 +66,52 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       l10n.sessionChartDistance,
       l10n.sessionChartHr,
     ];
+    final stravaConfigured = StravaConfig.isConfigured;
+    final ProfileProvider? profile = stravaConfigured
+        ? context.watch<ProfileProvider>()
+        : null;
+    final showUploadButton = stravaConfigured &&
+        profile != null &&
+        profile.isConnected &&
+        s.stravaActivityId == null &&
+        s.finishedAt != null;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(s.routineName ?? l10n.workoutFree),
+        actions: [
+          if (stravaConfigured && s.stravaActivityId != null)
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: Icon(Icons.cloud_done, color: Color(0xFFFC4C02), size: 20),
+            ),
+          if (showUploadButton)
+            IconButton(
+              icon: profile.isUploading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cloud_upload_outlined),
+              tooltip: l10n.profileUploadToStrava,
+              onPressed: profile.isUploading
+                  ? null
+                  : () async {
+                      final ok = await profile.uploadSession(s.id!);
+                      if (context.mounted) {
+                        if (ok) _refreshSession();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(ok
+                                ? l10n.profileUploaded
+                                : l10n.profileUploadFailed),
+                          ),
+                        );
+                      }
+                    },
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -76,6 +141,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   // ─── Resumen general ───────────────────────────────────────────────────
 
   Widget _buildSummary(WorkoutSession s, AppLocalizations l10n) {
+    final stats = SessionStats.compute(_points);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -87,11 +153,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                _StatChip(label: l10n.historyStatTime, value: s.durationFormatted),
-                _StatChip(label: l10n.historyStatDistance, value: '${s.totalDistanceMeters}m'),
-                _StatChip(label: l10n.historyStatWatts, value: '${s.avgPowerWatts}W'),
-                _StatChip(label: 'SPM', value: s.avgStrokeRate.toStringAsFixed(1)),
-                _StatChip(label: l10n.historyStatCalories, value: '${s.totalCalories}'),
+                _StatChip(label: l10n.historyStatTime, value: stats.durationFormatted),
+                _StatChip(label: l10n.historyStatDistance, value: '${stats.totalDistance}m', color: MetricColors.distance),
+                _StatChip(label: 'Watts', value: '${stats.p99Watts}', color: MetricColors.watts),
+                _StatChip(label: 'SPM', value: stats.p99Spm.toStringAsFixed(1), color: MetricColors.spm),
+                _StatChip(label: 'Split', value: stats.splitFormatted, color: MetricColors.split),
               ],
             ),
           ],
@@ -226,8 +292,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       return FlSpot(x, y);
     }).toList();
 
-    // Computar regiones de pasos con tipo
-    final stepRegions = <({double start, double end, String type})>[];
+    // Computar regiones de pasos con tipo e índice
+    final stepRegions = <({double start, double end, String type, int stepIndex})>[];
     if (_hasStepData) {
       int? prevStep;
       String? prevType;
@@ -235,16 +301,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       for (final p in _points) {
         if (p.stepIndex != null && p.stepIndex != prevStep) {
           if (prevStep != null && prevType != null) {
-            stepRegions.add((start: startX, end: p.elapsedSeconds.toDouble(), type: prevType!));
+            stepRegions.add((start: startX, end: p.elapsedSeconds.toDouble(), type: prevType!, stepIndex: prevStep!));
           }
           startX = p.elapsedSeconds.toDouble();
           prevStep = p.stepIndex;
           prevType = p.stepType ?? 'work';
         }
       }
-      // Último segmento
       if (prevStep != null && prevType != null) {
-        stepRegions.add((start: startX, end: _points.last.elapsedSeconds.toDouble(), type: prevType!));
+        stepRegions.add((start: startX, end: _points.last.elapsedSeconds.toDouble(), type: prevType!, stepIndex: prevStep!));
       }
     }
 
@@ -266,9 +331,51 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       _ => '',
     };
 
-    // Determinar max Y para las RangeAnnotations
+    // Líneas horizontales de target por step
+    final targetLines = <LineChartBarData>[];
+    if (_flatSteps.isNotEmpty) {
+      for (final region in stepRegions) {
+        if (region.stepIndex >= _flatSteps.length) continue;
+        final step = _flatSteps[region.stepIndex];
+
+        final targetValues = <double>[];
+        switch (_chartMetric) {
+          case 0:
+            if (step.targetWattsMin != null) targetValues.add(step.targetWattsMin!.toDouble());
+            if (step.targetWattsMax != null) targetValues.add(step.targetWattsMax!.toDouble());
+          case 1:
+            if (step.targetSpm != null) targetValues.add(step.targetSpm!.toDouble());
+          case 2:
+            if (step.targetSplitSeconds != null) targetValues.add(step.targetSplitSeconds!.toDouble());
+        }
+
+        for (final targetY in targetValues) {
+          final regionColor = stepColor(region.type);
+          targetLines.add(LineChartBarData(
+            spots: [FlSpot(region.start, targetY), FlSpot(region.end, targetY)],
+            isCurved: false,
+            color: Colors.white.withAlpha(200),
+            barWidth: 2,
+            dashArray: [8, 5],
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: regionColor.withAlpha(18),
+              cutOffY: 0,
+              applyCutOffY: true,
+            ),
+          ));
+        }
+      }
+    }
+
     double maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-    maxY = maxY * 1.1; // margen del 10%
+    for (final tl in targetLines) {
+      for (final s in tl.spots) {
+        if (s.y > maxY) maxY = s.y;
+      }
+    }
+    maxY = maxY * 1.1;
     if (maxY <= 0) maxY = 100;
 
     return SizedBox(
@@ -335,6 +442,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 color: lineColor.withAlpha(30),
               ),
             ),
+            ...targetLines,
           ],
           extraLinesData: ExtraLinesData(
             verticalLines: stepRegions
@@ -380,7 +488,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 class _StatChip extends StatelessWidget {
   final String label;
   final String value;
-  const _StatChip({required this.label, required this.value});
+  final Color? color;
+  const _StatChip({required this.label, required this.value, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -388,8 +497,10 @@ class _StatChip extends StatelessWidget {
       child: Column(
         children: [
           Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: color ?? Colors.white)),
           Text(label,
               style: const TextStyle(fontSize: 10, color: Colors.white38)),
         ],

@@ -5,6 +5,7 @@
   "navWorkout": "Workout",
   "navRoutines": "Rutinas",
   "navHistory": "Historial",
+  "navProfile": "Perfil",
 
   "deviceTitle": "Dispositivo",
   "deviceDisconnect": "Desconectar",
@@ -22,7 +23,7 @@
 
   "workoutTitle": "Entrenamiento",
   "workoutFree": "Entrenamiento libre",
-  "workoutRowerNotConnected": "Rower no conectado — los datos no se registrarán",
+  "workoutRowerNotConnected": "Conectá el rower para iniciar un entrenamiento",
   "workoutOrPickRoutine": "  O elegí una rutina:",
   "workoutNoRoutines": "Creá una rutina en la pestaña \"Rutinas\"",
   "workoutInProgress": "Entrenamiento en curso...",
@@ -85,5 +86,82 @@
   "stepTypeCooldown": "Enfriamiento",
 
   "cancel": "Cancelar",
-  "delete": "Eliminar"
+  "delete": "Eliminar",
+  "ok": "OK",
+  "confirm": "Confirmar",
+  "save": "Guardar",
+
+  "editorNewRoutine": "Nueva rutina",
+  "editorEditRoutine": "Editar rutina",
+  "editorRoutineName": "Nombre de la rutina",
+  "editorDescription": "Descripción (opcional)",
+  "editorStepsCount": "Pasos ({count})",
+  "@editorStepsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "editorStep": "Paso",
+  "editorSeries": "Serie",
+  "editorEmptySteps": "Todavía no hay pasos.\nPresioná \"Paso\" o \"Serie\".",
+  "editorDeleteSeries": "Eliminar serie",
+  "editorAddStepToSeries": "Agregar paso a serie",
+  "editorRepetitions": "Repeticiones",
+  "editorAmount": "Cantidad",
+  "editorNameEmpty": "El nombre no puede estar vacío",
+  "editorNoSteps": "Agregá al menos un paso",
+  "editorNewStep": "Nuevo paso",
+  "editorEditStep": "Editar paso",
+  "editorStepType": "Tipo",
+  "editorByTime": "Por tiempo",
+  "editorByDistance": "Por distancia",
+  "editorMinutes": "Min",
+  "editorSeconds": "Seg",
+  "editorMeters": "Metros",
+  "editorOptionalTargets": "Objetivos opcionales",
+  "editorWattsMin": "W mín",
+  "editorWattsMax": "W máx",
+  "editorTargetSpm": "SPM objetivo",
+  "editorSplitMin": "Split min",
+  "editorSplitSec": "Split seg",
+
+  "profileTitle": "Perfil",
+  "profileConnectStrava": "Conectar con Strava",
+  "profileConnected": "Conectado",
+  "profileConnectedToStrava": "Conectado a Strava",
+  "profileDisconnect": "Desconectar",
+  "profileDisconnectTitle": "Desconectar Strava",
+  "profileDisconnectContent": "Tus sesiones no se subirán automáticamente. ¿Continuar?",
+  "profileUploadSettings": "Configuración de subida",
+  "profileAutoUpload": "Subida automática",
+  "profileAutoUploadDesc": "Subir sesiones a Strava automáticamente al terminar",
+  "profileAskUpload": "Preguntar cada vez",
+  "profileAskUploadDesc": "Mostrar un diálogo después de cada entrenamiento",
+  "profileManualUpload": "Solo manual",
+  "profileManualUploadDesc": "Subir sesiones manualmente desde el Historial",
+  "profileSync": "Sincronización",
+  "profileSyncDesc": "Descargar tus actividades de remo desde Strava",
+  "profileSyncFromStrava": "Sincronizar desde Strava",
+  "profileSyncToStrava": "Sincronizar a Strava",
+  "profileSyncing": "Sincronizando...",
+  "profileUploading": "Subiendo...",
+  "profileSyncResult": "{count} sesiones sincronizadas",
+  "profileUploadResult": "{count} sesiones subidas",
+  "@profileUploadResult": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "profileSyncToDesc": "Subir todas las sesiones locales sin sincronizar a Strava",
+  "@profileSyncResult": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "profilePendingUploads": "Subidas pendientes",
+  "profileUploadToStrava": "Subir a Strava",
+  "profileUploadingToStrava": "Subiendo a Strava...",
+  "profileUploaded": "Subido a Strava",
+  "profileUploadFailed": "Error al subir",
+  "profileAskUploadDialog": "¿Subir esta sesión a Strava?"
 }

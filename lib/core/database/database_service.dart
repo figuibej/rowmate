@@ -7,7 +7,7 @@ import '../models/workout_session.dart';
 /// Servicio de base de datos SQLite para rutinas y sesiones de entrenamiento
 class DatabaseService {
   static const _dbName = 'rower_app.db';
-  static const _dbVersion = 5;
+  static const _dbVersion = 6;
   Database? _db;
 
   Future<Database> get database async {
@@ -52,6 +52,11 @@ class DatabaseService {
         'ALTER TABLE data_points ADD COLUMN step_type TEXT',
       );
     }
+    if (oldVersion < 6) {
+      await db.execute(
+        'ALTER TABLE workout_sessions ADD COLUMN strava_activity_id TEXT',
+      );
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -93,7 +98,8 @@ class DatabaseService {
         total_time_seconds    INTEGER NOT NULL DEFAULT 0,
         avg_power_watts       INTEGER NOT NULL DEFAULT 0,
         avg_stroke_rate       REAL    NOT NULL DEFAULT 0,
-        total_calories        INTEGER NOT NULL DEFAULT 0
+        total_calories        INTEGER NOT NULL DEFAULT 0,
+        strava_activity_id    TEXT
       )
     ''');
 
@@ -181,6 +187,14 @@ class DatabaseService {
     return step.copyWith(id: id);
   }
 
+  Future<Routine?> getRoutineById(int id) async {
+    final db = await database;
+    final rows = await db.query('routines', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return null;
+    final steps = await getStepsForRoutine(id);
+    return Routine.fromMap(rows.first, steps: steps);
+  }
+
   // ─── Sesiones ─────────────────────────────────────────────────────────────
 
   Future<int> insertSession(WorkoutSession session) async {
@@ -196,6 +210,23 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [session.id],
     );
+  }
+
+  Future<void> updateSessionStravaId(int sessionId, String stravaActivityId) async {
+    final db = await database;
+    await db.update(
+      'workout_sessions',
+      {'strava_activity_id': stravaActivityId},
+      where: 'id = ?',
+      whereArgs: [sessionId],
+    );
+  }
+
+  Future<WorkoutSession?> getSessionById(int id) async {
+    final db = await database;
+    final rows = await db.query('workout_sessions', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return null;
+    return WorkoutSession.fromMap(rows.first);
   }
 
   Future<List<WorkoutSession>> getSessions() async {
@@ -237,6 +268,39 @@ class DatabaseService {
             stepType: r['step_type'] as String?,
           ))
         .toList();
+  }
+
+  Future<Map<int, SessionStats>> getStatsForSessions(List<int> sessionIds) async {
+    if (sessionIds.isEmpty) return {};
+    final db = await database;
+    final placeholders = sessionIds.map((_) => '?').join(',');
+    final rows = await db.query(
+      'data_points',
+      columns: [
+        'session_id', 'power_watts', 'stroke_rate',
+        'pace_500m_seconds', 'distance_meters', 'elapsed_seconds', 'calories',
+      ],
+      where: 'session_id IN ($placeholders)',
+      whereArgs: sessionIds,
+    );
+
+    final grouped = <int, List<DataPoint>>{};
+    for (final row in rows) {
+      final sid = row['session_id'] as int;
+      grouped.putIfAbsent(sid, () => []).add(DataPoint(
+        sessionId: sid,
+        elapsedSeconds: row['elapsed_seconds'] as int,
+        strokeRate: (row['stroke_rate'] as num).toDouble(),
+        distanceMeters: row['distance_meters'] as int,
+        pace500mSeconds: row['pace_500m_seconds'] as int,
+        powerWatts: row['power_watts'] as int,
+        calories: row['calories'] as int,
+      ));
+    }
+
+    return grouped.map(
+      (sid, points) => MapEntry(sid, SessionStats.compute(points)),
+    );
   }
 
   Future<void> close() async => _db?.close();

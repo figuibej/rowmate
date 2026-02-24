@@ -10,6 +10,7 @@ class WorkoutSession {
   final int avgPowerWatts;
   final double avgStrokeRate;
   final int totalCalories;
+  final String? stravaActivityId;
 
   const WorkoutSession({
     this.id,
@@ -22,6 +23,7 @@ class WorkoutSession {
     this.avgPowerWatts = 0,
     this.avgStrokeRate = 0,
     this.totalCalories = 0,
+    this.stravaActivityId,
   });
 
   String get durationFormatted {
@@ -45,6 +47,7 @@ class WorkoutSession {
     'avg_power_watts': avgPowerWatts,
     'avg_stroke_rate': avgStrokeRate,
     'total_calories': totalCalories,
+    'strava_activity_id': stravaActivityId,
   };
 
   factory WorkoutSession.fromMap(Map<String, dynamic> map) => WorkoutSession(
@@ -60,7 +63,68 @@ class WorkoutSession {
     avgPowerWatts: map['avg_power_watts'] as int? ?? 0,
     avgStrokeRate: (map['avg_stroke_rate'] as num?)?.toDouble() ?? 0,
     totalCalories: map['total_calories'] as int? ?? 0,
+    stravaActivityId: map['strava_activity_id'] as String?,
   );
+}
+
+/// Estadísticas computadas desde data_points (percentil 99)
+class SessionStats {
+  final int p99Watts;
+  final double p99Spm;
+  final int p99SplitSeconds;
+  final int totalDistance;
+  final int totalTimeSeconds;
+  final int totalCalories;
+
+  const SessionStats({
+    this.p99Watts = 0,
+    this.p99Spm = 0,
+    this.p99SplitSeconds = 0,
+    this.totalDistance = 0,
+    this.totalTimeSeconds = 0,
+    this.totalCalories = 0,
+  });
+
+  String get splitFormatted {
+    if (p99SplitSeconds <= 0) return '--:--';
+    final m = p99SplitSeconds ~/ 60;
+    final s = p99SplitSeconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  String get durationFormatted {
+    final h = totalTimeSeconds ~/ 3600;
+    final m = (totalTimeSeconds % 3600) ~/ 60;
+    final s = totalTimeSeconds % 60;
+    if (h > 0) {
+      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  static double _percentile99(List<num> values) {
+    if (values.isEmpty) return 0;
+    final sorted = List<num>.from(values)..sort();
+    final index = ((sorted.length - 1) * 0.99).floor();
+    return sorted[index].toDouble();
+  }
+
+  static SessionStats compute(List<DataPoint> points) {
+    if (points.isEmpty) return const SessionStats();
+
+    final watts = points.map((p) => p.powerWatts).where((v) => v > 0).toList();
+    final spms = points.map((p) => p.strokeRate).where((v) => v > 0).toList();
+    final splits = points.map((p) => p.pace500mSeconds).where((v) => v > 0).toList();
+
+    return SessionStats(
+      p99Watts: _percentile99(watts).round(),
+      p99Spm: _percentile99(spms),
+      p99SplitSeconds: _percentile99(splits).round(),
+      totalDistance: points.map((p) => p.distanceMeters).reduce((a, b) => a > b ? a : b),
+      totalTimeSeconds: points.map((p) => p.elapsedSeconds).reduce((a, b) => a > b ? a : b),
+      totalCalories: points.map((p) => p.calories).reduce((a, b) => a > b ? a : b),
+    );
+  }
 }
 
 /// Punto de telemetría individual dentro de una sesión

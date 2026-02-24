@@ -46,8 +46,9 @@ Parsed metrics: **Split /500m · SPM · Watts · Distance · Calories · Heart R
 - 📊 **Real-time metrics** — split, SPM, watts, distance, BPM
 - 🏋️ **Training routines** — configurable intervals by time or distance
 - 🎯 **Targets** — optional watts and SPM goals per step
-- 📈 **Session history** — with detailed telemetry
+- 📈 **Session history** — with detailed telemetry and per-step breakdown
 - 🔒 **Screen always-on** during workouts
+- 🔄 **Strava integration** — upload sessions, sync activities, track sync status
 
 ---
 
@@ -72,16 +73,23 @@ lib/
 │   │   └── ftms_parser.dart       # 0x2AD2 characteristic parser
 │   ├── database/
 │   │   └── database_service.dart  # SQLite (sqflite)
-│   └── models/
-│       ├── rowing_data.dart        # Real-time metrics
-│       ├── routine.dart            # Training routine
-│       ├── interval_step.dart      # Individual step (work/rest)
-│       └── workout_session.dart    # Saved session + DataPoints
+│   ├── models/
+│   │   ├── rowing_data.dart        # Real-time metrics
+│   │   ├── routine.dart            # Training routine
+│   │   ├── interval_step.dart      # Individual step (work/rest)
+│   │   └── workout_session.dart    # Saved session + DataPoints
+│   └── strava/
+│       ├── strava_config.dart      # API URLs and constants
+│       ├── strava_secrets.dart     # Credentials (gitignored)
+│       ├── strava_auth_service.dart # OAuth2 login/logout/refresh
+│       ├── strava_api_service.dart  # Upload, sync, activity streams
+│       └── tcx_builder.dart        # TCX XML generator for uploads
 ├── features/
 │   ├── device/        # BLE scan + connection
 │   ├── workout/       # Live workout with routine tracking
 │   ├── routines/      # Routine CRUD + step editor
-│   └── history/       # Session history
+│   ├── history/       # Session history
+│   └── profile/       # Strava connection + upload settings
 └── shared/
     ├── theme.dart
     └── widgets/
@@ -116,6 +124,49 @@ flutter run -d macos
 # List available devices
 flutter devices
 ```
+
+---
+
+## Strava Integration (optional)
+
+RowMate can upload your rowing sessions to Strava and sync activities from other devices. **Strava is completely optional** — the app works fully offline without it.
+
+### Setup
+
+1. Go to [developers.strava.com](https://developers.strava.com) and log in with your Strava account
+2. Click **Create & Manage Your App** → **Create an App**
+3. Fill in the form:
+   - **Application Name**: `RowMate` (or any name)
+   - **Category**: `Training`
+   - **Club**: leave empty
+   - **Website**: any URL (e.g. `https://github.com/figuibeh/rowmate`)
+   - **Authorization Callback Domain**: `rowmate`
+4. Once created, copy your **Client Secret** from the app settings
+5. In the project, copy the example secrets file and fill in your secret:
+
+```bash
+cp lib/core/strava/strava_secrets.dart.example lib/core/strava/strava_secrets.dart
+```
+
+6. Edit `lib/core/strava/strava_secrets.dart`:
+
+```dart
+const stravaClientId = '205302';           // RowMate's public client ID
+const stravaClientSecret = 'YOUR_SECRET';  // paste your secret here
+```
+
+> The `client_id` (`205302`) is RowMate's registered app ID on Strava — it's public and shared across all users. The `client_secret` is personal and **must not be committed to git**.
+
+### Features
+
+- **Upload to Strava**: bulk-upload all unsynced local sessions with one tap
+- **Auto-upload**: sessions upload to Strava automatically after finishing (configurable)
+- **Ask each time**: shows a dialog after each workout
+- **Manual upload**: upload individual sessions from the session detail screen
+- **Sync from Strava**: download your rowing activities from Strava to the local history
+- **Sync status**: each session in history shows a Strava icon indicating sync status
+- **Session auto-repair**: sessions that didn't save properly (e.g. app closed mid-workout) are automatically repaired from telemetry data before uploading
+- **Duplicate detection**: re-uploading an already synced session links to the existing Strava activity instead of creating a duplicate
 
 ---
 

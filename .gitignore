@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Strava credentials
+lib/core/strava/strava_secrets.dart

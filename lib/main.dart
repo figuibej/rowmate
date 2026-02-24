@@ -6,10 +6,15 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'core/bluetooth/ble_service.dart';
 import 'core/database/database_service.dart';
+import 'core/strava/strava_config.dart';
+import 'core/strava/strava_auth_service.dart';
+import 'core/strava/strava_api_service.dart';
 import 'features/device/device_provider.dart';
 import 'features/device/device_screen.dart';
 import 'features/history/history_provider.dart';
 import 'features/history/history_screen.dart';
+import 'features/profile/profile_provider.dart';
+import 'features/profile/profile_screen.dart';
 import 'features/routines/routines_provider.dart';
 import 'features/routines/routines_screen.dart';
 import 'features/workout/workout_provider.dart';
@@ -29,6 +34,7 @@ class RowerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final ble = BleService();
     final db = DatabaseService();
+    final stravaConfigured = StravaConfig.isConfigured;
 
     return MultiProvider(
       providers: [
@@ -44,6 +50,12 @@ class RowerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WorkoutProvider(ble, db)),
         ChangeNotifierProvider(create: (_) => RoutinesProvider(db)),
         ChangeNotifierProvider(create: (_) => HistoryProvider(db)),
+        if (stravaConfigured)
+          ChangeNotifierProvider(create: (_) {
+            final stravaAuth = StravaAuthService();
+            final stravaApi = StravaApiService(stravaAuth);
+            return ProfileProvider(stravaAuth, stravaApi, db);
+          }),
       ],
       child: MaterialApp(
         title: 'RowMate',
@@ -75,22 +87,26 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _tab = 0;
 
-  static const _screens = [
-    DeviceScreen(),
-    WorkoutScreen(),
-    RoutinesScreen(),
-    HistoryScreen(),
+  static final _stravaConfigured = StravaConfig.isConfigured;
+
+  static final _screens = [
+    const DeviceScreen(),
+    const WorkoutScreen(),
+    const RoutinesScreen(),
+    const HistoryScreen(),
+    if (_stravaConfigured) const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    const historyIndex = 3;
     return Scaffold(
       body: IndexedStack(index: _tab, children: _screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) {
-          if (i == 3) context.read<HistoryProvider>().load();
+          if (i == historyIndex) context.read<HistoryProvider>().load();
           setState(() => _tab = i);
         },
         destinations: [
@@ -114,6 +130,12 @@ class _MainShellState extends State<MainShell> {
             selectedIcon: const Icon(Icons.history),
             label: l10n.navHistory,
           ),
+          if (_stravaConfigured)
+            NavigationDestination(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: l10n.navProfile,
+            ),
         ],
       ),
     );

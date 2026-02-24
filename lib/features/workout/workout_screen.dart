@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import '../../core/models/interval_step.dart';
 import '../../core/models/routine.dart';
 import '../../core/models/rowing_data.dart';
+import '../../core/strava/strava_config.dart';
 import '../../shared/theme.dart';
 import '../device/device_provider.dart';
+import '../profile/profile_provider.dart';
 import '../routines/routines_provider.dart';
 import 'workout_provider.dart';
 
@@ -35,10 +37,11 @@ class WorkoutScreen extends StatelessWidget {
 class _IdleView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final device = context.read<DeviceProvider>();
+    final device = context.watch<DeviceProvider>();
     final routines = context.watch<RoutinesProvider>().routines;
     final workout = context.read<WorkoutProvider>();
     final l10n = AppLocalizations.of(context)!;
+    final connected = device.isConnected;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.workoutTitle)),
@@ -47,7 +50,7 @@ class _IdleView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!device.isConnected)
+            if (!connected)
               Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 16),
@@ -59,17 +62,21 @@ class _IdleView extends StatelessWidget {
                   children: [
                     const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
                     const SizedBox(width: 8),
-                    Text(l10n.workoutRowerNotConnected,
-                        style: const TextStyle(color: Colors.orange, fontSize: 13)),
+                    Expanded(
+                      child: Text(l10n.workoutRowerNotConnected,
+                          style: const TextStyle(color: Colors.orange, fontSize: 13)),
+                    ),
                   ],
                 ),
               ),
 
             FilledButton.icon(
-              onPressed: () {
-                workout.startFree();
-                _openFullscreen(context);
-              },
+              onPressed: connected
+                  ? () {
+                      workout.startFree();
+                      _openFullscreen(context);
+                    }
+                  : null,
               icon: const Icon(Icons.play_arrow),
               label: Text(l10n.workoutFree),
             ),
@@ -85,16 +92,21 @@ class _IdleView extends StatelessWidget {
                   itemCount: routines.length,
                   itemBuilder: (context, i) {
                     final r = routines[i];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: ListTile(
-                        leading: const Icon(Icons.fitness_center,
-                            color: Color(0xFF00B4D8)),
-                        title: Text(r.name),
-                        subtitle: Text(r.summary,
-                            style: const TextStyle(fontSize: 12)),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _confirmStart(context, r, workout),
+                    return Opacity(
+                      opacity: connected ? 1.0 : 0.5,
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          leading: const Icon(Icons.fitness_center,
+                              color: Color(0xFF00B4D8)),
+                          title: Text(r.name),
+                          subtitle: Text(r.summary,
+                              style: const TextStyle(fontSize: 12)),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: connected
+                              ? () => _confirmStart(context, r, workout)
+                              : null,
+                        ),
                       ),
                     );
                   },
@@ -268,8 +280,53 @@ class _FullscreenWorkoutPageState extends State<_FullscreenWorkoutPage> {
     );
     if (ok == true) {
       await w.finish();
+      if (context.mounted && StravaConfig.isConfigured) {
+        _triggerStravaUpload(context, w);
+      }
       w.reset();
-      // Pop se hará automáticamente cuando el phase cambie a finished/idle
+    }
+  }
+
+  void _triggerStravaUpload(BuildContext context, WorkoutProvider w) {
+    final profile = context.read<ProfileProvider>();
+    final sessionId = w.lastFinishedSessionId;
+    if (!profile.isConnected || sessionId == null) return;
+
+    final l10n = AppLocalizations.of(context)!;
+
+    switch (profile.uploadPreference) {
+      case UploadPreference.auto:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.profileUploadingToStrava)),
+        );
+        profile.uploadSession(sessionId).then((ok) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(ok ? l10n.profileUploaded : l10n.profileUploadFailed)),
+            );
+          }
+        });
+      case UploadPreference.ask:
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(l10n.profileUploadToStrava),
+            content: Text(l10n.profileAskUploadDialog),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.cancel)),
+              FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    profile.uploadSession(sessionId);
+                  },
+                  child: Text(l10n.profileUploadToStrava)),
+            ],
+          ),
+        );
+      case UploadPreference.manual:
+        break;
     }
   }
 }
@@ -333,7 +390,51 @@ class _CompactTopBar extends StatelessWidget {
     );
     if (ok == true) {
       await w.finish();
+      if (context.mounted && StravaConfig.isConfigured) {
+        _triggerStravaUpload(context, w, l10n);
+      }
       w.reset();
+    }
+  }
+
+  void _triggerStravaUpload(BuildContext context, WorkoutProvider w, AppLocalizations l10n) {
+    final profile = context.read<ProfileProvider>();
+    final sessionId = w.lastFinishedSessionId;
+    if (!profile.isConnected || sessionId == null) return;
+
+    switch (profile.uploadPreference) {
+      case UploadPreference.auto:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.profileUploadingToStrava)),
+        );
+        profile.uploadSession(sessionId).then((ok) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(ok ? l10n.profileUploaded : l10n.profileUploadFailed)),
+            );
+          }
+        });
+      case UploadPreference.ask:
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(l10n.profileUploadToStrava),
+            content: Text(l10n.profileAskUploadDialog),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.cancel)),
+              FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    profile.uploadSession(sessionId);
+                  },
+                  child: Text(l10n.profileUploadToStrava)),
+            ],
+          ),
+        );
+      case UploadPreference.manual:
+        break;
     }
   }
 }
@@ -365,7 +466,7 @@ class _CompactStepBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${sp.step.type.label}${sp.step.targetLabel.isNotEmpty ? ' · ${sp.step.targetLabel}' : ''}',
+              '${stepTypeLocalized(sp.step.type, AppLocalizations.of(context)!)}${sp.step.targetLabel.isNotEmpty ? ' · ${sp.step.targetLabel}' : ''}',
               style: TextStyle(
                   color: color, fontWeight: FontWeight.w600, fontSize: 12),
               overflow: TextOverflow.ellipsis,

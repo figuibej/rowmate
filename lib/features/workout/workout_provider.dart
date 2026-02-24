@@ -54,6 +54,10 @@ class WorkoutProvider extends ChangeNotifier {
   final List<DataPoint> _dataBuffer = [];
   int _sampleTick = 0;
 
+  // Strava auto-upload: ID de la última sesión terminada
+  int? _lastFinishedSessionId;
+  int? get lastFinishedSessionId => _lastFinishedSessionId;
+
   WorkoutProvider(this._ble, this._db) {
     _dataSub = _ble.dataStream.listen(_onData);
   }
@@ -167,6 +171,9 @@ class WorkoutProvider extends ChangeNotifier {
         _distanceAtStepStart = _data.distanceMeters;
       } else {
         // Última etapa completada → fin de la rutina
+        // Set phase immediately to prevent re-entrant calls from timer
+        _phase = WorkoutPhase.finished;
+        _timer?.cancel();
         finish();
       }
     }
@@ -194,26 +201,49 @@ class WorkoutProvider extends ChangeNotifier {
     _timer?.cancel();
 
     if (_sessionId != null && _startedAt != null) {
-      // Guarda los data points pendientes
-      if (_dataBuffer.isNotEmpty) {
+      try {
+        // Captura último data point antes de guardar
+        _dataBuffer.add(DataPoint(
+          sessionId: _sessionId!,
+          elapsedSeconds: _data.elapsedSeconds,
+          strokeRate: _data.strokeRate,
+          strokeCount: _data.strokeCount,
+          distanceMeters: _data.distanceMeters,
+          pace500mSeconds: _data.pace500mSeconds,
+          powerWatts: _data.powerWatts,
+          calories: _data.totalCalories,
+          heartRate: _data.heartRate,
+          stepIndex: _routine != null ? _currentStepIndex : null,
+          stepType: _routine != null && _currentStepIndex < _routine!.steps.length
+              ? _routine!.steps[_currentStepIndex].type.name
+              : null,
+        ));
+
+        // Computa stats desde el buffer completo
+        final stats = SessionStats.compute(_dataBuffer);
+
+        // Guarda los data points
         await _db.insertDataPoints(_dataBuffer);
         _dataBuffer.clear();
-      }
 
-      // Actualiza la sesión con los totales finales
-      final session = WorkoutSession(
-        id: _sessionId,
-        routineId: _routine?.id,
-        routineName: _routine?.name,
-        startedAt: _startedAt!,
-        finishedAt: DateTime.now(),
-        totalDistanceMeters: _data.distanceMeters,
-        totalTimeSeconds: _data.elapsedSeconds,
-        avgPowerWatts: _data.powerWatts,
-        avgStrokeRate: _data.strokeRate,
-        totalCalories: _data.totalCalories,
-      );
-      await _db.updateSession(session);
+        // Actualiza la sesión con stats computadas
+        final session = WorkoutSession(
+          id: _sessionId,
+          routineId: _routine?.id,
+          routineName: _routine?.name,
+          startedAt: _startedAt!,
+          finishedAt: DateTime.now(),
+          totalDistanceMeters: stats.totalDistance,
+          totalTimeSeconds: stats.totalTimeSeconds,
+          avgPowerWatts: stats.p99Watts,
+          avgStrokeRate: stats.p99Spm,
+          totalCalories: stats.totalCalories,
+        );
+        await _db.updateSession(session);
+        _lastFinishedSessionId = _sessionId;
+      } catch (e) {
+        debugPrint('[Workout] Error saving session: $e');
+      }
     }
 
     notifyListeners();

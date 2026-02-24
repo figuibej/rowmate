@@ -29,6 +29,12 @@ dependencies:
   wakelock_plus: ^1.2.5
   fl_chart: ^1.1.1
 
+  # Strava integration
+  flutter_web_auth_2: ^4.0.1
+  flutter_secure_storage: ^9.2.2
+  http: ^1.2.0
+  shared_preferences: ^2.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

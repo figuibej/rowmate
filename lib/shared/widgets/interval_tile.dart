@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
 import '../../core/models/interval_step.dart';
 import '../theme.dart';
 
@@ -46,7 +47,7 @@ class IntervalTile extends StatelessWidget {
             ),
           ),
         ),
-        title: Text(step.type.label,
+        title: Text(stepTypeLocalized(step.type, AppLocalizations.of(context)!),
             style: TextStyle(
                 color: color, fontWeight: FontWeight.w600, fontSize: 13)),
         subtitle: Text(

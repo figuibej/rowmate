@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:rowmate/l10n/app_localizations.dart';
+import '../core/models/interval_step.dart';
 
 const _seed = Color(0xFF0077B6); // azul agua
 
@@ -35,6 +37,19 @@ class MetricColors {
   static const heartRate = Color(0xFFEF476F);  // rosa/rojo
   static const time = Color(0xFFE0E0E0);       // gris claro
   static const calories = Color(0xFF06D6A0);   // verde menta
+}
+
+String stepTypeLocalized(StepType type, AppLocalizations l10n) {
+  switch (type) {
+    case StepType.warmup:
+      return l10n.stepTypeWarmup;
+    case StepType.work:
+      return l10n.stepTypeWork;
+    case StepType.rest:
+      return l10n.stepTypeRest;
+    case StepType.cooldown:
+      return l10n.stepTypeCooldown;
+  }
 }
 
 // Colores por tipo de paso

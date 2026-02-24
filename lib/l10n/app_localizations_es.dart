@@ -21,6 +21,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navHistory => 'Historial';
 
   @override
+  String get navProfile => 'Perfil';
+
+  @override
   String get deviceTitle => 'Dispositivo';
 
   @override
@@ -71,7 +74,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get workoutRowerNotConnected =>
-      'Rower no conectado — los datos no se registrarán';
+      'Conectá el rower para iniciar un entrenamiento';
 
   @override
   String get workoutOrPickRoutine => '  O elegí una rutina:';
@@ -217,4 +220,197 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get delete => 'Eliminar';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get confirm => 'Confirmar';
+
+  @override
+  String get save => 'Guardar';
+
+  @override
+  String get editorNewRoutine => 'Nueva rutina';
+
+  @override
+  String get editorEditRoutine => 'Editar rutina';
+
+  @override
+  String get editorRoutineName => 'Nombre de la rutina';
+
+  @override
+  String get editorDescription => 'Descripción (opcional)';
+
+  @override
+  String editorStepsCount(int count) {
+    return 'Pasos ($count)';
+  }
+
+  @override
+  String get editorStep => 'Paso';
+
+  @override
+  String get editorSeries => 'Serie';
+
+  @override
+  String get editorEmptySteps =>
+      'Todavía no hay pasos.\nPresioná \"Paso\" o \"Serie\".';
+
+  @override
+  String get editorDeleteSeries => 'Eliminar serie';
+
+  @override
+  String get editorAddStepToSeries => 'Agregar paso a serie';
+
+  @override
+  String get editorRepetitions => 'Repeticiones';
+
+  @override
+  String get editorAmount => 'Cantidad';
+
+  @override
+  String get editorNameEmpty => 'El nombre no puede estar vacío';
+
+  @override
+  String get editorNoSteps => 'Agregá al menos un paso';
+
+  @override
+  String get editorNewStep => 'Nuevo paso';
+
+  @override
+  String get editorEditStep => 'Editar paso';
+
+  @override
+  String get editorStepType => 'Tipo';
+
+  @override
+  String get editorByTime => 'Por tiempo';
+
+  @override
+  String get editorByDistance => 'Por distancia';
+
+  @override
+  String get editorMinutes => 'Min';
+
+  @override
+  String get editorSeconds => 'Seg';
+
+  @override
+  String get editorMeters => 'Metros';
+
+  @override
+  String get editorOptionalTargets => 'Objetivos opcionales';
+
+  @override
+  String get editorWattsMin => 'W mín';
+
+  @override
+  String get editorWattsMax => 'W máx';
+
+  @override
+  String get editorTargetSpm => 'SPM objetivo';
+
+  @override
+  String get editorSplitMin => 'Split min';
+
+  @override
+  String get editorSplitSec => 'Split seg';
+
+  @override
+  String get profileTitle => 'Perfil';
+
+  @override
+  String get profileConnectStrava => 'Conectar con Strava';
+
+  @override
+  String get profileConnected => 'Conectado';
+
+  @override
+  String get profileConnectedToStrava => 'Conectado a Strava';
+
+  @override
+  String get profileDisconnect => 'Desconectar';
+
+  @override
+  String get profileDisconnectTitle => 'Desconectar Strava';
+
+  @override
+  String get profileDisconnectContent =>
+      'Tus sesiones no se subirán automáticamente. ¿Continuar?';
+
+  @override
+  String get profileUploadSettings => 'Configuración de subida';
+
+  @override
+  String get profileAutoUpload => 'Subida automática';
+
+  @override
+  String get profileAutoUploadDesc =>
+      'Subir sesiones a Strava automáticamente al terminar';
+
+  @override
+  String get profileAskUpload => 'Preguntar cada vez';
+
+  @override
+  String get profileAskUploadDesc =>
+      'Mostrar un diálogo después de cada entrenamiento';
+
+  @override
+  String get profileManualUpload => 'Solo manual';
+
+  @override
+  String get profileManualUploadDesc =>
+      'Subir sesiones manualmente desde el Historial';
+
+  @override
+  String get profileSync => 'Sincronización';
+
+  @override
+  String get profileSyncDesc =>
+      'Descargar tus actividades de remo desde Strava';
+
+  @override
+  String get profileSyncFromStrava => 'Sincronizar desde Strava';
+
+  @override
+  String get profileSyncToStrava => 'Sincronizar a Strava';
+
+  @override
+  String get profileSyncing => 'Sincronizando...';
+
+  @override
+  String get profileUploading => 'Subiendo...';
+
+  @override
+  String profileSyncResult(int count) {
+    return '$count sesiones sincronizadas';
+  }
+
+  @override
+  String profileUploadResult(int count) {
+    return '$count sesiones subidas';
+  }
+
+  @override
+  String get profileSyncToDesc =>
+      'Subir todas las sesiones locales sin sincronizar a Strava';
+
+  @override
+  String get profilePendingUploads => 'Subidas pendientes';
+
+  @override
+  String get profileUploadToStrava => 'Subir a Strava';
+
+  @override
+  String get profileUploadingToStrava => 'Subiendo a Strava...';
+
+  @override
+  String get profileUploaded => 'Subido a Strava';
+
+  @override
+  String get profileUploadFailed => 'Error al subir';
+
+  @override
+  String get profileAskUploadDialog => '¿Subir esta sesión a Strava?';
 }

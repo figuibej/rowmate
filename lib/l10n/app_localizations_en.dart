@@ -21,6 +21,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navHistory => 'History';
 
   @override
+  String get navProfile => 'Profile';
+
+  @override
   String get deviceTitle => 'Device';
 
   @override
@@ -70,8 +73,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutFree => 'Free workout';
 
   @override
-  String get workoutRowerNotConnected =>
-      'Rower not connected — data will not be recorded';
+  String get workoutRowerNotConnected => 'Connect the rower to start a workout';
 
   @override
   String get workoutOrPickRoutine => '  Or pick a routine:';
@@ -217,4 +219,193 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get delete => 'Delete';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get editorNewRoutine => 'New routine';
+
+  @override
+  String get editorEditRoutine => 'Edit routine';
+
+  @override
+  String get editorRoutineName => 'Routine name';
+
+  @override
+  String get editorDescription => 'Description (optional)';
+
+  @override
+  String editorStepsCount(int count) {
+    return 'Steps ($count)';
+  }
+
+  @override
+  String get editorStep => 'Step';
+
+  @override
+  String get editorSeries => 'Series';
+
+  @override
+  String get editorEmptySteps => 'No steps yet.\nPress \"Step\" or \"Series\".';
+
+  @override
+  String get editorDeleteSeries => 'Delete series';
+
+  @override
+  String get editorAddStepToSeries => 'Add step to series';
+
+  @override
+  String get editorRepetitions => 'Repetitions';
+
+  @override
+  String get editorAmount => 'Amount';
+
+  @override
+  String get editorNameEmpty => 'Name cannot be empty';
+
+  @override
+  String get editorNoSteps => 'Add at least one step';
+
+  @override
+  String get editorNewStep => 'New step';
+
+  @override
+  String get editorEditStep => 'Edit step';
+
+  @override
+  String get editorStepType => 'Type';
+
+  @override
+  String get editorByTime => 'By time';
+
+  @override
+  String get editorByDistance => 'By distance';
+
+  @override
+  String get editorMinutes => 'Min';
+
+  @override
+  String get editorSeconds => 'Sec';
+
+  @override
+  String get editorMeters => 'Meters';
+
+  @override
+  String get editorOptionalTargets => 'Optional targets';
+
+  @override
+  String get editorWattsMin => 'W min';
+
+  @override
+  String get editorWattsMax => 'W max';
+
+  @override
+  String get editorTargetSpm => 'Target SPM';
+
+  @override
+  String get editorSplitMin => 'Split min';
+
+  @override
+  String get editorSplitSec => 'Split sec';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profileConnectStrava => 'Connect with Strava';
+
+  @override
+  String get profileConnected => 'Connected';
+
+  @override
+  String get profileConnectedToStrava => 'Connected to Strava';
+
+  @override
+  String get profileDisconnect => 'Disconnect';
+
+  @override
+  String get profileDisconnectTitle => 'Disconnect Strava';
+
+  @override
+  String get profileDisconnectContent =>
+      'Your sessions won\'t be uploaded automatically. Continue?';
+
+  @override
+  String get profileUploadSettings => 'Upload Settings';
+
+  @override
+  String get profileAutoUpload => 'Auto-upload';
+
+  @override
+  String get profileAutoUploadDesc =>
+      'Upload sessions to Strava automatically after finishing';
+
+  @override
+  String get profileAskUpload => 'Ask me each time';
+
+  @override
+  String get profileAskUploadDesc => 'Show a dialog after each workout';
+
+  @override
+  String get profileManualUpload => 'Manual only';
+
+  @override
+  String get profileManualUploadDesc => 'Upload sessions manually from History';
+
+  @override
+  String get profileSync => 'Sync';
+
+  @override
+  String get profileSyncDesc => 'Download your rowing activities from Strava';
+
+  @override
+  String get profileSyncFromStrava => 'Sync from Strava';
+
+  @override
+  String get profileSyncToStrava => 'Sync to Strava';
+
+  @override
+  String get profileSyncing => 'Syncing...';
+
+  @override
+  String get profileUploading => 'Uploading...';
+
+  @override
+  String profileSyncResult(int count) {
+    return '$count sessions synced';
+  }
+
+  @override
+  String profileUploadResult(int count) {
+    return '$count sessions uploaded';
+  }
+
+  @override
+  String get profileSyncToDesc =>
+      'Upload all unsynced local sessions to Strava';
+
+  @override
+  String get profilePendingUploads => 'Pending Uploads';
+
+  @override
+  String get profileUploadToStrava => 'Upload to Strava';
+
+  @override
+  String get profileUploadingToStrava => 'Uploading to Strava...';
+
+  @override
+  String get profileUploaded => 'Uploaded to Strava';
+
+  @override
+  String get profileUploadFailed => 'Upload failed';
+
+  @override
+  String get profileAskUploadDialog => 'Upload this session to Strava?';
 }

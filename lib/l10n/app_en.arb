@@ -5,6 +5,7 @@
   "navWorkout": "Workout",
   "navRoutines": "Routines",
   "navHistory": "History",
+  "navProfile": "Profile",
 
   "deviceTitle": "Device",
   "deviceDisconnect": "Disconnect",
@@ -22,7 +23,7 @@
 
   "workoutTitle": "Workout",
   "workoutFree": "Free workout",
-  "workoutRowerNotConnected": "Rower not connected — data will not be recorded",
+  "workoutRowerNotConnected": "Connect the rower to start a workout",
   "workoutOrPickRoutine": "  Or pick a routine:",
   "workoutNoRoutines": "Create a routine in the \"Routines\" tab",
   "workoutInProgress": "Workout in progress...",
@@ -85,5 +86,82 @@
   "stepTypeCooldown": "Cooldown",
 
   "cancel": "Cancel",
-  "delete": "Delete"
+  "delete": "Delete",
+  "ok": "OK",
+  "confirm": "Confirm",
+  "save": "Save",
+
+  "editorNewRoutine": "New routine",
+  "editorEditRoutine": "Edit routine",
+  "editorRoutineName": "Routine name",
+  "editorDescription": "Description (optional)",
+  "editorStepsCount": "Steps ({count})",
+  "@editorStepsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "editorStep": "Step",
+  "editorSeries": "Series",
+  "editorEmptySteps": "No steps yet.\nPress \"Step\" or \"Series\".",
+  "editorDeleteSeries": "Delete series",
+  "editorAddStepToSeries": "Add step to series",
+  "editorRepetitions": "Repetitions",
+  "editorAmount": "Amount",
+  "editorNameEmpty": "Name cannot be empty",
+  "editorNoSteps": "Add at least one step",
+  "editorNewStep": "New step",
+  "editorEditStep": "Edit step",
+  "editorStepType": "Type",
+  "editorByTime": "By time",
+  "editorByDistance": "By distance",
+  "editorMinutes": "Min",
+  "editorSeconds": "Sec",
+  "editorMeters": "Meters",
+  "editorOptionalTargets": "Optional targets",
+  "editorWattsMin": "W min",
+  "editorWattsMax": "W max",
+  "editorTargetSpm": "Target SPM",
+  "editorSplitMin": "Split min",
+  "editorSplitSec": "Split sec",
+
+  "profileTitle": "Profile",
+  "profileConnectStrava": "Connect with Strava",
+  "profileConnected": "Connected",
+  "profileConnectedToStrava": "Connected to Strava",
+  "profileDisconnect": "Disconnect",
+  "profileDisconnectTitle": "Disconnect Strava",
+  "profileDisconnectContent": "Your sessions won't be uploaded automatically. Continue?",
+  "profileUploadSettings": "Upload Settings",
+  "profileAutoUpload": "Auto-upload",
+  "profileAutoUploadDesc": "Upload sessions to Strava automatically after finishing",
+  "profileAskUpload": "Ask me each time",
+  "profileAskUploadDesc": "Show a dialog after each workout",
+  "profileManualUpload": "Manual only",
+  "profileManualUploadDesc": "Upload sessions manually from History",
+  "profileSync": "Sync",
+  "profileSyncDesc": "Download your rowing activities from Strava",
+  "profileSyncFromStrava": "Sync from Strava",
+  "profileSyncToStrava": "Sync to Strava",
+  "profileSyncing": "Syncing...",
+  "profileUploading": "Uploading...",
+  "profileSyncResult": "{count} sessions synced",
+  "profileUploadResult": "{count} sessions uploaded",
+  "@profileUploadResult": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "profileSyncToDesc": "Upload all unsynced local sessions to Strava",
+  "@profileSyncResult": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "profilePendingUploads": "Pending Uploads",
+  "profileUploadToStrava": "Upload to Strava",
+  "profileUploadingToStrava": "Uploading to Strava...",
+  "profileUploaded": "Uploaded to Strava",
+  "profileUploadFailed": "Upload failed",
+  "profileAskUploadDialog": "Upload this session to Strava?"
 }
