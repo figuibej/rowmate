@@ -42,14 +42,18 @@ class HistoryScreen extends StatelessWidget {
                     return _SessionCard(
                       session,
                       stats: stats,
-                      onTap: () {
+                      onTap: () async {
                         final db = context.read<DatabaseService>();
-                        Navigator.of(context).push(MaterialPageRoute(
+                        await Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => SessionDetailScreen(
                             session: session,
                             db: db,
                           ),
                         ));
+                        // Recargar las sesiones cuando vuelves (por si se subió a Strava)
+                        if (context.mounted) {
+                          context.read<HistoryProvider>().load();
+                        }
                       },
                     );
                   },

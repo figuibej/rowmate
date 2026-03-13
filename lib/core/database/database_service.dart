@@ -303,5 +303,20 @@ class DatabaseService {
     );
   }
 
+  /// Elimina todas las sesiones descargadas de Strava (para re-sincronizar)
+  Future<void> deleteStravaSessions() async {
+    final db = await database;
+    // Primero eliminar los data points de las sesiones de Strava
+    await db.execute('''
+      DELETE FROM data_points
+      WHERE session_id IN (
+        SELECT id FROM workout_sessions
+        WHERE strava_activity_id IS NOT NULL
+      )
+    ''');
+    // Luego eliminar las sesiones de Strava
+    await db.delete('workout_sessions', where: 'strava_activity_id IS NOT NULL');
+  }
+
   Future<void> close() async => _db?.close();
 }

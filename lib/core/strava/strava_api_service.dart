@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/workout_session.dart';
+import '../models/interval_step.dart';
 import 'strava_auth_service.dart';
 import 'strava_config.dart';
 import 'tcx_builder.dart';
+import 'strava_metadata.dart';
 
 /// Resultado de una actividad de Strava (para sync/download)
 class StravaActivity {
@@ -67,16 +69,21 @@ class StravaApiService {
 
   // ─── Upload ────────────────────────────────────────────────────────────
 
-  /// Sube una sesión a Strava como archivo TCX.
+  /// Sube una sesión a Strava como archivo TCX con metadata de intervalos.
   /// Retorna el strava activity ID o null si falla.
-  Future<String?> uploadActivity(WorkoutSession session, List<DataPoint> points) async {
+  Future<String?> uploadActivity(
+    WorkoutSession session,
+    List<DataPoint> points, {
+    List<IntervalStep>? steps,
+    String? description,
+  }) async {
     final token = await _auth.getAccessToken();
     if (token == null) {
       debugPrint('[Strava] Upload failed: no access token');
       return null;
     }
 
-    final tcx = TcxBuilder.build(session, points);
+    final tcx = TcxBuilder.build(session, points, steps: steps, description: description);
     final name = session.routineName ?? 'RowMate Session';
 
     debugPrint('[Strava] Uploading session ${session.id} "$name" (${points.length} data points)');
@@ -226,4 +233,65 @@ class StravaApiService {
           : List.filled(time.length, 0.0),
     );
   }
+
+  /// Obtiene detalles completos de una actividad (descripción y laps)
+  Future<StravaActivityDetails?> getActivityDetails(int activityId) async {
+    final headers = await _headers;
+    final uri = Uri.parse('${StravaConfig.apiBase}/activities/$activityId');
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode != 200) return null;
+
+    final data = json.decode(response.body) as Map<String, dynamic>;
+    final description = data['description'] as String?;
+    final lapsData = data['laps'] as List?;
+
+    final laps = lapsData
+        ?.map((l) => StravaLap.fromJson(l as Map<String, dynamic>))
+        .toList() ?? [];
+
+    return StravaActivityDetails(
+      description: description,
+      laps: laps,
+      metadata: StravaMetadata.decode(description),
+    );
+  }
+}
+
+/// Detalles extendidos de una actividad de Strava
+class StravaActivityDetails {
+  final String? description;
+  final List<StravaLap> laps;
+  final StravaMetadata? metadata;
+
+  const StravaActivityDetails({
+    this.description,
+    required this.laps,
+    this.metadata,
+  });
+}
+
+/// Un lap de Strava
+class StravaLap {
+  final int id;
+  final int startIndex; // índice en los streams donde empieza este lap
+  final int endIndex;   // índice en los streams donde termina
+  final int elapsedTime;
+  final double distance;
+
+  const StravaLap({
+    required this.id,
+    required this.startIndex,
+    required this.endIndex,
+    required this.elapsedTime,
+    required this.distance,
+  });
+
+  factory StravaLap.fromJson(Map<String, dynamic> json) => StravaLap(
+    id: json['id'] as int,
+    startIndex: json['start_index'] as int? ?? 0,
+    endIndex: json['end_index'] as int? ?? 0,
+    elapsedTime: json['elapsed_time'] as int? ?? 0,
+    distance: (json['distance'] as num?)?.toDouble() ?? 0,
+  );
 }

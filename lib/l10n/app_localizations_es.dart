@@ -112,6 +112,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get workoutStart => 'Iniciar';
 
   @override
+  String get workoutCompleted => '¡Entrenamiento completado!';
+
+  @override
+  String get workoutCompletedMessage =>
+      'Has completado tu rutina exitosamente.';
+
+  @override
   String get metricTime => 'TIEMPO';
 
   @override

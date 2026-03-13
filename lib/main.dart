@@ -87,22 +87,24 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _tab = 0;
 
-  static final _stravaConfigured = StravaConfig.isConfigured;
-
-  static final _screens = [
-    const DeviceScreen(),
-    const WorkoutScreen(),
-    const RoutinesScreen(),
-    const HistoryScreen(),
-    if (_stravaConfigured) const ProfileScreen(),
-  ];
+  List<Widget> _buildScreens() {
+    final stravaConfigured = StravaConfig.isConfigured;
+    return [
+      const DeviceScreen(),
+      const WorkoutScreen(),
+      const RoutinesScreen(),
+      const HistoryScreen(),
+      if (stravaConfigured) const ProfileScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final screens = _buildScreens();
     const historyIndex = 3;
     return Scaffold(
-      body: IndexedStack(index: _tab, children: _screens),
+      body: IndexedStack(index: _tab, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) {
@@ -130,7 +132,7 @@ class _MainShellState extends State<MainShell> {
             selectedIcon: const Icon(Icons.history),
             label: l10n.navHistory,
           ),
-          if (_stravaConfigured)
+          if (StravaConfig.isConfigured)
             NavigationDestination(
               icon: const Icon(Icons.person_outline),
               selectedIcon: const Icon(Icons.person),

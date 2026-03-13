@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/database/database_service.dart';
 import '../../core/models/workout_session.dart';
+import '../../core/models/interval_step.dart';
 import '../../core/strava/strava_api_service.dart';
 import '../../core/strava/strava_auth_service.dart';
 
@@ -96,8 +97,19 @@ class ProfileProvider extends ChangeNotifier {
       }
 
       final points = await _db.getDataPointsForSession(sessionId);
-      debugPrint('[Profile] Uploading session $sessionId with ${points.length} data points');
-      final stravaId = await _api.uploadActivity(session, points);
+
+      // Obtener información de intervalos si la sesión tiene una rutina
+      List<IntervalStep>? steps;
+      if (session.routineId != null) {
+        final routine = await _db.getRoutineById(session.routineId!);
+        if (routine != null) {
+          steps = routine.flattenedSteps;
+        }
+      }
+
+      debugPrint('[Profile] Uploading session $sessionId with ${points.length} data points'
+          '${steps != null ? ' and ${steps.length} intervals' : ''}');
+      final stravaId = await _api.uploadActivity(session, points, steps: steps);
 
       if (stravaId != null) {
         await _db.updateSessionStravaId(sessionId, stravaId);
@@ -183,8 +195,19 @@ class ProfileProvider extends ChangeNotifier {
       for (final session in pending) {
         try {
           final points = await _db.getDataPointsForSession(session.id!);
-          debugPrint('[Profile] Uploading session ${session.id} "${session.routineName}" (${points.length} pts)');
-          final stravaId = await _api.uploadActivity(session, points);
+
+          // Obtener información de intervalos si la sesión tiene una rutina
+          List<IntervalStep>? steps;
+          if (session.routineId != null) {
+            final routine = await _db.getRoutineById(session.routineId!);
+            if (routine != null) {
+              steps = routine.flattenedSteps;
+            }
+          }
+
+          debugPrint('[Profile] Uploading session ${session.id} "${session.routineName}" (${points.length} pts)'
+              '${steps != null ? ' with ${steps.length} intervals' : ''}');
+          final stravaId = await _api.uploadActivity(session, points, steps: steps);
           if (stravaId != null) {
             await _db.updateSessionStravaId(session.id!, stravaId);
             _syncedCount++;
@@ -232,8 +255,13 @@ class ProfileProvider extends ChangeNotifier {
         final stravaIdStr = '${activity.stravaId}';
         if (localStravaIds.contains(stravaIdStr)) continue;
 
-        // Descargar streams de telemetría
+        // Descargar streams de telemetría y detalles (metadata + laps)
         final streams = await _api.getActivityStreams(activity.stravaId);
+        final details = await _api.getActivityDetails(activity.stravaId);
+
+        debugPrint('[Profile] Activity ${activity.stravaId}: '
+            '${details?.laps.length ?? 0} laps, '
+            'metadata: ${details?.metadata != null}');
 
         // Crear sesión local
         final session = WorkoutSession(
@@ -249,15 +277,92 @@ class ProfileProvider extends ChangeNotifier {
 
         // Insertar data points si hay streams
         if (streams != null && streams.time.isNotEmpty) {
+          // Primero calcular pace instantáneo para todos los puntos
+          final rawPaces = <double>[];
+          for (var i = 0; i < streams.time.length; i++) {
+            final elapsedSec = streams.time[i];
+            final distMeters = i < streams.distance.length ? streams.distance[i].round() : 0;
+
+            double paceSeconds = 0.0;
+            if (i > 0) {
+              final prevTime = streams.time[i - 1];
+              final prevDist = streams.distance.length > i - 1 ? streams.distance[i - 1].round() : 0;
+              final deltaTime = elapsedSec - prevTime;
+              final deltaDist = distMeters - prevDist;
+
+              // Solo calcular si hay movimiento significativo (mínimo 2 metros)
+              if (deltaDist >= 2 && deltaTime > 0) {
+                paceSeconds = (deltaTime / deltaDist) * 500;
+              }
+            } else if (distMeters > 0 && elapsedSec > 0) {
+              paceSeconds = (elapsedSec / distMeters) * 500;
+            }
+            rawPaces.add(paceSeconds);
+          }
+
+          // Filtrar outliers: remover valores irreales (pace < 60s o > 600s /500m)
+          final filteredPaces = <double>[];
+          for (var i = 0; i < rawPaces.length; i++) {
+            final pace = rawPaces[i];
+            if (pace >= 60 && pace <= 600) {
+              filteredPaces.add(pace);
+            } else {
+              // Reemplazar outlier con valor anterior válido o promedio
+              if (filteredPaces.isNotEmpty) {
+                filteredPaces.add(filteredPaces.last);
+              } else {
+                // Buscar el próximo valor válido
+                var nextValid = 120.0; // fallback a 2:00/500m
+                for (var j = i + 1; j < rawPaces.length; j++) {
+                  if (rawPaces[j] >= 60 && rawPaces[j] <= 600) {
+                    nextValid = rawPaces[j];
+                    break;
+                  }
+                }
+                filteredPaces.add(nextValid);
+              }
+            }
+          }
+
+          // Aplicar moving average más agresivo para suavizar (ventana de 15 puntos)
+          final smoothedPaces = _applyMovingAverage(filteredPaces, windowSize: 15);
+
+          // Mapear índices de stream a laps para asignar stepIndex
+          final lapMap = <int, int>{}; // streamIndex -> stepIndex
+          if (details?.laps != null && details!.laps.isNotEmpty) {
+            for (var stepIdx = 0; stepIdx < details.laps.length; stepIdx++) {
+              final lap = details.laps[stepIdx];
+              for (var i = lap.startIndex; i <= lap.endIndex && i < streams.time.length; i++) {
+                lapMap[i] = stepIdx;
+              }
+            }
+          }
+
+          // Crear data points con pace suavizado e información de intervalos
           final points = <DataPoint>[];
           for (var i = 0; i < streams.time.length; i++) {
+            final elapsedSec = streams.time[i];
+            final distMeters = i < streams.distance.length ? streams.distance[i].round() : 0;
+            final stepIdx = lapMap[i];
+
+            // Obtener tipo de intervalo desde metadata si existe
+            String? stepType;
+            if (stepIdx != null && details?.metadata?.intervals != null) {
+              if (stepIdx < details!.metadata!.intervals!.length) {
+                stepType = details.metadata!.intervals![stepIdx].type;
+              }
+            }
+
             points.add(DataPoint(
               sessionId: sessionId,
-              elapsedSeconds: streams.time[i],
+              elapsedSeconds: elapsedSec,
               powerWatts: i < streams.watts.length ? streams.watts[i] : 0,
               strokeRate: i < streams.cadence.length ? streams.cadence[i] : 0,
               heartRate: i < streams.heartRate.length ? streams.heartRate[i] : 0,
-              distanceMeters: i < streams.distance.length ? streams.distance[i].round() : 0,
+              distanceMeters: distMeters,
+              pace500mSeconds: smoothedPaces[i].round(),
+              stepIndex: stepIdx,
+              stepType: stepType,
             ));
           }
           await _db.insertDataPoints(points);
@@ -291,5 +396,31 @@ class ProfileProvider extends ChangeNotifier {
       notifyListeners();
       return _syncedCount;
     }
+  }
+
+  /// Elimina todas las sesiones descargadas de Strava (para re-sincronizar)
+  Future<void> clearStravaSessions() async {
+    await _db.deleteStravaSessions();
+    notifyListeners();
+  }
+
+  /// Aplica un filtro de media móvil para suavizar una serie de datos
+  /// Reduce el ruido manteniendo las tendencias generales
+  List<double> _applyMovingAverage(List<double> values, {int windowSize = 7}) {
+    if (values.isEmpty) return [];
+
+    final result = <double>[];
+    final halfWindow = windowSize ~/ 2;
+
+    for (var i = 0; i < values.length; i++) {
+      final start = (i - halfWindow).clamp(0, values.length - 1);
+      final end = (i + halfWindow + 1).clamp(0, values.length);
+
+      final window = values.sublist(start, end);
+      final avg = window.reduce((a, b) => a + b) / window.length;
+      result.add(avg);
+    }
+
+    return result;
   }
 }

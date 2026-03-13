@@ -27,6 +27,8 @@ class ProfileScreen extends StatelessWidget {
             _SyncCard(p: p, l10n: l10n),
             const SizedBox(height: 16),
             _PendingUploadsCard(p: p, l10n: l10n),
+            const SizedBox(height: 16),
+            _DebugCard(p: p),
           ],
         ],
       ),
@@ -398,6 +400,67 @@ class _PendingSessionTile extends StatelessWidget {
             tooltip: 'Upload',
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Debug / Maintenance ──────────────────────────────────────────────────
+
+class _DebugCard extends StatelessWidget {
+  final ProfileProvider p;
+  const _DebugCard({required this.p});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Mantenimiento',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('Limpiar sesiones de Strava'),
+                    content: const Text(
+                        'Esto eliminará todas las sesiones descargadas de Strava. '
+                        'Podrás volver a sincronizarlas después.\n\n'
+                        '¿Continuar?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Eliminar'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && context.mounted) {
+                  await p.clearStravaSessions();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sesiones de Strava eliminadas. '
+                            'Puedes sincronizar de nuevo.'),
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.delete_sweep, size: 18),
+              label: const Text('Limpiar sesiones de Strava'),
+            ),
+          ],
+        ),
       ),
     );
   }

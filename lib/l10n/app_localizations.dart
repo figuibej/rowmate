@@ -290,6 +290,18 @@ abstract class AppLocalizations {
   /// **'Start'**
   String get workoutStart;
 
+  /// No description provided for @workoutCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout Completed!'**
+  String get workoutCompleted;
+
+  /// No description provided for @workoutCompletedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have successfully completed your routine.'**
+  String get workoutCompletedMessage;
+
   /// No description provided for @metricTime.
   ///
   /// In en, this message translates to:

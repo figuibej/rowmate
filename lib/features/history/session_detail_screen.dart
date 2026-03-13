@@ -33,15 +33,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Future<void> _load() async {
-    final pts = await widget.db.getDataPointsForSession(widget.session.id!);
+    // Recargar session desde DB para tener el estado más actual
+    final freshSession = await widget.db.getSessionById(widget.session.id!);
+    final sessionToUse = freshSession ?? widget.session;
+
+    final pts = await widget.db.getDataPointsForSession(sessionToUse.id!);
     List<IntervalStep> flatSteps = [];
-    if (widget.session.routineId != null) {
-      final routine = await widget.db.getRoutineById(widget.session.routineId!);
+    if (sessionToUse.routineId != null) {
+      final routine = await widget.db.getRoutineById(sessionToUse.routineId!);
       if (routine != null) {
         flatSteps = routine.flattenedSteps;
       }
     }
     setState(() {
+      _session = sessionToUse;
       _points = pts;
       _flatSteps = flatSteps;
       _loading = false;
@@ -70,10 +75,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final ProfileProvider? profile = stravaConfigured
         ? context.watch<ProfileProvider>()
         : null;
+    // Mostrar botón si Strava está configurado, conectado y la sesión no fue subida
     final showUploadButton = stravaConfigured &&
         profile != null &&
         profile.isConnected &&
-        s.stravaActivityId == null &&
+        (s.stravaActivityId == null || s.stravaActivityId!.isEmpty) &&
         s.finishedAt != null;
 
     return Scaffold(
@@ -279,12 +285,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Widget _buildChart() {
     if (_points.isEmpty) return const SizedBox.shrink();
 
+    // Para Split/Pace, necesitamos calcular el máximo para la transformación
+    final maxPaceForTransform = _chartMetric == 2
+        ? _points.map((p) => p.pace500mSeconds.toDouble()).reduce((a, b) => a > b ? a : b)
+        : 0.0;
+
     final spots = _points.map((p) {
       final x = p.elapsedSeconds.toDouble();
       final y = switch (_chartMetric) {
         0 => p.powerWatts.toDouble(),
         1 => p.strokeRate,
-        2 => p.pace500mSeconds.toDouble(),
+        // Para Split: transformar para que valores bajos (pace rápido) aparezcan arriba
+        2 => maxPaceForTransform - p.pace500mSeconds.toDouble(),
         3 => p.distanceMeters.toDouble(),
         4 => p.heartRate.toDouble(),
         _ => 0.0,
@@ -370,20 +382,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
 
     double maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+    double minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
     for (final tl in targetLines) {
       for (final s in tl.spots) {
         if (s.y > maxY) maxY = s.y;
+        if (s.y < minY) minY = s.y;
       }
     }
-    maxY = maxY * 1.1;
-    if (maxY <= 0) maxY = 100;
+
+    // Para todas las métricas: eje Y normal (0 abajo, max arriba)
+    // Para Split, los datos ya están transformados para que pace rápido = valor alto (arriba)
+    final chartMinY = 0.0;
+    final chartMaxY = maxY * 1.1 > 0 ? maxY * 1.1 : 100.0;
 
     return SizedBox(
       height: 220,
       child: LineChart(
         LineChartData(
-          maxY: maxY,
-          minY: 0,
+          maxY: chartMaxY,
+          minY: chartMinY,
           rangeAnnotations: RangeAnnotations(
             verticalRangeAnnotations: stepRegions
                 .map((r) => VerticalRangeAnnotation(
@@ -419,10 +436,24 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 40,
-                getTitlesWidget: (value, meta) => Text(
-                  '${value.toInt()}',
-                  style: const TextStyle(fontSize: 9, color: Colors.white38),
-                ),
+                getTitlesWidget: (value, meta) {
+                  // Para Split (métrica 2): transformar de vuelta y formatear como MM:SS
+                  if (_chartMetric == 2) {
+                    // Valor transformado → Pace real
+                    final realPace = (maxPaceForTransform - value).toInt();
+                    final mins = realPace ~/ 60;
+                    final secs = realPace % 60;
+                    return Text(
+                      '$mins:${secs.toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontSize: 9, color: Colors.white38),
+                    );
+                  }
+                  // Para otras métricas: número entero
+                  return Text(
+                    '${value.toInt()}',
+                    style: const TextStyle(fontSize: 9, color: Colors.white38),
+                  );
+                },
               ),
             ),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -458,13 +489,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
               getTooltipItems: (spots) => spots
-                  .map((s) => LineTooltipItem(
-                        '${s.y.toStringAsFixed(1)} $unitLabel',
-                        const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600),
-                      ))
+                  .map((s) {
+                    String yValue;
+                    // Para Split (métrica 2): transformar de vuelta y formatear como MM:SS
+                    if (_chartMetric == 2) {
+                      final realPace = (maxPaceForTransform - s.y).toInt();
+                      final mins = realPace ~/ 60;
+                      final secs = realPace % 60;
+                      yValue = '$mins:${secs.toString().padLeft(2, '0')}';
+                    } else {
+                      yValue = s.y.toStringAsFixed(1);
+                    }
+                    return LineTooltipItem(
+                      '$yValue $unitLabel',
+                      const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    );
+                  })
                   .toList(),
             ),
           ),

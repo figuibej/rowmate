@@ -31,6 +31,11 @@ class StepProgress {
     }
     return 0;
   }
+
+  /// Verdadero si quedan 5 segundos o menos para terminar el paso
+  bool get isEndingSoon {
+    return remainingInStep >= 0 && remainingInStep <= 5 && remainingInStep > 0;
+  }
 }
 
 class WorkoutProvider extends ChangeNotifier {

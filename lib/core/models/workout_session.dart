@@ -40,8 +40,8 @@ class WorkoutSession {
     if (id != null) 'id': id,
     'routine_id': routineId,
     'routine_name': routineName,
-    'started_at': startedAt.toIso8601String(),
-    'finished_at': finishedAt?.toIso8601String(),
+    'started_at': startedAt.toUtc().toIso8601String(),
+    'finished_at': finishedAt?.toUtc().toIso8601String(),
     'total_distance_meters': totalDistanceMeters,
     'total_time_seconds': totalTimeSeconds,
     'avg_power_watts': avgPowerWatts,
@@ -54,9 +54,9 @@ class WorkoutSession {
     id: map['id'] as int?,
     routineId: map['routine_id'] as int?,
     routineName: map['routine_name'] as String?,
-    startedAt: DateTime.parse(map['started_at'] as String),
+    startedAt: DateTime.parse(map['started_at'] as String).toLocal(),
     finishedAt: map['finished_at'] != null
-        ? DateTime.parse(map['finished_at'] as String)
+        ? DateTime.parse(map['finished_at'] as String).toLocal()
         : null,
     totalDistanceMeters: map['total_distance_meters'] as int? ?? 0,
     totalTimeSeconds: map['total_time_seconds'] as int? ?? 0,

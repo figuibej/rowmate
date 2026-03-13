@@ -19,11 +19,9 @@ class WorkoutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<WorkoutProvider>(
       builder: (context, w, _) {
-        if (w.isIdle || w.phase == WorkoutPhase.finished) {
-          // Si terminó, resetear para volver al estado idle
-          if (w.phase == WorkoutPhase.finished) {
-            WidgetsBinding.instance.addPostFrameCallback((_) => w.reset());
-          }
+        // Solo mostrar IdleView si está realmente idle, no si está finished
+        // (finished se maneja en la pantalla fullscreen)
+        if (w.isIdle) {
           return _IdleView();
         }
         return _ActiveView();
@@ -198,6 +196,8 @@ class _FullscreenWorkoutPage extends StatefulWidget {
 }
 
 class _FullscreenWorkoutPageState extends State<_FullscreenWorkoutPage> {
+  bool _hasShownCompletionDialog = false;
+
   @override
   void initState() {
     super.initState();
@@ -216,11 +216,21 @@ class _FullscreenWorkoutPageState extends State<_FullscreenWorkoutPage> {
     final sp = w.stepProgress;
     final currentStep = sp?.step;
 
-    // Si el workout terminó, volver atrás
-    if (w.phase == WorkoutPhase.finished || w.isIdle) {
+    // Si el workout terminó, mostrar diálogo de completado (solo una vez)
+    if (w.phase == WorkoutPhase.finished && !_hasShownCompletionDialog) {
+      _hasShownCompletionDialog = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showWorkoutCompletedDialog(context, w);
+        }
+      });
+    }
+
+    // Si está idle (después de reset), volver atrás y resetear flag
+    if (w.isIdle) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && Navigator.of(context).canPop()) {
-          if (w.phase == WorkoutPhase.finished) w.reset();
+          _hasShownCompletionDialog = false;
           Navigator.of(context).pop();
         }
       });
@@ -287,6 +297,138 @@ class _FullscreenWorkoutPageState extends State<_FullscreenWorkoutPage> {
     }
   }
 
+  void _showWorkoutCompletedDialog(BuildContext context, WorkoutProvider w) async {
+    final l10n = AppLocalizations.of(context)!;
+    final profile = StravaConfig.isConfigured ? context.read<ProfileProvider>() : null;
+    final shouldAskStrava = StravaConfig.isConfigured &&
+                           profile != null &&
+                           profile.isConnected &&
+                           profile.uploadPreference == UploadPreference.ask;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Color(0xFF06D6A0), size: 28),
+              const SizedBox(width: 12),
+              Text(l10n.workoutCompleted ?? '¡Entrenamiento completado!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.workoutCompletedMessage ?? 'Has completado tu rutina exitosamente.'),
+              const SizedBox(height: 16),
+              _buildCompletionStats(w),
+            ],
+          ),
+          actions: [
+            if (shouldAskStrava) ...[
+              // Modo "ask": dos botones (con y sin Strava)
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  w.reset();
+                },
+                child: Text(l10n.workoutFinish ?? 'Finalizar'),
+              ),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  final sessionId = w.lastFinishedSessionId;
+                  if (sessionId != null) {
+                    profile!.uploadSession(sessionId).then((ok) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(ok ? l10n.profileUploaded : l10n.profileUploadFailed)),
+                        );
+                      }
+                    });
+                  }
+                  w.reset();
+                },
+                icon: const Icon(Icons.cloud_upload, size: 18),
+                label: Text(l10n.profileUploadToStrava),
+              ),
+            ] else ...[
+              // Modo "auto" o "manual": un solo botón
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Subir automáticamente si está configurado y es modo auto
+                  if (StravaConfig.isConfigured &&
+                      profile != null &&
+                      profile.isConnected &&
+                      profile.uploadPreference == UploadPreference.auto) {
+                    final sessionId = w.lastFinishedSessionId;
+                    if (sessionId != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.profileUploadingToStrava)),
+                      );
+                      profile.uploadSession(sessionId).then((ok) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(ok ? l10n.profileUploaded : l10n.profileUploadFailed)),
+                          );
+                        }
+                      });
+                    }
+                  }
+                  w.reset();
+                },
+                child: Text(l10n.workoutFinish ?? 'Finalizar'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletionStats(WorkoutProvider w) {
+    final duration = w.totalElapsedSeconds;
+    final h = duration ~/ 3600;
+    final m = (duration % 3600) ~/ 60;
+    final s = duration % 60;
+    final timeStr = h > 0
+        ? '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
+        : '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(10),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          _CompletionStat(
+            icon: Icons.timer,
+            label: 'Tiempo',
+            value: timeStr,
+          ),
+          const SizedBox(height: 8),
+          _CompletionStat(
+            icon: Icons.straighten,
+            label: 'Distancia',
+            value: '${w.data.distanceMeters} m',
+          ),
+          const SizedBox(height: 8),
+          _CompletionStat(
+            icon: Icons.local_fire_department,
+            label: 'Calorías',
+            value: '${w.data.totalCalories}',
+          ),
+        ],
+      ),
+    );
+  }
+
   void _triggerStravaUpload(BuildContext context, WorkoutProvider w) {
     final profile = context.read<ProfileProvider>();
     final sessionId = w.lastFinishedSessionId;
@@ -341,17 +483,17 @@ class _CompactTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.rowing, color: Color(0xFF00B4D8), size: 20),
-          const SizedBox(width: 8),
+          const Icon(Icons.rowing, color: Color(0xFF00B4D8), size: 26),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               w.routine?.name ?? l10n.metricFreeLabel,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 14,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
               overflow: TextOverflow.ellipsis,
@@ -361,10 +503,10 @@ class _CompactTopBar extends StatelessWidget {
             onPressed: () => _confirmFinish(context, w),
             style: TextButton.styleFrom(
               foregroundColor: Colors.redAccent,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              minimumSize: const Size(0, 36),
             ),
-            child: Text(l10n.workoutFinish, style: const TextStyle(fontSize: 12)),
+            child: Text(l10n.workoutFinish, style: const TextStyle(fontSize: 14)),
           ),
         ],
       ),
@@ -441,58 +583,106 @@ class _CompactTopBar extends StatelessWidget {
 
 // ─── Banner del paso actual (compacto) ────────────────────────────────────
 
-class _CompactStepBanner extends StatelessWidget {
+class _CompactStepBanner extends StatefulWidget {
   final StepProgress sp;
   const _CompactStepBanner({required this.sp});
 
   @override
+  State<_CompactStepBanner> createState() => _CompactStepBannerState();
+}
+
+class _CompactStepBannerState extends State<_CompactStepBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final sp = widget.sp;
     final color = stepColor(sp.step.type.name);
     final remaining = sp.remainingInStep;
     final remainStr = remaining >= 0
         ? '${remaining ~/ 60}:${(remaining % 60).toString().padLeft(2, '0')}'
         : '${sp.step.distanceMeters}m';
+    final isEndingSoon = sp.isEndingSoon;
 
-    return Container(
-      color: color.withOpacity(0.15),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '${stepTypeLocalized(sp.step.type, AppLocalizations.of(context)!)}${sp.step.targetLabel.isNotEmpty ? ' · ${sp.step.targetLabel}' : ''}',
-              style: TextStyle(
-                  color: color, fontWeight: FontWeight.w600, fontSize: 12),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Text(remainStr,
-              style: TextStyle(
-                  color: color, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(width: 6),
-          Text('${sp.stepIndex + 1}/${sp.totalSteps}',
-              style: const TextStyle(color: Colors.white38, fontSize: 11)),
-          // Barra de progreso mini
-          if (sp.progress > 0) ...[
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 40,
-              child: LinearProgressIndicator(
-                value: sp.progress,
-                backgroundColor: Colors.white12,
-                color: color,
-                minHeight: 3,
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        final pulseOpacity = isEndingSoon
+            ? 0.15 + (_pulseController.value * 0.25)
+            : 0.15;
+
+        return Container(
+          color: color.withOpacity(pulseOpacity),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: isEndingSoon
+                      ? [
+                          BoxShadow(
+                            color: color.withOpacity(0.6),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      : null,
+                ),
               ),
-            ),
-          ],
-        ],
-      ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '${stepTypeLocalized(sp.step.type, AppLocalizations.of(context)!)}${sp.step.targetLabel.isNotEmpty ? ' · ${sp.step.targetLabel}' : ''}',
+                  style: TextStyle(
+                      color: color, fontWeight: FontWeight.w600, fontSize: 15),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(remainStr,
+                  style: TextStyle(
+                      color: isEndingSoon ? Colors.white : color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isEndingSoon ? 22 : 20)),
+              const SizedBox(width: 8),
+              Text('${sp.stepIndex + 1}/${sp.totalSteps}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 13)),
+              // Barra de progreso mini
+              if (sp.progress > 0) ...[
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 45,
+                  child: LinearProgressIndicator(
+                    value: sp.progress,
+                    backgroundColor: Colors.white12,
+                    color: color,
+                    minHeight: 4,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -739,6 +929,43 @@ class _CompactControls extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Widget para estadísticas en diálogo de completado ────────────────────
+
+class _CompletionStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _CompletionStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF00B4D8)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white70),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ],
     );
   }
 }

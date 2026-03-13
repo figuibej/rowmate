@@ -40,6 +40,8 @@
     }
   },
   "workoutStart": "Iniciar",
+  "workoutCompleted": "¡Entrenamiento completado!",
+  "workoutCompletedMessage": "Has completado tu rutina exitosamente.",
 
   "metricTime": "TIEMPO",
   "metricSplit": "SPLIT 500m",
