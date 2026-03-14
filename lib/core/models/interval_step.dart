@@ -38,6 +38,11 @@ class IntervalStep {
   final String? groupId;           // UUID del grupo (null = paso suelto)
   final int? groupRepeatCount;     // repeticiones del grupo
 
+  // Progresiones (incrementos por repetición en grupos)
+  final int? progressionSpm;           // incremento de SPM por repetición
+  final int? progressionWatts;         // incremento de Watts por repetición
+  final int? progressionSplitSeconds;  // incremento/decremento de split por repetición
+
   const IntervalStep({
     this.id,
     required this.routineId,
@@ -51,6 +56,9 @@ class IntervalStep {
     this.targetSplitSeconds,
     this.groupId,
     this.groupRepeatCount,
+    this.progressionSpm,
+    this.progressionWatts,
+    this.progressionSplitSeconds,
   });
 
   bool get isTimeBased => durationSeconds != null;
@@ -81,6 +89,22 @@ class IntervalStep {
       final s = targetSplitSeconds! % 60;
       parts.add('${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}/500m');
     }
+
+    // Agregar indicadores de progresión
+    final progressions = <String>[];
+    if (progressionSpm != null && progressionSpm != 0) {
+      progressions.add('SPM ${progressionSpm! > 0 ? '+' : ''}$progressionSpm/rep');
+    }
+    if (progressionWatts != null && progressionWatts != 0) {
+      progressions.add('W ${progressionWatts! > 0 ? '+' : ''}$progressionWatts/rep');
+    }
+    if (progressionSplitSeconds != null && progressionSplitSeconds != 0) {
+      progressions.add('Split ${progressionSplitSeconds! > 0 ? '+' : ''}${progressionSplitSeconds}s/rep');
+    }
+    if (progressions.isNotEmpty) {
+      parts.add('📈 ${progressions.join(', ')}');
+    }
+
     return parts.join(' · ');
   }
 
@@ -97,6 +121,9 @@ class IntervalStep {
     'target_split_seconds': targetSplitSeconds,
     'group_id': groupId,
     'group_repeat_count': groupRepeatCount,
+    'progression_spm': progressionSpm,
+    'progression_watts': progressionWatts,
+    'progression_split_seconds': progressionSplitSeconds,
   };
 
   factory IntervalStep.fromMap(Map<String, dynamic> map) => IntervalStep(
@@ -112,6 +139,9 @@ class IntervalStep {
     targetSplitSeconds: map['target_split_seconds'] as int?,
     groupId: map['group_id'] as String?,
     groupRepeatCount: map['group_repeat_count'] as int?,
+    progressionSpm: map['progression_spm'] as int?,
+    progressionWatts: map['progression_watts'] as int?,
+    progressionSplitSeconds: map['progression_split_seconds'] as int?,
   );
 
   IntervalStep copyWith({
@@ -127,6 +157,9 @@ class IntervalStep {
     int? targetSplitSeconds,
     String? groupId,
     int? groupRepeatCount,
+    int? progressionSpm,
+    int? progressionWatts,
+    int? progressionSplitSeconds,
   }) =>
       IntervalStep(
         id: id ?? this.id,
@@ -141,5 +174,8 @@ class IntervalStep {
         targetSplitSeconds: targetSplitSeconds ?? this.targetSplitSeconds,
         groupId: groupId ?? this.groupId,
         groupRepeatCount: groupRepeatCount ?? this.groupRepeatCount,
+        progressionSpm: progressionSpm ?? this.progressionSpm,
+        progressionWatts: progressionWatts ?? this.progressionWatts,
+        progressionSplitSeconds: progressionSplitSeconds ?? this.progressionSplitSeconds,
       );
 }

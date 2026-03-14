@@ -75,7 +75,7 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
   void _addStep({String? groupId}) async {
     final result = await showDialog<IntervalStep>(
       context: context,
-      builder: (_) => const _StepDialog(),
+      builder: (_) => _StepDialog(isInGroup: groupId != null),
     );
     if (result != null) {
       setState(() {
@@ -90,7 +90,10 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
   void _editStep(int index) async {
     final result = await showDialog<IntervalStep>(
       context: context,
-      builder: (_) => _StepDialog(existing: _steps[index]),
+      builder: (_) => _StepDialog(
+        existing: _steps[index],
+        isInGroup: _steps[index].groupId != null,
+      ),
     );
     if (result != null) {
       setState(() {
@@ -132,7 +135,7 @@ class _RoutineEditorScreenState extends State<RoutineEditorScreen> {
   void _addStepToGroup(String groupId) async {
     final result = await showDialog<IntervalStep>(
       context: context,
-      builder: (_) => const _StepDialog(),
+      builder: (_) => const _StepDialog(isInGroup: true),
     );
     if (result == null) return;
 
@@ -470,7 +473,8 @@ class _EditorItem {
 
 class _StepDialog extends StatefulWidget {
   final IntervalStep? existing;
-  const _StepDialog({this.existing});
+  final bool isInGroup;
+  const _StepDialog({this.existing, this.isInGroup = false});
 
   @override
   State<_StepDialog> createState() => _StepDialogState();
@@ -487,6 +491,9 @@ class _StepDialogState extends State<_StepDialog> {
   final _spmCtrl = TextEditingController();   // spm
   final _splitMinCtrl = TextEditingController(); // split min
   final _splitSecCtrl = TextEditingController(); // split sec
+  final _progSpmCtrl = TextEditingController();   // progresión spm
+  final _progWattsCtrl = TextEditingController(); // progresión watts
+  final _progSplitCtrl = TextEditingController(); // progresión split
 
   @override
   void initState() {
@@ -507,12 +514,15 @@ class _StepDialogState extends State<_StepDialog> {
         _splitMinCtrl.text = (s.targetSplitSeconds! ~/ 60).toString();
         _splitSecCtrl.text = (s.targetSplitSeconds! % 60).toString();
       }
+      if (s.progressionSpm != null) _progSpmCtrl.text = s.progressionSpm.toString();
+      if (s.progressionWatts != null) _progWattsCtrl.text = s.progressionWatts.toString();
+      if (s.progressionSplitSeconds != null) _progSplitCtrl.text = s.progressionSplitSeconds.toString();
     }
   }
 
   @override
   void dispose() {
-    for (final c in [_minCtrl, _secCtrl, _distCtrl, _wMinCtrl, _wMaxCtrl, _spmCtrl, _splitMinCtrl, _splitSecCtrl]) {
+    for (final c in [_minCtrl, _secCtrl, _distCtrl, _wMinCtrl, _wMaxCtrl, _spmCtrl, _splitMinCtrl, _splitSecCtrl, _progSpmCtrl, _progWattsCtrl, _progSplitCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -538,6 +548,9 @@ class _StepDialogState extends State<_StepDialog> {
       targetWattsMax: int.tryParse(_wMaxCtrl.text.trim()),
       targetSpm: int.tryParse(_spmCtrl.text.trim()),
       targetSplitSeconds: _buildSplitSeconds(),
+      progressionSpm: int.tryParse(_progSpmCtrl.text.trim()),
+      progressionWatts: int.tryParse(_progWattsCtrl.text.trim()),
+      progressionSplitSeconds: int.tryParse(_progSplitCtrl.text.trim()),
     );
   }
 
@@ -671,6 +684,45 @@ class _StepDialogState extends State<_StepDialog> {
                 ),
               ],
             ),
+
+            if (widget.isInGroup) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              Text(l10n.editorProgressions,
+                  style: const TextStyle(fontSize: 12, color: Colors.white54)),
+              const SizedBox(height: 8),
+
+              TextField(
+                controller: _progSpmCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                    labelText: l10n.editorProgressionSpm,
+                    border: const OutlineInputBorder(),
+                    hintText: l10n.editorProgressionSpmHint),
+              ),
+
+              const SizedBox(height: 8),
+
+              TextField(
+                controller: _progWattsCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                    labelText: l10n.editorProgressionWatts,
+                    border: const OutlineInputBorder(),
+                    hintText: l10n.editorProgressionWattsHint),
+              ),
+
+              const SizedBox(height: 8),
+
+              TextField(
+                controller: _progSplitCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                    labelText: l10n.editorProgressionSplit,
+                    border: const OutlineInputBorder(),
+                    hintText: l10n.editorProgressionSplitHint),
+              ),
+            ],
           ],
         ),
       ),

@@ -704,6 +704,48 @@ abstract class AppLocalizations {
   /// **'Split sec'**
   String get editorSplitSec;
 
+  /// No description provided for @editorProgressions.
+  ///
+  /// In en, this message translates to:
+  /// **'Progressions (only applies to series)'**
+  String get editorProgressions;
+
+  /// No description provided for @editorProgressionSpm.
+  ///
+  /// In en, this message translates to:
+  /// **'SPM increment (+/rep)'**
+  String get editorProgressionSpm;
+
+  /// No description provided for @editorProgressionSpmHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g: 2'**
+  String get editorProgressionSpmHint;
+
+  /// No description provided for @editorProgressionWatts.
+  ///
+  /// In en, this message translates to:
+  /// **'Watts increment (+/rep)'**
+  String get editorProgressionWatts;
+
+  /// No description provided for @editorProgressionWattsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g: 5'**
+  String get editorProgressionWattsHint;
+
+  /// No description provided for @editorProgressionSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Split change in seconds (+/-/rep)'**
+  String get editorProgressionSplit;
+
+  /// No description provided for @editorProgressionSplitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g: -2 (faster)'**
+  String get editorProgressionSplitHint;
+
   /// No description provided for @profileTitle.
   ///
   /// In en, this message translates to:

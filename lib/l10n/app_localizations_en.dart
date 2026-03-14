@@ -323,6 +323,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorSplitSec => 'Split sec';
 
   @override
+  String get editorProgressions => 'Progressions (only applies to series)';
+
+  @override
+  String get editorProgressionSpm => 'SPM increment (+/rep)';
+
+  @override
+  String get editorProgressionSpmHint => 'e.g: 2';
+
+  @override
+  String get editorProgressionWatts => 'Watts increment (+/rep)';
+
+  @override
+  String get editorProgressionWattsHint => 'e.g: 5';
+
+  @override
+  String get editorProgressionSplit => 'Split change in seconds (+/-/rep)';
+
+  @override
+  String get editorProgressionSplitHint => 'e.g: -2 (faster)';
+
+  @override
   String get profileTitle => 'Profile';
 
   @override

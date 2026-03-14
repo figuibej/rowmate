@@ -7,7 +7,7 @@ import '../models/workout_session.dart';
 /// Servicio de base de datos SQLite para rutinas y sesiones de entrenamiento
 class DatabaseService {
   static const _dbName = 'rower_app.db';
-  static const _dbVersion = 6;
+  static const _dbVersion = 7;
   Database? _db;
 
   Future<Database> get database async {
@@ -57,6 +57,17 @@ class DatabaseService {
         'ALTER TABLE workout_sessions ADD COLUMN strava_activity_id TEXT',
       );
     }
+    if (oldVersion < 7) {
+      await db.execute(
+        'ALTER TABLE interval_steps ADD COLUMN progression_spm INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE interval_steps ADD COLUMN progression_watts INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE interval_steps ADD COLUMN progression_split_seconds INTEGER',
+      );
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -83,6 +94,9 @@ class DatabaseService {
         target_split_seconds  INTEGER,
         group_id              TEXT,
         group_repeat_count    INTEGER,
+        progression_spm       INTEGER,
+        progression_watts     INTEGER,
+        progression_split_seconds INTEGER,
         FOREIGN KEY (routine_id) REFERENCES routines(id) ON DELETE CASCADE
       )
     ''');

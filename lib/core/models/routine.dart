@@ -21,6 +21,7 @@ class Routine {
       steps.fold(0, (sum, s) => sum + (s.durationSeconds ?? 0));
 
   /// Expande las series en pasos individuales secuenciales
+  /// Aplica progresiones a los objetivos en cada repetición del grupo
   List<IntervalStep> get flattenedSteps {
     final result = <IntervalStep>[];
     int i = 0;
@@ -38,9 +39,26 @@ class Routine {
           group.add(steps[i]);
           i++;
         }
-        // Repetir el grupo N veces
+        // Repetir el grupo N veces, aplicando progresiones
         for (var r = 0; r < repeat; r++) {
-          result.addAll(group);
+          for (final stepInGroup in group) {
+            // Aplicar progresiones según la iteración actual (r)
+            final progressed = stepInGroup.copyWith(
+              targetSpm: stepInGroup.targetSpm != null && stepInGroup.progressionSpm != null
+                  ? stepInGroup.targetSpm! + (stepInGroup.progressionSpm! * r)
+                  : stepInGroup.targetSpm,
+              targetWattsMin: stepInGroup.targetWattsMin != null && stepInGroup.progressionWatts != null
+                  ? stepInGroup.targetWattsMin! + (stepInGroup.progressionWatts! * r)
+                  : stepInGroup.targetWattsMin,
+              targetWattsMax: stepInGroup.targetWattsMax != null && stepInGroup.progressionWatts != null
+                  ? stepInGroup.targetWattsMax! + (stepInGroup.progressionWatts! * r)
+                  : stepInGroup.targetWattsMax,
+              targetSplitSeconds: stepInGroup.targetSplitSeconds != null && stepInGroup.progressionSplitSeconds != null
+                  ? stepInGroup.targetSplitSeconds! + (stepInGroup.progressionSplitSeconds! * r)
+                  : stepInGroup.targetSplitSeconds,
+            );
+            result.add(progressed);
+          }
         }
       }
     }

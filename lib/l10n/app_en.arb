@@ -126,6 +126,13 @@
   "editorTargetSpm": "Target SPM",
   "editorSplitMin": "Split min",
   "editorSplitSec": "Split sec",
+  "editorProgressions": "Progressions (only applies to series)",
+  "editorProgressionSpm": "SPM increment (+/rep)",
+  "editorProgressionSpmHint": "e.g: 2",
+  "editorProgressionWatts": "Watts increment (+/rep)",
+  "editorProgressionWattsHint": "e.g: 5",
+  "editorProgressionSplit": "Split change in seconds (+/-/rep)",
+  "editorProgressionSplitHint": "e.g: -2 (faster)",
 
   "profileTitle": "Profile",
   "profileConnectStrava": "Connect with Strava",

@@ -234,6 +234,47 @@ gantt
 
 Each step in the editor can have an individual watts/SPM target, so the app warns you in real time when you drop below your goal.
 
+### Progressive Targets in Series
+
+When configuring a **series** (a group of steps that repeat), you can set **progressive targets** that automatically increase with each repetition. This is perfect for ladder workouts and progressive training.
+
+**How it works:**
+- When editing a step **inside a series**, you'll see three optional progression fields:
+  - **SPM increment (+/rep)**: how much to increase SPM each round (e.g. `+2`)
+  - **Watts increment (+/rep)**: how much to increase watts each round (e.g. `+5`)
+  - **Split change (+/-/rep)**: how much to change split time each round in seconds (e.g. `-2` to go faster)
+
+**Example: Progressive SPM ladder**
+```
+Series configuration:
+  - 3 repetitions
+  - Work: 5 minutes @ 18 SPM
+  - Progression SPM: +2
+  - Rest: 2 minutes
+
+Result (auto-expanded):
+  1st round: 5 min @ 18 SPM
+  2 min rest
+  2nd round: 5 min @ 20 SPM
+  2 min rest
+  3rd round: 5 min @ 22 SPM
+```
+
+**Multiple progressions:**
+You can combine different progression types in the same step:
+```
+Work: 8 min @ 150W, 22 SPM
+  - Watts progression: +10
+  - SPM progression: +2
+
+Result:
+  Round 1: 150W @ 22 SPM
+  Round 2: 160W @ 24 SPM
+  Round 3: 170W @ 26 SPM
+```
+
+> **Note:** Progression fields only appear when configuring steps inside a series. For standalone steps, they're hidden to avoid confusion.
+
 ---
 
 ## Contributing
