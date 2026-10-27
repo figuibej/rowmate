@@ -1,0 +1,14 @@
+{
+    "name": "RowMate.Presentation",
+    "rootNamespace": "RowMate.Presentation",
+    "references": ["RowMate.Core", "RowMate.App", "Unity.InputSystem"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

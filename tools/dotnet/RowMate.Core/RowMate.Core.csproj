@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>RowMate.Core</AssemblyName>
+    <RootNamespace>RowMate.Core</RootNamespace>
+    <RowMateAsmdef>Core/RowMate.Core.asmdef</RowMateAsmdef>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityAssets)Core/**/*.cs" LinkBase="Core" />
+  </ItemGroup>
+</Project>

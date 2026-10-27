@@ -1,0 +1,14 @@
+{
+    "name": "RowMate.App",
+    "rootNamespace": "RowMate.App",
+    "references": ["RowMate.Core"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

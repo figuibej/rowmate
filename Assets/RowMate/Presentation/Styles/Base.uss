@@ -1,0 +1,809 @@
+/* Base de RowMate (02-tech-design §3.12). Dueño: WP-B. Estructura, propiedades de contrato y una base neutra que reemplaza
+   el aspecto genérico de los controles de Unity (botones, ScrollView, Toggle). WP-D pule el aspecto en Skin.uss.
+   Reglas: ningún color literal (solo var(--rm-…) de Tokens.uss; los "blanco al N %" que no son token, con opacity);
+   ningún font-size ni -unity-font-definition en elementos con .rm-type-* (es de Typography.uss); lo que el código pone en
+   línea manda (borde superior de las tarjetas, brillos, opacidad del corazón, área segura, grilla, píldora, llave, panel). */
+
+/* ── Raíz, pantallas y capas ───────────────────────────────────────────── */
+.rm-app {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--rm-bg-app);
+    color: var(--rm-text-primary);
+}
+
+.unity-label {
+    margin: 0;
+    padding: 0;
+}
+
+.rm-tab-content,
+.rm-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: column;
+    background-color: var(--rm-bg-app);
+}
+
+.rm-text--tertiary {
+    color: var(--rm-text-tertiary);
+}
+
+/* ── Barra superior (AC-APP-05-02): alto 56 + área segura superior (por código), sin borde ni sombra ── */
+.rm-appbar {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    height: 56px;
+    background-color: var(--rm-bg-app);
+    border-width: 0;
+}
+
+.rm-appbar__title {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: 16px;
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-left;
+}
+
+.rm-appbar__actions {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+/* ── Barras de desplazamiento superpuestas (contrato: no ocupan ancho, AC-BLE-11-05) ── */
+.rm-scroll .unity-scroll-view__vertical-scroller {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 8px;
+    min-width: 8px;
+    border-width: 0;
+    background-color: transparent;
+}
+
+.rm-scroll .unity-scroller__low-button,
+.rm-scroll .unity-scroller__high-button {
+    display: none;
+}
+
+.rm-scroll .unity-scroller__slider {
+    margin: 0;
+    flex-grow: 1;
+}
+
+.rm-scroll .unity-base-slider__tracker {
+    background-color: transparent;
+    border-width: 0;
+}
+
+.rm-scroll .unity-base-slider__dragger {
+    width: 4px;
+    left: 2px;
+    border-radius: 2px;
+    border-width: 0;
+    background-color: var(--rm-border-strong);
+}
+
+/* ── Barra de pestañas (AC-APP-02-03, ART_BIBLE §3.11): alto 64 + área segura inferior (por código) ── */
+.rm-tab-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 64px;
+    flex-direction: row;
+    background-color: var(--rm-surface-nav);
+    border-top-width: 1px;
+    border-top-color: var(--rm-border-subtle);
+}
+
+.rm-tab-bar__sheen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: 32px;
+    opacity: 0.05;
+    -unity-background-image-tint-color: var(--rm-text-primary);
+}
+
+.rm-tab-bar__pill {
+    position: absolute;
+    top: 6px;
+    width: 56px;
+    height: 32px;
+    border-radius: 999px;
+    background-color: var(--rm-nav-indicator);
+}
+
+.rm-tab {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0;
+    padding: 6px 0 0 0;
+    border-width: 0;
+    border-radius: 0;
+    background-color: transparent;
+}
+
+.rm-tab:hover,
+.rm-tab:active,
+.rm-tab:focus,
+.rm-tab:hover:active {
+    background-color: transparent;
+    border-width: 0;
+}
+
+.rm-tab__icon-box {
+    width: 56px;
+    height: 32px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.rm-tab__state {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 999px;
+    background-color: var(--rm-text-primary);
+    opacity: 0;
+}
+
+.rm-tab__icon {
+    color: var(--rm-text-secondary);
+}
+
+.rm-tab__label {
+    margin-top: 4px;
+    color: var(--rm-text-secondary);
+    white-space: nowrap;
+    -unity-text-align: upper-center;
+}
+
+.rm-tab--selected .rm-tab__icon,
+.rm-tab--selected .rm-tab__label {
+    color: var(--rm-accent-primary);
+}
+
+/* ── Anillo de foco (AC-APP-05-07): solo con .rm-keyboard-nav, absoluto, no ocupa lugar ── */
+.rm-focus-ring {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
+    display: none;
+    border-width: 2px;
+    border-color: var(--rm-focus-ring);
+    border-radius: 16px;
+}
+
+.rm-focus-ring__halo {
+    position: absolute;
+    left: -6px;
+    top: -6px;
+    right: -6px;
+    bottom: -6px;
+    border-width: 4px;
+    border-color: var(--rm-focus-ring-halo);
+    border-radius: 20px;
+}
+
+.rm-keyboard-nav *:focus > .rm-focus-ring,
+.rm-keyboard-nav .rm-tab:focus .rm-focus-ring {
+    display: flex;
+}
+
+/* ── Botones (ART_BIBLE §3.6, DN-20): alto de contrato como min-height, etiqueta .rm-type-button, flex-shrink 0 ── */
+.rm-button {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-height: 40px;
+    margin: 0;
+    padding: 0 12px;
+    border-width: 0;
+    border-radius: 12px;
+    background-color: transparent;
+}
+
+.rm-button:hover,
+.rm-button:active,
+.rm-button:focus,
+.rm-button:hover:active,
+.rm-button:disabled {
+    background-color: transparent;
+}
+
+.rm-button__state {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 12px;
+    background-color: var(--rm-text-primary);
+    opacity: 0;
+}
+
+.rm-button__icon {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.rm-button__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    -unity-text-align: middle-center;
+    color: var(--rm-accent-primary);
+}
+
+.rm-button .rm-icon {
+    color: var(--rm-accent-primary);
+}
+
+.rm-button--primary,
+.rm-button--primary:hover,
+.rm-button--primary:focus {
+    min-height: 48px;
+    padding: 0 16px;
+    background-color: var(--rm-accent-primary);
+}
+
+.rm-button--primary:disabled,
+.rm-button--primary:disabled:hover {
+    background-color: var(--rm-accent-primary);
+}
+
+.rm-button--primary:active,
+.rm-button--primary:hover:active {
+    background-color: var(--rm-accent-primary-pressed);
+}
+
+.rm-button--primary .rm-button__label,
+.rm-button--primary .rm-icon {
+    color: var(--rm-text-on-accent);
+}
+
+.rm-button--primary .rm-spinner {
+    color: var(--rm-text-primary);
+}
+
+.rm-button--tonal,
+.rm-button--tonal:hover,
+.rm-button--tonal:active,
+.rm-button--tonal:focus,
+.rm-button--tonal:hover:active,
+.rm-button--tonal:disabled,
+.rm-button--tonal:disabled:hover {
+    min-height: 44px;
+    padding: 0 16px;
+    background-color: var(--rm-nav-indicator);
+}
+
+.rm-button--outline,
+.rm-button--outline:hover,
+.rm-button--outline:active,
+.rm-button--outline:focus,
+.rm-button--outline:hover:active,
+.rm-button--outline:disabled,
+.rm-button--outline:disabled:hover {
+    min-height: 44px;
+    padding: 0 16px;
+    border-width: 1px;
+    border-color: var(--rm-border-strong);
+}
+
+.rm-button--outline .rm-button__label,
+.rm-button--outline .rm-icon {
+    color: var(--rm-text-primary);
+}
+
+.rm-button--danger .rm-button__label,
+.rm-button--danger .rm-icon {
+    color: var(--rm-state-danger-text);
+}
+
+/* Deshabilitado (AC-HRM-13-04): opacidad 0,38, sin transición. */
+.rm-button:disabled,
+.rm-icon-button:disabled,
+.rm-chip:disabled,
+.rm-hrm-device-row:disabled {
+    opacity: 0.38;
+}
+
+.rm-icon-button {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    border-radius: 24px;
+    background-color: transparent;
+}
+
+.rm-icon-button:hover,
+.rm-icon-button:active,
+.rm-icon-button:focus,
+.rm-icon-button:hover:active {
+    background-color: transparent;
+}
+
+.rm-icon-button .rm-button__state {
+    left: 4px;
+    top: 4px;
+    right: 4px;
+    bottom: 4px;
+    border-radius: 20px;
+}
+
+.rm-icon-button__icon {
+    color: var(--rm-text-primary);
+}
+
+.rm-spinner {
+    color: var(--rm-accent-primary);
+}
+
+/* ── Tarjetas (AC-APP-05-02, AC-APP-08-02): misma tarjeta para el tablero y el pulsómetro ── */
+.rm-card {
+    background-color: var(--rm-surface-card);
+    border-radius: 16px;
+    border-top-width: 3px;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    padding: 16px;
+}
+
+.rm-card__glow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: 24px;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+}
+
+/* ── Dispositivo: vistas superpuestas (DN-12) ── */
+.rm-device-views {
+    flex-grow: 1;
+    position: relative;
+}
+
+.rm-device-connected,
+.rm-device-scan {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-device-connected > .unity-scroll-view {
+    flex-grow: 1;
+}
+
+.rm-device-connected__content {
+    padding-top: 16px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.rm-device-header {
+    margin-top: 8px;
+    min-height: 32px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.rm-device-header__icon {
+    color: var(--rm-accent-primary);
+    margin-right: 12px;
+}
+
+.rm-device-header__name {
+    flex-shrink: 1;
+    margin-right: 12px;
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-badge {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 4px 0;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background-color: var(--rm-state-connected-bg);
+}
+
+.rm-badge__icon {
+    color: var(--rm-state-connected);
+    margin-right: 4px;
+}
+
+.rm-badge__label {
+    color: var(--rm-state-connected);
+    white-space: nowrap;
+}
+
+.rm-metric-grid {
+    margin-top: 24px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+#hrm-card-slot-connected {
+    margin-top: 12px;
+    margin-bottom: 48px;
+    flex-shrink: 0;
+}
+
+/* Tarjeta de métrica (AC-BLE-11-03, -06; AC-APP-06-01, DV-03): ícono, etiqueta y valor al 100 % en el color de la
+   métrica; PULSO con ícono y etiqueta en metric.hr.hud y valor en metric.hr. */
+.rm-metric-tile {
+    flex-direction: column;
+}
+
+.rm-metric-tile__header {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.rm-metric-tile__icon {
+    margin-right: 6px;
+}
+
+.rm-metric-tile__label {
+    white-space: nowrap;
+}
+
+.rm-metric-tile__value-box {
+    flex-grow: 1;
+}
+
+.rm-metric--split .rm-metric-tile__icon,
+.rm-metric--split .rm-metric-tile__label,
+.rm-metric--split .rm-metric-tile__value {
+    color: var(--rm-metric-split);
+}
+
+.rm-metric--spm .rm-metric-tile__icon,
+.rm-metric--spm .rm-metric-tile__label,
+.rm-metric--spm .rm-metric-tile__value {
+    color: var(--rm-metric-spm);
+}
+
+.rm-metric--watts .rm-metric-tile__icon,
+.rm-metric--watts .rm-metric-tile__label,
+.rm-metric--watts .rm-metric-tile__value {
+    color: var(--rm-metric-watts);
+}
+
+.rm-metric--distance .rm-metric-tile__icon,
+.rm-metric--distance .rm-metric-tile__label,
+.rm-metric--distance .rm-metric-tile__value {
+    color: var(--rm-metric-distance);
+}
+
+.rm-metric--hr .rm-metric-tile__icon,
+.rm-metric--hr .rm-metric-tile__label {
+    color: var(--rm-metric-hr-hud);
+}
+
+.rm-metric--hr .rm-metric-tile__value {
+    color: var(--rm-metric-hr);
+}
+
+.rm-metric--split .rm-card__glow {
+    -unity-background-image-tint-color: var(--rm-metric-split);
+}
+
+.rm-metric--spm .rm-card__glow {
+    -unity-background-image-tint-color: var(--rm-metric-spm);
+}
+
+.rm-metric--watts .rm-card__glow {
+    -unity-background-image-tint-color: var(--rm-metric-watts);
+}
+
+.rm-metric--distance .rm-card__glow {
+    -unity-background-image-tint-color: var(--rm-metric-distance);
+}
+
+.rm-metric--hr .rm-card__glow,
+#hrm-glow {
+    -unity-background-image-tint-color: var(--rm-metric-hr);
+}
+
+/* ── Dispositivo: vista de búsqueda (AC-BLE-05-01, -02) ── */
+.rm-device-scan {
+    flex-direction: column;
+    padding: 16px;
+}
+
+#device-search {
+    align-self: stretch;
+}
+
+#device-search-hint {
+    margin-top: 12px;
+    padding: 8px 0;
+    white-space: normal;
+    -unity-text-align: upper-center;
+    flex-shrink: 0;
+}
+
+.rm-device-empty {
+    margin-top: 12px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+}
+
+.rm-device-empty .unity-scroll-view__content-container {
+    min-height: 100%;
+    justify-content: center;
+}
+
+.rm-empty {
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.rm-empty__icon {
+    color: var(--rm-text-primary);
+    opacity: 0.24;
+}
+
+.rm-empty__title {
+    margin-top: 12px;
+    color: var(--rm-text-secondary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.rm-empty__hint {
+    margin-top: 8px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+#hrm-card-slot-scan {
+    margin-top: 12px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+}
+
+/* ── Tarjeta del pulsómetro (AC-HRM-13-02 a -07; 04-design-notes §4.6) ── */
+.rm-hrm-card {
+    flex-shrink: 0;
+}
+
+.rm-hrm-card__header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.rm-hrm-card__heart {
+    color: var(--rm-metric-hr);
+    margin-right: 6px;
+}
+
+.rm-hrm-card__title {
+    color: var(--rm-metric-hr-hud);
+    white-space: nowrap;
+}
+
+.rm-hrm-connected {
+    flex-direction: row;
+    align-items: center;
+}
+
+.rm-hrm-connected__texts {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+#hrm-connected-name {
+    color: var(--rm-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-hrm-bpm-box {
+    margin-top: 4px;
+}
+
+.rm-hrm-bpm-row {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.rm-hrm-bpm {
+    color: var(--rm-metric-hr);
+}
+
+#hrm-bpm-unit {
+    margin-left: 6px;
+    color: var(--rm-metric-hr-hud);
+    white-space: nowrap;
+}
+
+.rm-hrm-connecting,
+.rm-hrm-scanning__status {
+    flex-direction: row;
+    align-items: center;
+}
+
+.rm-hrm-connecting .rm-spinner,
+.rm-hrm-scanning__status .rm-spinner {
+    margin-right: 12px;
+}
+
+#hrm-connecting-text {
+    flex-shrink: 1;
+    color: var(--rm-text-primary);
+    white-space: normal;
+}
+
+#hrm-searching-text {
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.rm-hrm-device-row {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 56px;
+    margin: 4px 0 0 0;
+    padding: 8px 0;
+    border-width: 0;
+    border-radius: 8px;
+    background-color: transparent;
+}
+
+.rm-hrm-device-row:hover,
+.rm-hrm-device-row:active,
+.rm-hrm-device-row:focus,
+.rm-hrm-device-row:hover:active {
+    background-color: transparent;
+}
+
+.rm-hrm-device-row .rm-button__state {
+    left: -8px;
+    right: -8px;
+    border-radius: 8px;
+}
+
+.rm-hrm-device-row__icon {
+    color: var(--rm-metric-hr);
+    margin-right: 16px;
+}
+
+.rm-hrm-device-row__texts {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.rm-hrm-device-row__title {
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-left;
+}
+
+.rm-hrm-device-row__subtitle {
+    white-space: nowrap;
+    -unity-text-align: middle-left;
+}
+
+.rm-hrm-device-row__chevron {
+    color: var(--rm-text-tertiary);
+}
+
+#hrm-remembered-text {
+    color: var(--rm-text-secondary);
+    white-space: normal;
+}
+
+.rm-hrm-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.rm-hrm-actions > .rm-button {
+    margin-right: 8px;
+    margin-bottom: 4px;
+}
+
+#hrm-nosensor-text {
+    color: var(--rm-text-primary);
+    white-space: normal;
+}
+
+#hrm-watch-hint {
+    margin-top: 4px;
+    white-space: normal;
+}
+
+.rm-hrm-card--nosensor #hrm-search {
+    margin-top: 12px;
+    align-self: flex-start;
+}
+
+#hrm-error {
+    margin-top: 8px;
+    color: var(--rm-state-danger-text);
+    white-space: normal;
+}
+
+/* ── Pestañas provisorias (AC-APP-02-08): ícono 56 apagado al 24 %, centrado entre las dos barras ── */
+.rm-placeholder__body {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.rm-placeholder__icon {
+    color: var(--rm-text-primary);
+    opacity: 0.24;
+}

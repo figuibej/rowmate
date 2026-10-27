@@ -1,0 +1,12 @@
+/* Tema de RowMate (02-tech-design §3.12). Dueño: WP-B. Orden de importación = orden de precedencia (lo que viene después gana
+   con la misma especificidad): WP-D sobrescribe en Skin.uss cualquier propiedad visual sin tocar los archivos de WP-B.
+   Las hojas del simulador son solo estilos (sin textos ni código): incluirlas en el tema de todos los builds no agrega
+   código del simulador (AC-BLE-13-02). */
+@import url("unity-theme://default");
+@import url("Tokens.uss");
+@import url("Typography.uss");
+@import url("Base.uss");
+@import url("../../SimulatorPresentation/Styles/SimulatorBase.uss");
+@import url("Skin.uss");
+@import url("../../SimulatorPresentation/Styles/SimulatorSkin.uss");
+@import url("Motion.uss");

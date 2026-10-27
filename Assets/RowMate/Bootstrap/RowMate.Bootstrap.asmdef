@@ -1,0 +1,24 @@
+{
+    "name": "RowMate.Bootstrap",
+    "rootNamespace": "RowMate.Bootstrap",
+    "references": [
+        "RowMate.Core",
+        "RowMate.App",
+        "RowMate.Infrastructure",
+        "RowMate.Platform",
+        "RowMate.Presentation",
+        "RowMate.Scene",
+        "RowMate.Simulator",
+        "RowMate.Simulator.Presentation",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

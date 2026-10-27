@@ -1,0 +1,109 @@
+/* Dueño: WP-D (Designer). Transiciones de USS SOLO para micro-interacciones (hover, presionado e interruptor; 04-design-notes
+   de la It. 2, §5.8). Todo lo demás se anima por código con el reloj inyectable (D-14): rodillo, destello, latido, píldora,
+   color de las pestañas, vistas, panel y llave.
+   Como en CSS, la duración "hacia el estado" va en la regla del estado (:hover, :hover:active) y la de vuelta en la regla
+   base. Sin transición: :disabled, el anillo de foco, display.
+   Dos reglas para que las capturas y los videos sigan siendo deterministas (las transiciones de USS corren con el reloj
+   real del panel, no con el de prueba):
+   1. Todo lo que transiciona acá cambia solo con el puntero encima (:hover, :hover:active). El arnés toca con
+      NavigationSubmitEvent, sin puntero: nada de esto se mueve en una captura.
+   2. Ninguna propiedad que el código anima tiene transición (una transición de USS también se dispara con un cambio de
+      estilo en línea): la llave (#sim-open) escala por PopTransition al volver, así que su escala al presionar solo tiene
+      transición mientras está apoyada; el ícono de la pestaña escala por código y la caja del ícono, por USS.
+   Con .rm-reduce-motion no hay escala al presionar (queda la capa de estado). */
+
+/* ── Capas de estado: opacidad. Vuelta dur.fast ease.exit; hacia el estado dur.micro ease.enter ── */
+.rm-button__state,
+.rm-tab__state {
+    transition-property: opacity;
+    transition-duration: var(--rm-dur-fast);
+    transition-timing-function: var(--rm-ease-exit);
+}
+
+.rm-desktop .rm-button:hover > .rm-button__state,
+.rm-desktop .rm-icon-button:hover > .rm-button__state,
+.rm-desktop .rm-chip:hover > .rm-button__state,
+.rm-desktop .rm-hrm-device-row:hover > .rm-button__state,
+.rm-desktop .rm-sim-fab:hover > .rm-button__state,
+.rm-button:hover:active > .rm-button__state,
+.rm-icon-button:hover:active > .rm-button__state,
+.rm-chip:hover:active > .rm-button__state,
+.rm-hrm-device-row:hover:active > .rm-button__state,
+.rm-sim-fab:hover:active > .rm-button__state,
+.rm-desktop .rm-tab:hover .rm-tab__state,
+.rm-tab:hover:active .rm-tab__state {
+    transition-duration: var(--rm-dur-micro);
+    transition-timing-function: var(--rm-ease-enter);
+}
+
+/* ── Presionado: escala (0,97 botones y chips; 0,94 botones de ícono, caja del ícono de la pestaña y llave).
+   Hacia 90 ms ease-out-cubic; vuelta 240 ms ease-out-cubic (≈ spring.snappy). El primario además funde su fondo a
+   accent.primaryPressed (hacia 90, vuelta 160). ── */
+.rm-button,
+.rm-chip,
+.rm-icon-button,
+.rm-tab__icon-box {
+    transition-property: scale;
+    transition-duration: var(--rm-dur-base);
+    transition-timing-function: var(--rm-ease-enter);
+}
+
+.rm-button--primary:hover {
+    transition-property: scale, background-color;
+    transition-duration: var(--rm-dur-base), var(--rm-dur-fast);
+    transition-timing-function: var(--rm-ease-enter), var(--rm-ease-enter);
+}
+
+.rm-button:hover:active,
+.rm-chip:hover:active {
+    scale: 0.97 0.97;
+    transition-duration: var(--rm-dur-micro);
+}
+
+.rm-button--primary:hover:active {
+    transition-duration: var(--rm-dur-micro), var(--rm-dur-micro);
+}
+
+.rm-icon-button:hover:active,
+.rm-tab:hover:active .rm-tab__icon-box {
+    scale: 0.94 0.94;
+    transition-duration: var(--rm-dur-micro);
+}
+
+/* La llave: transición solo mientras está apoyada (en reposo su escala la anima PopTransition por código al volver). */
+.rm-sim-fab:hover:active {
+    scale: 0.94 0.94;
+    transition-property: scale;
+    transition-duration: var(--rm-dur-micro);
+    transition-timing-function: var(--rm-ease-enter);
+}
+
+/* Deshabilitado: sin presión. */
+.rm-button:hover:active:disabled,
+.rm-chip:hover:active:disabled,
+.rm-icon-button:hover:active:disabled {
+    scale: 1 1;
+}
+
+/* ── Interruptor (DN-17): perilla (desplazamiento, escala, color) y pista (fondo y borde), dur.fast ease.move, con el
+   puntero sobre el renglón (regla 1: el cambio de :checked por NavigationSubmitEvent del arnés queda en el acto) ── */
+.rm-switch-row:hover .rm-switch__thumb {
+    transition-property: translate, scale, background-color;
+    transition-duration: var(--rm-dur-fast);
+    transition-timing-function: var(--rm-ease-move);
+}
+
+.rm-switch-row:hover .rm-switch__track {
+    transition-property: background-color, border-color;
+    transition-duration: var(--rm-dur-fast);
+    transition-timing-function: var(--rm-ease-move);
+}
+
+/* ── Reducir movimiento (AC-APP-05-08; §5.10): sin escala al presionar ── */
+.rm-reduce-motion .rm-button:hover:active,
+.rm-reduce-motion .rm-chip:hover:active,
+.rm-reduce-motion .rm-icon-button:hover:active,
+.rm-reduce-motion .rm-sim-fab:hover:active,
+.rm-reduce-motion .rm-tab:hover:active .rm-tab__icon-box {
+    scale: 1 1;
+}

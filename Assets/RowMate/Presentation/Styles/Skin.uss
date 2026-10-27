@@ -1,0 +1,150 @@
+/* Dueño: WP-D (Designer). Aspecto de la app sobre las clases de contrato de 02-tech-design §3.12 ("Lo que es de WP-D"):
+   capas de estado (hover y presionado), botón tonal, anillo y halo de foco por control, brillos y vidrio de la barra.
+   Fuente: 04-design-notes de la It. 2, §4.1-§4.7 y §4.10 (y §15, lo que cambió al implementarlo). No cambia las
+   propiedades de contrato (las verifican los tests PlayMode): fondos, radios de tarjeta, bordes superiores, tamaños de
+   ícono, alturas mínimas, colores de texto de contrato.
+   Reglas: ningún color literal (solo var(--rm-…)); los "blanco al N %" son la capa blanca de Base.uss con opacity; ningún
+   font-size ni -unity-font-definition en elementos con .rm-type-*. USS no tiene :not(): las excepciones (el elegido, lo
+   deshabilitado) van con una regla más específica después. Las escalas al presionar y todas las transiciones están en
+   Motion.uss.
+   Presionado = :hover:active (puntero o dedo apoyado sobre el control). Un :active solo es el "clic simulado" de UI Toolkit
+   (Enter/Espacio o NavigationSubmitEvent: :active durante 100 ms de reloj real): con teclado manda el anillo de foco, y así
+   el arnés de capturas, que toca con NavigationSubmitEvent y un reloj de prueba, no fotografía un "presionado" a medias. */
+
+/* ── Brillos (DN-06; §4.2 y §4.4): la textura VerticalFade (por código) estirada a la caja; tinte y alto en Base.uss ── */
+.rm-card__glow,
+.rm-tab-bar__sheen {
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+/* ── Barra de pestañas de vidrio (§4.2) ───────────────────────────────────────────────────────────────────────────── */
+/* Hover solo en escritorio y solo en los no elegidos: capa blanca al 4 %. */
+.rm-desktop .rm-tab:hover .rm-tab__state {
+    opacity: 0.04;
+}
+
+.rm-desktop .rm-tab--selected:hover .rm-tab__state {
+    opacity: 0;
+}
+
+/* Presionado: capa al 8 % (la caja del ícono además escala a 0,94: Motion.uss). */
+.rm-tab:hover:active .rm-tab__state,
+.rm-desktop .rm-tab:hover:active .rm-tab__state,
+.rm-desktop .rm-tab--selected:hover:active .rm-tab__state {
+    opacity: 0.08;
+}
+
+/* Anillo alrededor de la caja del ícono (56 × 32, r.full): radio 16 + 4; halo + 4. */
+.rm-tab .rm-focus-ring {
+    border-radius: 20px;
+}
+
+.rm-tab .rm-focus-ring__halo {
+    border-radius: 24px;
+}
+
+/* ── Botones y controles accionables (§4.7) ───────────────────────────────────────────────────────────────────────
+   Capa .rm-button__state (blanca, Base.uss): hover 4 % (solo escritorio), presionado 8 %. Vale para los botones
+   (RmButton), los de ícono, los chips, las filas de sensores y la llave del simulador. */
+.rm-desktop .rm-button:hover > .rm-button__state,
+.rm-desktop .rm-icon-button:hover > .rm-button__state,
+.rm-desktop .rm-chip:hover > .rm-button__state,
+.rm-desktop .rm-hrm-device-row:hover > .rm-button__state,
+.rm-desktop .rm-sim-fab:hover > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-button:hover:active > .rm-button__state,
+.rm-icon-button:hover:active > .rm-button__state,
+.rm-chip:hover:active > .rm-button__state,
+.rm-hrm-device-row:hover:active > .rm-button__state,
+.rm-sim-fab:hover:active > .rm-button__state,
+.rm-desktop .rm-button:hover:active > .rm-button__state,
+.rm-desktop .rm-icon-button:hover:active > .rm-button__state,
+.rm-desktop .rm-chip:hover:active > .rm-button__state,
+.rm-desktop .rm-hrm-device-row:hover:active > .rm-button__state,
+.rm-desktop .rm-sim-fab:hover:active > .rm-button__state {
+    opacity: 0.08;
+}
+
+/* Primario: presionado = fondo accent.primaryPressed (sin capa encima). Base.uss lo pone también con :active solo (el clic
+   simulado de 100 ms); acá queda solo con el puntero apoyado, como el resto. */
+.rm-button--primary:active {
+    background-color: var(--rm-accent-primary);
+}
+
+.rm-button--primary:hover:active {
+    background-color: var(--rm-accent-primary-pressed);
+}
+
+.rm-button--primary:hover:active > .rm-button__state,
+.rm-desktop .rm-button--primary:hover:active > .rm-button__state {
+    opacity: 0;
+}
+
+/* Deshabilitado (contrato: opacidad 0,38 en todo el control): sin hover ni presión. */
+.rm-button:disabled > .rm-button__state,
+.rm-icon-button:disabled > .rm-button__state,
+.rm-chip:disabled > .rm-button__state,
+.rm-hrm-device-row:disabled > .rm-button__state,
+.rm-desktop .rm-button:hover:disabled > .rm-button__state,
+.rm-desktop .rm-icon-button:hover:disabled > .rm-button__state,
+.rm-desktop .rm-chip:hover:disabled > .rm-button__state,
+.rm-desktop .rm-hrm-device-row:hover:disabled > .rm-button__state,
+.rm-desktop .rm-button:hover:active:disabled > .rm-button__state,
+.rm-desktop .rm-icon-button:hover:active:disabled > .rm-button__state,
+.rm-desktop .rm-chip:hover:active:disabled > .rm-button__state,
+.rm-desktop .rm-hrm-device-row:hover:active:disabled > .rm-button__state {
+    opacity: 0;
+}
+
+/* Tonal (hrm-search en "Sin sensor", hrm-retry): accent.tonalBg con accent.onTonal (N3: 5,88 en reposo, 5,24 con hover).
+   Mismos selectores que Base.uss para ganarle con la misma especificidad. */
+.rm-button--tonal,
+.rm-button--tonal:hover,
+.rm-button--tonal:active,
+.rm-button--tonal:focus,
+.rm-button--tonal:hover:active,
+.rm-button--tonal:disabled,
+.rm-button--tonal:disabled:hover {
+    background-color: var(--rm-accent-tonal-bg);
+}
+
+.rm-button--tonal .rm-button__label,
+.rm-button--tonal .rm-icon {
+    color: var(--rm-accent-on-tonal);
+}
+
+/* Anillo de foco por control: radio = radio del control + 4 y halo + 4 (Base.uss: botón r.l 12 → 16 / 20). */
+.rm-icon-button > .rm-focus-ring {
+    border-radius: 28px;
+}
+
+.rm-icon-button > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 32px;
+}
+
+.rm-chip > .rm-focus-ring {
+    border-radius: 12px;
+}
+
+.rm-chip > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 16px;
+}
+
+/* La capa de la fila se extiende 8 dp a cada lado del texto (Base.uss): el anillo la rodea. */
+.rm-hrm-device-row > .rm-focus-ring {
+    left: -12px;
+    right: -12px;
+    border-radius: 12px;
+}
+
+.rm-hrm-device-row > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 16px;
+}
+
+/* ── Interruptor (DN-17): anillo alrededor del renglón, con el radio de los botones ── */
+.rm-switch-row > .rm-focus-ring {
+    left: -8px;
+    right: -8px;
+}

@@ -1,0 +1,333 @@
+{
+  "@@locale": "es",
+  "navDevice": "Dispositivo",
+  "navWorkout": "Workout",
+  "navRoutines": "Rutinas",
+  "navHistory": "Historial",
+  "navProfile": "Perfil",
+  "deviceTitle": "Dispositivo",
+  "deviceDisconnect": "Desconectar",
+  "deviceConnected": "Conectado",
+  "deviceSearching": "Buscando...",
+  "deviceSearch": "Buscar dispositivos",
+  "deviceSearchHint": "Buscando dispositivos FTMS con servicio 0x1826...",
+  "deviceNoResults": "No se encontraron dispositivos",
+  "deviceNoResultsHint": "Asegurate que el rower esté encendido\ny el Bluetooth activado",
+  "deviceBtOff": "Bluetooth apagado",
+  "deviceBtOffHint": "Activá el Bluetooth desde el Centro de Control\no Ajustes para buscar el rower",
+  "deviceBtDenied": "Permiso de Bluetooth denegado",
+  "deviceBtDeniedHint": "Habilitá el permiso de Bluetooth en\nAjustes > Privacidad > Bluetooth",
+  "deviceBtEnable": "Activar Bluetooth",
+  "hrmTitle": "Pulsómetro",
+  "hrmNoSensor": "Sin sensor",
+  "hrmWatchHint": "Un smartwatch (Wear OS, Apple Watch) necesita una app que transmita el pulso por Bluetooth, p. ej. Heart for Bluetooth en Wear OS.",
+  "hrmSearch": "Buscar",
+  "hrmSearchOther": "Buscar otro",
+  "hrmSearching": "Buscando sensores...",
+  "hrmConnectingTo": "Conectando a {name}...",
+  "@hrmConnectingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hrmConnect": "Conectar",
+  "hrmDisconnect": "Desconectar",
+  "hrmForget": "Olvidar",
+  "hrmReconnecting": "reconectando...",
+  "hrmNotFound": "no encontrado",
+  "hrmUnknownSensor": "Sensor desconocido",
+  "hrmIncompatible": "No es un pulsómetro compatible (sin servicio Heart Rate)",
+  "hrmConnectError": "Error al conectar: {error}",
+  "@hrmConnectError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hrmBpm": "bpm",
+  "workoutTitle": "Entrenamiento",
+  "workoutFree": "Entrenamiento libre",
+  "workoutRowerNotConnected": "Conectá el rower para iniciar un entrenamiento",
+  "workoutOrPickRoutine": "  O elegí una rutina:",
+  "workoutNoRoutines": "Creá una rutina en la pestaña \"Rutinas\"",
+  "workoutInProgress": "Entrenamiento en curso...",
+  "workoutScene": "Escenario",
+  "sceneLake": "Lago alpino",
+  "sceneRiver": "Río urbano",
+  "sceneCoast": "Costa",
+  "sceneRegatta": "Canal de regata",
+  "workoutFinish": "Terminar",
+  "workoutFinishTitle": "Terminar entrenamiento",
+  "workoutFinishContent": "Se guardará la sesión. ¿Continuar?",
+  "workoutPause": "Pausa",
+  "workoutResume": "Reanudar",
+  "workoutStartTitle": "¿Iniciar entrenamiento?",
+  "workoutStartContent": "{summary}\n\n¿Iniciar el entrenamiento?",
+  "@workoutStartContent": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "workoutStart": "Iniciar",
+  "workoutCompleted": "¡Entrenamiento completado!",
+  "workoutCompletedMessage": "Has completado tu rutina exitosamente.",
+  "metricTime": "TIEMPO",
+  "metricSplit": "SPLIT 500m",
+  "metricDistance": "DISTANCIA",
+  "metricWatts": "VATIOS",
+  "metricSpm": "SPM",
+  "metricCalories": "CALORÍAS",
+  "metricHeartRate": "PULSO",
+  "metricFreeLabel": "Entrenamiento libre",
+  "routinesTitle": "Rutinas",
+  "routinesEmpty": "No hay rutinas todavía",
+  "routinesEmptyHint": "Presioná + para crear una",
+  "routineEdit": "Editar",
+  "routineDelete": "Eliminar",
+  "routineDeleteTitle": "Eliminar rutina",
+  "routineDeleteContent": "¿Eliminar \"{name}\"?",
+  "@routineDeleteContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "historyTitle": "Historial",
+  "historyEmpty": "No hay sesiones guardadas",
+  "historyFree": "Libre",
+  "historyStatTime": "Tiempo",
+  "historyStatDistance": "Distancia",
+  "historyStatWatts": "Vatios",
+  "historyStatCalories": "kcal",
+  "historyStatHeartRate": "Pulso",
+  "sessionNoTelemetry": "No hay datos de telemetría",
+  "sessionSummary": "Resumen",
+  "sessionStepBreakdown": "Rendimiento por paso",
+  "sessionChartWatts": "Vatios",
+  "sessionChartSpm": "SPM",
+  "sessionChartSplit": "Split 500m",
+  "sessionChartDistance": "Distancia",
+  "sessionChartHr": "Pulso",
+  "stepTypeWarmup": "Calentamiento",
+  "stepTypeWork": "Trabajo",
+  "stepTypeRest": "Descanso",
+  "stepTypeCooldown": "Enfriamiento",
+  "cancel": "Cancelar",
+  "delete": "Eliminar",
+  "ok": "OK",
+  "confirm": "Confirmar",
+  "save": "Guardar",
+  "editorNewRoutine": "Nueva rutina",
+  "editorEditRoutine": "Editar rutina",
+  "editorRoutineName": "Nombre de la rutina",
+  "editorDescription": "Descripción (opcional)",
+  "editorStepsCount": "Pasos ({count})",
+  "@editorStepsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorStep": "Paso",
+  "editorSeries": "Serie",
+  "editorEmptySteps": "Todavía no hay pasos.\nPresioná \"Paso\" o \"Serie\".",
+  "editorDeleteSeries": "Eliminar serie",
+  "editorAddStepToSeries": "Agregar paso a serie",
+  "editorRepetitions": "Repeticiones",
+  "editorAmount": "Cantidad",
+  "editorNameEmpty": "El nombre no puede estar vacío",
+  "editorNoSteps": "Agregá al menos un paso",
+  "editorNewStep": "Nuevo paso",
+  "editorEditStep": "Editar paso",
+  "editorStepType": "Tipo",
+  "editorByTime": "Por tiempo",
+  "editorByDistance": "Por distancia",
+  "editorMinutes": "Min",
+  "editorSeconds": "Seg",
+  "editorMeters": "Metros",
+  "editorOptionalTargets": "Objetivos opcionales",
+  "editorWattsMin": "W mín",
+  "editorWattsMax": "W máx",
+  "editorTargetSpm": "SPM objetivo",
+  "editorSplitMin": "Split min",
+  "editorSplitSec": "Split seg",
+  "editorProgressions": "Progresiones (solo aplica en series)",
+  "editorProgressionSpm": "Incremento SPM (+/rep)",
+  "editorProgressionSpmHint": "Ej: 2",
+  "editorProgressionWatts": "Incremento Watts (+/rep)",
+  "editorProgressionWattsHint": "Ej: 5",
+  "editorProgressionSplit": "Cambio Split segundos (+/-/rep)",
+  "editorProgressionSplitHint": "Ej: -2 (más rápido)",
+  "profileTitle": "Perfil",
+  "profileConnectStrava": "Conectar con Strava",
+  "profileConnected": "Conectado",
+  "profileConnectedToStrava": "Conectado a Strava",
+  "profileDisconnect": "Desconectar",
+  "profileDisconnectTitle": "Desconectar Strava",
+  "profileDisconnectContent": "Tus sesiones no se subirán automáticamente. ¿Continuar?",
+  "profileUploadSettings": "Configuración de subida",
+  "profileAutoUpload": "Subida automática",
+  "profileAutoUploadDesc": "Subir sesiones a Strava automáticamente al terminar",
+  "profileAskUpload": "Preguntar cada vez",
+  "profileAskUploadDesc": "Mostrar un diálogo después de cada entrenamiento",
+  "profileManualUpload": "Solo manual",
+  "profileManualUploadDesc": "Subir sesiones manualmente desde el Historial",
+  "profileSync": "Sincronización",
+  "profileSyncDesc": "Descargar tus actividades de remo desde Strava",
+  "profileSyncFromStrava": "Sincronizar desde Strava",
+  "profileSyncToStrava": "Sincronizar a Strava",
+  "profileSyncing": "Sincronizando...",
+  "profileUploading": "Subiendo...",
+  "profileSyncResult": "{count, plural, one{# sesión sincronizada} other{# sesiones sincronizadas}}",
+  "@profileSyncResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileUploadResult": "{count, plural, one{# sesión subida} other{# sesiones subidas}}",
+  "@profileUploadResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileSyncToDesc": "Subir todas las sesiones locales sin sincronizar a Strava",
+  "profilePendingUploads": "Subidas pendientes",
+  "profileUploadToStrava": "Subir a Strava",
+  "profileUploadingToStrava": "Subiendo a Strava...",
+  "profileUploaded": "Subido a Strava",
+  "profileUploadFailed": "Error al subir",
+  "profileAskUploadDialog": "¿Subir esta sesión a Strava?",
+  "routineSummarySteps": "{count, plural, one{# paso} other{# pasos}}",
+  "@routineSummarySteps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "routineSummaryWorkRest": "{work, plural, one{# serie} other{# series}} · {rest, plural, one{# descanso} other{# descansos}}",
+  "@routineSummaryWorkRest": {
+    "placeholders": {
+      "work": {
+        "type": "int"
+      },
+      "rest": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationMinSec": "{m}m {s}s",
+  "@stepDurationMinSec": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      },
+      "s": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationMin": "{m}m",
+  "@stepDurationMin": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationSec": "{s}s",
+  "@stepDurationSec": {
+    "placeholders": {
+      "s": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationMeters": "{meters}m",
+  "@stepDurationMeters": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationNone": "?",
+  "stepTargetWattsRange": "{min}-{max}W",
+  "@stepTargetWattsRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "stepTargetWattsMin": ">{min}W",
+  "@stepTargetWattsMin": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "stepTargetSpm": "{spm} spm",
+  "@stepTargetSpm": {
+    "placeholders": {
+      "spm": {
+        "type": "int"
+      }
+    }
+  },
+  "stepTargetSplit": "{split}/500m",
+  "@stepTargetSplit": {
+    "placeholders": {
+      "split": {
+        "type": "String"
+      }
+    }
+  },
+  "stepTargetProgressions": "📈 {list}",
+  "@stepTargetProgressions": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "stepProgressionSpm": "SPM {delta}/rep",
+  "@stepProgressionSpm": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "stepProgressionWatts": "W {delta}/rep",
+  "@stepProgressionWatts": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "stepProgressionSplit": "Split {delta}s/rep",
+  "@stepProgressionSplit": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  }
+}

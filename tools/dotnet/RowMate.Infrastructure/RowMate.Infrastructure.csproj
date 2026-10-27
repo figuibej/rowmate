@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>RowMate.Infrastructure</AssemblyName>
+    <RootNamespace>RowMate.Infrastructure</RootNamespace>
+    <RowMateAsmdef>Infrastructure/RowMate.Infrastructure.asmdef</RowMateAsmdef>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityAssets)Infrastructure/**/*.cs" LinkBase="Infrastructure" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- sqlite-net-pcl 1.9.172 y Newtonsoft.Json 13.0.2 entran en la It. 3, con su primer uso (D-07). -->
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+  </ItemGroup>
+</Project>

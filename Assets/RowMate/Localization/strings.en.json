@@ -1,0 +1,333 @@
+{
+  "@@locale": "en",
+  "navDevice": "Device",
+  "navWorkout": "Workout",
+  "navRoutines": "Routines",
+  "navHistory": "History",
+  "navProfile": "Profile",
+  "deviceTitle": "Device",
+  "deviceDisconnect": "Disconnect",
+  "deviceConnected": "Connected",
+  "deviceSearching": "Searching...",
+  "deviceSearch": "Search devices",
+  "deviceSearchHint": "Searching for FTMS devices with service 0x1826...",
+  "deviceNoResults": "No devices found",
+  "deviceNoResultsHint": "Make sure the rower is on\nand Bluetooth is enabled",
+  "deviceBtOff": "Bluetooth is off",
+  "deviceBtOffHint": "Turn on Bluetooth from Control Center\nor Settings to search for the rower",
+  "deviceBtDenied": "Bluetooth permission denied",
+  "deviceBtDeniedHint": "Enable Bluetooth permission in\nSettings > Privacy > Bluetooth",
+  "deviceBtEnable": "Enable Bluetooth",
+  "hrmTitle": "Heart rate sensor",
+  "hrmNoSensor": "No sensor",
+  "hrmWatchHint": "A smartwatch (Wear OS, Apple Watch) needs an app that broadcasts heart rate over Bluetooth, e.g. Heart for Bluetooth on Wear OS.",
+  "hrmSearch": "Search",
+  "hrmSearchOther": "Search another",
+  "hrmSearching": "Searching for sensors...",
+  "hrmConnectingTo": "Connecting to {name}...",
+  "@hrmConnectingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hrmConnect": "Connect",
+  "hrmDisconnect": "Disconnect",
+  "hrmForget": "Forget",
+  "hrmReconnecting": "reconnecting...",
+  "hrmNotFound": "not found",
+  "hrmUnknownSensor": "Unknown sensor",
+  "hrmIncompatible": "Not a compatible heart rate sensor (no Heart Rate service)",
+  "hrmConnectError": "Connection error: {error}",
+  "@hrmConnectError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hrmBpm": "bpm",
+  "workoutTitle": "Workout",
+  "workoutFree": "Free workout",
+  "workoutRowerNotConnected": "Connect the rower to start a workout",
+  "workoutOrPickRoutine": "  Or pick a routine:",
+  "workoutNoRoutines": "Create a routine in the \"Routines\" tab",
+  "workoutInProgress": "Workout in progress...",
+  "workoutScene": "Scenery",
+  "sceneLake": "Alpine lake",
+  "sceneRiver": "City river",
+  "sceneCoast": "Coast",
+  "sceneRegatta": "Regatta course",
+  "workoutFinish": "Finish",
+  "workoutFinishTitle": "Finish workout",
+  "workoutFinishContent": "The session will be saved. Continue?",
+  "workoutPause": "Pause",
+  "workoutResume": "Resume",
+  "workoutStartTitle": "Start workout?",
+  "workoutStartContent": "{summary}\n\nStart the workout?",
+  "@workoutStartContent": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "workoutStart": "Start",
+  "workoutCompleted": "Workout Completed!",
+  "workoutCompletedMessage": "You have successfully completed your routine.",
+  "metricTime": "TIME",
+  "metricSplit": "SPLIT 500m",
+  "metricDistance": "DISTANCE",
+  "metricWatts": "WATTS",
+  "metricSpm": "SPM",
+  "metricCalories": "CALORIES",
+  "metricHeartRate": "HR",
+  "metricFreeLabel": "Free workout",
+  "routinesTitle": "Routines",
+  "routinesEmpty": "No routines yet",
+  "routinesEmptyHint": "Press + to create one",
+  "routineEdit": "Edit",
+  "routineDelete": "Delete",
+  "routineDeleteTitle": "Delete routine",
+  "routineDeleteContent": "Delete \"{name}\"?",
+  "@routineDeleteContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "historyTitle": "History",
+  "historyEmpty": "No saved sessions",
+  "historyFree": "Free",
+  "historyStatTime": "Time",
+  "historyStatDistance": "Distance",
+  "historyStatWatts": "Watts",
+  "historyStatCalories": "kcal",
+  "historyStatHeartRate": "HR",
+  "sessionNoTelemetry": "No telemetry data",
+  "sessionSummary": "Summary",
+  "sessionStepBreakdown": "Step Performance",
+  "sessionChartWatts": "Watts",
+  "sessionChartSpm": "SPM",
+  "sessionChartSplit": "Split 500m",
+  "sessionChartDistance": "Distance",
+  "sessionChartHr": "HR",
+  "stepTypeWarmup": "Warmup",
+  "stepTypeWork": "Work",
+  "stepTypeRest": "Rest",
+  "stepTypeCooldown": "Cooldown",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "ok": "OK",
+  "confirm": "Confirm",
+  "save": "Save",
+  "editorNewRoutine": "New routine",
+  "editorEditRoutine": "Edit routine",
+  "editorRoutineName": "Routine name",
+  "editorDescription": "Description (optional)",
+  "editorStepsCount": "Steps ({count})",
+  "@editorStepsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorStep": "Step",
+  "editorSeries": "Series",
+  "editorEmptySteps": "No steps yet.\nPress \"Step\" or \"Series\".",
+  "editorDeleteSeries": "Delete series",
+  "editorAddStepToSeries": "Add step to series",
+  "editorRepetitions": "Repetitions",
+  "editorAmount": "Amount",
+  "editorNameEmpty": "Name cannot be empty",
+  "editorNoSteps": "Add at least one step",
+  "editorNewStep": "New step",
+  "editorEditStep": "Edit step",
+  "editorStepType": "Type",
+  "editorByTime": "By time",
+  "editorByDistance": "By distance",
+  "editorMinutes": "Min",
+  "editorSeconds": "Sec",
+  "editorMeters": "Meters",
+  "editorOptionalTargets": "Optional targets",
+  "editorWattsMin": "W min",
+  "editorWattsMax": "W max",
+  "editorTargetSpm": "Target SPM",
+  "editorSplitMin": "Split min",
+  "editorSplitSec": "Split sec",
+  "editorProgressions": "Progressions (only applies to series)",
+  "editorProgressionSpm": "SPM increment (+/rep)",
+  "editorProgressionSpmHint": "e.g: 2",
+  "editorProgressionWatts": "Watts increment (+/rep)",
+  "editorProgressionWattsHint": "e.g: 5",
+  "editorProgressionSplit": "Split change in seconds (+/-/rep)",
+  "editorProgressionSplitHint": "e.g: -2 (faster)",
+  "profileTitle": "Profile",
+  "profileConnectStrava": "Connect with Strava",
+  "profileConnected": "Connected",
+  "profileConnectedToStrava": "Connected to Strava",
+  "profileDisconnect": "Disconnect",
+  "profileDisconnectTitle": "Disconnect Strava",
+  "profileDisconnectContent": "Your sessions won't be uploaded automatically. Continue?",
+  "profileUploadSettings": "Upload Settings",
+  "profileAutoUpload": "Auto-upload",
+  "profileAutoUploadDesc": "Upload sessions to Strava automatically after finishing",
+  "profileAskUpload": "Ask me each time",
+  "profileAskUploadDesc": "Show a dialog after each workout",
+  "profileManualUpload": "Manual only",
+  "profileManualUploadDesc": "Upload sessions manually from History",
+  "profileSync": "Sync",
+  "profileSyncDesc": "Download your rowing activities from Strava",
+  "profileSyncFromStrava": "Sync from Strava",
+  "profileSyncToStrava": "Sync to Strava",
+  "profileSyncing": "Syncing...",
+  "profileUploading": "Uploading...",
+  "profileSyncResult": "{count, plural, one{# session synced} other{# sessions synced}}",
+  "@profileSyncResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileUploadResult": "{count, plural, one{# session uploaded} other{# sessions uploaded}}",
+  "@profileUploadResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileSyncToDesc": "Upload all unsynced local sessions to Strava",
+  "profilePendingUploads": "Pending Uploads",
+  "profileUploadToStrava": "Upload to Strava",
+  "profileUploadingToStrava": "Uploading to Strava...",
+  "profileUploaded": "Uploaded to Strava",
+  "profileUploadFailed": "Upload failed",
+  "profileAskUploadDialog": "Upload this session to Strava?",
+  "routineSummarySteps": "{count, plural, one{# step} other{# steps}}",
+  "@routineSummarySteps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "routineSummaryWorkRest": "{work, plural, one{# interval} other{# intervals}} · {rest, plural, one{# rest} other{# rests}}",
+  "@routineSummaryWorkRest": {
+    "placeholders": {
+      "work": {
+        "type": "int"
+      },
+      "rest": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationMinSec": "{m}m {s}s",
+  "@stepDurationMinSec": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      },
+      "s": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationMin": "{m}m",
+  "@stepDurationMin": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationSec": "{s}s",
+  "@stepDurationSec": {
+    "placeholders": {
+      "s": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationMeters": "{meters}m",
+  "@stepDurationMeters": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "stepDurationNone": "?",
+  "stepTargetWattsRange": "{min}-{max}W",
+  "@stepTargetWattsRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "stepTargetWattsMin": ">{min}W",
+  "@stepTargetWattsMin": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "stepTargetSpm": "{spm} spm",
+  "@stepTargetSpm": {
+    "placeholders": {
+      "spm": {
+        "type": "int"
+      }
+    }
+  },
+  "stepTargetSplit": "{split}/500m",
+  "@stepTargetSplit": {
+    "placeholders": {
+      "split": {
+        "type": "String"
+      }
+    }
+  },
+  "stepTargetProgressions": "📈 {list}",
+  "@stepTargetProgressions": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "stepProgressionSpm": "SPM {delta}/rep",
+  "@stepProgressionSpm": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "stepProgressionWatts": "W {delta}/rep",
+  "@stepProgressionWatts": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "stepProgressionSplit": "Split {delta}s/rep",
+  "@stepProgressionSplit": {
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  }
+}

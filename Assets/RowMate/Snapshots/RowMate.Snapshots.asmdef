@@ -1,0 +1,23 @@
+{
+    "name": "RowMate.Snapshots",
+    "rootNamespace": "RowMate.Snapshots",
+    "references": [
+        "RowMate.Core",
+        "RowMate.App",
+        "RowMate.Presentation",
+        "RowMate.Bootstrap",
+        "RowMate.Simulator",
+        "RowMate.Simulator.Presentation",
+        "RowMate.Tests.Support",
+        "RowMate.Tests.UiSupport"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

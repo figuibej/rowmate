@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RowMate.Tests.Simulator</AssemblyName>
+    <RootNamespace>RowMate.Tests.Simulator</RootNamespace>
+    <RowMateAsmdef>Tests/Simulator/RowMate.Tests.Simulator.asmdef</RowMateAsmdef>
+    <DefineConstants>$(DefineConstants);ROWMATE_SIMULATOR</DefineConstants>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityAssets)Tests/Simulator/**/*.cs" LinkBase="Simulator" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RowMate.Tests.Support/RowMate.Tests.Support.csproj" />
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+    <ProjectReference Include="../RowMate.App/RowMate.App.csproj" />
+    <ProjectReference Include="../RowMate.Simulator/RowMate.Simulator.csproj" />
+  </ItemGroup>
+</Project>

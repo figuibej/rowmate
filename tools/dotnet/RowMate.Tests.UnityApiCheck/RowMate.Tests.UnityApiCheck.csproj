@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Solo compila: las fuentes de test tienen que existir en .NET Standard 2.1 (el perfil de Unity)
+         y en NUnit 3.5 (com.unity.ext.nunit). Lo compila run-tests.ps1 (dotnet build de la solución). -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>RowMate.Tests.UnityApiCheck</AssemblyName>
+    <DefineConstants>$(DefineConstants);ROWMATE_SIMULATOR</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Support entra por glob (no por ProjectReference): así todo se compila contra NUnit 3.5 sin mezclar versiones. -->
+    <Compile Include="$(UnityAssets)Tests/Support/**/*.cs" LinkBase="Support" />
+    <Compile Include="$(UnityAssets)Tests/EditMode/**/*.cs" LinkBase="EditMode" />
+    <Compile Include="$(UnityAssets)Tests/Simulator/**/*.cs" LinkBase="Simulator" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- NuGet elige lib/net45 por AssetTargetFallback (NU1701, esperado): es la variante completa, como la de Unity. -->
+    <PackageReference Include="NUnit" Version="3.5.0" NoWarn="NU1701" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+    <ProjectReference Include="../RowMate.App/RowMate.App.csproj" />
+    <ProjectReference Include="../RowMate.Infrastructure/RowMate.Infrastructure.csproj" />
+    <ProjectReference Include="../RowMate.Simulator/RowMate.Simulator.csproj" />
+  </ItemGroup>
+</Project>

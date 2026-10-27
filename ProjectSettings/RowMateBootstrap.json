@@ -1,0 +1,77 @@
+{
+    "version": 3,
+    "editorVersion": "6000.3.27f1",
+    "appliedAtUtc": "2026-10-27T20:27:17.9289870Z",
+    "steps": [
+        {
+            "id": "player.identity",
+            "status": "ok",
+            "detail": "iguisoft/RowMate 1.0.0 (1); Android com.iguisoft.rowmate; iOS y Standalone com.iguisoft.rowmate.unity"
+        },
+        {
+            "id": "player.scripting",
+            "status": "ok",
+            "detail": "IL2CPP + .NET Standard 2.1 en Android, iOS y Standalone"
+        },
+        {
+            "id": "player.android",
+            "status": "ok",
+            "detail": "minSdk 26, target automático, ARM64, Internet obligatorio"
+        },
+        {
+            "id": "player.ios",
+            "status": "ok",
+            "detail": "iOS 15.0"
+        },
+        {
+            "id": "player.rendering",
+            "status": "ok",
+            "detail": "Linear; Android Vulkan+GLES3; Windows DX11; Apple Metal"
+        },
+        {
+            "id": "player.runtime",
+            "status": "ok",
+            "detail": "runInBackground y Frame Timing Stats"
+        },
+        {
+            "id": "player.input",
+            "status": "skipped",
+            "detail": "ya era Input System"
+        },
+        {
+            "id": "urp.provisional",
+            "status": "ok",
+            "detail": "renderer con el PostProcessData de URP; asignado en Graphics y en 6 nivel(es) de calidad existente(s)"
+        },
+        {
+            "id": "urp.tidy",
+            "status": "skipped",
+            "detail": "los assets de URP ya están en Assets/RowMate/Settings/URP"
+        },
+        {
+            "id": "player.window",
+            "status": "ok",
+            "detail": "ventana 1280×720 redimensionable; sin splash; fondo bg.app; Android con barras del sistema visibles"
+        },
+        {
+            "id": "ui.fonts",
+            "status": "ok",
+            "detail": "FontAsset creados: 0, ya existían: 9; USS reimportados"
+        },
+        {
+            "id": "ui.panel",
+            "status": "ok",
+            "detail": "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app"
+        },
+        {
+            "id": "scene.boot",
+            "status": "ok",
+            "detail": "creada: AppRoot _assets UiCamera; única escena del build"
+        },
+        {
+            "id": "defines.check",
+            "status": "ok",
+            "detail": "ROWMATE_SIMULATOR ausente en Standalone, Android e iOS"
+        }
+    ]
+}

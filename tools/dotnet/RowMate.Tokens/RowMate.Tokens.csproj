@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Herramienta: genera o chequea Assets/RowMate/Presentation/Styles/Tokens.uss desde Core/Design/Tokens.cs (ADR 016). -->
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>RowMate.Tokens</AssemblyName>
+    <RootNamespace>RowMate.Tokens</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(RepoRoot)tools/tokens/**/*.cs" LinkBase="tokens" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+  </ItemGroup>
+</Project>

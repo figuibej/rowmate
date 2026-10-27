@@ -1,0 +1,115 @@
+{
+  "description": "Cambios de la It. 1 sobre lib/l10n/app_{es,en}.arb del legacy. Fuente: 01-po-spec §4.17.1 (4 claves que cambian, Q-02) y §4.17.2 (15 claves nuevas, Q-01 + Q-02); tipos de los parámetros: 02-tech-design §3.3 (QA-07). Lo aplica tools/l10n/arb_to_catalog.dart una sola vez; después los catálogos se mantienen a mano (ADR 011).",
+  "changed": [
+    {
+      "key": "workoutStartTitle",
+      "es": { "from": "Iniciar entrenamiento?", "to": "¿Iniciar entrenamiento?" }
+    },
+    {
+      "key": "workoutStartContent",
+      "es": { "from": "{summary}\n\nIniciar el entrenamiento?", "to": "{summary}\n\n¿Iniciar el entrenamiento?" }
+    },
+    {
+      "key": "profileSyncResult",
+      "es": { "from": "{count} sesiones sincronizadas", "to": "{count, plural, one{# sesión sincronizada} other{# sesiones sincronizadas}}" },
+      "en": { "from": "{count} sessions synced", "to": "{count, plural, one{# session synced} other{# sessions synced}}" }
+    },
+    {
+      "key": "profileUploadResult",
+      "es": { "from": "{count} sesiones subidas", "to": "{count, plural, one{# sesión subida} other{# sesiones subidas}}" },
+      "en": { "from": "{count} sessions uploaded", "to": "{count, plural, one{# session uploaded} other{# sessions uploaded}}" }
+    }
+  ],
+  "added": [
+    {
+      "key": "routineSummarySteps",
+      "es": "{count, plural, one{# paso} other{# pasos}}",
+      "en": "{count, plural, one{# step} other{# steps}}",
+      "placeholders": { "count": "int" }
+    },
+    {
+      "key": "routineSummaryWorkRest",
+      "es": "{work, plural, one{# serie} other{# series}} · {rest, plural, one{# descanso} other{# descansos}}",
+      "en": "{work, plural, one{# interval} other{# intervals}} · {rest, plural, one{# rest} other{# rests}}",
+      "placeholders": { "work": "int", "rest": "int" }
+    },
+    {
+      "key": "stepDurationMinSec",
+      "es": "{m}m {s}s",
+      "en": "{m}m {s}s",
+      "placeholders": { "m": "int", "s": "int" }
+    },
+    {
+      "key": "stepDurationMin",
+      "es": "{m}m",
+      "en": "{m}m",
+      "placeholders": { "m": "int" }
+    },
+    {
+      "key": "stepDurationSec",
+      "es": "{s}s",
+      "en": "{s}s",
+      "placeholders": { "s": "int" }
+    },
+    {
+      "key": "stepDurationMeters",
+      "es": "{meters}m",
+      "en": "{meters}m",
+      "placeholders": { "meters": "int" }
+    },
+    {
+      "key": "stepDurationNone",
+      "es": "?",
+      "en": "?",
+      "placeholders": {}
+    },
+    {
+      "key": "stepTargetWattsRange",
+      "es": "{min}-{max}W",
+      "en": "{min}-{max}W",
+      "placeholders": { "min": "int", "max": "int" }
+    },
+    {
+      "key": "stepTargetWattsMin",
+      "es": ">{min}W",
+      "en": ">{min}W",
+      "placeholders": { "min": "int" }
+    },
+    {
+      "key": "stepTargetSpm",
+      "es": "{spm} spm",
+      "en": "{spm} spm",
+      "placeholders": { "spm": "int" }
+    },
+    {
+      "key": "stepTargetSplit",
+      "es": "{split}/500m",
+      "en": "{split}/500m",
+      "placeholders": { "split": "String" }
+    },
+    {
+      "key": "stepTargetProgressions",
+      "es": "📈 {list}",
+      "en": "📈 {list}",
+      "placeholders": { "list": "String" }
+    },
+    {
+      "key": "stepProgressionSpm",
+      "es": "SPM {delta}/rep",
+      "en": "SPM {delta}/rep",
+      "placeholders": { "delta": "String" }
+    },
+    {
+      "key": "stepProgressionWatts",
+      "es": "W {delta}/rep",
+      "en": "W {delta}/rep",
+      "placeholders": { "delta": "String" }
+    },
+    {
+      "key": "stepProgressionSplit",
+      "es": "Split {delta}s/rep",
+      "en": "Split {delta}s/rep",
+      "placeholders": { "delta": "String" }
+    }
+  ]
+}

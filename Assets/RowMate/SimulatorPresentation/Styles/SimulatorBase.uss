@@ -1,0 +1,249 @@
+/* Capa del simulador (02-tech-design §3.5; 04-design-notes §4.8, §4.9). Dueño: WP-B. Estructura y valores de contrato; el
+   aspecto fino es de WP-D (SimulatorSkin.uss). Solo estilos: incluirla en el tema de todos los builds no agrega código del
+   simulador (AC-BLE-13-02). Posiciones de la llave y alto máximo del panel: por código (D-26). */
+
+.rm-sim-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Llave (AC-BLE-16-02): 40 dp, a 16 de la derecha y 16 sobre la barra real (por código). */
+.rm-sim-fab {
+    position: absolute;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    border-radius: 12px;
+    background-color: var(--rm-surface-overlay);
+}
+
+.rm-sim-fab:hover,
+.rm-sim-fab:active,
+.rm-sim-fab:focus,
+.rm-sim-fab:hover:active {
+    background-color: var(--rm-surface-overlay);
+    border-color: var(--rm-border-default);
+}
+
+.rm-sim-fab .rm-button__state {
+    border-radius: 12px;
+}
+
+.rm-sim-fab .rm-icon {
+    color: var(--rm-accent-primary);
+}
+
+/* Panel (AC-BLE-16-02 a -04): 280 dp, anclado abajo a la derecha en el lugar de la llave; alto máximo por código. */
+.rm-sim-panel {
+    position: absolute;
+    right: 16px;
+    width: 280px;
+    flex-direction: column;
+    overflow: hidden;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    border-radius: 16px;
+    background-color: var(--rm-surface-overlay);
+}
+
+.rm-sim-panel__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    height: 48px;
+    padding-left: 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--rm-border-subtle);
+}
+
+.rm-sim-panel__title {
+    flex-grow: 1;
+    color: var(--rm-text-primary);
+}
+
+#sim-close .rm-icon {
+    color: var(--rm-text-secondary);
+}
+
+.rm-sim-panel > .unity-scroll-view {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.rm-sim-panel__content {
+    padding: 4px 12px 12px 12px;
+}
+
+.rm-sim-presets {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 4px 0 8px 0;
+}
+
+.rm-chip {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-height: 32px;
+    margin: 0 8px 4px 0;
+    padding: 0 12px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    border-radius: 8px;
+    background-color: transparent;
+}
+
+.rm-chip:hover,
+.rm-chip:active,
+.rm-chip:focus,
+.rm-chip:hover:active {
+    background-color: transparent;
+    border-color: var(--rm-border-default);
+}
+
+.rm-chip .rm-button__state {
+    border-radius: 8px;
+}
+
+.rm-chip__label {
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+}
+
+/* Renglones ± (AC-BLE-16-06, -07; DN-19, D-27: valor de 64 dp). */
+.rm-sim-stepper {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 48px;
+}
+
+.rm-sim-stepper__label {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    color: var(--rm-text-primary);
+    white-space: normal;
+}
+
+.rm-sim-stepper__value {
+    width: 64px;
+    flex-shrink: 0;
+    color: var(--rm-text-primary);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+#sim-hour-real {
+    align-self: flex-end;
+}
+
+/* Interruptor "Remando" (DN-17): el renglón entero lo cambia; pista 40 × 24 y perilla 20 × 20. */
+.rm-switch-row {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 48px;
+    margin: 0;
+}
+
+.rm-switch-row > .unity-toggle__label,
+.rm-switch-row > .unity-base-field__label,
+.rm-switch-row__label {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin: 0 52px 0 0;
+    padding: 0;
+    color: var(--rm-text-primary);
+    white-space: normal;
+}
+
+.rm-switch-row > .unity-toggle__input,
+.rm-switch-row > .unity-base-field__input {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    background-color: transparent;
+}
+
+.rm-switch__track {
+    position: absolute;
+    right: 0;
+    top: 12px;
+    width: 40px;
+    height: 24px;
+    border-width: 1px;
+    border-color: var(--rm-border-strong);
+    border-radius: 12px;
+    background-color: var(--rm-bg-sunken);
+}
+
+.rm-switch__thumb {
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background-color: var(--rm-text-secondary);
+    scale: 0.8 0.8;
+}
+
+.rm-switch-row:checked .rm-switch__track {
+    border-color: var(--rm-accent-primary);
+    background-color: var(--rm-accent-primary);
+}
+
+.rm-switch-row:checked .rm-switch__thumb {
+    background-color: var(--rm-text-on-accent);
+    scale: 1 1;
+    translate: 15px 0;
+}
+
+#sim-drop-rower,
+#sim-drop-hrm {
+    margin-top: 8px;
+    align-self: stretch;
+    padding: 0 12px;
+}
+
+/* Cinta SIMULADOR (AC-BLE-16-01, DV-01): esquina superior izquierda de la PANTALLA (centro en 24, 24), −45°, último hijo,
+   sin eventos. Sin clase .rm-type-* (tamaño fijo, no escala con la letra del sistema). */
+.rm-sim-ribbon {
+    position: absolute;
+    left: -16px;
+    top: 18px;
+    width: 80px;
+    height: 12px;
+    rotate: -45deg;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--rm-dev-simulator);
+}
+
+.rm-sim-ribbon__label {
+    font-size: 10px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
+    color: var(--rm-dev-simulator-text);
+    letter-spacing: 0;
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+    margin: 0;
+    padding: 0;
+}

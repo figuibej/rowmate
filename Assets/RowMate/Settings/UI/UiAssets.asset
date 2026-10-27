@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6c68d85389d6d244a176bf62cce771f, type: 3}
+  m_Name: UiAssets
+  m_EditorClassIdentifier: RowMate.Bootstrap::RowMate.Bootstrap.UiAssets
+  _panel: {fileID: 11400000, guid: 76f0a64089f11aa4daa5c6235ae6a63d, type: 2}
+  _stringsEs: {fileID: 4900000, guid: 6318638c6bd4b164ab738ac508c0a132, type: 3}
+  _stringsEn: {fileID: 4900000, guid: 695bb7a6ca8adab408e331873c1debf3, type: 3}
+  _presentMaterial: {fileID: 0}

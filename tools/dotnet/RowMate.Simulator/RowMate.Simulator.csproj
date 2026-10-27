@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>RowMate.Simulator</AssemblyName>
+    <RootNamespace>RowMate.Simulator</RootNamespace>
+    <RowMateAsmdef>Simulator/RowMate.Simulator.asmdef</RowMateAsmdef>
+    <DefineConstants>$(DefineConstants);ROWMATE_SIMULATOR</DefineConstants>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityAssets)Simulator/**/*.cs" LinkBase="Simulator" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+    <ProjectReference Include="../RowMate.App/RowMate.App.csproj" />
+  </ItemGroup>
+</Project>

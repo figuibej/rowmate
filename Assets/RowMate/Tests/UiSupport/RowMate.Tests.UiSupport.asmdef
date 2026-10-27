@@ -1,0 +1,22 @@
+{
+    "name": "RowMate.Tests.UiSupport",
+    "rootNamespace": "RowMate.Tests.UiSupport",
+    "references": [
+        "RowMate.Core",
+        "RowMate.App",
+        "RowMate.Presentation",
+        "RowMate.Bootstrap",
+        "RowMate.Tests.Support",
+        "RowMate.Simulator",
+        "RowMate.Simulator.Presentation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

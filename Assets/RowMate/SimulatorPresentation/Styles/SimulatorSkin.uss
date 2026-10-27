@@ -1,0 +1,21 @@
+/* Dueño: WP-D (Designer). Aspecto del panel, la llave y la cinta del simulador (04-design-notes de la It. 2, §4.8, §4.9)
+   sobre las clases de contrato de 02-tech-design §3.5 y §3.12. La estructura, la geometría de contrato (llave 40 a 16 de
+   la derecha y 16 sobre la barra, panel de 280, cinta 80 × 12 a −45° con 10/700 sin tracking) y la base del aspecto
+   están en SimulatorBase.uss (WP-B); acá, lo que pule. Ningún color literal: solo var(--rm-…). Las capas de estado de la
+   llave, los chips y los ± están en Skin.uss y sus transiciones en Motion.uss. */
+
+/* Cabecera: relleno 0 / 12, así la X (caja de 48) queda alineada con la columna de los + del contenido (§4.9). */
+.rm-sim-panel__header {
+    padding-right: 12px;
+}
+
+/* La llave: la capa de estado con el radio de la llave (r.l), y el anillo de foco + 4. */
+.rm-sim-fab > .rm-focus-ring {
+    border-radius: 16px;
+}
+
+/* Interruptor: la pista centrada en el alto del renglón (a 1,3× el rótulo puede pasar a dos líneas y el renglón crece). */
+.rm-switch__track {
+    top: 50%;
+    margin-top: -12px;
+}

@@ -1,0 +1,14 @@
+{
+    "name": "RowMate.Simulator.Presentation",
+    "rootNamespace": "RowMate.Simulator.Presentation",
+    "references": ["RowMate.Core", "RowMate.App", "RowMate.Simulator", "RowMate.Presentation"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": ["ROWMATE_SIMULATOR"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,358 @@
+/* GENERADO por tools/tokens desde Assets/RowMate/Core/Design/Tokens.cs (TypographyUssWriter). NO EDITAR A MANO (ADR 016). */
+
+:root {
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Regular-SDF.asset");
+}
+
+.rm-icon {
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Icons/Generated/RowMateIcons-Outline-SDF.asset");
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    letter-spacing: 0;
+}
+
+.rm-icon--filled {
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Icons/Generated/RowMateIcons-Filled-SDF.asset");
+}
+
+.rm-type-body {
+    font-size: 15px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Regular-SDF.asset");
+}
+
+.rm-type-body-m {
+    font-size: 14px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Regular-SDF.asset");
+}
+
+.rm-type-body-s {
+    font-size: 13px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Regular-SDF.asset");
+}
+
+.rm-type-body-xs {
+    font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Regular-SDF.asset");
+}
+
+.rm-type-button {
+    font-size: 14px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+}
+
+.rm-type-caption {
+    font-size: 11px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Medium-SDF.asset");
+}
+
+.rm-type-display {
+    font-size: 32px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
+}
+
+.rm-type-headline {
+    font-size: 24px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
+}
+
+.rm-type-label {
+    font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+    /* unidad de TextCore: N px = N/100 em por letra; 8px = 0,08 em a cualquier tamaño */
+    letter-spacing: 8px;
+}
+
+.rm-type-num-band {
+    font-size: 34px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-num-hero {
+    font-size: 64px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-ExtraBold-SDF.asset");
+}
+
+.rm-type-num-l {
+    font-size: 44px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-num-lap {
+    font-size: 34px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-num-m {
+    font-size: 32px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-num-row {
+    font-size: 24px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-num-s {
+    font-size: 20px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-num-stat {
+    font-size: 16px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-num-xl {
+    font-size: 52px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+}
+
+.rm-type-title {
+    font-size: 20px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+}
+
+.rm-type-title-s {
+    font-size: 16px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+}
+
+.rm-text-scale-085 .rm-type-body {
+    font-size: 12.75px;
+}
+
+.rm-text-scale-085 .rm-type-body-m {
+    font-size: 11.9px;
+}
+
+.rm-text-scale-085 .rm-type-body-s {
+    font-size: 11.05px;
+}
+
+.rm-text-scale-085 .rm-type-body-xs {
+    font-size: 10.2px;
+}
+
+.rm-text-scale-085 .rm-type-button {
+    font-size: 11.9px;
+}
+
+.rm-text-scale-085 .rm-type-caption {
+    font-size: 9.35px;
+}
+
+.rm-text-scale-085 .rm-type-display {
+    font-size: 27.2px;
+}
+
+.rm-text-scale-085 .rm-type-headline {
+    font-size: 20.4px;
+}
+
+.rm-text-scale-085 .rm-type-label {
+    font-size: 10.2px;
+}
+
+.rm-text-scale-085 .rm-type-num-band {
+    font-size: 28.9px;
+}
+
+.rm-text-scale-085 .rm-type-num-hero {
+    font-size: 54.4px;
+}
+
+.rm-text-scale-085 .rm-type-num-l {
+    font-size: 37.4px;
+}
+
+.rm-text-scale-085 .rm-type-num-lap {
+    font-size: 28.9px;
+}
+
+.rm-text-scale-085 .rm-type-num-m {
+    font-size: 27.2px;
+}
+
+.rm-text-scale-085 .rm-type-num-row {
+    font-size: 20.4px;
+}
+
+.rm-text-scale-085 .rm-type-num-s {
+    font-size: 17px;
+}
+
+.rm-text-scale-085 .rm-type-num-stat {
+    font-size: 13.6px;
+}
+
+.rm-text-scale-085 .rm-type-num-xl {
+    font-size: 44.2px;
+}
+
+.rm-text-scale-085 .rm-type-title {
+    font-size: 17px;
+}
+
+.rm-text-scale-085 .rm-type-title-s {
+    font-size: 13.6px;
+}
+
+.rm-text-scale-115 .rm-type-body {
+    font-size: 17.25px;
+}
+
+.rm-text-scale-115 .rm-type-body-m {
+    font-size: 16.1px;
+}
+
+.rm-text-scale-115 .rm-type-body-s {
+    font-size: 14.95px;
+}
+
+.rm-text-scale-115 .rm-type-body-xs {
+    font-size: 13.8px;
+}
+
+.rm-text-scale-115 .rm-type-button {
+    font-size: 16.1px;
+}
+
+.rm-text-scale-115 .rm-type-caption {
+    font-size: 12.65px;
+}
+
+.rm-text-scale-115 .rm-type-display {
+    font-size: 36.8px;
+}
+
+.rm-text-scale-115 .rm-type-headline {
+    font-size: 27.6px;
+}
+
+.rm-text-scale-115 .rm-type-label {
+    font-size: 13.8px;
+}
+
+.rm-text-scale-115 .rm-type-num-band {
+    font-size: 39.1px;
+}
+
+.rm-text-scale-115 .rm-type-num-hero {
+    font-size: 73.6px;
+}
+
+.rm-text-scale-115 .rm-type-num-l {
+    font-size: 50.6px;
+}
+
+.rm-text-scale-115 .rm-type-num-lap {
+    font-size: 39.1px;
+}
+
+.rm-text-scale-115 .rm-type-num-m {
+    font-size: 36.8px;
+}
+
+.rm-text-scale-115 .rm-type-num-row {
+    font-size: 27.6px;
+}
+
+.rm-text-scale-115 .rm-type-num-s {
+    font-size: 23px;
+}
+
+.rm-text-scale-115 .rm-type-num-stat {
+    font-size: 18.4px;
+}
+
+.rm-text-scale-115 .rm-type-num-xl {
+    font-size: 59.8px;
+}
+
+.rm-text-scale-115 .rm-type-title {
+    font-size: 23px;
+}
+
+.rm-text-scale-115 .rm-type-title-s {
+    font-size: 18.4px;
+}
+
+.rm-text-scale-130 .rm-type-body {
+    font-size: 19.5px;
+}
+
+.rm-text-scale-130 .rm-type-body-m {
+    font-size: 18.2px;
+}
+
+.rm-text-scale-130 .rm-type-body-s {
+    font-size: 16.9px;
+}
+
+.rm-text-scale-130 .rm-type-body-xs {
+    font-size: 15.6px;
+}
+
+.rm-text-scale-130 .rm-type-button {
+    font-size: 18.2px;
+}
+
+.rm-text-scale-130 .rm-type-caption {
+    font-size: 14.3px;
+}
+
+.rm-text-scale-130 .rm-type-display {
+    font-size: 41.6px;
+}
+
+.rm-text-scale-130 .rm-type-headline {
+    font-size: 31.2px;
+}
+
+.rm-text-scale-130 .rm-type-label {
+    font-size: 15.6px;
+}
+
+.rm-text-scale-130 .rm-type-num-band {
+    font-size: 44.2px;
+}
+
+.rm-text-scale-130 .rm-type-num-hero {
+    font-size: 83.2px;
+}
+
+.rm-text-scale-130 .rm-type-num-l {
+    font-size: 57.2px;
+}
+
+.rm-text-scale-130 .rm-type-num-lap {
+    font-size: 44.2px;
+}
+
+.rm-text-scale-130 .rm-type-num-m {
+    font-size: 41.6px;
+}
+
+.rm-text-scale-130 .rm-type-num-row {
+    font-size: 31.2px;
+}
+
+.rm-text-scale-130 .rm-type-num-s {
+    font-size: 26px;
+}
+
+.rm-text-scale-130 .rm-type-num-stat {
+    font-size: 20.8px;
+}
+
+.rm-text-scale-130 .rm-type-num-xl {
+    font-size: 67.6px;
+}
+
+.rm-text-scale-130 .rm-type-title {
+    font-size: 26px;
+}
+
+.rm-text-scale-130 .rm-type-title-s {
+    font-size: 20.8px;
+}

@@ -1,0 +1,254 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using NUnit.Framework;
+using RowMate.App.Composition;
+using RowMate.App.Device;
+using RowMate.App.Shell;
+using RowMate.Core.Ble;
+using RowMate.Core.Ble.Unavailable;
+using RowMate.Core.Common;
+using RowMate.Core.Localization;
+using RowMate.Core.Ports;
+using RowMate.Tests.EditMode.Localization;
+using RowMate.Tests.Support;
+using AppContext = RowMate.App.Composition.AppContext;
+
+namespace RowMate.Tests.EditMode.Composition
+{
+    // AppComposer + AppContext = el MultiProvider de lib/main.dart:58-92 (composición pura, 02-tech-design §2.8).
+    [TestFixture]
+    public sealed class AppComposerTests
+    {
+        private FakeScheduler _scheduler = null!;
+        private RecordingLogger _logger = null!;
+        private ControllableRowerService _rower = null!;
+        private ScriptedHeartRateService _hrm = null!;
+        private DeviceBackend _backend = null!;
+        private FakeSystemLocale _locale = null!;
+        private FakeAccessibilitySettings _accessibility = null!;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _scheduler = new FakeScheduler();
+            _logger = new RecordingLogger();
+            _rower = new ControllableRowerService(_logger);
+            _hrm = new ScriptedHeartRateService(_logger);
+            _backend = new DeviceBackend(_rower, _hrm, null);
+            _locale = new FakeSystemLocale("es-AR");
+            _accessibility = new FakeAccessibilitySettings(1.15, reduceMotion: true);
+        }
+
+        private AppContext Compose(bool profileTab = false)
+        {
+            return AppComposer.Compose(new AppServices(_backend, _scheduler, _logger, LocalizationFixture.Set, _locale, _accessibility,
+                new ShellOptions(profileTab)));
+        }
+
+        [Test]
+        public void ComposesTheStoresFromTheBackend()
+        {
+            var app = Compose(profileTab: true);
+            Assert.That(app.Devices, Is.SameAs(_backend));
+            Assert.That(app.Device.State.Value.Status, Is.EqualTo(BleStatus.Disconnected));
+            Assert.That(app.HeartRate.State.Value.Status, Is.EqualTo(HrmStatus.Disconnected));
+            Assert.That(app.Shell.Destinations.Count, Is.EqualTo(5));
+            Assert.That(app.Scene.HourOverride.Value, Is.Null);
+            Assert.That(app.Language.Current.Value, Is.EqualTo(AppLanguage.Es));
+            Assert.That(app.Texts.Value.LanguageCode, Is.EqualTo("es"));
+            Assert.That(app.Accessibility.Value, Is.EqualTo(new AccessibilitySnapshot(1.15, true)));
+            Assert.That(app.Scheduler, Is.SameAs(_scheduler));
+            Assert.That(app.Logger, Is.SameAs(_logger));
+            Assert.That(_rower.StartCalls, Is.EqualTo(0), "armar no arranca nada");
+            Assert.That(_hrm.AutoConnectCalls, Is.EqualTo(0));
+            app.Dispose();
+        }
+
+        [Test, Category("AC-APP-01-04")]
+        public void StartLaunchesAutoConnectWithoutWaiting()
+        {
+            var app = Compose();
+            app.Start();
+            Assert.That(_rower.StartCalls, Is.EqualTo(1), "el remo empieza a escuchar (el simulado se conecta)");
+            Assert.That(_hrm.AutoConnectCalls, Is.EqualTo(1), "el pulsómetro arranca activo e intenta reconectar");
+            app.Start();
+            Assert.That(_rower.StartCalls, Is.EqualTo(1), "una sola vez");
+            Assert.That(_hrm.AutoConnectCalls, Is.EqualTo(1));
+            Assert.That(_logger.Lines, Is.Empty);
+            app.Dispose();
+        }
+
+        [Test, Category("AC-APP-01-04")]
+        public void StartDoesNotWaitForASlowAutoConnect()
+        {
+            var slow = new SlowHeartRateService();
+            _backend = new DeviceBackend(_rower, slow, null);
+            var app = Compose();
+            var previous = SynchronizationContext.Current;
+            var context = new TestMainThreadContext();
+            SynchronizationContext.SetSynchronizationContext(context);
+            try
+            {
+                app.Start(); // vuelve en el acto aunque la reconexión siga
+                Assert.That(slow.Calls, Is.EqualTo(1));
+                slow.Fail(new InvalidOperationException("sin sensor recordado"));
+                context.RunUntilIdle();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(previous);
+            }
+
+            Assert.That(_logger.Lines, Is.EqualTo(new[] { "[HRM] Warning: autoConnect: sin sensor recordado" }));
+            app.Dispose();
+        }
+
+        [Test, Category("AC-APP-01-04")]
+        public void AutoConnectFailureGoesOnlyToTheLog()
+        {
+            _hrm.AutoConnectError = new InvalidOperationException("GATT 133");
+            var app = Compose();
+            var states = new StateRecorder<HeartRateState>(app.HeartRate.State);
+            Assert.DoesNotThrow(() => app.Start());
+            Assert.That(_logger.Lines, Is.EqualTo(new[] { "[HRM] Warning: autoConnect: GATT 133" }));
+            Assert.That(_logger.Errors[0], Is.InstanceOf<InvalidOperationException>());
+            Assert.That(app.HeartRate.State.Value.Error, Is.Null, "nada en pantalla");
+            Assert.That(states.Count, Is.EqualTo(0));
+            app.Dispose();
+        }
+
+        [Test, Category("AC-APP-01-03")]
+        public void NormalBuildBackendOpensOnTheSearchView()
+        {
+            _backend = new DeviceBackend(new UnavailableRowerService(_logger), new UnavailableHeartRateService(_logger), null);
+            var app = Compose();
+            app.Start();
+            _scheduler.Advance(TimeSpan.FromSeconds(10));
+            Assert.That(DeviceScreenRules.ViewFor(app.Device.State.Value.Status), Is.EqualTo(DeviceViewKind.Scan),
+                "el remo arranca desconectado y Dispositivo muestra la vista de búsqueda");
+            Assert.That(HrmCardRules.BodyFor(app.HeartRate.State.Value), Is.EqualTo(HrmCardBody.NoSensor));
+            Assert.That(_logger.Lines, Is.Empty);
+            app.Dispose();
+            _backend.Dispose();
+        }
+
+        [Test, Category("AC-APP-01-08")]
+        public void DisposeLeavesNoTimers()
+        {
+            var app = Compose();
+            app.Start();
+            _rower.Emit(BleStatus.Connected);
+            app.Dispose();
+            var deviceStates = new StateRecorder<DeviceState>(app.Device.State);
+            _rower.Emit(BleStatus.Disconnected);
+            _hrm.EmitBpm(80);
+            Assert.That(deviceStates.Count, Is.EqualTo(0), "los stores ya no escuchan");
+            Assert.That(_rower.Disposed, Is.False, "AppContext no dispone el backend: lo dispone quien lo creó");
+            _backend.Dispose();
+            Assert.That(_rower.Disposed, Is.True);
+            Assert.That(_hrm.Disposed, Is.True);
+            Assert.That(_scheduler.PendingTimers, Is.EqualTo(0));
+            Assert.DoesNotThrow(() => app.Dispose());
+            Assert.DoesNotThrow(() => _backend.Dispose());
+            app.Start();
+            Assert.That(_rower.StartCalls, Is.EqualTo(1), "una app dispuesta no arranca");
+        }
+
+        [Test, Category("AC-APP-09-05")]
+        public void LanguageChangeWithTheAppOpenChangesTheTexts()
+        {
+            var app = Compose();
+            var texts = new StateRecorder<Localizer>(app.Texts);
+            _rower.Emit(BleStatus.Connected);
+            app.RefreshSystemSettings(new[] { "en-US" });
+            Assert.That(texts.Count, Is.EqualTo(1));
+            Assert.That(app.Texts.Value.Get(L10nKeys.NavDevice), Is.EqualTo("Device"), "sin reiniciar la app");
+            Assert.That(app.Device.State.Value.Status, Is.EqualTo(BleStatus.Connected), "y nada más cambia");
+            app.RefreshSystemSettings(new[] { "en-GB" });
+            Assert.That(texts.Count, Is.EqualTo(1), "mismo idioma: sin aviso");
+            app.RefreshSystemSettings(new[] { "fr-FR", "es-AR" });
+            Assert.That(app.Texts.Value.LanguageCode, Is.EqualTo("es"), "la lista entera (AC-APP-09-06)");
+            app.Dispose();
+        }
+
+        [Test]
+        public void ComposerRejectsIncompleteServices()
+        {
+            Assert.Throws<ArgumentNullException>(() => AppComposer.Compose(null!));
+            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, _scheduler, _logger, LocalizationFixture.Set,
+                null!, _accessibility, new ShellOptions(false))));
+        }
+
+        // Pulsómetro cuya reconexión tarda (como la real, hasta 15 s) y falla cuando el test quiere.
+        private sealed class SlowHeartRateService : IHeartRateService
+        {
+            private readonly TaskCompletionSource<bool> _pending = new TaskCompletionSource<bool>();
+            private readonly EventStream<int> _bpm = new EventStream<int>(NullAppLogger.Instance);
+            private readonly EventStream<IReadOnlyList<BleScanResult>> _devices =
+                new EventStream<IReadOnlyList<BleScanResult>>(NullAppLogger.Instance);
+
+            public SlowHeartRateService()
+            {
+                Status = new ReadOnlyObservable<HrmStatus>(new ObservableValue<HrmStatus>(HrmStatus.Disconnected, NullAppLogger.Instance));
+            }
+
+            public int Calls { get; private set; }
+
+            public IReadOnlyObservable<HrmStatus> Status { get; }
+
+            public IEventSource<int> Bpm => _bpm;
+
+            public int CurrentBpm => 0;
+
+            public IEventSource<IReadOnlyList<BleScanResult>> Devices => _devices;
+
+            public string? ConnectedDeviceName => null;
+
+            public string? RememberedDeviceName => null;
+
+            public bool IsRetrying => false;
+
+            public void Fail(Exception error)
+            {
+                _pending.SetException(error);
+            }
+
+            public Task AutoConnectAsync()
+            {
+                Calls++;
+                return _pending.Task;
+            }
+
+            public Task StartScanAsync(TimeSpan? timeout = null)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task StopScanAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task ConnectAsync(string deviceId)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task DisconnectAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task ForgetAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+            public void Dispose()
+            {
+            }
+        }
+    }
+}

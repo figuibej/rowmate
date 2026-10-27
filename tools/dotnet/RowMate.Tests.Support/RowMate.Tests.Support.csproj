@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>RowMate.Tests.Support</AssemblyName>
+    <RootNamespace>RowMate.Tests.Support</RootNamespace>
+    <RowMateAsmdef>Tests/Support/RowMate.Tests.Support.asmdef</RowMateAsmdef>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityAssets)Tests/Support/**/*.cs" LinkBase="Support" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.14.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+    <ProjectReference Include="../RowMate.App/RowMate.App.csproj" />
+    <ProjectReference Include="../RowMate.Infrastructure/RowMate.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Respaldo de RepoPaths en dotnet (Unity no lo tiene: ahí sube desde el directorio actual). -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>RowMateRepoRoot</_Parameter1>
+      <_Parameter2>$(RepoRoot)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

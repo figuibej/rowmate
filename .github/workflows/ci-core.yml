@@ -1,0 +1,49 @@
+name: ci-core
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      ROWMATE_CI: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: .NET SDK (global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Tests del Core (mismo comando que en la PC)
+        shell: pwsh
+        run: ./tools/dotnet/run-tests.ps1 -Ci
+
+      - name: Resultados (.trx)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-test-results-${{ matrix.os }}
+          path: tools/dotnet/.artifacts/TestResults/
+          if-no-files-found: warn

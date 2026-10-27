@@ -1,0 +1,24 @@
+{
+    "name": "RowMate.Tests.UnityEditMode",
+    "rootNamespace": "RowMate.Tests.UnityEditMode",
+    "references": [
+        "RowMate.Tests.Support",
+        "RowMate.Core",
+        "RowMate.App",
+        "RowMate.Platform",
+        "RowMate.Presentation",
+        "RowMate.Bootstrap",
+        "RowMate.Editor",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
