@@ -16,7 +16,7 @@ El proyecto es Linear (URP). Unity compone la UI de UI Toolkit en espacio **line
 
 ## Decisión
 
-- **`UiColorPipeline.GammaRt` por defecto** (opción A de la It. 1): el panel de la app se dibuja en una RT `R8G8B8A8_UNorm` del tamaño de la pantalla con `forceGammaRendering`, y un presentador la lleva al *backbuffer* sin volver a convertir los colores. Respaldo: `Overlay` (`-rowmate-ui-pipeline Overlay`), con la composición lineal y el respaldo de tokens de 04-design-notes §8.3.
+- **`UiColorPipeline.GammaRt` por defecto** (opción A de la It. 1): el panel de la app se dibuja en una RT `R8G8B8A8_UNorm` del tamaño de la pantalla con `forceGammaRendering`, y un presentador la lleva al *backbuffer* sin volver a convertir los colores. Respaldo: `Overlay` (`-rowmate-ui-pipeline Overlay`), con la composición lineal y el respaldo de tokens de 04-design-notes §8.3. Desde la It. 3 (QA-V2-09, decisión del PO) `-rowmate-ui-pipeline` y `-rowmate-color-probe` solo existen en el Editor y en los builds de desarrollo (`#if UNITY_EDITOR || DEVELOPMENT_BUILD`): el build normal siempre usa `GammaRt` y no lee esos argumentos.
 - **Presentador: `OverlayCopyPresenter`** (solo UI Toolkit, sin *shader*): en `RenderPipelineManager.beginContextRendering`, `Graphics.CopyTexture` de la RT UNorm a una RT sRGB del mismo tamaño y un segundo panel *Overlay* (`sortingOrder` 30000, `pickingMode Ignore`) con esa RT de fondo a pantalla completa. Su `GameObject` va en la **raíz de la escena**: un `UIDocument` hijo del `GameObject` de otro `UIDocument` se anida en el panel del padre e ignora su `PanelSettings` (ver S-B1). `BlitPresenter` queda escrito como alternativa (necesitaría `GammaPresent.shader`, que no se agrega: S-B1 no lo pidió).
 - **Las RT llevan stencil** (`D24_UNorm_S8_UInt`): UI Toolkit enmascara con stencil los `overflow: hidden` con esquinas redondeadas (el panel del simulador, el cuerpo de la tarjeta mientras anima). Sin stencil la máscara sale como un rectángulo blanco (hallazgo del arnés, CAP-16).
 - **Limpieza a `bg.app`** al crear cada RT (`GL.Clear`): en la UNorm con el valor del token; en la sRGB, con el color en lineal (si no, la RT recién creada da `#405B71`; prueba `THM.SurfaceRtsStartCleared`). Lo mismo para el `colorClearValue` del panel con `Overlay` (`UiSurface.ClearValue`): el panel limpia un destino sRGB.
@@ -25,7 +25,7 @@ El proyecto es Linear (URP). Unity compone la UI de UI Toolkit en espacio **line
 
 ## Resultado de S-B1 (build de desarrollo de Windows, Mono)
 
-`tools/build/build.ps1 -Target Windows -Backend Mono -Simulator` y `RowMate.exe -screen-fullscreen 0 -screen-width 1280 -screen-height 800 -rowmate-color-probe <json> [-rowmate-ui-pipeline GammaRt|Overlay]` (`Bootstrap/ColorProbe`: dibuja la muestra de CAP-23 en el panel de la app, con la misma superficie y el mismo presentador, y lee el *backbuffer* con `ReadPixels` después de `WaitForEndOfFrame`). Direct3D 11, NVIDIA GPU de escritorio, 2026-10-27:
+`tools/build/build.ps1 -Target Windows -Backend Mono -Simulator` y `RowMate.exe -screen-fullscreen 0 -screen-width 1280 -screen-height 800 -rowmate-color-probe <json> [-rowmate-ui-pipeline GammaRt|Overlay]` (`Bootstrap/ColorProbe`: dibuja la muestra de CAP-23 en el panel de la app, con la misma superficie y el mismo presentador, y lee el *backbuffer* con `ReadPixels` después de `WaitForEndOfFrame`). Direct3D 11, 2026-10-27:
 
 | Criterio | GammaRt (`OverlayCopyPresenter`) | Overlay (respaldo) |
 |---|---|---|

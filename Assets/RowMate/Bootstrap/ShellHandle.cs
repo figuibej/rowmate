@@ -8,8 +8,9 @@ using Object = UnityEngine.Object;
 
 namespace RowMate.Bootstrap
 {
-    // La UI armada por ShellHost (02-tech-design §1.4): Tick() una vez por cuadro (área segura y animaciones), HandleBack()
-    // para "Atrás" del sistema y Dispose() al cerrar (desuscribe las vistas al sacarlas del panel, libera la capa del
+    // La UI armada por ShellHost (02-tech-design §1.4): Tick() una vez por cuadro (área segura, teclado y animaciones),
+    // HandleBack(BackSource) para "Atrás" del sistema y Escape (menú → diálogo → página → raíz; Escape no cierra páginas,
+    // P-08) y Dispose() al cerrar (cierra las capas, desuscribe las vistas al sacarlas del panel, libera la capa del
     // simulador y la textura de degradé).
     public sealed class ShellHandle : IDisposable
     {
@@ -42,15 +43,23 @@ namespace RowMate.Bootstrap
             }
 
             Shell.Layout.Poll();
+            Shell.Tick();
             Motion.Tick();
         }
 
-        // "Atrás" del sistema (AC-APP-02-06): en la It. 2, siempre la raíz → IBackButtonPolicy.OnBackAtRoot(), una vez.
+        public BackNavigation Back => _back;
+
+        // "Atrás" de Android (AC-APP-02-06, AC-APP-03-02): lo de arriba, o la raíz → IBackButtonPolicy.OnBackAtRoot(), una vez.
         public void HandleBack()
+        {
+            HandleBack(BackSource.SystemBack);
+        }
+
+        public void HandleBack(BackSource source)
         {
             if (!_disposed)
             {
-                _back.HandleBack();
+                _back.HandleBack(source);
             }
         }
 
@@ -62,6 +71,7 @@ namespace RowMate.Bootstrap
             }
 
             _disposed = true;
+            Shell.Dispose();
             Shell.RemoveFromHierarchy();
             if (Shell.TopLayer is IDisposable layer)
             {

@@ -18,6 +18,10 @@
 #   y en el CI el test SimulatorInUnityTests.CommittedSettingsDoNotEnableTheSimulator falla si el define quedo versionado.
 # -RestoreOnly: solo el paso 3 (para recuperar una corrida interrumpida).
 #
+# It. 3 (AC-HIS-20-04; 03-rutinas/02-tech-design Sec. 2.4 y 6.1): toda corrida de tests usa una carpeta de datos PROPIA y
+# temporal: ROWMATE_DATA_DIR = <temp>/RowMate.Tests/unity-<id> (Unity la hereda; AppRoot la usa en el Editor en lugar de
+# LocalLow/iguisoft/RowMate) y se borra en finally, pase lo que pase. Ninguna corrida abre las bases del usuario.
+#
 # Una sola instancia de Unity por proyecto: si Temp/UnityLockfile esta tomado (Editor abierto), sale con 10 sin tocar nada.
 # Unity.exe: -Unity, o la variable ROWMATE_UNITY, o el Editor de ProjectSettings/ProjectVersion.txt en la ruta por defecto de
 # Unity Hub. Resultados y logs en -ArtifactsPath (por defecto tools/unity/.artifacts, ignorado por git).
@@ -155,6 +159,13 @@ $testArgs = @('-batchmode', '-projectPath', $repo, '-runTests', '-testPlatform',
 if ($Filter -ne '') { $testArgs += @('-testFilter', $Filter) }
 if ($Category -ne '') { $testArgs += @('-testCategory', $Category) }
 
+# Carpeta de datos propia de la corrida (AC-HIS-20-04): la hereda Unity y se borra en finally. El bloque de la corrida
+# va sin sangria adentro del try a proposito (es el mismo texto de la It. 1, que revisa SimulatorInUnityTests).
+$previousDataDir = $env:ROWMATE_DATA_DIR
+$dataDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\unity-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+$env:ROWMATE_DATA_DIR = $dataDir
+try {
 $exitCode = 0
 if ($Simulator) {
     $enableCode = Invoke-Method $enableMethod 'unity-simulator-enable.log'
@@ -178,6 +189,11 @@ if ($Simulator) {
 }
 else {
     $exitCode = Invoke-Unity $testArgs
+}
+}
+finally {
+    if ($null -eq $previousDataDir) { Remove-Item Env:ROWMATE_DATA_DIR -ErrorAction SilentlyContinue } else { $env:ROWMATE_DATA_DIR = $previousDataDir }
+    Remove-Item -Recurse -Force -Path $dataDir -ErrorAction SilentlyContinue
 }
 
 Write-Host ('[unity-tests] -runTests -> ' + $exitCode + ' (log: ' + $log + ')')

@@ -121,6 +121,7 @@ Todos tienen **3 LOD + impostor**, apoyan en terreno o muro (nada flota) y respe
 | `ui.font.text` | Inter | [Google Fonts](https://fonts.google.com/specimen/Inter) · [GitHub](https://github.com/rsms/inter) | OFL 1.1 | 2 |
 | `ui.font.numeric` | Barlow Semi Condensed (+ derivado "RowMate Numeric") | [Google Fonts](https://fonts.google.com/specimen/Barlow+Semi+Condensed) · [GitHub](https://github.com/jpt/barlow) | OFL 1.1 | 2 |
 | `ui.font.mono` | JetBrains Mono | [Google Fonts](https://fonts.google.com/specimen/JetBrains+Mono) | OFL 1.1 | 10 |
+| `ui.font.emoji` | Noto Emoji **monocroma**, instancia estática Medium (500, el peso de los íconos): último respaldo del texto, para emojis en nombres y descripciones (P-09). Se dibuja en el color del texto, del alto de la línea. En el repo: `Assets/RowMate/UI/Fonts/NotoEmoji/NotoEmoji-Medium.ttf` con su `OFL.txt` (§3, punto 6). Sin el slot, Windows dibuja el emoji de color del sistema y otras plataformas `□`; el resto del texto no se corre | [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Emoji) | OFL 1.1 | 3 |
 | `ui.icons` | Fuente de íconos "RowMate Icons": Material Symbols Rounded recortada a los glifos de la app (§4). **Glifos de fuente, no SVG** (QA-P-09, cerrado al iniciar la It. 2). Placeholder: íconos provisorios dibujados por código (§4.4) | [GitHub (versión fijada)](https://github.com/google/material-design-icons/tree/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont) · [catálogo](https://fonts.google.com/icons) | Apache 2.0 | 2 |
 | `ui.thumbnail.<entorno>` | Miniaturas del selector | **Horneadas en el Editor** por `EnvironmentThumbnailBaker` (ARCHITECTURE §14.5) desde la escena real, en `Assets/RowMate/Art/Textures/Thumbnails/`, a las 12:00 (paridad F-SCN-22). Opcional, si se aprueba en el gate de la It. 8: 6, 12, 18 y 22 h (ART_BIBLE §7.6) | propio | 8 |
 | `brand.strava` | Botón "Connect with Strava" y logo "Powered by Strava" | [Guía de marca de Strava](https://developers.strava.com/guidelines/), en **PNG @2x** | Guía de marca de Strava (usar sin modificar) | 12 |
@@ -228,7 +229,9 @@ Seleccioná `RowerRealistic@SittingIdle.fbx` → **Rig**: `Humanoid`, Avatar Def
 4. En el *Text Settings* de los PanelSettings: fuente por defecto Inter Regular. Los íconos **no** dependen del *fallback*: cada ícono usa la clase USS `.rm-icon`, que fija la fuente de íconos (§4).
    - No uses las Inter que trae el Editor de Unity (`Editor/Data/Resources/Fonts/` de la instalación): son recursos del Editor, no entran en el build y no vienen con su `OFL.txt`. Siempre la copia de Google Fonts.
    - Sin las fuentes descargadas, la UI usa la fuente por defecto del tema de Unity y los tamaños de `Tokens.cs` no cambian ([00-deuda-diseno §4.3](../iterations/02-dispositivo-simulador/00-deuda-diseno.md)).
-5. **Derivado tabular "RowMate Numeric" (opcional, para listas y ejes):**
+5. **Kerning (It. 3, R3-06 decidido; [03-rutinas/04-design-notes §4.16](../iterations/03-rutinas/04-design-notes.md)):** las 7 caras de texto (`FontAssetPaths.TextFaces`: Inter 400 a 700 y Barlow SC 600 a 800) van con **`getFontFeatures = false`**: el kerning es el de la tabla que quedó versionada en cada `FontAsset` y TextCore no busca pares nuevos mientras dibuja, así el texto queda en el mismo lugar en cualquier orden y en una corrida parcial del arnés (el atlas dinámico puede variar en 1 el borde de un glifo: medido en la It. 3, 04-design-notes §16.5). Lo deja el bootstrapper dentro de `GeneratedAssetGuard.AllowWrites()` y lo controla `ItThreeToolingTests` (`m_GetFontFeatures: 0`). Los íconos y Noto Emoji quedan como los crea Unity. Para completar la tabla de un juego fijo de caracteres (no antes de la It. 4a): `TryAddCharacters(juego, out _, includeFontFeatures: true)` y volver el asset a 0 glifos y atlas 1 × 1 sin vaciar `m_FontFeatureTable` (el camino lo elige el Architect; 04-design-notes de la It. 3 §4.16).
+6. **Noto Emoji (It. 3, slot `ui.font.emoji`):** de [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Emoji) → **Get font** → **Download all**; del ZIP, el `.ttf` **estático** `NotoEmoji-Medium.ttf` (si el ZIP trae solo la variable: `uvx --from fonttools==4.67.0 fonttools varLib.instancer NotoEmoji[wght].ttf wght=500 -o NotoEmoji-Medium.ttf`) y su `OFL.txt`, a `Assets/RowMate/UI/Fonts/NotoEmoji/`. El `FontAsset` dinámico (`NotoEmoji-Medium-SDF`, en `FontAssetPaths.All`) lo crea el bootstrapper, protegido por `GeneratedAssetGuard` como los otros 9. Orden de respaldos del panel (lo arma `RuntimePanelFactory`, la única fábrica: app, `UiTestHost` y arnés): Inter (por la clase) → RowMate Icons contorno → Noto Emoji. Visto bueno del Designer en la It. 3: con la fuente, `Remo 🚣 ñ` sale con el glifo monocromo en el color del texto, en la línea y sin correr la `ñ` (sonda S-B3a, corrida 1).
+7. **Derivado tabular "RowMate Numeric" (opcional, para listas y ejes):**
    1. Instalá Python 3 y ejecutá `pip install opentype-feature-freezer`.
    2. Verificá que la fuente tenga cifras tabulares: `pyftfeatfreeze -r Inter-SemiBold.ttf` (tiene que listar `tnum`). Repetilo con Barlow.
    3. Generá el derivado (la OFL exige **otro nombre** para una versión modificada): `pyftfeatfreeze -f tnum -R "Inter/RowMate Numeric" Inter-SemiBold.ttf RowMateNumeric-SemiBold.ttf`.
@@ -251,7 +254,7 @@ Seleccioná `RowerRealistic@SittingIdle.fbx` → **Rig**: `Humanoid`, Avatar Def
 
 Versión fijada: commit [`10ecc14`](https://github.com/google/material-design-icons/tree/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont) del repositorio oficial (2026-10-23). Los codepoints de §4.3 salen de **ese** archivo `.codepoints`: entre versiones de la fuente pueden cambiar.
 
-1. Instalá Python 3 y ejecutá `pip install fonttools` (si ya instalaste `opentype-feature-freezer` en el §3, fonttools ya está). **Sin Python instalado:** si tenés [`uv`](https://docs.astral.sh/uv/), anteponé `uvx --from fonttools` a cada comando (`uvx --from fonttools fonttools varLib.instancer …` y `uvx --from fonttools pyftsubset …`): `uv` baja Python y fonttools solo, sin instalar nada en el sistema. Así se verificó esta receta (fonttools 4.67.0, 00-deuda-diseno §7).
+1. Instalá Python 3 y ejecutá `pip install fonttools` (si ya instalaste `opentype-feature-freezer` en el §3, fonttools ya está). **Sin Python instalado:** si tenés [`uv`](https://docs.astral.sh/uv/), anteponé `uvx --from fonttools==4.67.0` a cada comando (`uvx --from fonttools==4.67.0 fonttools varLib.instancer …` y `uvx --from fonttools==4.67.0 pyftsubset …`): `uv` baja Python y fonttools solo, sin instalar nada en el sistema. **Fijá la versión**: sin `==4.67.0`, `uvx` toma la última (4.68.0 en octubre de 2026). Así se verificó esta receta (fonttools 4.67.0, 00-deuda-diseno §7; en la It. 3, con los 44 codepoints: 03-rutinas/04-design-notes §14.6).
 2. Descargá los 3 archivos de la versión fijada:
    - [`MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf) (15 MB, fuente variable)
    - [`MaterialSymbolsRounded[FILL,GRAD,opsz,wght].codepoints`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.codepoints)
@@ -266,17 +269,17 @@ Versión fijada: commit [`10ecc14`](https://github.com/google/material-design-ic
 4. Recortá cada una a sus glifos (§4.3). Sin ligaduras: la app usa los codepoints.
 
    ```
-   pyftsubset msr-outline.ttf --unicodes="U+E921,U+EB43,U+E80E,U+E1A2,U+EB3B,U+E040,U+E425,U+E41C,U+EA0B,U+E9E4,U+EF55,U+EFD6,U+E8B3,U+E8E5,U+E1A7,U+E1A8,U+E1A9,U+E60F,U+E868,U+E87E,U+EAC2,U+E5D5,U+F0D3,U+E2C3,U+E2C0,U+E16C,U+E250,U+E16F,U+F083,U+F8B6,U+E5CC,U+E5CF,U+E5CE,U+E145,U+E15B,U+E5CD,U+F097,U+E92E,U+F8CD,U+E564,U+E5C7,U+E5C5" --layout-features="" --no-hinting --output-file=RowMateIcons-Outline.ttf
+   pyftsubset msr-outline.ttf --unicodes="U+E921,U+EB43,U+E80E,U+E1A2,U+EB3B,U+E040,U+E425,U+E41C,U+EA0B,U+E9E4,U+EF55,U+EFD6,U+E8B3,U+E8E5,U+E1A7,U+E1A8,U+E1A9,U+E60F,U+E868,U+E87E,U+EAC2,U+E5D5,U+F0D3,U+E2C3,U+E2C0,U+E16C,U+E250,U+E16F,U+F083,U+F8B6,U+E5CC,U+E5CF,U+E5CE,U+E145,U+E15B,U+E5CD,U+F097,U+E92E,U+F8CD,U+E564,U+E5C7,U+E5C5,U+E5C4,U+E5D4" --layout-features="" --no-hinting --output-file=RowMateIcons-Outline.ttf
    pyftsubset msr-filled.ttf --unicodes="U+E87E,U+E037,U+E034,U+F0BE,U+E2BF,U+E425,U+F0D3" --layout-features="" --no-hinting --output-file=RowMateIcons-Filled.ttf
    ```
 
-   Resultado esperado (verificado): `RowMateIcons-Outline.ttf` ≈ 9 KB con 43 glifos (42 + `.notdef`) y `RowMateIcons-Filled.ttf` ≈ 3 KB con 8 (7 + `.notdef`), los dos con Weight 500, 960 unidades por em y avance de 960 en todos los glifos. Si un codepoint no aparece en el resultado, la versión descargada no es la fijada.
+   Resultado esperado (verificado): `RowMateIcons-Outline.ttf` ≈ 9 KB con 45 glifos (44 + `.notdef`; 9 304 B desde la It. 3, que sumó `arrow_back` y `more_vert` con los 42 de antes idénticos) y `RowMateIcons-Filled.ttf` ≈ 3 KB con 8 (7 + `.notdef`), los dos con Weight 500, 960 unidades por em y avance de 960 en todos los glifos. Si un codepoint no aparece en el resultado, la versión descargada no es la fijada.
 
 5. Copiá a `Assets/RowMate/UI/Icons/` (se versionan): `RowMateIcons-Outline.ttf`, `RowMateIcons-Filled.ttf`, el `LICENSE`, el `.codepoints` original y un `NOTICE.md` que diga: *"Derivado de Material Symbols Rounded (Google, Apache License 2.0), commit 10ecc14. Modificaciones: instancias estáticas FILL 0 y 1, wght 500, GRAD 0, opsz 24, y recorte a los glifos de RowMate."* Apache 2.0 §4 pide avisar qué se cambió. La fuente variable de 15 MB **no** se versiona.
 
 ### 4.2 Importar y usar (It. 2, con Editor)
 
-1. Clic derecho en cada `.ttf` → **Create → Text → Font Asset** (o **Create → TextCore → Font Asset**). Ajustes: Atlas Population Mode `Dynamic` (la fuente ya está recortada: no puede entrar ningún glifo ajeno), Render Mode `SDFAA`, Sampling Point Size 64, Padding 10 %. Atlas: **512×512** para el contorno (los 42 glifos ocupan alrededor del 60 %; queda lugar para unos 20 más) y **256×256** para el relleno (7 glifos). Verificado con esos ajustes en 6000.3.27f1: entran los 42 y los 7 codepoints y el atlas SDF sale bien (00-deuda-diseno §7).
+1. Clic derecho en cada `.ttf` → **Create → Text → Font Asset** (o **Create → TextCore → Font Asset**). Ajustes: Atlas Population Mode `Dynamic` (la fuente ya está recortada: no puede entrar ningún glifo ajeno), Render Mode `SDFAA`, Sampling Point Size 64, Padding 10 %. Atlas: **512×512** para el contorno (los 42 glifos de la It. 2 ocupaban alrededor del 60 %; los 44 de la It. 3 entran con lugar para unos 18 más) y **256×256** para el relleno (7 glifos). Verificado con esos ajustes en 6000.3.27f1: entran los 42 y los 7 codepoints y el atlas SDF sale bien (00-deuda-diseno §7).
 2. USS: clase `.rm-icon` con `-unity-font-definition` apuntando al Font Asset de contorno, `-unity-text-align: middle-center`, `white-space: nowrap`, sin `letter-spacing`; el tamaño del ícono es su `font-size` (14, 16, 18, 20, 22, 24, 32, 56 o 64 dp, ART_BIBLE §3) y la caja del elemento es un cuadrado de ese lado. La variante `.rm-icon--filled` cambia a la fuente rellena. Métricas de la fuente: 960 unidades por em, ascendente 1 056 y descendente 96, o sea una línea de 1,2 em **simétrica** respecto del centro del ícono (el dibujo va de 0 a 960): se centra en vertical y en horizontal sin ajustes a mano.
 3. El texto del `Label` es el codepoint, tomado de constantes (por ejemplo `Icons.Rowing = "\uE921"`). Propuesta al Architect, junto con el generador de tokens (QA-P-05): `Core/Design/Icons.cs`, generado desde la tabla de §4.3, con un test de dotnet que verifique cada nombre y su codepoint contra el `.codepoints` versionado.
 4. Íconos que cambian de glifo o de relleno (pestaña seleccionada): se cambia la clase y el glifo en el mismo cuadro, con el fundido de color de ANIMATION_BIBLE §2.1. El corazón del pulsómetro es relleno siempre (como el legacy) y solo cambia de opacidad (`@40 %` sin conexión).
@@ -332,8 +335,10 @@ Nombres del catálogo de Material Symbols; codepoints del `.codepoints` del comm
 | `build` | `F8CD` | contorno | botón del simulador | `build` |
 | `landscape` | `E564` | contorno | sección "Escenario" | — |
 | `arrow_drop_up` / `arrow_drop_down` | `E5C7` / `E5C5` | contorno | flecha de fuera de objetivo (D-ART-01) | — |
+| `arrow_back` | `E5C4` | contorno | volver del editor de rutinas (It. 3; a 4 dp del borde, 24 `text.primary`) | `arrow_back` (del `AppBar`) |
+| `more_vert` | `E5D4` | contorno | menú `⋮` de la tarjeta de rutina (It. 3; 24 `text.secondary`) | `more_vert` |
 
-Total: 42 glifos en la fuente de contorno y 7 en la rellena. Agregar un ícono = sumarlo a esta tabla, repetir el §4.1 paso 4, regenerar las constantes y sumar su receta provisoria (§4.4). Los 42 + 7 codepoints se verificaron contra el `.codepoints` del commit `10ecc14` al iniciar la It. 2: coinciden todos. Los que usa la It. 2, con tamaño, color y lugar: [00-deuda-diseno §3.5](../iterations/02-dispositivo-simulador/00-deuda-diseno.md).
+Total: **44** glifos en la fuente de contorno (42 de la It. 2 + `arrow_back` y `more_vert` de la It. 3, verificados contra el mismo `.codepoints`: `e5c4`, `e5d4`) y 7 en la rellena. Agregar un ícono = sumarlo a esta tabla, repetir el §4.1 paso 4, regenerar las constantes y sumar su receta provisoria (§4.4). Los 42 + 7 codepoints se verificaron contra el `.codepoints` del commit `10ecc14` al iniciar la It. 2: coinciden todos. Los que usa la It. 2, con tamaño, color y lugar: [00-deuda-diseno §3.5](../iterations/02-dispositivo-simulador/00-deuda-diseno.md).
 
 ### 4.4 Íconos provisorios (sin la fuente o sin un codepoint)
 
@@ -469,3 +474,17 @@ Decisión de íconos y alineación con lo que se verificó con el Editor instala
 | §4.3 | Los 42 + 7 codepoints se revisaron contra el `.codepoints` de `10ecc14`: coinciden todos. `timer` también es el split del tablero y `speed` solo el SPM, como el legacy (`device_screen.dart:253-254`). `favorite`: relleno en el encabezado y el tablero, contorno en las filas encontradas. `person`: la pestaña Perfil aparece en la It. 12-13 |
 | §4.4 (nuevo) | Íconos provisorios dibujados por código, con sus recetas para los íconos de la It. 2 y un genérico para el resto |
 | §0.1, §1.6, §3, §5.1, §8 | Placeholder de íconos; no usar las Inter que trae el Editor; qué pasa sin las fuentes; el módulo integrado de SVG no se agrega; criterios de calidad de los placeholders de texto e íconos |
+
+---
+
+## Cambios de la It. 3
+
+Rutinas, editor y base local. Fuente: [03-rutinas/04-design-notes](../iterations/03-rutinas/04-design-notes.md) (§4.15, §4.16, §10, §14.6 y §16) y [02-tech-design §7.1](../iterations/03-rutinas/02-tech-design.md) (WP-D0), 2026-10-28.
+
+| Dónde | Qué cambió |
+|---|---|
+| §1.6 | Slot nuevo `ui.font.emoji`: Noto Emoji monocroma Medium (OFL 1.1), último respaldo del texto para emojis del usuario (P-09) |
+| §3 | Punto 5: kerning de la tabla versionada (`getFontFeatures = false` en las 7 caras de texto, DN3-24) y cómo se completa la tabla cuando haga falta. Punto 6: Noto Emoji, su `FontAsset` dinámico y el orden de respaldos de `RuntimePanelFactory`, con el visto bueno del Designer |
+| §4.1 | `uvx --from fonttools==4.67.0` con la versión fijada (QA-G3-18); el recorte de contorno pasa a 44 codepoints (+ `U+E5C4`, `U+E5D4`): 45 glifos y 9 304 B, con los 42 de antes idénticos (contornos y avances comparados con fontTools) |
+| §4.2 | El atlas de 512 × 512 alcanza para los 44 glifos |
+| §4.3 | `arrow_back` (`E5C4`) y `more_vert` (`E5D4`); total 44 + 7 |

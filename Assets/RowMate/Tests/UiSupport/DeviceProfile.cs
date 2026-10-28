@@ -7,13 +7,13 @@ namespace RowMate.Tests.UiSupport
     // captura representa el tamaño en dp con su densidad, sin depender del monitor de la PC (spec §12.2).
     public readonly struct DeviceProfile
     {
-        public static readonly DeviceProfile TV = new DeviceProfile("TV", 1080, 2400, 2.625);     // 411 × 914 dp
-        public static readonly DeviceProfile TH = new DeviceProfile("TH", 2400, 1080, 2.625);     // 914 × 411
+        public static readonly DeviceProfile TV = new DeviceProfile("TV", 1080, 2400, 2.625, true);     // 411 × 914 dp, teléfono
+        public static readonly DeviceProfile TH = new DeviceProfile("TH", 2400, 1080, 2.625, true);     // 914 × 411, teléfono
         public static readonly DeviceProfile L640 = new DeviceProfile("L640", 640, 360, 1);
         public static readonly DeviceProfile P800 = new DeviceProfile("P800", 800, 360, 1);
         public static readonly DeviceProfile W1280 = new DeviceProfile("W1280", 1280, 720, 1);
 
-        public DeviceProfile(string code, int widthPx, int heightPx, double density)
+        public DeviceProfile(string code, int widthPx, int heightPx, double density, bool phone = false)
         {
             if (widthPx <= 0 || heightPx <= 0 || !(density > 0))
             {
@@ -24,9 +24,14 @@ namespace RowMate.Tests.UiSupport
             WidthPx = widthPx;
             HeightPx = heightPx;
             Density = density;
+            IsPhone = phone;
         }
 
         public string Code { get; }
+
+        // TV y TH son el teléfono de la spec (§7.2); L640, P800 y W1280, ventanas de escritorio. Las capturas arman la UI de
+        // teléfono (UiHostOptions.IsDesktop = false: sin barra de desplazamiento ni :hover, QA-V2-13) con los perfiles de teléfono.
+        public bool IsPhone { get; }
 
         public int WidthPx { get; }
 

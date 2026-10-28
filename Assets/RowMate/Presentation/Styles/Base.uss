@@ -807,3 +807,928 @@
     color: var(--rm-text-primary);
     opacity: 0.24;
 }
+
+/* ════ It. 3 — Rutinas, editor y capas (03-rutinas/02-tech-design §4, §7.5; 04-design-notes §4). Estructura y contrato:
+   las transparencias de un token (velo, oscurecido, insignias, fondos de la serie, cápsula, resaltado) van por código. ════ */
+
+/* ── Pila de páginas (AC-APP-03-01): la página tapa todo el panel ── */
+.rm-page-stack__dim {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-page {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: column;
+    background-color: var(--rm-bg-app);
+}
+
+/* ── Diálogos (AC-APP-03-03; 04-design-notes §4.9): ancho y alto máximo por código ── */
+.rm-dialog-host,
+.rm-dialog__scrim,
+.rm-dialog-frame {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-dialog-frame {
+    align-items: center;
+    justify-content: center;
+}
+
+.rm-dialog {
+    flex-direction: column;
+    flex-shrink: 1;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    background-color: var(--rm-surface-overlay);
+    overflow: hidden;
+}
+
+.rm-dialog__title {
+    flex-shrink: 0;
+    padding: 24px 24px 16px 24px;
+    color: var(--rm-text-primary);
+    white-space: normal;
+}
+
+.rm-dialog__pinned {
+    flex-shrink: 0;
+    padding: 0 24px 16px 24px;
+}
+
+.rm-dialog__content {
+    flex-grow: 0;
+    flex-shrink: 1;
+}
+
+.rm-dialog__content-body {
+    padding: 0 24px;
+}
+
+.rm-dialog__content--scrolls {
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-color: var(--rm-border-subtle);
+}
+
+.rm-dialog__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 24px;
+}
+
+.rm-dialog__actions > .rm-button {
+    margin-left: 8px;
+}
+
+.rm-dialog--compact .rm-dialog__title {
+    padding: 16px 16px 12px 16px;
+}
+
+.rm-dialog--compact .rm-dialog__pinned {
+    padding: 0 16px 12px 16px;
+}
+
+.rm-dialog--compact .rm-dialog__content-body {
+    padding: 0 16px;
+}
+
+.rm-dialog--compact .rm-dialog__actions {
+    padding: 16px;
+}
+
+.rm-dialog__message {
+    color: var(--rm-text-secondary);
+}
+
+.rm-button--danger-fill,
+.rm-button--danger-fill:hover,
+.rm-button--danger-fill:active,
+.rm-button--danger-fill:focus,
+.rm-button--danger-fill:hover:active {
+    min-height: 48px;
+    padding: 0 16px;
+    background-color: var(--rm-state-danger-fill);
+}
+
+.rm-button--danger-fill .rm-button__label,
+.rm-button--danger-fill .rm-icon {
+    color: var(--rm-text-primary);
+}
+
+/* ── Avisos (AC-APP-03-05; 04-design-notes §4.12): ancho y posición por código ── */
+.rm-toast {
+    position: absolute;
+    min-height: 48px;
+    justify-content: center;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    background-color: var(--rm-surface-overlay);
+}
+
+.rm-toast__text {
+    color: var(--rm-text-primary);
+    white-space: normal;
+}
+
+/* ── Menús y ayudas (#popup-layer; 04-design-notes §4.4): posición por código ── */
+.rm-popup-catcher {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-menu {
+    position: absolute;
+    min-width: 140px;
+    max-width: 280px;
+    padding: 8px 0;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    background-color: var(--rm-surface-overlay);
+}
+
+.rm-menu__item {
+    flex-direction: row;
+    align-items: center;
+    min-height: 48px;
+    margin: 0;
+    padding: 0 16px;
+    border-width: 0;
+    border-radius: 0;
+    background-color: transparent;
+}
+
+.rm-menu__item:hover,
+.rm-menu__item:active,
+.rm-menu__item:focus,
+.rm-menu__item:hover:active {
+    background-color: transparent;
+}
+
+.rm-menu__item .rm-button__state {
+    border-radius: 0;
+}
+
+.rm-menu__item--danger .rm-button__state {
+    background-color: var(--rm-overlay-scrim);
+}
+
+.rm-menu__label {
+    flex-grow: 1;
+    flex-shrink: 1;
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-left;
+}
+
+.rm-menu__item--danger .rm-menu__label {
+    color: var(--rm-state-danger-text);
+}
+
+.rm-menu--dense .rm-menu__item {
+    min-height: 36px;
+    padding: 0 12px;
+}
+
+.rm-focus-ring--inset {
+    left: 2px;
+    top: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-radius: 6px;
+}
+
+.rm-focus-ring--inset .rm-focus-ring__halo {
+    display: none;
+}
+
+.rm-tooltip {
+    position: absolute;
+    max-width: 240px;
+    min-height: 24px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    background-color: var(--rm-surface-overlay);
+    color: var(--rm-text-primary);
+    white-space: normal;
+}
+
+/* ── Botón flotante + (AC-RUT-10-01, -04): right 16, bottom = barra + 16 (por código) ── */
+.rm-fab {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    border-radius: 28px;
+    background-color: var(--rm-accent-primary);
+}
+
+.rm-fab:hover,
+.rm-fab:focus {
+    background-color: var(--rm-accent-primary);
+}
+
+.rm-fab:active,
+.rm-fab:hover:active {
+    background-color: var(--rm-accent-primary-pressed);
+}
+
+.rm-fab .rm-button__state {
+    border-radius: 28px;
+}
+
+.rm-fab__icon {
+    color: var(--rm-text-on-accent);
+}
+
+.rm-fab > .rm-focus-ring {
+    border-radius: 32px;
+}
+
+.rm-fab > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 36px;
+}
+
+/* ── Rutinas (F-RUT-10; 04-design-notes §4.1-§4.3) ── */
+.rm-routines__body {
+    flex-grow: 1;
+    position: relative;
+}
+
+.rm-routines__center {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.rm-routines .rm-empty__icon.rm-routines__empty-icon {
+    opacity: 0.12;
+}
+
+.rm-routines .rm-empty__title,
+.rm-routines .rm-empty__hint {
+    max-width: 320px;
+}
+
+.rm-routines__error-icon {
+    color: var(--rm-state-danger-text);
+}
+
+.rm-routines__error-text {
+    margin-top: 12px;
+    max-width: 280px;
+    color: var(--rm-text-secondary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+#routines-retry {
+    margin-top: 16px;
+}
+
+.rm-routines__list-host {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-routines__scroll {
+    flex-grow: 1;
+}
+
+.rm-routines__list {
+    padding-top: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.rm-slot {
+    flex-shrink: 0;
+}
+
+.rm-routine-card {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+    margin-bottom: 10px;
+    padding: 16px 4px 16px 16px;
+    border-radius: 16px;
+    background-color: var(--rm-surface-card);
+}
+
+.rm-routine-card .rm-button__state,
+.rm-routine-card > .rm-highlight {
+    border-radius: 16px;
+}
+
+.rm-highlight {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-routine-card__icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    border-radius: 8px;
+    background-color: var(--rm-accent-tonal-bg);
+}
+
+.rm-routine-card__icon .rm-icon {
+    color: var(--rm-accent-primary);
+}
+
+.rm-routine-card__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+}
+
+.rm-routine-card__name {
+    color: var(--rm-text-primary);
+    white-space: pre-wrap;
+}
+
+.rm-routine-card__description {
+    margin-top: 2px;
+    color: var(--rm-text-secondary);
+    white-space: pre-wrap;
+}
+
+.rm-routine-card__summary {
+    margin-top: 4px;
+    color: var(--rm-text-tertiary);
+    white-space: normal;
+}
+
+.rm-structure-bar {
+    margin-top: 10px;
+    height: 4px;
+    flex-shrink: 0;
+}
+
+.rm-routine-card__menu {
+    margin-top: -14px;
+    margin-left: 4px;
+}
+
+.rm-routine-card__menu .rm-icon-button__icon {
+    color: var(--rm-text-secondary);
+}
+
+.rm-routine-card > .rm-focus-ring {
+    border-radius: 20px;
+}
+
+.rm-routine-card > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 24px;
+}
+
+/* ── Editor (F-RUT-11; 04-design-notes §4.5): UN solo desplazamiento (DV-18) ── */
+.rm-appbar__back {
+    margin-left: 4px;
+}
+
+.rm-appbar--with-back .rm-appbar__title {
+    margin-left: 20px;
+}
+
+.rm-editor__scroll {
+    flex-grow: 1;
+}
+
+.rm-editor__content {
+    min-height: 100%;
+}
+
+.rm-editor__fields {
+    padding: 16px;
+    flex-shrink: 0;
+}
+
+.rm-editor__fields > .rm-field--multiline {
+    margin-top: 12px;
+}
+
+.rm-divider {
+    height: 1px;
+    flex-shrink: 0;
+    background-color: var(--rm-border-default);
+}
+
+.rm-editor__steps-header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 56px;
+    padding: 8px 4px 8px 16px;
+}
+
+.rm-editor__steps-count {
+    flex-shrink: 1;
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+}
+
+.rm-editor__spacer {
+    flex-grow: 1;
+}
+
+.rm-editor__steps-header > .rm-button {
+    margin-left: 4px;
+}
+
+.rm-editor__empty {
+    flex-grow: 1;
+    align-self: center;
+    max-width: 280px;
+    margin: 24px 0;
+    color: var(--rm-text-tertiary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.rm-editor__steps {
+    flex-shrink: 0;
+    padding: 0 12px;
+}
+
+/* ── Fila de paso (AC-RUT-12-02; 04-design-notes §4.6): borde del color base, título e ícono en .hud (DV-12) ── */
+.rm-step-row {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 56px;
+    margin: 3px 0;
+    padding: 8px 4px 8px 12px;
+    border-radius: 12px;
+    border-left-width: 3px;
+    background-color: var(--rm-surface-card);
+}
+
+.rm-step-row > .rm-highlight {
+    border-radius: 12px;
+}
+
+.rm-step-row--in-series {
+    margin-left: 13px;
+}
+
+.rm-step-row--preview {
+    margin: 0;
+    padding-right: 12px;
+}
+
+.rm-dialog__content-body > .rm-step-row--preview {
+    margin-bottom: 16px;
+}
+
+.rm-step-row--work {
+    border-left-color: var(--rm-step-work);
+}
+
+.rm-step-row--rest {
+    border-left-color: var(--rm-step-rest);
+}
+
+.rm-step-row--warmup {
+    border-left-color: var(--rm-step-warmup);
+}
+
+.rm-step-row--cooldown {
+    border-left-color: var(--rm-step-cooldown);
+}
+
+.rm-step-row--work .rm-step-row__title,
+.rm-step-row--work .rm-step-row__icon {
+    color: var(--rm-step-work-hud);
+}
+
+.rm-step-row--rest .rm-step-row__title,
+.rm-step-row--rest .rm-step-row__icon {
+    color: var(--rm-step-rest-hud);
+}
+
+.rm-step-row--warmup .rm-step-row__title,
+.rm-step-row--warmup .rm-step-row__icon {
+    color: var(--rm-step-warmup-hud);
+}
+
+.rm-step-row--cooldown .rm-step-row__title,
+.rm-step-row--cooldown .rm-step-row__icon {
+    color: var(--rm-step-cooldown-hud);
+}
+
+.rm-step-row__badge {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    border-radius: 6px;
+}
+
+.rm-step-row__badge-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 6px;
+}
+
+.rm-step-row__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+    justify-content: center;
+}
+
+.rm-step-row__title {
+    white-space: normal;
+}
+
+.rm-step-row__subtitle {
+    margin-top: 2px;
+    color: var(--rm-text-secondary);
+    white-space: pre-wrap;
+}
+
+.rm-step-row__edit .rm-icon-button__icon {
+    color: var(--rm-text-secondary);
+}
+
+.rm-icon-button--danger .rm-icon-button__icon {
+    color: var(--rm-state-danger-text);
+}
+
+/* ── Bloque de serie (AC-RUT-14-02, -03; 04-design-notes §4.7): riel continuo de 3 dp ── */
+.rm-series {
+    flex-shrink: 0;
+    margin: 8px 0;
+}
+
+.rm-series__header {
+    flex-direction: row;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 4px 0 12px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-left-width: 3px;
+    border-left-color: var(--rm-brand-seed);
+}
+
+.rm-series__icon {
+    margin-right: 6px;
+    color: var(--rm-accent-primary);
+}
+
+.rm-series__title {
+    margin-right: 4px;
+    color: var(--rm-accent-primary);
+    white-space: nowrap;
+}
+
+.rm-chip.rm-chip--repeat,
+.rm-chip.rm-chip--repeat:hover,
+.rm-chip.rm-chip--repeat:active,
+.rm-chip.rm-chip--repeat:focus,
+.rm-chip.rm-chip--repeat:hover:active {
+    min-width: 48px;
+    min-height: 48px;
+    margin: 0;
+    padding: 0 4px;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+    border-radius: 0;
+    background-color: transparent;
+}
+
+.rm-chip__pill {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    min-width: 40px;
+    padding: 0 10px;
+    border-radius: 14px;
+}
+
+.rm-chip__pill .rm-button__state {
+    border-radius: 14px;
+}
+
+.rm-chip__count {
+    color: var(--rm-accent-on-tonal);
+}
+
+.rm-chip__pill > .rm-focus-ring {
+    border-radius: 18px;
+}
+
+.rm-chip__pill > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 22px;
+}
+
+.rm-keyboard-nav .rm-chip--repeat:focus .rm-chip__pill > .rm-focus-ring {
+    display: flex;
+}
+
+.rm-series__spacer {
+    flex-grow: 1;
+}
+
+.rm-series__steps {
+    border-left-width: 3px;
+    border-left-color: var(--rm-brand-seed);
+}
+
+.rm-series__footer {
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left-width: 3px;
+    border-left-color: var(--rm-brand-seed);
+}
+
+.rm-series__add-step .rm-button__icon {
+    margin-right: 6px;
+}
+
+.rm-series__stack {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 6px;
+}
+
+.rm-series__stack-layer {
+    position: absolute;
+    height: 3px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+/* ── Campos de texto (04-design-notes §4.8, DN3-09): etiqueta adentro, sin anillo; lo animado es nuestro (0 s) ── */
+.rm-field {
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.rm-field,
+.rm-field * {
+    transition-duration: 0s;
+}
+
+.rm-field__box {
+    min-height: 52px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--rm-border-input);
+    background-color: var(--rm-bg-sunken);
+}
+
+.rm-field--multiline .rm-field__box {
+    min-height: 72px;
+}
+
+.rm-field--focused .rm-field__box {
+    padding: 0 11px;
+    border-width: 2px;
+    border-color: var(--rm-accent-primary);
+}
+
+.rm-field--error .rm-field__box {
+    padding: 0 11px;
+    border-width: 2px;
+    border-color: var(--rm-state-danger);
+}
+
+.rm-field__input {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+}
+
+.rm-field__input .unity-base-text-field__input {
+    margin: 0;
+    padding: 0 0 8px 0;
+    border-width: 0;
+    background-color: transparent;
+    color: var(--rm-text-primary);
+    --unity-cursor-color: var(--rm-accent-primary);
+    --unity-selection-color: var(--rm-text-selection);
+}
+
+.rm-field__input .unity-base-text-field__input--placeholder {
+    color: var(--rm-text-tertiary);
+}
+
+.rm-field__label {
+    position: absolute;
+    left: 12px;
+    color: var(--rm-text-secondary);
+    white-space: nowrap;
+}
+
+.rm-field--focused .rm-field__label {
+    left: 11px;
+    color: var(--rm-accent-primary);
+}
+
+.rm-field--error .rm-field__label {
+    color: var(--rm-state-danger-text);
+}
+
+.rm-field__error {
+    margin-top: 4px;
+    padding-left: 12px;
+    color: var(--rm-state-danger-text);
+    white-space: normal;
+}
+
+.rm-field-pair {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+.rm-field-pair__item {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+}
+
+/* ── Selectores (DV-09, DN3-08; 04-design-notes §4.11) ── */
+.rm-segmented {
+    flex-direction: row;
+    flex-shrink: 0;
+    height: 40px;
+    border-radius: 20px;
+    border-width: 1px;
+    border-color: var(--rm-border-strong);
+    overflow: hidden;
+}
+
+.rm-segmented__option,
+.rm-segmented__option:hover,
+.rm-segmented__option:active,
+.rm-segmented__option:focus,
+.rm-segmented__option:hover:active {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0 12px;
+    border-width: 0;
+    border-radius: 0;
+    background-color: transparent;
+}
+
+.rm-segmented__option--divided {
+    border-left-width: 1px;
+    border-left-color: var(--rm-border-strong);
+}
+
+.rm-segmented__option--selected,
+.rm-segmented__option--selected:hover,
+.rm-segmented__option--selected:active,
+.rm-segmented__option--selected:focus {
+    background-color: var(--rm-brand-seed);
+}
+
+.rm-segmented__label {
+    color: var(--rm-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-center;
+}
+
+.rm-segmented__option--selected .rm-segmented__label {
+    color: var(--rm-text-primary);
+}
+
+.rm-segmented--tiles {
+    flex-wrap: wrap;
+    height: auto;
+    margin: -4px;
+    border-width: 0;
+    border-radius: 0;
+    overflow: visible;
+}
+
+.rm-segmented--tiles .rm-segmented__option,
+.rm-segmented--tiles .rm-segmented__option:hover,
+.rm-segmented--tiles .rm-segmented__option:active,
+.rm-segmented--tiles .rm-segmented__option:focus,
+.rm-segmented--tiles .rm-segmented__option:hover:active {
+    flex-direction: column;
+    min-height: 56px;
+    margin: 4px;
+    padding: 8px 6px;
+    border-width: 2px;
+    border-radius: 8px;
+}
+
+.rm-segmented--two-columns .rm-segmented__option {
+    flex-basis: 40%;
+}
+
+.rm-segmented--four-columns .rm-segmented__option {
+    flex-basis: 20%;
+}
+
+.rm-segmented__option-icon {
+    margin-bottom: 4px;
+}
+
+.rm-segmented--tiles .rm-segmented__label {
+    white-space: normal;
+    align-self: stretch;
+}
+
+.rm-segmented--tiles .rm-segmented__option > .rm-focus-ring {
+    border-radius: 12px;
+}
+
+/* ── Diálogo de paso (04-design-notes §4.11) ── */
+.rm-step-dialog__caption {
+    margin-bottom: 8px;
+    color: var(--rm-text-tertiary);
+    white-space: normal;
+}
+
+.rm-step-dialog__mode,
+.rm-step-dialog__first-row {
+    margin-top: 12px;
+}
+
+.rm-step-dialog__divider {
+    margin-top: 16px;
+    margin-bottom: 12px;
+}
+
+.rm-step-dialog__row {
+    margin-top: 8px;
+}
+
+.rm-field-pair__error {
+    margin-top: 4px;
+}

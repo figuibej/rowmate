@@ -8,13 +8,19 @@ using AtlasPopulationMode = UnityEngine.TextCore.Text.AtlasPopulationMode;
 
 namespace RowMate.EditorTools
 {
-    // Paso ui.fonts del bootstrapper v3 (02-tech-design §1.3): crea los 9 FontAsset SOLO si no existen, con atlas y material
+    // Paso ui.fonts del bootstrapper v3 (02-tech-design §1.3): crea los 10 FontAsset SOLO si no existen (desde la It. 3, también
+    // el respaldo de emojis Noto Emoji, DN3-21: 64 / 6, 512²), con atlas y material
     // como subassets (verificado en S-0), y después reimporta los USS que los nombran (un USS importado antes de que exista
     // el FontAsset queda con MissingAssetReference y no se arregla solo, S-0). Las rutas salen de FontAssetPaths (las mismas
     // que usa el generador de Typography.uss). Ajustes de ASSET_SLOTS §3 y §4.2:
     //   Inter 400/500/600/700: 48 pt, padding 5 (10 %), atlas 1024²  ·  Barlow SC 600/700/800: 90 / 9, 1024²
     //   íconos de contorno: 64 / 6, 512²  ·  íconos rellenos: 64 / 6, 256²
-    // Atlas dinámico (Dynamic) con clearDynamicDataOnBuild, para que el uso en el Editor no ensucie los .asset (R2-03).
+    // Atlas dinámico (Dynamic) con clearDynamicDataOnBuild, para que el uso en el Editor no ensucie los .asset (R2-03). Desde
+    // QA-V2-07 solo los escribe quien abre GeneratedAssetGuard.AllowWrites (este paso, dentro del bootstrapper): un FontAsset
+    // recién creado ya está en el estado que se versiona (sin glifos, atlas de 1 × 1).
+    // DN3-24 (R3-06, 03-rutinas/04-design-notes §4.16): las 7 caras de texto quedan con getFontFeatures = false (los que ya
+    // existen y los que cree, solo si hace falta): el kerning es el de la tabla versionada y nada más, así un texto se ve
+    // igual en cualquier orden de dibujo.
     internal static class FontAssetBuilder
     {
         public static readonly string[] StyleSheetsToReimport =
@@ -29,17 +35,23 @@ namespace RowMate.EditorTools
         {
             var created = 0;
             var existing = 0;
+            var features = 0;
             foreach (var face in FontAssetPaths.TextFaces)
             {
                 var numeric = face.Family == FontFamilyRole.Numeric;
-                if (Ensure(FontAssetPaths.SourceFor(face.Family, face.Weight), FontAssetPaths.For(face.Family, face.Weight),
-                        numeric ? 90 : 48, numeric ? 9 : 5, 1024, 1024))
+                var path = FontAssetPaths.For(face.Family, face.Weight);
+                if (Ensure(FontAssetPaths.SourceFor(face.Family, face.Weight), path, numeric ? 90 : 48, numeric ? 9 : 5, 1024, 1024))
                 {
                     created++;
                 }
                 else
                 {
                     existing++;
+                }
+
+                if (FreezeFontFeatures(path))
+                {
+                    features++;
                 }
             }
 
@@ -61,6 +73,15 @@ namespace RowMate.EditorTools
                 existing++;
             }
 
+            if (Ensure(FontAssetPaths.EmojiFallbackSource, FontAssetPaths.EmojiFallback, 64, 6, 512, 512))
+            {
+                created++;
+            }
+            else
+            {
+                existing++;
+            }
+
             AssetDatabase.SaveAssets();
             foreach (var path in StyleSheetsToReimport)
             {
@@ -70,7 +91,8 @@ namespace RowMate.EditorTools
                 }
             }
 
-            return BootstrapState.Step.Ok(id, "FontAsset creados: " + created + ", ya existían: " + existing + "; USS reimportados");
+            return BootstrapState.Step.Ok(id, "FontAsset creados: " + created + ", ya existían: " + existing + "; getFontFeatures apagado en "
+                + features + "; USS reimportados");
         }
 
         // true si lo creó.
@@ -123,6 +145,29 @@ namespace RowMate.EditorTools
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+            return true;
+        }
+
+        // DN3-24: getFontFeatures = false (kerning solo de la tabla versionada). true si lo cambió (escribe solo si hace falta).
+        private static bool FreezeFontFeatures(string assetPath)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<FontAsset>(assetPath);
+            if (asset == null)
+            {
+                return false;
+            }
+
+            var serialized = new SerializedObject(asset);
+            var property = serialized.FindProperty("m_GetFontFeatures");
+            if (property == null || !property.boolValue)
+            {
+                return false;
+            }
+
+            property.boolValue = false;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(asset);
+            AssetDatabase.SaveAssets();
             return true;
         }
 

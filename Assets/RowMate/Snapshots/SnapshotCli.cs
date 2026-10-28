@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using RowMate.Presentation.Surface;
+using RowMate.Tests.Support;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,31 +11,43 @@ namespace RowMate.Snapshots
 {
     // Entrada del arnés de capturas (02-tech-design §4.1, §4.6):
     //   Unity.exe -batchmode -projectPath <repo> -executeMethod RowMate.Snapshots.SnapshotCli.Run -logFile <log>
-    //             [-snapshotFilter "CAP-01,CAP-1*,VID-*"] [-snapshotOut <carpeta>] [-snapshotPipeline GammaRt|Overlay]
+    //             [-snapshotSet it3|it2] [-snapshotFilter "CAP-01,CAP-1*,VID-*"] [-snapshotOut <carpeta>]
+    //             [-snapshotPipeline GammaRt|Overlay]
+    // It. 3 (03-rutinas/02-tech-design §5.1): -snapshotSet elige el catálogo (it3 por defecto: Rutinas; it2: Dispositivo) y su
+    // carpeta de salida. SeedDatabase (otro -executeMethod, con -quit) escribe la base sintética de CAP-27
+    // (-snapshotSeedDb <carpeta>/cap27.db -seed Cap27) para tools/unity/capture-cap27.ps1.
     // SIN -quit: Run() registra la máquina de estados en EditorApplication.update y vuelve; al terminar sale con
     // EditorApplication.Exit (0 bien, 1 alguna toma falló, 3 venció el tope de 15 min). En batchmode sin -quit el Editor sigue
     // vivo y update corre (S-0). Casi todas las tomas necesitan ROWMATE_SIMULATOR (tools/unity/capture-snapshots.ps1 lo pone y
     // lo saca); sin el define solo hay CAP-22 y CAP-23, y lo avisa.
     public static class SnapshotCli
     {
-        public const string DefaultOutput = "docs/migration/iterations/02-dispositivo-simulador/snapshots";
+        public const string It2Output = "docs/migration/iterations/02-dispositivo-simulador/snapshots";
+        public const string It3Output = "docs/migration/iterations/03-rutinas/snapshots";
+        public const string DefaultSet = "it3";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
+
+        public static string OutputFor(string set)
+        {
+            return string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase) ? It2Output : It3Output;
+        }
 
         public static void Run()
         {
             var args = Environment.GetCommandLineArgs();
+            var set = Value(args, "-snapshotSet") ?? DefaultSet;
             var filter = Value(args, "-snapshotFilter") ?? "";
-            var output = Value(args, "-snapshotOut") ?? DefaultOutput;
+            var output = Value(args, "-snapshotOut") ?? OutputFor(set);
             var pipeline = string.Equals(Value(args, "-snapshotPipeline"), "Overlay", StringComparison.OrdinalIgnoreCase)
                 ? UiColorPipeline.Overlay
                 : UiColorPipeline.GammaRt;
-            Start(filter, output, pipeline, code => EditorApplication.Exit(code));
+            Start(set, filter, output, pipeline, code => EditorApplication.Exit(code));
         }
 
         [MenuItem("RowMate/Capturas/Generar todas")]
         public static void RunFromMenu()
         {
-            Start("", DefaultOutput, UiColorPipeline.GammaRt, code => Debug.Log("[SNAPSHOT] terminó con " + code));
+            Start(DefaultSet, "", OutputFor(DefaultSet), UiColorPipeline.GammaRt, code => Debug.Log("[SNAPSHOT] terminó con " + code));
         }
 
         // Filtro guardado en EditorPrefs (RowMate.Snapshots.Filter), p. ej. "CAP-1*,VID-01"; vacío = todas.
@@ -42,12 +55,46 @@ namespace RowMate.Snapshots
         public static void RunFiltered()
         {
             var filter = EditorPrefs.GetString(FilterPrefKey, "CAP-01");
-            Start(filter, DefaultOutput, UiColorPipeline.GammaRt, code => Debug.Log("[SNAPSHOT] terminó con " + code));
+            Start(DefaultSet, filter, OutputFor(DefaultSet), UiColorPipeline.GammaRt, code => Debug.Log("[SNAPSHOT] terminó con " + code));
+        }
+
+        // La base sintética de CAP-27 (03-rutinas/02-tech-design §5.5): SOLO la semilla pedida (Cap27 = Escalera SPM de F-LISTA,
+        // nunca datos del usuario), en el archivo pedido, que no puede estar en la carpeta de datos del usuario ni llamarse como
+        // la base de la app fuera de la carpeta de pruebas (TempDatabase.Guard, dentro de RoutineSeeds.WriteFile): el script la
+        // pide como cap27.db (QA-V3-01). Sale con 0 si la escribió, 1 si no pudo y 2 si faltan los argumentos.
+        public static void SeedDatabase()
+        {
+            var args = Environment.GetCommandLineArgs();
+            var file = Value(args, "-snapshotSeedDb");
+            var seedName = Value(args, "-seed") ?? "Cap27";
+            if (file == null || file.Length == 0 || seedName != "Cap27")
+            {
+                Debug.LogError("[SNAPSHOT] SeedDatabase: falta -snapshotSeedDb <archivo> (y solo existe -seed Cap27)");
+                EditorApplication.Exit(2);
+                return;
+            }
+
+            try
+            {
+                RoutineSeeds.WriteFile(file, RoutineSeeds.Cap27);
+                Debug.Log("[SNAPSHOT] base sintética de CAP-27 lista (Escalera SPM)");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception error)
+            {
+                Debug.LogError("[SNAPSHOT] SeedDatabase: " + error.GetType().Name + ": " + error.Message);
+                EditorApplication.Exit(1);
+            }
         }
 
         public static IReadOnlyList<SnapshotScenario> Select(string filter)
         {
-            var all = SnapshotCatalog.All;
+            return Select(DefaultSet, filter);
+        }
+
+        public static IReadOnlyList<SnapshotScenario> Select(string set, string filter)
+        {
+            var all = SnapshotCatalog.For(set);
             if (string.IsNullOrWhiteSpace(filter))
             {
                 return all;
@@ -79,14 +126,14 @@ namespace RowMate.Snapshots
             return selected;
         }
 
-        private static void Start(string filter, string output, UiColorPipeline pipeline, Action<int> exit)
+        private static void Start(string set, string filter, string output, UiColorPipeline pipeline, Action<int> exit)
         {
 #if !ROWMATE_SIMULATOR
-            Debug.LogWarning("[SNAPSHOT] sin ROWMATE_SIMULATOR: solo CAP-22 y CAP-23 (usar tools/unity/capture-snapshots.ps1).");
+            Debug.LogWarning("[SNAPSHOT] sin ROWMATE_SIMULATOR: el catálogo queda casi vacío (usar tools/unity/capture-snapshots.ps1).");
 #endif
-            var scenarios = Select(filter);
+            var scenarios = Select(set, filter);
             var folder = Path.GetFullPath(output);
-            new SnapshotRunner(scenarios, folder, pipeline, !string.IsNullOrWhiteSpace(filter), exit).Start();
+            new SnapshotRunner(scenarios, folder, pipeline, !string.IsNullOrWhiteSpace(filter), exit, SnapshotCatalog.TitleFor(set)).Start();
         }
 
         private static string? Value(string[] args, string name)

@@ -1,5 +1,6 @@
 using RowMate.Bootstrap;
 using RowMate.Core.Design;
+using FontAsset = UnityEngine.TextCore.Text.FontAsset;
 using RowMate.Presentation.Controls;
 using UnityEditor;
 using UnityEngine;
@@ -10,7 +11,8 @@ namespace RowMate.EditorTools
     // Paso ui.panel del bootstrapper v3 (02-tech-design §1.3): Settings/UI/RowMatePanel.asset (tema RowMateTheme.tss,
     // ConstantPixelSize, escala 1, limpia a bg.app, sortingOrder 0, sin targetTexture: la RT y la escala por densidad las pone
     // la COPIA de AppRoot y de UiTestHost) y Settings/UI/UiAssets.asset (panel y catálogos; sin material de presentador: S-B1
-    // eligió el presentador por copia, sin shader). Idempotente: crea lo que falta y reasigna los valores.
+    // eligió el presentador por copia, sin shader) y, desde la It. 3, los FontAsset de respaldo del panel (íconos de contorno y
+    // Noto Emoji: RuntimePanelFactory, QA-G3-12). Idempotente: crea lo que falta y reasigna los valores.
     internal static class UiAssetsBuilder
     {
         public const string Folder = "Assets/RowMate/Settings/UI";
@@ -47,23 +49,28 @@ namespace RowMate.EditorTools
                 throw new System.IO.FileNotFoundException("faltan los catálogos " + UiAssets.StringsEsPath + " / " + UiAssets.StringsEnPath);
             }
 
+            var icons = AssetDatabase.LoadAssetAtPath<FontAsset>(FontAssetPaths.IconsOutline);
+            var emoji = AssetDatabase.LoadAssetAtPath<FontAsset>(FontAssetPaths.EmojiFallback);
             var assets = AssetDatabase.LoadAssetAtPath<UiAssets>(UiAssets.AssetPath);
             if (assets == null)
             {
                 assets = ScriptableObject.CreateInstance<UiAssets>();
                 assets.name = "UiAssets";
                 assets.Set(panel, es, en, null);
+                assets.SetFallbacks(icons, emoji);
                 AssetDatabase.CreateAsset(assets, UiAssets.AssetPath);
                 created += " UiAssets";
             }
             else
             {
                 assets.Set(panel, es, en, null);
+                assets.SetFallbacks(icons, emoji);
                 EditorUtility.SetDirty(assets);
             }
 
             AssetDatabase.SaveAssets();
-            return BootstrapState.Step.Ok(id, (created.Length > 0 ? "creado:" + created + "; " : "") + "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app");
+            return BootstrapState.Step.Ok(id, (created.Length > 0 ? "creado:" + created + "; " : "") + "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app; respaldos: "
+                + (icons != null ? "íconos" : "SIN íconos") + ", " + (emoji != null ? "Noto Emoji" : "SIN Noto Emoji"));
         }
 
         private static void Configure(PanelSettings panel, ThemeStyleSheet theme)

@@ -150,7 +150,8 @@ namespace RowMate.Tests.PlayMode
         public IEnumerator PlaceholdersShowTitleAndDimIconOnly()
         {
             Create(new UiHostOptions());
-            var cases = new[] { ("tab-workout", "screen-workout", "Entrenamiento"), ("tab-routines", "screen-routines", "Rutinas"), ("tab-history", "screen-history", "Historial") };
+            // Desde la It. 3 Rutinas ya no es provisoria (RLT.RoutinesIsNotAPlaceholder): siguen Workout e Historial.
+            var cases = new[] { ("tab-workout", "screen-workout", "Entrenamiento"), ("tab-history", "screen-history", "Historial") };
             foreach (var (tab, screen, title) in cases)
             {
                 yield return Tap(tab);

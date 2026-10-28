@@ -4,6 +4,7 @@
     "references": [
         "RowMate.Core",
         "RowMate.App",
+        "RowMate.Infrastructure",
         "RowMate.Presentation",
         "RowMate.Bootstrap",
         "RowMate.Simulator",

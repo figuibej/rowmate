@@ -1,10 +1,17 @@
-# Arnes de capturas de la It. 2 (02-tech-design Sec. 4.6): corre RowMate.Snapshots.SnapshotCli.Run en el Editor, en modo
-# edicion (sin Play), con ROWMATE_SIMULATOR puesto solo para la corrida.
+# Arnes de capturas (It. 2: 02-tech-design Sec. 4.6; It. 3: 03-rutinas/02-tech-design Sec. 5.1): corre
+# RowMate.Snapshots.SnapshotCli.Run en el Editor, en modo edicion (sin Play), con ROWMATE_SIMULATOR puesto solo para la corrida.
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
+#
+# -Set: el catalogo (it3 por defecto: Rutinas, 42 IDs = 47 archivos en docs/migration/iterations/03-rutinas/snapshots;
+# it2: Dispositivo y simulador, en docs/migration/iterations/02-dispositivo-simulador/snapshots). Sin -Out, la carpeta del
+# conjunto. CAP-27 (ventana del build normal) NUNCA sale de aca: es tools/unity/capture-cap27.ps1, a pedido.
+# Carpeta de datos (AC-HIS-20-04): la corrida pone ROWMATE_DATA_DIR en una carpeta temporal propia
+# (<temp>/RowMate.Tests/capture-<id>) y la borra en finally. Las tomas usan bases de prueba (TempDatabase): nunca las del
+# usuario.
 #
 # Tres corridas de Unity, una detras de otra (una sola instancia por proyecto):
 #   1. Unity -batchmode -quit -executeMethod RowMate.EditorTools.SimulatorDefine.EnableForTests: agrega el define (y deja la
@@ -18,10 +25,12 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
+    [ValidateSet('it3', 'it2')]
+    [string]$Set = 'it3',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
-    [string]$Out = 'docs/migration/iterations/02-dispositivo-simulador/snapshots',
+    [string]$Out = '',
     [string]$Unity = '',
     [string]$ArtifactsPath = 'tools/unity/.artifacts',
     [switch]$NoSimulator,
@@ -105,10 +114,16 @@ function Restore-Simulator([bool]$Check, [bool]$WasInSettings) {
     return $code
 }
 
+function Get-SetFolder {
+    if ($Out -ne '') { return $Out }
+    if ($Set -eq 'it2') { return 'docs/migration/iterations/02-dispositivo-simulador/snapshots' }
+    return 'docs/migration/iterations/03-rutinas/snapshots'
+}
+
 function Invoke-Harness {
     $log = Join-Path $script:artifacts 'capture-snapshots.log'
     $harnessArgs = @('-batchmode', '-projectPath', $repo, '-executeMethod', $harnessMethod, '-logFile', $log,
-        '-snapshotOut', (Get-FullPath $Out), '-snapshotPipeline', $Pipeline)
+        '-snapshotSet', $Set, '-snapshotOut', (Get-FullPath (Get-SetFolder)), '-snapshotPipeline', $Pipeline)
     if ($Filter -ne '') { $harnessArgs += @('-snapshotFilter', $Filter) }
     $code = Invoke-Unity $harnessArgs
     Write-Host ('[capturas] ' + $harnessMethod + ' -> ' + $code + ' (log: ' + $log + ')')
@@ -135,23 +150,37 @@ if ($RestoreOnly) {
     exit (Restore-Simulator $false $false)
 }
 
-if ($NoSimulator) {
-    exit (Invoke-Harness)
-}
-
+# Carpeta de datos propia de la corrida (AC-HIS-20-04): la hereda Unity y se borra en finally.
+$previousDataDir = $env:ROWMATE_DATA_DIR
+$dataDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\capture-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+$env:ROWMATE_DATA_DIR = $dataDir
 $wasInSettings = Test-SimulatorInSettings
+$enabled = $false
 $exitCode = 0
-$enableCode = Invoke-Method $enableMethod 'capture-simulator-enable.log'
-if ($enableCode -ne 0) {
-    Write-Host '[capturas] no se pudo activar el define: no se corre el arnes.'
-    $restoreCode = Restore-Simulator $true $wasInSettings
-    exit $enableCode
-}
 try {
-    $exitCode = Invoke-Harness
+    if ($NoSimulator) {
+        $exitCode = Invoke-Harness
+    }
+    else {
+        $enabled = $true
+        $enableCode = Invoke-Method $enableMethod 'capture-simulator-enable.log'
+        if ($enableCode -ne 0) {
+            Write-Host '[capturas] no se pudo activar el define: no se corre el arnes.'
+            $exitCode = $enableCode
+        }
+        else {
+            $exitCode = Invoke-Harness
+        }
+    }
 }
 finally {
-    $restoreCode = Restore-Simulator $true $wasInSettings
-    if ($exitCode -eq 0 -and $restoreCode -ne 0) { $exitCode = $restoreCode }
+    # SIEMPRE: los defines como estaban (verificado) y la carpeta de datos temporal borrada.
+    if ($enabled) {
+        $restoreCode = Restore-Simulator $true $wasInSettings
+        if ($exitCode -eq 0 -and $restoreCode -ne 0) { $exitCode = $restoreCode }
+    }
+    if ($null -eq $previousDataDir) { Remove-Item Env:ROWMATE_DATA_DIR -ErrorAction SilentlyContinue } else { $env:ROWMATE_DATA_DIR = $previousDataDir }
+    Remove-Item -Recurse -Force -Path $dataDir -ErrorAction SilentlyContinue
 }
 exit $exitCode

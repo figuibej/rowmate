@@ -43,11 +43,30 @@ namespace RowMate.Tests.PlayMode
             yield return Frames();
         }
 
+        // = pumpAndSettle con cuadros reales cuando una animación espera el layout (lo nuevo que crece). Tope: 2 s de reloj.
         protected IEnumerator Settle()
         {
             yield return Frames();
-            H.Settle();
-            yield return Frames();
+            var spent = 0.0;
+            var stalled = 0;
+            for (var i = 0; i < 60; i++)
+            {
+                var advanced = H.Settle(TimeSpan.FromSeconds(Math.Max(0, 2 - spent)));
+                spent += advanced;
+                yield return Frames();
+                if (!H.HasFiniteMotions || spent >= 2)
+                {
+                    break;
+                }
+
+                // Si algo sigue esperando un layout que no llega, el reloj avanza igual (como antes: tope de 2 s).
+                stalled = advanced > 0 ? 0 : stalled + 1;
+                if (stalled >= 3)
+                {
+                    H.Step();
+                    spent += UiTestHost.FrameSeconds;
+                }
+            }
         }
 
         protected IEnumerator Tap(string elementName)

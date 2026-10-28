@@ -8,7 +8,10 @@ namespace RowMate.Presentation.Controls
     //   .rm-button__icon   ícono (IconView 18) o, ocupado, .rm-spinner (16)
     //   .rm-button__label  .rm-type-button, white-space: normal, centrada (a 1,3× pasa a dos líneas y el botón crece)
     //   .rm-focus-ring > .rm-focus-ring__halo   absolutos, no ocupan lugar (visibles solo con .rm-keyboard-nav)
-    // Variante: --primary, --tonal, --outline, --text (y --danger sobre --text). Alto de contrato como min-height (USS).
+    // Variante: --primary, --tonal, --outline, --text (y --danger sobre --text), --danger-fill (relleno state.dangerFill con
+    // texto blanco: Eliminar del diálogo, It. 3). Alto de contrato como min-height (USS). Desde la It. 3 (DN3-17) el tamaño
+    // del ícono va por parámetro (18 por defecto; 16 en el pie de la serie) y la clase de texto también (.rm-type-button por
+    // defecto; .rm-type-button-s en el pie).
     // Deshabilitado = SetEnabled(false): :disabled, opacidad 0,38 y sin respuesta (AC-HRM-13-04). Enter (NavigationSubmit)
     // activa por Button; Espacio lo agrega este control (AC-APP-05-07).
     public class RmButton : Button
@@ -18,12 +21,18 @@ namespace RowMate.Presentation.Controls
         public const string IconClass = "rm-button__icon";
         public const string LabelClass = "rm-button__label";
 
+        public const float DefaultIconDp = 18;
+        public const string DefaultTypeClass = "rm-type-button";
+
         private readonly VisualElement _iconSlot;
+        private readonly float _iconDp;
         private IconView? _icon;
         private Spinner? _spinner;
 
-        public RmButton(string name, string variant, string? iconCodepoint, string label, Action? onClick)
+        public RmButton(string name, string variant, string? iconCodepoint, string label, Action? onClick, float iconDp = DefaultIconDp,
+                        string typeClass = DefaultTypeClass)
         {
+            _iconDp = iconDp;
             this.name = name;
             text = "";
             StripUnityChrome(this);
@@ -57,7 +66,7 @@ namespace RowMate.Presentation.Controls
 
             Label = new Label(label);
             Label.AddToClassList(LabelClass);
-            Label.AddToClassList("rm-type-button");
+            Label.AddToClassList(string.IsNullOrEmpty(typeClass) ? DefaultTypeClass : typeClass);
             Label.pickingMode = PickingMode.Ignore;
             Add(Label);
             Add(FocusRing());
@@ -94,7 +103,7 @@ namespace RowMate.Presentation.Controls
             _iconSlot.style.display = DisplayStyle.Flex;
             if (_icon == null)
             {
-                _icon = new IconView(codepoint!, false, 18);
+                _icon = new IconView(codepoint!, false, _iconDp);
                 _iconSlot.Add(_icon);
             }
             else

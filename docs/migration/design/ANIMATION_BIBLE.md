@@ -21,6 +21,8 @@
 4. **El dato mostrado siempre es real**: los números en vivo no "cuentan" pasando por valores intermedios inventados (solo los totales finales pueden contar, §2.5).
 5. **60 fps**: curvas evaluadas en Core sin asignaciones; nada de animación por cambio de layout de UI Toolkit en cada cuadro (se anima con `transform`/`opacity`). Fuera del inmersivo, cada animación de este documento pide 60 fps a `FramePacing` mientras corre y la libera al terminar; en reposo la app baja a 30 fps (ARCHITECTURE §13.1, QA-P-07).
 6. **Reducir movimiento** del sistema (`IAccessibilitySettings.ReduceMotion`, ARCHITECTURE §13.2) apaga respiración de cámara, vuelos y pulsos (ART_BIBLE §10.4); la remada y el agua siguen (son el dato).
+7. **Código o USS** (D-14 de la It. 2): toda animación que forma parte de una coreografía o que tiene que verse igual en las capturas y los videos se maneja **por código** (`MotionDriver`, con el reloj inyectable). Las transiciones de USS (`Motion.uss`) corren con el reloj real del panel y quedan solo para *hover*, presionado y el interruptor, y **todas dependen de `:hover`** (puntero o dedo apoyado): en *batchmode* una transición de USS queda congelada en su valor inicial y el clic simulado deja `:active` 100 ms de reloj real, así que nada de eso puede aparecer en una toma (04-design-notes de la It. 2 §15.3). Sin transición: deshabilitado, foco y `display`.
+8. **Nada antes del primer cuadro presentado**: el estado inicial se aplica tal cual (sin "encender" el tablero al abrir la app ni destellos de arranque).
 
 ### 0.2 Propuestas que necesitan decisión
 
@@ -70,7 +72,7 @@ Uso de Mixamo: el **personaje** (malla + rig Humanoid). Opcional: un clip de rep
 
 ### 1.2 Curvas
 
-UI Toolkit (USS `transition-timing-function`) solo trae curvas con nombre; no hay `cubic-bezier`. Se mapean así:
+UI Toolkit (USS `transition-timing-function`) solo trae curvas con nombre; no hay `cubic-bezier`. Se mapean así (el `cubic-bezier` de `Tokens.cs` es la aproximación que usa el código). En 6000.3 **`var()` funciona en `transition-duration` y `transition-timing-function`**, también en el atajo `transition:` (medido en la It. 2): `Motion.uss` usa `var(--rm-dur-*)` y `var(--rm-ease-*)` de `Tokens.uss`, sin clases de transición generadas.
 
 | Token | USS | Uso |
 |---|---|---|
@@ -89,7 +91,7 @@ Para lo que USS no resuelve (rodillo de dígitos, indicadores que siguen un valo
 | `spring.smooth` | 12 | ≈ 0,49 s | paneles de series, tamaños |
 | `spring.gentle` | 6 | ≈ 0,97 s | seguimiento y respiración de cámara |
 
-Los resortes todavía **no** son tokens de `Tokens.cs` (el mecanismo de la It. 1 no tiene un tipo para ellos). Viven en esta tabla hasta que el Architect decida el tipo (propuesta: `SpringToken.Omega(nombre, radPorSeg)` junto con `CriticalSpring`, 04-design-notes de la It. 1, §7).
+Los resortes todavía **no** son tokens de `Tokens.cs` (el mecanismo de la It. 1 no tiene un tipo para ellos). Viven en esta tabla y, en código, como constantes de `CriticalSpring` (`SnappyOmega`, `SmoothOmega`) que usa `MotionSpecs` (píldora, escala de `FitBox`), hasta que el Architect decida el tipo (propuesta: `SpringToken.Omega(nombre, radPorSeg)`, 04-design-notes de la It. 1, §7). Los demás números de motion que no son tokens (rodillo, latido, destello, coreografías de la It. 2) están en `Core/Design/MotionSpecs.cs`.
 
 ### 1.3 Distancias de desplazamiento
 
@@ -101,32 +103,52 @@ Los resortes todavía **no** son tokens de `Tokens.cs` (el mecanismo de la It. 1
 
 ### 2.1 Cambio de pestaña
 
+Todo por código (VID-02 de la It. 2 es determinista).
+
 | t (ms) | Qué |
 |---|---|
-| 0–120 | vista saliente: opacidad 1→0, x 0→−12·dir (`ease.exit`) |
+| 0 | el glifo del destino nuevo cambia a su variante elegida (contorno → relleno en Workout, `bluetooth` → `bluetooth_connected` en Dispositivo) y el anterior a la suya; arranca todo lo demás. Con los íconos provisorios (ASSET_SLOTS §4.4) es igual |
+| 0–≈260 | pastilla: `spring.snappy` (ω 22) en x hacia el centro del destino, **desde su posición y su velocidad actuales** (un segundo toque a mitad de camino no la frena en seco); sin rebote. El ancho no cambia (56) |
+| 0–90–260 | ícono elegido: escala 1 → 1,12 (`ease.enter`) → 1 (`ease.move`); el que se deja no se escala |
+| 0–160 | color del ícono y de la etiqueta: el nuevo va de `text.secondary` a `accent.primary` y el anterior al revés (`ease.move`, **por código**; al terminar se limpia el estilo en línea) |
+| 0–120 | vista saliente: opacidad 1→0, x 0→−12·dir (`shift.m`, `ease.exit`) |
 | 80–280 | vista entrante: opacidad 0→1, x +12·dir→0 (`ease.enter`) |
-| 0–260 | pastilla indicadora se desliza al destino (`spring.snappy` en x y ancho); ícono escala 1→1,12→1 y cambia de color (160). El glifo (contorno → relleno en Workout, `bluetooth` → `bluetooth_connected` en Dispositivo) cambia en el cuadro 0, junto con el comienzo del fundido de color; con los íconos provisorios (ASSET_SLOTS §4.4) es igual |
 
-`dir` = +1 si la pestaña está a la derecha. Las vistas se conservan vivas (paridad `IndexedStack`): no se recrean.
+`dir` = +1 si la pestaña está a la derecha. Tocar el destino elegido no hace nada. Las vistas se conservan vivas (paridad `IndexedStack`): no se recrean. Reducir movimiento: la pastilla está en el destino en el cuadro 0, sin escala del ícono; el contenido con los mismos tiempos pero solo opacidad; el fundido de color no cambia.
 
 ### 2.2 Pantallas apiladas y diálogos
 
-- **Push** (detalle, editor): entra desde la derecha 24 dp + fundido (`dur.base`, `ease.enter`); la anterior baja a 92 % de brillo y x −24. **Pop**: inverso en 200 ms.
-- **Diálogo:** velo `#000000` 0→60 % (200); diálogo escala 0,96→1 + fundido (220, `ease.enter`); salida 150 `ease.exit`. Tocar afuera = cancelar (paridad).
-- **Aviso (toast):** sube 16 dp + fundido (220), queda 4 s, sale (160).
+Todo por código (`PageTransition`, `DialogTransition`, `ToastTransition`; constantes en `MotionSpecs`), con los tiempos de la It. 3 ([03-rutinas/04-design-notes §5.1-§5.4](../iterations/03-rutinas/04-design-notes.md)).
+
+- **Push** (editor; después, detalle): la página entra x +24 → 0 en 0-240 (`shift.xl`, `ease.enter`) y opacidad 0 → 1 en **0-160**: llega opaca antes de terminar de moverse (dos pantallas superpuestas a media opacidad se ven sucias). Lo de atrás va x 0 → −24 y se oscurece con `overlay.scrim` 0 → 0,08 en 0-240. A los 240, pestañas y barra pasan a `display: none`. **Pop**: x 0 → +24 en 0-200 `ease.exit` y opacidad 1 → 0 en 40-200; lo de atrás vuelve en 0-200 `ease.enter` (llega y frena). Un "Atrás" a mitad de la entrada arranca el *pop* desde los valores actuales. Reducir movimiento: fundido de 120 lineal, sin desplazamientos.
+- **Diálogo:** velo `overlay.scrim` 0 → 60 % en 0-200 (`ease.move`); diálogo escala 0,96 → 1 y fundido en 0-220 (`ease.enter`, origen al centro). Salida (cancelar, confirmar, velo, Escape, "Atrás"): escala → **0,98** y opacidad → 0 en 150 `ease.exit`, con el velo. El resultado se aplica en el cuadro 0 de la salida: la fila nueva ya crece debajo del diálogo que se va. Tocar afuera = cancelar (paridad). Reducir movimiento: solo opacidad.
+- **Menú y ayuda:** el menú escala 0,96 → 1 y funde en 120 `ease.enter`, con el origen en la esquina que toca el ancla; sale en 90 `ease.exit`. La ayuda funde en 120 y sale en 90. Al elegir `Eliminar`, el menú sale mientras el diálogo entra. Reducir movimiento: solo opacidad.
+- **Aviso (toast):** sube 16 dp y funde en 220 (`ease.enter`), queda 4 s y sale en 160 bajando 8 (`ease.exit`). Un aviso nuevo **reemplaza** al visible y reinicia los 4 s, con un empujón de escala 1 → 1,02 (0-90 `ease.enter`) → 1 (90-240 `ease.move`) desde abajo al centro, y si cambia el texto, el viejo funde en 0-80 y el nuevo entra en 80-200. Si un obstáculo inferior cambia mientras se ve (la llave que sube), lo sigue con `CriticalSpring` ω 22. Reducir movimiento: solo opacidad, sin empujón.
+- **Lo que sale no responde** (It. 3): desde el cuadro 0 de su salida, la página, el diálogo y el menú no reciben toques ni conservan el foco; la ayuda no recibe toques nunca. El aspecto de la salida no cambia.
 
 ### 2.3 Aparición de tarjetas y listas
 
-- Primera carga: escalonado de 35 ms por tarjeta, máximo 8 animadas (el resto aparece con la octava); cada una: opacidad 0→1, y +12→0, `dur.base` `ease.enter`.
-- Recarga (Historial, Q-22 "sin parpadeo"): **no** se reanima la lista; solo los ítems nuevos entran (200) y los que se van colapsan su alto (200) con fundido (120).
-- Editor de rutinas: agregar paso = alto 0→N con `spring.smooth` + fundido; borrar = fundido 120 + colapso 200; el bloque de serie se estira con el mismo resorte.
+Regla general desde la It. 3: **lo nuevo crece, lo cambiado se ilumina, lo borrado se desvanece y colapsa**. El margen se anima junto con el alto: si no, quedan 10 dp que saltan al final.
+
+- Primera carga **con la pestaña a la vista**: escalonado de 35 ms por tarjeta, máximo 8 animadas (el resto aparece con la octava); cada una, opacidad 0 → 1 e y +12 → 0 en `dur.base` `ease.enter`. Si la lista llega antes de mostrar la pestaña (lo normal), entra con la transición de la pestaña (§2.1), sin animación propia: dos movimientos encimados se ven como un tirón.
+- **Crecer** (alta): alto **y márgenes** 0 → N con `spring.smooth` (ω 12); opacidad 0 → 1 en 60-260 `ease.enter`. **Colapsar** (baja): opacidad 1 → 0 en 0-120 `ease.exit`; alto y márgenes → 0 en 80-280 `ease.move`; lo de abajo sube sin salto. **Iluminar** (edición): capa blanca 0,08 → 0 en 600 `ease.move`.
+- Recarga (Historial, Q-22 "sin parpadeo"): **no** se reanima la lista; solo los ítems nuevos crecen y los que se van colapsan, con los tiempos de arriba.
+- Editor de rutinas: los mismos tres verbos para filas y bloques de serie; tiempos y casos en §2.14.
 
 ### 2.4 Valores en vivo: rodillo de dígitos
 
-- Solo animan los **dígitos que cambian** (componente `TabularNumber`, ART_BIBLE §4.2). Dígito viejo: y 0→∓0,35 em y opacidad 1→0; nuevo: y ±0,35 em→0 y 0→1; 180 ms `ease.enter`. Sentido: hacia arriba si el valor numérico subió, hacia abajo si bajó.
+- Solo animan las **celdas que cambian** (componente `TabularNumber` + `DigitRoll`, ART_BIBLE §4.2), alineadas a la derecha; las celdas nuevas cuentan como cambiadas y las que no cambian no se mueven ni un subpíxel. Duración 180 ms; `u = t / 180`, `E` = `ease.enter`, `dir` = +1 si el valor subió y −1 si bajó (un marcador `--` vale 0: al apagarse los dígitos bajan, al encenderse suben):
+
+  | Glifo | Desplazamiento vertical | Opacidad |
+  |---|---|---|
+  | Saliente | `−dir · 0,35 em · E(u)` | `1 − E(min(1; u / 0,6))` (desaparece a los 108 ms) |
+  | Entrante | `+dir · 0,35 em · (1 − E(u))` | `E(clamp((u − 0,15) / 0,85))` (empieza a los 27 ms) |
+
+- **El número que se ve es el real**: el texto nuevo es el de la lectura desde el cuadro 0 (solo se animan posición y opacidad), nunca se dibuja un dígito que no sea el viejo o el nuevo, y en `u ≥ 1` se ve exactamente el texto de la lectura.
 - Si llega un dato nuevo antes de terminar, el rodillo en curso salta a su final y arranca el siguiente (nunca se acumulan).
-- Tarjeta del tablero (Dispositivo): además, el acento superior se ilumina 100 %→60 % en 300 ms.
-- Con "reducir movimiento": fundido de 80 ms en lugar de rodillo.
+- Si cambia el largo (`9m` → `13m`), el ancho del número se interpola en los mismos 180 ms con `E` y las celdas quedan pegadas a la derecha: el número no salta media celda al recentrarse. Las celdas que se van solo salen.
+- Tarjeta del tablero (Dispositivo): además, **destello del acento**, solo en las tarjetas cuyo **texto** cambió (si `24.0` sigue en `24.0`, nada se mueve ni brilla). Factor `k(t) = 1 − 0,4 · E_pulse(t / 300 ms)`: 1,0 en el cuadro de la lectura (el mismo en que arranca el rodillo) y 0,60 a los 300 ms (`ease.pulse`). Acento = color de la métrica con alfa `k`; brillo = opacidad `0,14 · k`. Una lectura nueva reinicia en 1,0. La tarjeta del pulsómetro no destella (`k` = 0,6 fijo).
+- Con "reducir movimiento": fundido cruzado en el lugar de 80 ms lineal (saliente `1 − u`, entrante `u`) en lugar de rodillo; el destello no cambia (es opacidad).
 
 ### 2.5 Contadores que interpolan
 
@@ -163,7 +185,22 @@ El umbral se evalúa **instantáneo con cada lectura** [CONTRATO]. Lo visual:
 
 ### 2.9 Pulso cardíaco
 
-El corazón de la tarjeta del pulsómetro y de la tarjeta BPM late **a la frecuencia real**: período `T = 60 / bpm`; en cada latido escala 1→1,16 (90 ms `ease.enter`) → 1 (200 ms `ease.move`) y un segundo golpe a +170 ms de 1→1,06→1 (70/150). El período nuevo se aplica al próximo latido (sin saltos). Sin pulso o bpm 0: quieto `@40 %`. El corazón es el glifo `favorite` relleno en los dos estados (como el legacy); el latido es una escala del elemento, así que el ícono provisorio late igual. El pivote de la escala es el centro del ícono (la caja del glifo es simétrica, ASSET_SLOTS §4.2). La tarjeta BPM del HUD aparece y desaparece con fundido de 240 (F-WKT-05 mejora).
+El corazón de la tarjeta del pulsómetro y de la tarjeta BPM late **a la frecuencia real** (`HeartbeatClock`): período `T = 60 / bpm`; cada latido arranca en `τ = 0` y la escala es la **suma** de dos golpes, `s(τ) = 1 + 0,16 · p₁(τ) + 0,06 · p₂(τ)`:
+
+| Golpe | Sube | Baja | Pico |
+|---|---|---|---|
+| Principal | 0 → 90 ms, `ease.enter` | 90 → 290 ms, `ease.move` | +0,16 |
+| Segundo | 170 → 240 ms, `ease.enter` | 240 → 390 ms, `ease.move` | +0,06 |
+
+A los 170 ms el principal todavía vale ≈ 0,74, así que el "lub-dub" se lee como un golpe y un rebote (≈ 1,07 a los 240 ms).
+
+- **Compresión**: si `T < 420 ms` (bpm > 142,9), todos los tiempos se multiplican por `T / 420 ms` (a 180 bpm, 0,79); los picos no cambian. Así un latido nunca se encima con el siguiente.
+- Arranca en el cuadro en que llega el primer pulso > 0. El período nuevo se aplica al próximo latido (sin saltos de fase). 120 bpm → 20 latidos en 10 s (19 a 21 según la fase de inicio).
+- Para (bpm 0, desconexión o caída): sin latidos nuevos; la escala vuelve a 1 en 120 ms `ease.move` desde donde esté.
+- Opacidad (por código, nunca por USS): conectado, 1 (con pulso late; con `--` queda **pleno y quieto**); sin conexión, quieto `@40 %` [CONTRATO]. Los cambios de opacidad duran 160 ms `ease.move`, también con reducir movimiento.
+- Reducir movimiento: escala 1 siempre.
+
+El corazón es el glifo `favorite` relleno en los dos estados (como el legacy); el latido es una escala del elemento, así que el ícono provisorio late igual. El pivote de la escala es el centro del ícono (la caja del glifo es simétrica, ASSET_SLOTS §4.2). La tarjeta BPM del HUD aparece y desaparece con fundido de 240 (F-WKT-05 mejora).
 
 ### 2.10 Paneles de series
 
@@ -172,7 +209,7 @@ El corazón de la tarjeta del pulsómetro y de la tarjeta BPM late **a la frecue
 
 ### 2.11 Pausa, entrada y salida del inmersivo, completado
 
-- **Pausa:** la escena se desatura 30 % y oscurece 15 % (peso de un *Volume* de URP, 300 ms); tarjetas del HUD a 85 %; etiqueta "PAUSA" (texto del catálogo) escala 0,96→1 + fundido 240. **Reanudar:** inverso en 240. El bote sigue frenando con su inercia (§4.8); el remero se detiene suave (§3.9).
+- **Pausa:** la escena se desatura 30 % y oscurece 15 % (peso de un *Volume* de URP, 300 ms); las tarjetas del HUD **no** bajan de opacidad (siguen al 100 %, como el legacy: al 85 % el pulso daba 3,2:1 sobre una nube blanca, ART_BIBLE §3.2, QA-V2-12); etiqueta "PAUSA" (texto del catálogo) escala 0,96→1 + fundido 240. **Reanudar:** inverso en 240. El bote sigue frenando con su inercia (§4.8); el remero se detiene suave (§3.9).
 - **Entrada "sumergirse"** (al iniciar una sesión): Workout se funde a negro (220) y se ocultan las barras del sistema → la escena aparece con el **vuelo de cámara** (§5.3, 1,6 s) → HUD en cascada: barra de pasos a 400 ms, SPM 520, Split/Watts 600, banda 680, kcal/BPM 760, controles 840; cada uno 280 ms (`ease.enter`, y +10→0). La sesión y el reloj corren desde el toque: la animación no demora nada.
 - **Salida:** HUD sale junto (200) → cámara se eleva y se aleja (§5.3) → fundido a negro desde 0,8 s (400) → Workout entra (240).
 - **Rutina completada:** 300 ms después de `finished`, diálogo de vidrio; el check se dibuja (trazo 320) con escala `ease.emphasis`; los totales cuentan (§2.5); la cámara hace la toma aérea lenta (§5.3).
@@ -181,15 +218,54 @@ El corazón de la tarjeta del pulsómetro y de la tarjeta BPM late **a la frecue
 
 | Elemento | Spec |
 |---|---|
-| Botones | presionar: escala 0,97 (90, `ease.enter`) y capa `#FFFFFF @8 %`; soltar: `spring.snappy`. Sin *ripple*. |
+| Botones y controles (USS, `Motion.uss`) | presionado = `:hover:active` (ART_BIBLE §3.6): escala 0,97 (botones, chips; 0,94 en botones de ícono, caja del ícono de la pestaña y llave) hacia el estado en 90 ms y vuelta en 240 ms, las dos `ease-out-cubic` (la vuelta ≈ `spring.snappy`); capa de estado `opacity` 0,08 (*hover* 0,04) hacia el estado en `dur.micro` `ease.enter` y vuelta en `dur.fast` `ease.exit`; fondo del primario presionado 90 / 160. La duración "hacia el estado" se declara en la regla del estado y la de vuelta en la regla base, como en CSS. Con reducir movimiento no hay escala (queda la capa). Sin *ripple*. Desde la It. 3, con los mismos tiempos: tarjeta de rutina (capa 4 / 8 %, sin escala), `+` (fondo `accent.primaryPressed` 90 / 160 y escala 0,94), cápsula `×N` (capa y escala 0,97), mosaicos de tipo (capa y escala 0,97), tiempo / distancia (capa, sin escala), ítems de menú (capa; la del peligro, oscura al 12 / 24 %) y borde del campo hacia el *hover* en 90 (la vuelta, en el acto: una transición en la regla base correría también al perder el foco, sin puntero) |
+| Interruptor (USS) | perilla (desplazamiento, escala 0,8 ↔ 1 y color) y pista (fondo y borde) en `dur.fast` `ease.move`, ida y vuelta; las transiciones se declaran bajo `:hover` del renglón (§0.1, principio 7) |
+| Spinner | una vuelta cada 900 ms, lineal, por código; sigue con reducir movimiento (indica espera) |
 | Selector de escenario | borde y ancho con `spring.snappy`; miniatura escala 1→1,03 (240); nombre: fundido de peso |
 | Búsqueda BLE ("sonar", It. 10a) | 3 anillos que se expanden (radio 0→1 `ease.enter`, alfa 0,45→0), período 1,6 s, desfase 0,53 s; tarjetas encontradas con escalonado de §2.3 |
 | Pasos de conexión (It. 10a) | cada paso marca su check (trazo 240); error = color + ícono, **sin sacudidas** |
-| Skeleton | barrido de brillo `@8 %` de izquierda a derecha, 1,2 s lineal en loop (es "esperando", no dato) |
+| Skeleton | sin uso desde la It. 3: la carga de una lista muestra el indicador de 32 con 120 ms de gracia y fundido de 160 (ART_BIBLE §3.10, DT-20) |
 | Gráfico del detalle | franjas de paso aparecen (200) → la línea se dibuja de izquierda a derecha (revelado, 600 `ease.enter`) → el área se funde (300, desde 150); cambio de métrica: fundido cruzado 220 + reescalado del eje Y 300 (`ease.move`); tooltip sigue el dedo con `spring.snappy` |
 | Rotación del dispositivo | el HUD se reacomoda con fundido cruzado de 200; la escena no se reinicia |
 | Luces nocturnas | ventanas y faroles se encienden de a una en 20 min de escena alrededor del umbral `ambient < 0,6` (cada luz con un desfase fijo por semilla), cada encendido 0,4 s |
 | Háptica (It. 14) | leve en pausa/reanudar, media en cambio de paso, "éxito" al completar la rutina |
+
+### 2.13 Dispositivo y simulador (It. 2)
+
+Todo por código, con los números de `MotionSpecs` (04-design-notes de la It. 2 §5).
+
+| Animación | Spec | Con reducir movimiento |
+|---|---|---|
+| Vista conectada → búsqueda ("apagar", al caer el remo) | las dos vistas están superpuestas bajo la barra superior y la saliente ignora eventos. 0–120: vista conectada, opacidad 1→0 y escala 1→0,985 (origen arriba al centro), `ease.exit`; a los 120 la tarjeta del pulsómetro pasa a la vista de búsqueda; 120–360: vista de búsqueda, opacidad 0→1 e y +8→0 (`shift.s`), `ease.enter` | salida 0–120 y entrada 120–240, solo opacidad |
+| Búsqueda → conectada ("encender", al volver) | 0–120: búsqueda, opacidad 1→0 (`ease.exit`); a los 120 la tarjeta del pulsómetro vuelve y el desplazamiento queda en 0; 120–360: cabecera, opacidad 0→1; tarjeta `i` de la grilla de `120 + 35·i` a `+240`: opacidad 0→1 e y +12→0 (`shift.m`, `ease.enter`) con su destello del acento al arrancar, como una luz que se prende; la tarjeta del pulsómetro, igual y sin destello, al final (500 ms con 4 tarjetas). La grilla entra en ceros y la primera lectura los hace rodar | ídem, solo opacidad, sin escalonado (el destello sí) |
+| Interrupción | si el estado cambia en medio de una transición, la actual salta a su final y arranca la otra | — |
+| Alto del cuerpo de la tarjeta del pulsómetro | al cambiar de estado, el cuerpo nuevo se arma con opacidad 0; el alto va del anterior al nuevo en `dur.slow` 360 `ease.move` con `overflow: hidden` (se despliega o se recoge) y el contenido entra en 160 `ease.enter`; al terminar, alto automático | sin animación |
+| Llave y panel del simulador | abrir: la llave se oculta y el panel aparece en su lugar, opacidad 0→1 en 160 y escala 0,92→1 en 240 (`ease.enter`, origen abajo a la derecha: crece desde la llave). Cerrar: el panel se oculta **en el acto** y la llave vuelve con opacidad 0→1 y escala 0,85→1 en 160. Los cambios de valores del panel, en el acto (el efecto se ve en el tablero) | solo opacidad (panel 160, llave 120) |
+| Escala de `FitBox` | si un dato nuevo cambia la escala necesaria (`9999m` → `10000m` en 2 columnas: 1 → 0,82), la escala sigue un `spring.smooth` (ω 12, 98 % en ≈ 0,49 s). El primer cálculo, un cambio de ventana o de letra: en el acto | en el acto |
+| Tarjeta PULSO (pulso del remo > 0) | al aparecer, el alto de la grilla anima en `dur.slow` `ease.move` y la tarjeta entra como en el "encender" (240, y +12, opacidad); al irse, opacidad → 0 en 120 y después el alto se recoge en 200 | fundido |
+| 2 ↔ 3 columnas (rotar, redimensionar) | sin animación propia, como el legacy | — |
+
+**Reducir movimiento** (resumen): se activa con `.rm-reduce-motion` en la raíz (USS) y `MotionSettings.ReduceMotion` (código). Rodillo → fundido de 80; corazón quieto; pestañas, vistas, panel y PULSO → solo opacidad con los mismos tiempos; alto de la tarjeta y `FitBox` → en el acto; sin escalas al presionar. No cambian los datos ni cuándo se actualizan, el destello, los fundidos de color ni el spinner. Una captura fija con y sin reducir movimiento es idéntica.
+
+### 2.14 Rutinas y editor (It. 3)
+
+Todo por código con el reloj inyectable (`MotionSpecs`, `GrowMotion`, `CollapseMotion`, `HighlightMotion`); `Motion.uss` solo agrega *hover* y presionado (§2.12). Fuente: [03-rutinas/04-design-notes §5](../iterations/03-rutinas/04-design-notes.md).
+
+| Animación | Spec | Con reducir movimiento |
+|---|---|---|
+| Pila, diálogos, menú, ayuda, aviso | §2.2 | solo opacidad |
+| Tarjetas: primera carga, alta, edición, baja | §2.3; la tarjeta nueva crece al terminar el *pop* (t = 200) y la editada se ilumina; si era la última, el vacío entra al terminar el colapso (280) | fundido sin cambio de alto; el resaltado igual |
+| `+ Paso` → `Confirmar` | en el cuadro 0, con el diálogo saliendo, la fila crece (§2.3); si queda fuera de la vista, el contenido se desplaza hasta mostrarla con 16 dp de aire (ω 12). Si era el primer paso, el vacío funde → 0 en 120 | fundido; desplazamiento en el acto |
+| `Serie` | el bloque crece con el mismo resorte y sus piezas funden en escalera: encabezado 0-200, filas 40-240 y 80-280, pie y hojas 120-320 (`ease.enter`): se despliega de arriba abajo | fundido |
+| Cruz · tacho | la fila (o el bloque entero, también si era la última fila de su serie) se desvanece y colapsa (§2.3). Si era el último paso, el vacío entra en 240 al terminar | fundido |
+| Lápiz → `Confirmar` | la fila se ilumina; si cambió el tipo, borde, insignia, ícono y título cruzan de color en 160 `ease.move`; el subtítulo, en el acto | igual |
+| `×N` → `OK` | el número rueda (`DigitRoll` 180, hacia arriba si crece) y el ancho de la cápsula interpola en los mismos 180; las hojas aparecen o se van (alto 0 ↔ 3 y opacidad en 160 `ease.move`) | fundido de 80; hojas en el acto |
+| Diálogo de paso | mosaico elegido y vista previa cruzan color en 160; el campo de modo que llega funde en 120; la etiqueta del campo flota (traslado y escala 0,8) en 160 `ease.move`; la línea de error abre su alto y funde en 160 | colores igual; etiqueta, campo y error en el acto |
+| Llave del simulador | va a su nueva y con `CriticalSpring` ω 22 desde su posición y velocidad: al cambiar a Rutinas o salir de ella, al terminar la entrada del editor (baja) y al empezar su salida (sube); se puede tocar mientras se mueve | en el acto |
+| Desplazamientos | hasta lo nuevo, ω 12; hasta el primer error, el foco por Tab o sobre el teclado, ω 22; siempre con 16 dp de aire | en el acto |
+| Indicador de carga | gracia de 120, fundido de 160, una vuelta cada 900 | igual (indica espera) |
+
+Interrupciones: borrar algo que está creciendo colapsa desde su alto actual; dos altas seguidas crecen por separado, cada una con su resorte. Nada anima antes del primer cuadro presentado y ninguna propiedad animada por código tiene transición de USS. Una captura fija con y sin reducir movimiento es idéntica. Lo que la implementación de la It. 3 todavía no anima (el último paso que se va, las hojas, los cruces de color del tipo y la línea de error aparecen en el acto) está en 03-rutinas/04-design-notes §16.6.
 
 ---
 
@@ -593,7 +669,7 @@ Al cargar el personaje se miden los largos de sus huesos y se calcula (Core, tes
 | `PuddleField` | reglas legacy (QA §5): 2 por `BladeExit` (uno por pala, izquierdo primero, x < 0 y x > 0); vida 4 s; radio 0,3→0,9; **fijos en el mundo** (su z de mundo no cambia mientras el bote avanza y la cámara los pasa); no se crean en pausa. Más D-ANI-02: posición = punta de pala en el mundo al salir |
 | `LegacyBoatGeometry` | `boat_painter_test` portado sin cambios: catch hacia la cámara, pala hacia la proa, lados espejados (geometría legacy, no la pose 3D) |
 | `ChaseCameraMotion` | desvío del horizonte ≤ 3 px en 390×844 y 844×390; desfases acotados; "reducir movimiento" → 0 |
-| `CriticalSpring`, `DigitRoll`, `PillProgress`, `HeartbeatClock` | llega al 98 % en el tiempo de la tabla §1.2; dígitos que cambian (`149→155` cambia 2); el progreso visual nunca supera el del próximo tick; período = 60/bpm y el cambio se aplica en el latido siguiente |
+| `CriticalSpring`, `DigitRoll`, `PillProgress`, `HeartbeatClock` | llega al 98 % en el tiempo de la tabla §1.2; dígitos que cambian (`149→155` cambia 2) con las curvas por celda de §2.4 y el texto final exacto en `u ≥ 1`; el progreso visual nunca supera el del próximo tick; período = 60/bpm, suma de los dos golpes y compresión por debajo de 420 ms (§2.9), el cambio se aplica en el latido siguiente y la parada vuelve a 1 en 120 ms |
 
 ### 7.6 Aceptación visual (Editor, capturas y video)
 
@@ -628,3 +704,34 @@ Alineación con `Core/Design/Tokens.cs` (fuente única desde la It. 1) y con la 
 | §1.3 | Las distancias se nombran como en `Tokens.cs`: `shift.s` 8, `shift.m` 12, `shift.l` 16, `shift.xl` 24 |
 | §2.1 | Cambio de pestaña: el glifo (o el ícono provisorio) cambia en el cuadro 0, junto con el comienzo del fundido de color |
 | §2.9 | El corazón es `favorite` relleno en los dos estados, como el legacy; el latido escala el elemento desde su centro y vale igual para el ícono provisorio |
+
+---
+
+## Cambios al iniciar la It. 3
+
+Deuda de diseño de la It. 2: alineación con lo que se decidió e implementó ([04-design-notes de la It. 2 §5, §11, §15.3 y §15.6](../iterations/02-dispositivo-simulador/04-design-notes.md)) y una regla de QA-V2-12. Detalle en [iterations/03-rutinas/00-deuda-diseno.md](../iterations/03-rutinas/00-deuda-diseno.md), 2026-10-27. Manda el código (`Core/Design/MotionSpecs.cs`, `Tokens.cs`, `Motion.uss`): ningún número de motion de esta tabla cambia lo implementado.
+
+| Dónde | Qué cambió |
+|---|---|
+| §0.1 | Principio 7: coreografías y todo lo que sale en capturas, por código; USS solo para *hover*, presionado e interruptor, siempre bajo `:hover`. Principio 8: nada anima antes del primer cuadro presentado |
+| §1.2 | `var()` funciona en las transiciones de USS (medido en 6000.3); los resortes viven como constantes de `CriticalSpring` y el resto de los números de motion en `MotionSpecs` |
+| §2.1 | Cambio de pestaña con los tiempos implementados: glifo en el cuadro 0, pastilla con resorte desde su posición y velocidad (solo x), escala del ícono 0–90–260, color por código en 160 `ease.move`; reducir movimiento |
+| §2.4 | Rodillo con curvas por celda (desplazamiento 0,35 em; salida hasta 0,6, entrada desde 0,15), ancho interpolado al cambiar el largo, "el número que se ve es el real"; destello `k(t) = 1 − 0,4 · E_pulse(t / 300)` solo si cambió el texto; reducir movimiento con fundido lineal de 80 |
+| §2.9 | Latido como suma de dos golpes, compresión por debajo de 420 ms de período, parada en 120 ms, opacidad por código; conectado con `--`: pleno y quieto (decía "sin pulso: quieto `@40 %`", que es solo sin conexión) |
+| §2.11 (QA-V2-12) | En pausa las tarjetas del HUD no bajan al 85 %: siguen al 100 %, como el legacy |
+| §2.12 | Presionado `:hover:active` con 0,97 / 0,94, ida 90 y vuelta 240 `ease-out-cubic`; capa 0,08 / 0,04; interruptor; spinner de 900 ms |
+| §2.13 | Nueva: "apagar" y "encender" Dispositivo, alto del cuerpo del pulsómetro, llave y panel del simulador, escala de `FitBox`, tarjeta PULSO y el resumen de reducir movimiento |
+| §7.5 | Casos de `DigitRoll` y `HeartbeatClock` con las curvas, la compresión y la parada |
+
+---
+
+## Cambios de la It. 3
+
+Rutinas y editor. Fuente: [03-rutinas/04-design-notes](../iterations/03-rutinas/04-design-notes.md) §5, §12 y §16, 2026-10-28. Manda el código (`Core/Design/MotionSpecs.cs`, con las constantes de 04-design-notes §5.11, y `Motion.uss`).
+
+| Dónde | Qué cambió |
+|---|---|
+| §2.2 | Pila con opacidad en 0-160 al entrar y 40-200 al salir, x ±24 y oscurecido de 0,08; diálogo que sale a escala 0,98 con el resultado en el cuadro 0; menú y ayuda (120 / 90, origen en el ancla); aviso con reemplazo, empujón de 1,02, cruce de texto y seguimiento de obstáculos; lo que sale no recibe toques |
+| §2.3 | "Lo nuevo crece, lo cambiado se ilumina, lo borrado se desvanece y colapsa", con márgenes incluidos y los tiempos de 04-design-notes §5.5-§5.6; la primera carga escalona solo con la pestaña a la vista |
+| §2.12 | Micro-interacciones de Rutinas en `Motion.uss` (tarjeta, `+`, cápsula, mosaicos, segmentado, menú, campo), todas bajo `:hover`; el borde del campo vuelve en el acto. El *skeleton* sale (DT-20) |
+| §2.14 (nueva) | Rutinas y editor: tabla de cada animación con su reducir movimiento, y lo que todavía no anima la implementación (04-design-notes §16.6) |

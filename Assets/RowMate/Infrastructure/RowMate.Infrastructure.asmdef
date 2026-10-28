@@ -1,7 +1,7 @@
 {
     "name": "RowMate.Infrastructure",
     "rootNamespace": "RowMate.Infrastructure",
-    "references": ["RowMate.Core"],
+    "references": ["RowMate.Core", "Gilzoide.SqliteNet"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

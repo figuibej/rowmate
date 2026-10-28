@@ -12,14 +12,19 @@ namespace RowMate.EditorTools
     //         -rowmateTarget Windows|Android [-rowmateSimulator] [-rowmateBackend Mono|IL2CPP] [-rowmateOutput <carpeta>]
     // - Con -rowmateSimulator: ROWMATE_SIMULATOR por extraScriptingDefines (nunca en PlayerSettings: solo SimulatorDefine los
     //   escribe) y SIEMPRE Development (R-01, AC-BLE-13-01). SimulatorBuildGuard sigue mirando los defines del proyecto.
-    // - Sin -rowmateSimulator: al terminar, BuildOutputInspector busca rastros del simulador; si encuentra alguno, falla.
+    // - Sin -rowmateSimulator: al terminar, BuildOutputInspector busca lo que un build normal no puede llevar (simulador,
+    //   diagnósticos de desarrollo, metadatos de tests); si encuentra algo, falla.
     // - El backend (Mono temporal, D-16) se cambia solo para este build y se restaura en finally.
-    // - Si falta el módulo de la plataforma o del backend: NO VERIFICABLE, sale con 3 y lo dice.
-    // Códigos: 0 bien; 1 el build falló; 2 rastros del simulador en un build normal; 3 falta un módulo.
+    // - Si falta el módulo de la plataforma o del backend (IL2CPP, QA-V2-03): NO VERIFICABLE, sale con 3 y lo dice, antes
+    //   de compilar nada.
+    // Códigos: 0 bien; 1 el build falló; 2 el build normal lleva algo prohibido; 3 falta un módulo.
     public static class BuildCli
     {
         public const string Prefix = "[BUILD] ";
         private const string SimulatorSymbol = "ROWMATE_SIMULATOR";
+
+        // Lo que Unity escribe en el reporte cuando falta el módulo del backend (visto en la It. 2 con IL2CPP de Windows).
+        private const string BackendNotInstalled = "is not installed";
 
         public static void Build()
         {
@@ -46,11 +51,31 @@ namespace RowMate.EditorTools
             return options;
         }
 
+        // QA-V2-03: el módulo IL2CPP de una plataforma deja sus variantes en <PlaybackEngines>/<plataforma>/Variations/*il2cpp*
+        // (Windows: win64_player_development_il2cpp, …; Android: il2cpp). Sin ninguna, IL2CPP no está instalado.
+        public static bool HasIl2CppVariation(string? playbackEngineDirectory)
+        {
+            if (string.IsNullOrEmpty(playbackEngineDirectory))
+            {
+                return false;
+            }
+
+            var variations = Path.Combine(playbackEngineDirectory, "Variations");
+            return Directory.Exists(variations) && Directory.GetDirectories(variations, "*il2cpp*").Length > 0;
+        }
+
         public static int Run(BuildRequest request)
         {
             if (!BuildPipeline.IsBuildTargetSupported(request.BuildTargetGroup, request.BuildTarget))
             {
                 Debug.LogWarning(Prefix + "NO VERIFICABLE: falta el módulo de " + request.Target + " en este Editor.");
+                return 3;
+            }
+
+            if (request.ScriptingBackend == ScriptingImplementation.IL2CPP
+                && !HasIl2CppVariation(BuildPipeline.GetPlaybackEngineDirectory(request.BuildTarget, BuildOptions.None)))
+            {
+                Debug.LogWarning(Prefix + "NO VERIFICABLE: falta el módulo IL2CPP de " + request.Target + " en este Editor.");
                 return 3;
             }
 
@@ -74,9 +99,10 @@ namespace RowMate.EditorTools
                 if (report.summary.result != BuildResult.Succeeded)
                 {
                     Debug.LogError(Prefix + "el build falló: " + report.summary.result + " (" + report.summary.totalErrors + " errores)");
-                    if (request.ScriptingBackend == ScriptingImplementation.IL2CPP)
+                    if (MentionsMissingBackend(report))
                     {
-                        Debug.LogWarning(Prefix + "NO VERIFICABLE si falta el módulo IL2CPP de " + request.Target + ".");
+                        Debug.LogWarning(Prefix + "NO VERIFICABLE: falta el módulo de " + request.ScriptingBackend + " de " + request.Target + ".");
+                        return 3;
                     }
 
                     return 1;
@@ -85,14 +111,23 @@ namespace RowMate.EditorTools
                 Debug.Log(Prefix + "listo: " + report.summary.outputPath + " (" + report.summary.totalSize + " bytes)");
                 if (!request.Simulator)
                 {
-                    var traces = BuildOutputInspector.FindSimulatorTraces(request.OutputFolder);
+                    if (request.Development)
+                    {
+                        // Un build de desarrollo de la variante normal (-SmokeTest, -DbSmoke de la It. 3) lleva los diagnósticos a
+                        // propósito y nunca se publica: el inspector es para el release.
+                        Debug.Log(Prefix + "build de desarrollo: BuildOutputInspector no aplica (no es un release).");
+                        return 0;
+                    }
+
+                    var traces = BuildOutputInspector.FindForbiddenTraces(request.OutputFolder);
                     if (traces.Count > 0)
                     {
-                        Debug.LogError(Prefix + "el build normal tiene rastros del simulador (AC-BLE-13-02):\n" + string.Join("\n", traces));
+                        Debug.LogError(Prefix + "el build normal lleva lo que no puede llevar (simulador AC-BLE-13-02, diagnósticos QA-V2-09 o tests QA-V2-02):\n"
+                            + string.Join("\n", traces));
                         return 2;
                     }
 
-                    Debug.Log(Prefix + "BuildOutputInspector: sin rastros del simulador.");
+                    Debug.Log(Prefix + "BuildOutputInspector: sin rastros del simulador, de diagnósticos ni de tests.");
                 }
 
                 return 0;
@@ -102,6 +137,23 @@ namespace RowMate.EditorTools
                 PlayerSettings.SetScriptingBackend(named, previousBackend);
                 AssetDatabase.SaveAssets();
             }
+        }
+
+        // Respaldo de la comprobación previa: el reporte dice "Currently selected scripting backend (IL2CPP) is not installed."
+        private static bool MentionsMissingBackend(BuildReport report)
+        {
+            foreach (var step in report.steps)
+            {
+                foreach (var message in step.messages)
+                {
+                    if (message.content != null && message.content.Contains("scripting backend") && message.content.Contains(BackendNotInstalled))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static string[] EnabledScenes()

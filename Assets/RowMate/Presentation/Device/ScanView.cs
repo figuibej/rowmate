@@ -41,7 +41,7 @@ namespace RowMate.Presentation.Device
             EmptyArea = new ScrollView(ScrollViewMode.Vertical) { name = "device-empty-area" };
             EmptyArea.AddToClassList("rm-device-empty");
             EmptyArea.AddToClassList("rm-scroll");
-            EmptyArea.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            ScrollPolicy.Apply(EmptyArea, ui.IsDesktop);
             _empty = new VisualElement();
             _empty.AddToClassList("rm-empty");
             _empty.pickingMode = PickingMode.Ignore;
@@ -65,7 +65,7 @@ namespace RowMate.Presentation.Device
             CardSlot = new ScrollView(ScrollViewMode.Vertical) { name = "hrm-card-slot-scan" };
             CardSlot.AddToClassList("rm-hrm-slot");
             CardSlot.AddToClassList("rm-scroll");
-            CardSlot.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            ScrollPolicy.Apply(CardSlot, ui.IsDesktop);
             Add(CardSlot);
         }
 

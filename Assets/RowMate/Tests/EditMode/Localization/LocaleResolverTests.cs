@@ -116,7 +116,7 @@ namespace RowMate.Tests.EditMode.Localization
         }
 
         [Test, Category("AC-APP-09-06")]
-        [Ignore("NO VERIFICABLE → It. 2: [Device] lista nativa en Android (LocaleList) y Windows (GlobalizationPreferences); [Apple] → It. 10b")]
+        [Ignore("Windows: se verifica en Unity EditMode (SystemLocaleProviderTests.WindowsListIsBcp47AndNotEmpty) y en la PC (05-qa-verification de la It. 2). [Device] Android (LocaleList): QA en equipo cuando estén el módulo y el teléfono; [Apple] It. 10b")]
         public void NativeListOnDevices()
         {
         }

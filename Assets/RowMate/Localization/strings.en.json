@@ -329,5 +329,59 @@
         "type": "String"
       }
     }
-  }
+  },
+  "navBack": "Back",
+  "menuShow": "Show menu",
+  "textCut": "Cut",
+  "textCopy": "Copy",
+  "textPaste": "Paste",
+  "textSelectAll": "Select all",
+  "editorRepeatCount": "×{count}",
+  "@editorRepeatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorErrorRange": "Out of range: up to ±{max}",
+  "@editorErrorRange": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "editorErrorRangeRep": "Out of range in repetition {rep}: up to ±{max}",
+  "@editorErrorRangeRep": {
+    "placeholders": {
+      "rep": {
+        "type": "int"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "editorRepetitionsMax": "Maximum {max}",
+  "@editorRepetitionsMax": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "editorRepetitionsOutOfRange": "With ×{count}, a target goes out of range",
+  "@editorRepetitionsOutOfRange": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorStepOutOfRange": "A step has out-of-range values",
+  "editorSaveError": "Couldn't save the routine",
+  "routineDeleteError": "Couldn't delete the routine",
+  "routinesLoadError": "Couldn't load routines",
+  "retry": "Retry"
 }

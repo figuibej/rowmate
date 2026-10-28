@@ -40,6 +40,11 @@
     -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
 }
 
+.rm-type-button-s {
+    font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+}
+
 .rm-type-caption {
     font-size: 11px;
     -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Medium-SDF.asset");
@@ -47,6 +52,11 @@
 
 .rm-type-display {
     font-size: 32px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
+}
+
+.rm-type-header-s {
+    font-size: 13px;
     -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
 }
 
@@ -117,6 +127,11 @@
     -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
 }
 
+.rm-type-title-xs {
+    font-size: 14px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+}
+
 .rm-text-scale-085 .rm-type-body {
     font-size: 12.75px;
 }
@@ -137,12 +152,20 @@
     font-size: 11.9px;
 }
 
+.rm-text-scale-085 .rm-type-button-s {
+    font-size: 10.2px;
+}
+
 .rm-text-scale-085 .rm-type-caption {
     font-size: 9.35px;
 }
 
 .rm-text-scale-085 .rm-type-display {
     font-size: 27.2px;
+}
+
+.rm-text-scale-085 .rm-type-header-s {
+    font-size: 11.05px;
 }
 
 .rm-text-scale-085 .rm-type-headline {
@@ -197,6 +220,10 @@
     font-size: 13.6px;
 }
 
+.rm-text-scale-085 .rm-type-title-xs {
+    font-size: 11.9px;
+}
+
 .rm-text-scale-115 .rm-type-body {
     font-size: 17.25px;
 }
@@ -217,12 +244,20 @@
     font-size: 16.1px;
 }
 
+.rm-text-scale-115 .rm-type-button-s {
+    font-size: 13.8px;
+}
+
 .rm-text-scale-115 .rm-type-caption {
     font-size: 12.65px;
 }
 
 .rm-text-scale-115 .rm-type-display {
     font-size: 36.8px;
+}
+
+.rm-text-scale-115 .rm-type-header-s {
+    font-size: 14.95px;
 }
 
 .rm-text-scale-115 .rm-type-headline {
@@ -277,6 +312,10 @@
     font-size: 18.4px;
 }
 
+.rm-text-scale-115 .rm-type-title-xs {
+    font-size: 16.1px;
+}
+
 .rm-text-scale-130 .rm-type-body {
     font-size: 19.5px;
 }
@@ -297,12 +336,20 @@
     font-size: 18.2px;
 }
 
+.rm-text-scale-130 .rm-type-button-s {
+    font-size: 15.6px;
+}
+
 .rm-text-scale-130 .rm-type-caption {
     font-size: 14.3px;
 }
 
 .rm-text-scale-130 .rm-type-display {
     font-size: 41.6px;
+}
+
+.rm-text-scale-130 .rm-type-header-s {
+    font-size: 16.9px;
 }
 
 .rm-text-scale-130 .rm-type-headline {
@@ -355,4 +402,8 @@
 
 .rm-text-scale-130 .rm-type-title-s {
     font-size: 20.8px;
+}
+
+.rm-text-scale-130 .rm-type-title-xs {
+    font-size: 18.2px;
 }

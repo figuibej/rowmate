@@ -9,7 +9,10 @@ namespace RowMate.Snapshots
     {
         Still,
         Video,
-        Rt1
+        Rt1,
+
+        // Una sola armada con varias tomas (DEMO de la It. 3): cada ScenarioScript.Shot es una foto fija con su registro.
+        Sequence
     }
 
     // Una toma del catálogo (02-tech-design §4.3): una captura fija, un video o la medición de R-T1. Cada toma arma su propio
@@ -59,6 +62,16 @@ namespace RowMate.Snapshots
         public bool SkipReadingWindow { get; set; }
 
         public string FileName => FileStem + (Kind == SnapshotKind.Video ? ".mp4" : ".png");
+
+        // Sequence: las tomas que tiene que hacer, en orden (id, archivo sin extensión). Las que no se lleguen a tomar quedan en
+        // el manifest como fallas.
+        public List<(string Id, string Stem, string State)> SequenceShots { get; } = new List<(string, string, string)>();
+
+        public SnapshotScenario Shot(string id, string stem, string state)
+        {
+            SequenceShots.Add((id, stem, state));
+            return this;
+        }
 
         public SnapshotScenario WithProbe(PixelProbe probe, bool aspect = false)
         {

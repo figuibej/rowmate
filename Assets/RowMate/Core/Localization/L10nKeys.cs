@@ -1,8 +1,9 @@
 namespace RowMate.Core.Localization
 {
-    // Las 174 claves del catálogo (F-APP-10): las 159 del legacy en su orden (lib/l10n/app_es.arb) y las 15 nuevas de la
-    // It. 1 al final (01-po-spec §4.17.2). Nombre de la constante = la clave en PascalCase. Se mantiene a mano (D-05):
-    // L10nKeysTests falla si una constante no existe en los dos catálogos o si una clave del catálogo no tiene constante.
+    // Las 190 claves del catálogo (F-APP-10): las 159 del legacy en su orden (lib/l10n/app_es.arb), las 15 nuevas de la
+    // It. 1 (01-po-spec §4.17.2) y las 16 de la It. 3 (03-rutinas/01-po-spec §11.2) al final. Nombre de la constante = la
+    // clave en PascalCase. Se mantiene a mano (D-05): L10nKeysTests falla si una constante no existe en los dos catálogos o si
+    // una clave del catálogo no tiene constante.
     public static class L10nKeys
     {
         // ── Legacy (159) ──
@@ -182,5 +183,32 @@ namespace RowMate.Core.Localization
         public const string StepProgressionSpm = "stepProgressionSpm";
         public const string StepProgressionWatts = "stepProgressionWatts";
         public const string StepProgressionSplit = "stepProgressionSplit";
+
+        // ── Nuevas de la It. 3 (Q-01; 03-rutinas/01-po-spec §11.2) ──
+        // Ayudas emergentes que en el legacy pone Flutter (material_es.arb:5, :14; P-09 de la It. 1).
+        public const string NavBack = "navBack";
+        public const string MenuShow = "menuShow";
+
+        // Menú del clic derecho de los campos en la PC (AC-RUT-11-09; material_es.arb:27-32).
+        public const string TextCut = "textCut";
+        public const string TextCopy = "textCopy";
+        public const string TextPaste = "textPaste";
+        public const string TextSelectAll = "textSelectAll";
+
+        // Chip ×N de la serie (antes un literal del legacy: routine_editor_screen.dart:403).
+        public const string EditorRepeatCount = "editorRepeatCount";
+
+        // Topes de Q-92 (AC-RUT-13-11, -12, AC-RUT-14-05, -06, AC-RUT-11-05).
+        public const string EditorErrorRange = "editorErrorRange";
+        public const string EditorErrorRangeRep = "editorErrorRangeRep";
+        public const string EditorRepetitionsMax = "editorRepetitionsMax";
+        public const string EditorRepetitionsOutOfRange = "editorRepetitionsOutOfRange";
+        public const string EditorStepOutOfRange = "editorStepOutOfRange";
+
+        // Errores de la base (Q-13: AC-RUT-09-04 a -06).
+        public const string EditorSaveError = "editorSaveError";
+        public const string RoutineDeleteError = "routineDeleteError";
+        public const string RoutinesLoadError = "routinesLoadError";
+        public const string Retry = "retry";
     }
 }

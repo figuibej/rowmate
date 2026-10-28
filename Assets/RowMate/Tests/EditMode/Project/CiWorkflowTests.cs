@@ -7,7 +7,7 @@ using RowMate.Tests.Support;
 namespace RowMate.Tests.EditMode.Project
 {
     // F-APP-19 (también toca): .github/workflows/ci-core.yml y tools/dotnet/run-tests.ps1 (02-tech-design §2.6 y §7).
-    // Sin repositorio remoto la corrida del CI es NO VERIFICABLE (P-03): acá se revisa el texto.
+    // La corrida del CI no se verifica desde un test (ci-core.yml corre en GitHub Actions desde que el repositorio es público): acá se revisa el texto.
     [TestFixture]
     public sealed class CiWorkflowTests
     {
@@ -119,12 +119,12 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(script, Does.Contain("if ($runSettings.Count -gt 0) { $test += @('--') + $runSettings }"));
         }
 
-        [Test, Category("AC-APP-19-01"), Ignore("NO VERIFICABLE → [CI] sin repositorio remoto en GitHub (P-03): la corrida de ci-core.yml en Windows y Linux")]
+        [Test, Category("AC-APP-19-01"), Ignore("[CI] no se verifica desde un test: es la corrida de ci-core.yml en GitHub Actions (ubuntu-latest y windows-latest) del repositorio público")]
         public void RunsOnGitHub()
         {
         }
 
-        [Test, Category("AC-APP-19-02"), Ignore("NO VERIFICABLE → [CI] sin repositorio remoto en GitHub (P-03): un test rojo deja el job rojo")]
+        [Test, Category("AC-APP-19-02"), Ignore("[CI] no se verifica desde un test: en GitHub Actions un test rojo deja rojo el job de ci-core.yml (run-tests.ps1 sale con el código de dotnet test)")]
         public void RedJobOnGitHub()
         {
         }

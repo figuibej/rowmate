@@ -30,7 +30,7 @@ namespace RowMate.Tests.EditMode.Models
             Assert.That(RowingFormats.Elapsed(3661), Is.EqualTo("1:01:01"));
         }
 
-        [Test, Category("AC-BLE-01-05"), Ignore("NO VERIFICABLE → [Editor] It. 2 (F-BLE-11): los textos en la grilla de Dispositivo en pantalla")]
+        [Test, Category("AC-BLE-01-05"), Ignore("Se verifica en PlayMode: DeviceScreenTests.GridTextsLikeImage01 (It. 2, con las culturas es-AR y de-DE) y en CAP-01 / CAP-06")]
         public void DeviceGridShowsTheTextsOnScreen()
         {
         }

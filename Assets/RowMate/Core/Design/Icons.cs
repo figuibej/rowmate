@@ -7,10 +7,11 @@ namespace RowMate.Core.Design
     // constante es el texto del Label (el codepoint, un carácter del área privada); la clase USS .rm-icon elige la fuente de
     // contorno y .rm-icon--filled la rellena (Typography.uss). IconsTests compara cada nombre y codepoint con
     // UI/Icons/MaterialSymbolsRounded[...].codepoints y con el cmap de las dos fuentes versionadas.
-    // 42 glifos en la fuente de contorno y 7 en la rellena (timer, favorite y person están en las dos).
+    // 44 glifos en la fuente de contorno y 7 en la rellena (timer, favorite y person están en las dos); la It. 3 suma
+    // arrow_back y more_vert (03-rutinas/02-tech-design §7.1).
     public static class Icons
     {
-        // ── Contorno (42) ────────────────────────────────────────────────────────
+        // ── Contorno (44) ────────────────────────────────────────────────────────
         public const string Rowing = "";
         public const string FitnessCenter = "";
         public const string Whatshot = "";
@@ -53,6 +54,8 @@ namespace RowMate.Core.Design
         public const string Landscape = "";
         public const string ArrowDropUp = "";
         public const string ArrowDropDown = "";
+        public const string ArrowBack = "";             // It. 3: flecha de volver del editor
+        public const string MoreVert = "";              // It. 3: menú ⋮ de la tarjeta de rutina
 
         // ── Solo relleno (4; los otros 3 rellenos son Timer, Favorite y Person) ──
         public const string PlayArrow = "";
@@ -108,9 +111,11 @@ namespace RowMate.Core.Design
             Outline("landscape", Landscape),
             Outline("arrow_drop_up", ArrowDropUp),
             Outline("arrow_drop_down", ArrowDropDown),
+            Outline("arrow_back", ArrowBack),
+            Outline("more_vert", MoreVert),
         };
 
-        // Los 46 nombres de ASSET_SLOTS §4.3, en el orden de esa tabla.
+        // Los 48 nombres de ASSET_SLOTS §4.3, en el orden de esa tabla.
         public static IReadOnlyList<IconInfo> All => Table;
 
         // Por nombre del catálogo de Material Symbols ("bluetooth_connected"); KeyNotFoundException si no existe.

@@ -3,6 +3,7 @@ using RowMate.Platform.Accessibility;
 using RowMate.Platform.Display;
 using RowMate.Platform.Input;
 using RowMate.Platform.Locale;
+using RowMate.Platform.Storage;
 using UnityEngine;
 
 namespace RowMate.Platform
@@ -14,7 +15,8 @@ namespace RowMate.Platform
         public static PlatformServices Create(IAppLogger logger)
         {
             return new PlatformServices(new SystemLocaleProvider(), new AccessibilitySettingsProvider(logger), new DisplayMetricsProvider(),
-                BackButtonPolicy.ForCurrentPlatform(), CurrentKind(), IsDesktop());
+                BackButtonPolicy.ForCurrentPlatform(), CurrentKind(), IsDesktop(), new WindowsTitleBar(logger), new AppDataLocation(),
+                new SystemClipboard(), new SoftKeyboard(Application.isMobilePlatform));
         }
 
         public static PlatformKind CurrentKind()

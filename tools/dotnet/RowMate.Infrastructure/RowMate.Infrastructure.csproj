@@ -10,7 +10,13 @@
     <Compile Include="$(UnityAssets)Infrastructure/**/*.cs" LinkBase="Infrastructure" />
   </ItemGroup>
   <ItemGroup>
-    <!-- sqlite-net-pcl 1.9.172 y Newtonsoft.Json 13.0.2 entran en la It. 3, con su primer uso (D-07). -->
     <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- It. 3 (02-tech-design §1.2, §2.7): sqlite-net-pcl es el par en dotnet de Gilzoide.SqliteNet (com.gilzoide.sqlite-net
+         1.3.3 en Unity): el mismo SQLite.cs de sqlite-net, sobre SQLitePCLRaw. bundle_green 2.1.11 fijado (SQLite 3.49.1,
+         más cerca del 3.53.4 de Unity que el 3.39.2 de la dependencia por defecto); trae e_sqlite3 para Windows y Linux. -->
+    <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
   </ItemGroup>
 </Project>

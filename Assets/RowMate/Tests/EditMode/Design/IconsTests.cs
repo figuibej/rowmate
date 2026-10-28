@@ -63,7 +63,7 @@ namespace RowMate.Tests.EditMode.Design
         }
 
         [Test, Category("AC-APP-05-03")]
-        public void FortyTwoOutlineAndSevenFilled()
+        public void FortyFourOutlineAndSevenFilled()
         {
             var outline = 0;
             var filled = 0;
@@ -78,13 +78,13 @@ namespace RowMate.Tests.EditMode.Design
                 }
             }
 
-            Assert.That(outline, Is.EqualTo(42));
+            Assert.That(outline, Is.EqualTo(44), "It. 3: + arrow_back y more_vert");
             Assert.That(filled, Is.EqualTo(7));
             Assert.That(both, Is.EquivalentTo(new[] { "timer", "favorite", "person" }));
-            Assert.That(Icons.All.Count, Is.EqualTo(46));
+            Assert.That(Icons.All.Count, Is.EqualTo(48));
 
             // Las fuentes no traen glifos de más (fuera de .notdef, que no tiene codepoint).
-            Assert.That(ReadCmap(RepoPaths.Combine(IconsFolder, "RowMateIcons-Outline.ttf")).Count, Is.EqualTo(42));
+            Assert.That(ReadCmap(RepoPaths.Combine(IconsFolder, "RowMateIcons-Outline.ttf")).Count, Is.EqualTo(44));
             Assert.That(ReadCmap(RepoPaths.Combine(IconsFolder, "RowMateIcons-Filled.ttf")).Count, Is.EqualTo(7));
         }
 

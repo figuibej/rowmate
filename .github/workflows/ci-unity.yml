@@ -1,6 +1,11 @@
-# CI de Unity, opcional (AC-APP-19-05; 02-tech-design §1.1): EditMode y PlayMode con GameCI, a pedido y solo si el
-# repositorio tiene la licencia de Unity en los secretos (UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD). No activa el modo
-# simulador (esas pruebas corren en la PC con tools/unity/run-unity-tests.ps1 -Simulator). El CI de dotnet es ci-core.yml.
+# CI de Unity, opcional (AC-APP-19-05; 02-tech-design §1.1; QA-V2-14): EditMode y PlayMode con GameCI, sin y con el modo
+# simulador, a pedido y solo si el repositorio tiene la licencia de Unity en los secretos (UNITY_LICENSE, UNITY_EMAIL,
+# UNITY_PASSWORD). El CI de dotnet es ci-core.yml.
+# Con simulator: true, el define se activa SOLO para la corrida de tests, en el checkout efímero del runner, como
+# tools/unity/run-unity-tests.ps1 -Simulator en la PC: tools/unity/ci-simulator-define.sh enable lo agrega a
+# ProjectSettings.asset y deja la marca de SimulatorDefine; Unity recibe -rowmateSimulatorTestRun (lo acepta
+# SimulatorInUnityTests.CommittedSettingsDoNotEnableTheSimulator) y al final "restore" deja todo como en el commit antes de
+# que se guarde la caché. Este workflow no compila players ni commitea nada (R-01).
 name: ci-unity
 
 on:
@@ -8,11 +13,13 @@ on:
 
 jobs:
   unity-tests:
+    name: Unity ${{ matrix.testMode }}${{ matrix.simulator && ' + simulador' || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         testMode: [EditMode, PlayMode]
+        simulator: [false, true]
     steps:
       - name: Requiere la licencia de Unity en los secretos
         env:
@@ -25,7 +32,10 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ matrix.testMode }}-${{ hashFiles('Packages/packages-lock.json') }}
+          key: Library-${{ matrix.testMode }}-sim-${{ matrix.simulator }}-${{ hashFiles('Packages/packages-lock.json') }}
+      - name: Modo simulador solo para esta corrida
+        if: ${{ matrix.simulator }}
+        run: bash tools/unity/ci-simulator-define.sh enable
       - name: Tests (${{ matrix.testMode }})
         uses: game-ci/unity-test-runner@v4
         env:
@@ -35,9 +45,13 @@ jobs:
         with:
           unityVersion: 6000.3.27f1
           testMode: ${{ matrix.testMode }}
-          artifactsPath: artifacts-${{ matrix.testMode }}
+          artifactsPath: artifacts-${{ matrix.testMode }}-sim-${{ matrix.simulator }}
+          customParameters: ${{ matrix.simulator && '-rowmateSimulatorTestRun' || '' }}
+      - name: Restaurar los defines y sacar la marca (antes de guardar la caché)
+        if: ${{ always() && matrix.simulator }}
+        run: bash tools/unity/ci-simulator-define.sh restore
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: unity-${{ matrix.testMode }}
-          path: artifacts-${{ matrix.testMode }}
+          name: unity-${{ matrix.testMode }}-sim-${{ matrix.simulator }}
+          path: artifacts-${{ matrix.testMode }}-sim-${{ matrix.simulator }}

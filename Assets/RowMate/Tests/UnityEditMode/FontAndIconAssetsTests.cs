@@ -11,7 +11,11 @@ namespace RowMate.Tests.UnityEditMode
         [Test, Category("AC-APP-05-03")]
         public void FontAssetsExistAndCoverTheirSets()
         {
-            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(9));
+            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(10), "7 caras de texto, 2 de íconos y Noto Emoji (It. 3, DN3-21)");
+            var emoji = AssetDatabase.LoadAssetAtPath<FontAsset>(FontAssetPaths.EmojiFallback);
+            Assert.That(emoji, Is.Not.Null, FontAssetPaths.EmojiFallback);
+            Assert.That(emoji.sourceFontFile, Is.Not.Null, "Noto Emoji: dinámico, con su .ttf");
+            Assert.That(emoji.HasCharacter(0x1F6A3, false, true), Is.True, "🚣 (U+1F6A3) en Noto Emoji");
             foreach (var face in FontAssetPaths.TextFaces)
             {
                 var path = FontAssetPaths.For(face.Family, face.Weight);

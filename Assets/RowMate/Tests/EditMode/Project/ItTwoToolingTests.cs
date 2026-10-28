@@ -79,7 +79,8 @@ namespace RowMate.Tests.EditMode.Project
             var cli = SourceScan.StripComments(File.ReadAllText(RepoPaths.Combine("Assets/RowMate/Editor/Build/BuildCli.cs")));
             var normal = cli.IndexOf("if (!request.Simulator)", StringComparison.Ordinal);
             Assert.That(normal, Is.GreaterThan(0));
-            Assert.That(cli.Substring(normal), Does.Contain("BuildOutputInspector.FindSimulatorTraces(request.OutputFolder)"));
+            Assert.That(cli.Substring(normal), Does.Contain("BuildOutputInspector.FindForbiddenTraces(request.OutputFolder)"),
+                "simulador, diagnósticos y metadatos de tests (QA-V2-02, -09, -10)");
             Assert.That(cli.Substring(normal), Does.Contain("return 2;"), "con rastros, el build normal falla");
             var inspector = File.ReadAllText(RepoPaths.Combine("Assets/RowMate/Editor/Build/BuildOutputInspector.cs"));
             Assert.That(inspector, Does.Contain("Encoding.Unicode.GetBytes"), "busca también en UTF-16");

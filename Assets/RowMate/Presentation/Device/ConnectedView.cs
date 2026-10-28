@@ -1,3 +1,4 @@
+using RowMate.Presentation.Controls;
 using RowMate.Presentation.Shell;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -23,7 +24,7 @@ namespace RowMate.Presentation.Device
             AddToClassList("rm-device-connected");
             Scroll = new ScrollView(ScrollViewMode.Vertical) { name = "device-connected-scroll" };
             Scroll.AddToClassList("rm-scroll");
-            Scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            ScrollPolicy.Apply(Scroll, ui.IsDesktop);
             Scroll.contentContainer.AddToClassList("rm-device-connected__content");
             layout.RegisterBottomPadding(Scroll.contentContainer, ContentPaddingBottom);
             Add(Scroll);

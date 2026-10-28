@@ -100,6 +100,11 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(lt.Id);
             }
 
+            foreach (var ac in It03Ids.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -402,6 +407,132 @@ namespace RowMate.Tests.EditMode.Traceability
             {
                 TestContext.Out.WriteLine("pendientes de WP-B (sin su carpeta todavía): " + string.Join(", ", pending));
             }
+        }
+
+        // ------------------------------------------------------------------ It. 3 (02-tech-design §6.3)
+
+        [Test, Category("AC-BASE-09")]
+        public void It03IdsAreComplete()
+        {
+            // 102 AC = 91 nuevos (RUT 70, HIS 10, APP 11) + 11 de iteraciones anteriores (§5); sin casos legacy (spec §6).
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var earlier = new HashSet<string>(It03Ids.FromEarlier, StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var ac in It02Ids.Acceptance)
+            {
+                before.Add(ac.Id);
+            }
+
+            int rut = 0, his = 0, app = 0;
+            foreach (var ac in It03Ids.Acceptance)
+            {
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It03Ids: " + ac.Id);
+                Assert.That(AcPattern.IsMatch(ac.Id), Is.True, ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                if (earlier.Contains(ac.Id))
+                {
+                    Assert.That(before.Contains(ac.Id), Is.True, ac.Id + " figura como de una iteración anterior pero no está en It01Ids ni en It02Ids");
+                    continue;
+                }
+
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior: va en FromEarlier");
+                rut += ac.Id.StartsWith("AC-RUT-", StringComparison.Ordinal) ? 1 : 0;
+                his += ac.Id.StartsWith("AC-HIS-", StringComparison.Ordinal) ? 1 : 0;
+                app += ac.Id.StartsWith("AC-APP-", StringComparison.Ordinal) ? 1 : 0;
+            }
+
+            Assert.That(It03Ids.Acceptance.Length, Is.EqualTo(102));
+            Assert.That(It03Ids.FromEarlier.Length, Is.EqualTo(11));
+            Assert.That(rut, Is.EqualTo(70));
+            Assert.That(his, Is.EqualTo(10));
+            Assert.That(app, Is.EqualTo(11));
+            foreach (var id in It03Ids.FromEarlier)
+            {
+                Assert.That(ids.Contains(id), Is.True, id);
+            }
+
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            foreach (var ac in It03Ids.Acceptance)
+            {
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It03Ids.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It03Ids.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(unityOnly.Count, Is.EqualTo(42), "34 nuevos y 8 de §5");
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It03DotnetIdsHaveTests()
+        {
+            // Lo que el plan verifica con dotnet ([d] o [s] en 02-tech-design §6.3) tiene al menos un test con su categoría en
+            // Tests/EditMode o Tests/Simulator (WP-A).
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It03Ids.Acceptance)
+            {
+                if ((HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s")) && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " AC [d]/[s] de la It. 3 sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It03UnityOnlyIdsHaveAUnityLocation()
+        {
+            // Como It02UnityOnlyIdsHaveAUnityLocation. Mientras ninguno de los NUEVOS de la It. 3 tenga su prueba de Unity
+            // (WP-B no empezó), se ignora con el motivo; desde que aparece uno, se exigen todos.
+            var folders = new Dictionary<string, SourceIndex?>(StringComparer.Ordinal)
+            {
+                ["p"] = ScanFolders("Tests/PlayMode"),
+                ["ps"] = ScanFolders("Tests/PlayModeSimulator"),
+                ["u"] = ScanFolders("Tests/UnityEditMode"),
+                ["cap"] = ScanFolders("Snapshots"),
+            };
+            var checks = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var ac in It03Ids.Acceptance)
+            {
+                checks[ac.Id] = ac.Checks;
+            }
+
+            var earlier = new HashSet<string>(It03Ids.FromEarlier, StringComparer.Ordinal);
+            var missing = new List<string>();
+            var newFound = 0;
+            foreach (var id in It03Ids.UnityOnlyIds)
+            {
+                var found = false;
+                foreach (var kind in folders.Keys)
+                {
+                    var index = folders[kind];
+                    if (!HasKind(checks[id], kind) || index == null)
+                    {
+                        continue;
+                    }
+
+                    found |= kind == "cap" ? index.MentionsText(id) : index.Categories.ContainsKey(id);
+                }
+
+                if (found && !earlier.Contains(id))
+                {
+                    newFound++;
+                }
+
+                if (!found)
+                {
+                    missing.Add(id + " (" + checks[id] + ")");
+                }
+            }
+
+            if (newFound == 0)
+            {
+                Assert.Ignore("pendiente WP-B: todavía no hay pruebas de Unity de la It. 3 (" + missing.Count + " IDs sin su prueba)");
+            }
+
+            Assert.That(missing, Is.Empty, "IDs de la It. 3 solo de Unity sin su prueba en la carpeta esperada: " + string.Join(", ", missing));
         }
 
         [Test, Category("AC-BASE-09")]

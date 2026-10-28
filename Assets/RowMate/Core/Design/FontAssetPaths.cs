@@ -18,6 +18,12 @@ namespace RowMate.Core.Design
         public const string IconsOutlineSource = "Assets/RowMate/UI/Icons/RowMateIcons-Outline.ttf";
         public const string IconsFilledSource = "Assets/RowMate/UI/Icons/RowMateIcons-Filled.ttf";
 
+        // Respaldo de emojis del texto del usuario (P-09, DN3-21; 03-rutinas/04-design-notes §4.15): Noto Emoji monocroma,
+        // instancia estática de 500 (el peso de los íconos), SIL OFL 1.1. Va último en los respaldos del panel
+        // (RuntimePanelFactory): Inter → íconos de contorno → Noto Emoji.
+        public const string EmojiFallback = GeneratedFonts + "/NotoEmoji-Medium-SDF.asset";
+        public const string EmojiFallbackSource = "Assets/RowMate/UI/Fonts/NotoEmoji/NotoEmoji-Medium.ttf";
+
         // Pesos que existen por familia (los de los tokens tipográficos: Inter 400/500/600/700, Barlow SC 600/700/800).
         private static readonly (FontFamilyRole Family, int Weight, string Folder, string Stem)[] Faces =
         {
@@ -44,12 +50,13 @@ namespace RowMate.Core.Design
             return "Assets/RowMate/UI/Fonts/" + face.Folder + "/" + face.Stem + ".ttf";
         }
 
-        // Los 9 FontAsset que crea el bootstrapper: 7 de texto y número, y los 2 de íconos.
+        // Los 10 FontAsset que crea el bootstrapper: 7 de texto y número, los 2 de íconos y el respaldo de emojis (It. 3,
+        // QA-G3-12: así GeneratedAssetGuard también lo protege).
         public static IReadOnlyList<string> All
         {
             get
             {
-                var all = new List<string>(Faces.Length + 2);
+                var all = new List<string>(Faces.Length + 3);
                 for (var i = 0; i < Faces.Length; i++)
                 {
                     all.Add(For(Faces[i].Family, Faces[i].Weight));
@@ -57,6 +64,7 @@ namespace RowMate.Core.Design
 
                 all.Add(IconsOutline);
                 all.Add(IconsFilled);
+                all.Add(EmojiFallback);
                 return all;
             }
         }

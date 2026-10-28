@@ -54,6 +54,24 @@ namespace RowMate.Presentation.Motion
             }
         }
 
+        // Alguna animación finita espera el layout del cuadro siguiente (ILayoutBoundMotion): avanzar el reloj no la mueve, hace
+        // falta un cuadro real (UiTestHost.Settle corta y el que llama deja pasar uno).
+        public bool WaitingForLayout
+        {
+            get
+            {
+                for (var i = 0; i < _count; i++)
+                {
+                    if (_items[i] is ILayoutBoundMotion bound && bound.IsWaitingForLayout)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
         // Diagnóstico (arnés): los tipos de las animaciones finitas en curso.
         public string DescribeFinite()
         {

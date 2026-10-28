@@ -64,6 +64,20 @@ namespace RowMate.EditorTools
             }
         }
 
+        // -executeMethod RowMate.EditorTools.ProjectBootstrapper.ReapplyFromCommandLine -quit: vuelve a aplicar TODOS los pasos
+        // aunque la versión ya esté aplicada (son idempotentes), como el menú Reaplicar. Lo usó la It. 3 (B2) para crear el
+        // FontAsset de Noto Emoji, asignar los respaldos de UiAssets y apagar getFontFeatures (DN3-24) sin subir la versión.
+        // Sale con 1 si algún paso falló.
+        public static void ReapplyFromCommandLine()
+        {
+            Apply(true);
+            var state = BootstrapState.Load(StatePath);
+            if (state == null || state.version < CurrentVersion)
+            {
+                EditorApplication.Exit(1);
+            }
+        }
+
         // Intento automático: se marca en SessionState recién cuando de verdad corre (si el Editor está ocupado se reagenda;
         // si en el medio hay una recarga de dominio, el constructor estático lo vuelve a agendar porque la marca no está).
         private static void RunOncePerSession()
@@ -124,22 +138,27 @@ namespace RowMate.EditorTools
             }
 
             var results = new List<BootstrapState.Step>();
-            RunStep(results, "player.identity", PlayerSettingsStep.ApplyIdentity);
-            RunStep(results, "player.scripting", PlayerSettingsStep.ApplyScripting);
-            RunStep(results, "player.android", PlayerSettingsStep.ApplyAndroid);
-            RunStep(results, "player.ios", PlayerSettingsStep.ApplyIos);
-            RunStep(results, "player.rendering", PlayerSettingsStep.ApplyRendering);
-            RunStep(results, "player.runtime", PlayerSettingsStep.ApplyRuntime);
-            RunStep(results, "player.input", PlayerSettingsStep.ApplyInputHandler);
-            RunStep(results, "urp.provisional", UrpProvisioner.Apply);
-            RunStep(results, "urp.tidy", UrpProvisioner.Tidy);
-            RunStep(results, "player.window", PlayerSettingsStep.ApplyWindow);
-            RunStep(results, "ui.fonts", FontAssetBuilder.Apply);
-            RunStep(results, "ui.panel", UiAssetsBuilder.Apply);
-            RunStep(results, "scene.boot", BootSceneBuilder.Apply);
-            RunStep(results, "defines.check", PlayerSettingsStep.CheckSimulatorDefine);
 
-            AssetDatabase.SaveAssets();
+            // El bootstrapper es de los pocos que escriben los FontAsset generados y los assets de URP (QA-V2-07).
+            using (GeneratedAssetGuard.AllowWrites())
+            {
+                RunStep(results, "player.identity", PlayerSettingsStep.ApplyIdentity);
+                RunStep(results, "player.scripting", PlayerSettingsStep.ApplyScripting);
+                RunStep(results, "player.android", PlayerSettingsStep.ApplyAndroid);
+                RunStep(results, "player.ios", PlayerSettingsStep.ApplyIos);
+                RunStep(results, "player.rendering", PlayerSettingsStep.ApplyRendering);
+                RunStep(results, "player.runtime", PlayerSettingsStep.ApplyRuntime);
+                RunStep(results, "player.input", PlayerSettingsStep.ApplyInputHandler);
+                RunStep(results, "urp.provisional", UrpProvisioner.Apply);
+                RunStep(results, "urp.tidy", UrpProvisioner.Tidy);
+                RunStep(results, "player.window", PlayerSettingsStep.ApplyWindow);
+                RunStep(results, "ui.fonts", FontAssetBuilder.Apply);
+                RunStep(results, "ui.panel", UiAssetsBuilder.Apply);
+                RunStep(results, "scene.boot", BootSceneBuilder.Apply);
+                RunStep(results, "defines.check", PlayerSettingsStep.CheckSimulatorDefine);
+
+                AssetDatabase.SaveAssets();
+            }
 
             var failed = 0;
             for (var i = 0; i < results.Count; i++)

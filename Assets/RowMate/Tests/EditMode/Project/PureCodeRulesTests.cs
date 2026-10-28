@@ -54,8 +54,81 @@ namespace RowMate.Tests.EditMode.Project
                 new Regex(@"\basync\s+void\b"),
                 new Regex(@"\.ConfigureAwait\s*\(\s*false\s*\)"),
             };
-            AssertNoMatches(PureProduction, patterns, true, "async void o ConfigureAwait(false)");
+            // It. 3 (02-tech-design §2.6): también Infrastructure, cuyas tareas vuelven al hilo principal por el contexto.
+            AssertNoMatches(new[] { "Core", "App", "Simulator", "Infrastructure" }, patterns, true, "async void o ConfigureAwait(false)");
         }
+
+        // QA-G3-07 (02-tech-design §1.2): ningún archivo fuera de Infrastructure usa tipos de sqlite-net. En dotnet sqlite-net-pcl
+        // llega en forma transitiva a todo proyecto que referencia Infrastructure, así que un test que los nombrara compilaría
+        // con dotnet y rompería RowMate.Tests.EditMode en Unity (su asmdef no nombra Gilzoide.SqliteNet). Los tests leen la base
+        // con RowMateDatabase.QueryRawForTestsAsync (tipos primitivos). Sobre el código sin comentarios ni literales.
+        [Test, Category("AC-BASE-08"), Category("AC-HIS-17-02")]
+        public void SqliteOnlyInInfrastructure()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\busing\s+(static\s+)?SQLite\b"),
+                new Regex(@"\bSQLiteConnection\b"),
+                new Regex(@"\bSQLiteException\b"),
+                new Regex(@"\bSQLite3\b"),
+                new Regex(@"\bSQLiteOpenFlags\b"),
+                new Regex(@"\bSQLiteConnectionString\b"),
+            };
+            var offenders = new List<string>();
+            var inside = 0;
+            foreach (var file in SourceScan.CsFiles(""))
+            {
+                if (RepoPaths.Relative(file).StartsWith("Assets/RowMate/Infrastructure/", StringComparison.Ordinal))
+                {
+                    inside++;
+                    continue;
+                }
+
+                offenders.AddRange(SourceScan.Matches(file, patterns, true));
+            }
+
+            Assert.That(inside, Is.GreaterThan(5), "el escaneo no encontró Infrastructure");
+            Assert.That(offenders, Is.Empty, "tipos de sqlite-net fuera de Infrastructure:\n" + string.Join("\n", offenders));
+        }
+
+        // QA-G3-08: el SQLite de Unity compila con SQLITE_DQS 0 (un literal entre comillas dobles es un error) y el de dotnet no:
+        // todo literal de C# con SQL lleva sus textos entre comillas simples (ningún \" ni "" adentro).
+        [Test, Category("AC-HIS-17-02")]
+        public void SqlLiteralsUseSingleQuotes()
+        {
+            var offenders = new List<string>();
+            var sqlLiterals = 0;
+            foreach (var file in SourceScan.CsFiles("Infrastructure", "Tests/Support", "Tests/EditMode/Infrastructure"))
+            {
+                var code = SourceScan.StripComments(File.ReadAllText(file));
+                foreach (Match literal in StringLiteral.Matches(code))
+                {
+                    if (!SqlKeyword.IsMatch(literal.Value))
+                    {
+                        continue;
+                    }
+
+                    sqlLiterals++;
+                    var body = literal.Value.Substring(literal.Value.IndexOf('"') + 1);
+                    body = body.Substring(0, body.Length - 1);
+                    if (body.Contains("\\\"") || body.Contains("\"\""))
+                    {
+                        offenders.Add(RepoPaths.Relative(file) + ":" + SourceScan.LineOf(code, literal.Index) + ": " + literal.Value);
+                    }
+                }
+            }
+
+            Assert.That(sqlLiterals, Is.GreaterThan(20), "el escaneo no encontró el SQL");
+            Assert.That(offenders, Is.Empty, "SQL con comillas dobles (usar comillas simples):\n" + string.Join("\n", offenders));
+            Assert.That(SqlKeyword.IsMatch("\"SELECT 1\""), Is.True);
+            Assert.That(SqlKeyword.IsMatch("\"Seleccionar todo\""), Is.False);
+        }
+
+        // Literales de texto normales y textuales (@"…" con "" adentro), sobre código sin comentarios.
+        private static readonly Regex StringLiteral = new Regex(@"@""(?:[^""]|"""")*""|""(?:[^""\\\n]|\\.)*""");
+
+        // Una palabra clave de SQL en mayúsculas al principio del texto o después de un espacio.
+        private static readonly Regex SqlKeyword = new Regex(@"(^|[\s""(])(SELECT|INSERT|UPDATE|DELETE|CREATE|PRAGMA|DROP|ALTER|VALUES|WHERE)\b");
 
         [Test, Category("AC-APP-19-03")]
         public void NoSystemRandomOutsideSystemRandom()

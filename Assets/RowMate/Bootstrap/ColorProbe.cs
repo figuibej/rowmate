@@ -1,3 +1,6 @@
+// QA-V2-09 (decisión del PO al cerrar la It. 2): la sonda de color solo existe en el Editor y en los builds de desarrollo.
+// En un build normal este archivo no compila nada (AppRoot tampoco lee -rowmate-color-probe ni -rowmate-ui-pipeline).
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections;
 using System.Globalization;
 using System.IO;
@@ -305,3 +308,4 @@ namespace RowMate.Bootstrap
         }
     }
 }
+#endif

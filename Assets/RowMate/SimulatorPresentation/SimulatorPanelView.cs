@@ -47,7 +47,7 @@ namespace RowMate.Simulator.Presentation
 
             Scroll = new ScrollView(ScrollViewMode.Vertical) { name = "sim-panel-scroll" };
             Scroll.AddToClassList("rm-scroll");
-            Scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            ScrollPolicy.Apply(Scroll, ui.IsDesktop);
             var content = Scroll.contentContainer;
             content.AddToClassList("rm-sim-panel__content");
             Add(Scroll);

@@ -1,14 +1,19 @@
 # Builds de RowMate por linea de comandos (ARCHITECTURE Sec. 19, 02-tech-design Sec. 1.1): Unity -batchmode -executeMethod
 # RowMate.EditorTools.BuildCli.Build. Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 #
-#   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-Out <carpeta>]
+#   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-Out <carpeta>]
 #                         [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
+#
+# - -DbSmoke (It. 3, R3-01; 03-rutinas/02-tech-design Sec. 6.1): build de DESARROLLO (como -SmokeTest) y despues corre el
+#   player una vez con -rowmate-db-smoke sobre una carpeta temporal propia (<temp>/RowMate.Tests/db-smoke-<id>, borrada en
+#   finally): crea la base v8, guarda y relee Escalera SPM y borra. Pasa si el registro del player dice "[DB] humo: ok".
+#   Solo Windows (en Android hace falta el telefono: NO VERIFICABLE). Codigo 4 si el humo falla.
 #
 # - Con -Simulator: BuildCli pasa ROWMATE_SIMULATOR por extraScriptingDefines (nunca a PlayerSettings) y fuerza Development
 #   (R-01, AC-BLE-13-01). Sin -Simulator: al terminar, BuildOutputInspector busca rastros del simulador en la carpeta del
 #   build y el build falla (codigo 2) si encuentra alguno (AC-BLE-13-02).
 # - -Backend Mono es el temporal de la It. 2 (D-16: no esta el modulo IL2CPP de Windows); BuildCli lo restaura al terminar.
-# - Si falta el modulo de la plataforma: NO VERIFICABLE, codigo 3.
+# - Si falta el modulo de la plataforma o el de IL2CPP (-Backend IL2CPP): NO VERIFICABLE, codigo 3, sin compilar nada.
 # Salida por defecto: Builds/<Target>/<normal|simulator>/RowMate.exe (Builds/ esta en .gitignore).
 # Codigos: 0 bien; 1 el build fallo; 2 rastros del simulador en un build normal; 3 falta un modulo; 10 proyecto abierto en
 # otro Editor; 12 no encuentra Unity.exe.
@@ -19,6 +24,7 @@ param(
     [ValidateSet('Mono', 'IL2CPP')]
     [string]$Backend = 'Mono',
     [switch]$SmokeTest,
+    [switch]$DbSmoke,
     [string]$Out = '',
     [string]$Unity = '',
     [string]$ArtifactsPath = 'tools/unity/.artifacts'
@@ -77,12 +83,13 @@ if ($Simulator) { $variant = 'simulator' }
 if ($Out -eq '') { $Out = 'Builds/' + $Target + '/' + $variant }
 $artifacts = Get-FullPath $ArtifactsPath
 New-Item -ItemType Directory -Force -Path $artifacts | Out-Null
-$log = Join-Path $artifacts ('build-' + $Target.ToLowerInvariant() + '-' + $variant + '.log')
+# Un log por destino, variante y backend (QA-V2-03): el de Mono y el de IL2CPP no se pisan.
+$log = Join-Path $artifacts ('build-' + $Target.ToLowerInvariant() + '-' + $variant + '-' + $Backend.ToLowerInvariant() + '.log')
 
 $unityArgs = @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $buildMethod, '-logFile', $log,
     '-rowmateTarget', $Target, '-rowmateBackend', $Backend, '-rowmateOutput', (Get-FullPath $Out))
 if ($Simulator) { $unityArgs += '-rowmateSimulator' }
-if ($SmokeTest) { $unityArgs += '-rowmateSmokeTest' }
+if ($SmokeTest -or $DbSmoke) { $unityArgs += '-rowmateSmokeTest' }
 
 $line = ($unityArgs | ForEach-Object { Quote-Arg $_ }) -join ' '
 Write-Host ('"' + $unityExe + '" ' + $line)
@@ -96,5 +103,40 @@ $code = $process.ExitCode
 Write-Host ('[build] ' + $Target + ' ' + $variant + ' ' + $Backend + ' -> ' + $code + ' (log: ' + $log + ')')
 if (Test-Path $log) {
     Select-String -Path $log -Pattern '\[BUILD\]', 'error CS\d+', 'Build Finished' | Select-Object -Last 20 | ForEach-Object { Write-Host ('  ' + $_.Line) }
+}
+
+# Humo de la base en el player (solo con -DbSmoke, en un build de desarrollo de Windows que salio bien).
+if ($DbSmoke -and $code -eq 0) {
+    if ($Target -ne 'Windows') {
+        Write-Host '[build] -DbSmoke: solo en Windows (en Android: NO VERIFICABLE sin telefono).'
+        exit 3
+    }
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $smokeDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\db-smoke-' + [guid]::NewGuid().ToString('N'))
+    $smokeLog = Join-Path $artifacts ('db-smoke-' + $variant + '-' + $Backend.ToLowerInvariant() + '.log')
+    New-Item -ItemType Directory -Force -Path $smokeDir | Out-Null
+    try {
+        $smokeArgs = @('-batchmode', '-nographics', '-logFile', $smokeLog, '-rowmate-db-smoke', $smokeDir)
+        $smokeLine = ($smokeArgs | ForEach-Object { Quote-Arg $_ }) -join ' '
+        $smokeInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $smokeInfo.FileName = $exe
+        $smokeInfo.Arguments = $smokeLine
+        $smokeInfo.UseShellExecute = $false
+        $smoke = [System.Diagnostics.Process]::Start($smokeInfo)
+        if (-not $smoke.WaitForExit(120000)) { $smoke.Kill() }
+        $lines = @()
+        if (Test-Path $smokeLog) { $lines = @(Select-String -Path $smokeLog -Pattern '\[DB\] humo' | ForEach-Object { $_.Line }) }
+        foreach ($l in $lines) { Write-Host ('  ' + $l) }
+        if (($lines | Where-Object { $_ -match '\[DB\] humo: ok' }).Count -eq 0) {
+            Write-Host '[build] -DbSmoke: el humo de la base fallo (ver el registro del player).'
+            $code = 4
+        }
+        else {
+            Write-Host '[build] -DbSmoke: [DB] humo: ok'
+        }
+    }
+    finally {
+        Remove-Item -Recurse -Force -Path $smokeDir -ErrorAction SilentlyContinue
+    }
 }
 exit $code

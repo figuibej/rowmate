@@ -97,3 +97,8 @@ InitTestScene*.unity*
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers.meta
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# QA-V2-02 (It. 2): com.unity.test-framework.performance escribe estos archivos al empezar un build y solo los borra si el
+# build termina. Editor/Build/PerformanceTestRunCleaner los saca antes de juntar los activos; si un build se corta, no se
+# versionan.
+/Assets/Resources/PerformanceTestRun*

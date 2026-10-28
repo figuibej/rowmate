@@ -384,7 +384,7 @@ namespace RowMate.Core.Common
 | Contexto | Qué corre | Cómo |
 |---|---|---|
 | Hilo principal | Todo Core, App, UI, escena | Un solo hilo lógico, como el isolate de Dart. Sin locks |
-| Hilo de base de datos | Toda llamada a SQLite | `IDbExecutor`: en producción `SerialExecutor` (un hilo dedicado con cola). Devuelve `Task<T>`; al hacer `await` desde el hilo principal, la continuación vuelve al hilo principal por el `UnitySynchronizationContext`. En Core y App está prohibido `ConfigureAwait(false)` |
+| Hilo de base de datos | Toda llamada a SQLite | `IDbExecutor`: en producción `SerialExecutor` (un hilo dedicado con cola; `Dispose` termina lo encolado y suelta el aviso de descarga del dominio). Devuelve `Task<T>`; al hacer `await` desde el hilo principal, la continuación vuelve al hilo principal por el `UnitySynchronizationContext`. En Core y App está prohibido `ConfigureAwait(false)`; en Infrastructure va en cada `await` (It. 3). Las pruebas de UI y el arnés usan `InlineDbExecutor` (determinista cuadro a cuadro) |
 | Hilos nativos (BLE, OAuth loopback) | Eventos de Kotlin/Swift/WinRT, socket local | **Nunca** tocan Core: el plugin guarda cada evento **con su marca de tiempo monótona** en un *buffer* nativo y C# lo drena al principio de cada frame (`NativeEventPump`, §10.4). El *loopback* de OAuth encola en `MainThreadQueue` (lock-free) |
 | Red (Strava) | `UnityWebRequest` | Asíncrono nativo de Unity; completa en el hilo principal |
 
@@ -457,7 +457,10 @@ Se elige **UI Toolkit para toda la UI 2D**. uGUI no se usa para pantallas.
 | 2 | `PageStack` | Páginas apiladas (editor de rutina, detalle de sesión, entrenamiento inmersivo). Tapan la barra, como el `Navigator` del legacy |
 | 3 | `DialogLayer` | Diálogos modales con scrim |
 | 4 | `ToastLayer` | Avisos breves (equivalente a `SnackBar`) |
-| 5 | `SimulatorLayer` | Cinta "SIMULADOR" y panel 🛠 (solo con `ROWMATE_SIMULATOR`) |
+| 5 | `PopupLayer` | Menús (⋮ de la tarjeta, menú de texto del clic derecho) y ayudas emergentes, con su *catcher* (It. 3, AC-APP-03-04) |
+| 6 | `SimulatorLayer` | Cinta "SIMULADOR" y panel 🛠 (solo con `ROWMATE_SIMULATOR`) |
+
+Desde la It. 3 (03-rutinas/02-tech-design §4.1): lo que sale (página, diálogo, menú) deja de recibir toques y foco desde el cuadro 0 de su salida (`ExitLock`); los rellenos inferiores de lo desplazable y la posición del aviso esquivan los **obstáculos inferiores** registrados en `ShellLayout` (el `+` de Rutinas y la llave del simulador, que sube sobre el `+`: DV-13, DN3-13, DN3-14). El panel es siempre una copia hecha por `RuntimePanelFactory`, con su propio `PanelTextSettings` y los respaldos de fuente (íconos y Noto Emoji). Corrección para el registro: `PanelSettings.textSettings` **existe** en 6000.3 (es un campo público); el 02-tech-design de la It. 2 (hallazgos de S-0) decía lo contrario y no se edita (S3-b).
 
 ### 7.3 Escala y área segura
 
@@ -508,7 +511,7 @@ El Designer pide celdas de ancho fijo por dígito con rodillo (ART_BIBLE §4.2, 
 - Cambiar de pestaña pone `style.display = None` en la anterior y `Flex` en la nueva: los elementos, el scroll y el estado de cada pantalla **se conservan** (equivalente a `IndexedStack`). Las pantallas ocultas siguen suscriptas a sus stores (el estado no se pierde) pero no se dibujan.
 - Tocar Historial dispara `HistoryStore.Reload()` (igual que `main.dart:147`), sin parpadeo (Q-22): la lista sigue visible mientras recarga.
 - `PageStack.Push(page)` / `Pop()` para pantallas apiladas; cada página implementa `IPage` (`OnPushed`, `OnPopped`, `OnBackRequested`). El entrenamiento inmersivo es una página que además pide `ISceneHost.Enter()` / `Exit()` y `ISystemUi.SetImmersive(bool)`.
-- Botón "atrás" (Android, Escape en escritorio) vía Input System: cierra el diálogo superior; si no hay, `PageStack.OnBackRequested()`; en la raíz, Android manda la app al fondo (`moveTaskToBack`), como Flutter.
+- "Atrás" vía Input System, **un nivel por pulsación** (It. 3, P-08, DT-04; ADR 007): primero el menú o la ayuda de `PopupLayer`, después el diálogo de arriba. **Escape** (teclado de la PC) termina ahí: nunca cierra una página. Solo "Atrás" de Android sigue con `IPage.OnBackRequested()` de la página de arriba (el editor cierra sin preguntar) y, en la raíz, con la política del sistema (`moveTaskToBack` en API ≥ 31, `Application.Quit()` antes, como el legacy). El único camino es `AppRoot.Update` → `BackNavigation.HandleBack(BackSource)`; ningún control cierra nada con `NavigationCancelEvent`.
 - Diálogos: `DialogService.ShowAsync<TResult>(DialogSpec)` devuelve `Task<TResult>`; el diálogo "preguntar" de Strava queda abierto hasta que el usuario responde (Q-53).
 
 ---
@@ -522,9 +525,9 @@ El Designer pide celdas de ancho fijo por dígito con rodillo (ART_BIBLE §4.2, 
 | Librería | `com.gilzoide.sqlite-net` 1.3.3 (sqlite-net 1.9.172 + SQLite 3.53.4) en Unity; `sqlite-net-pcl` 1.9.172 (misma API pública, `namespace SQLite`) en `dotnet` |
 | Por qué | Binarios nativos ya compilados para las 4 plataformas, compatible con IL2CPP (los atributos de columna heredan `PreserveAttribute`), MIT, sin plugins pagos; y el mismo código de repositorio compila y se testea en `dotnet` |
 | Plataformas | Android (arm64/armv7/x86_64 `.so`), iOS (estática, `__Internal`), macOS (universal), Windows (x64/arm64 `.dll`). En Android no se puede usar el SQLite del sistema (es privado desde Android 7): por eso un paquete con su propio binario |
-| Archivo | `Path.Combine(Application.persistentDataPath, dbFile)`; `dbFile` = `rower_app.db` o `rower_app_dev.db` (simulador, F-HIS-20). La ruta se resuelve en el hilo principal y se pasa a Infrastructure |
+| Archivo | Carpeta privada de la app (It. 3, AC-HIS-17-01): `Application.persistentDataPath` fuera de Android (Windows: `LocalLow/iguisoft/RowMate`); en Android, `getDatabasePath(...).getParentFile()` por JNI (almacenamiento interno, como `sqflite`; `persistentDataPath` es el externo). `dbFile` = `rower_app.db` o `rower_app_dev.db` (simulador, F-HIS-20), elegido **solo** en `AppRoot` (`DatabaseFiles.NameFor`). En el Editor y en desarrollo, `ROWMATE_DATA_DIR` reemplaza la carpeta (tests, arnés y humo: AC-HIS-20-04). La ruta se resuelve en el hilo principal y se pasa a Infrastructure |
 | Hilo | Una conexión sincrónica, usada solo desde el `SerialExecutor` (§6) |
-| Pragmas | `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=OFF` (paridad: en el legacy nunca se activan, DC-06) |
+| Pragmas | `journal_mode=WAL`, `synchronous=FULL` (It. 3, DT-07: con `NORMAL` un *commit* puede perderse ante un corte de luz), `foreign_keys=OFF` (paridad: en el legacy nunca se activan, DC-06; la baja de una rutina borra sus pasos explícitamente) |
 | Versión | `PRAGMA user_version` (lo mismo que usa `sqflite`) |
 | Mapeo | DTOs de fila con `[Table]`/`[Column("snake_case")]` + `link.xml` que preserva `RowMate.Infrastructure`. El DDL se ejecuta con el texto exacto del legacy (no `CreateTable<T>`, que generaría otro esquema) |
 
@@ -1213,3 +1216,18 @@ Detalle en [02-tech-design](../iterations/02-dispositivo-simulador/02-tech-desig
 | §13 | `FramePacer` aplica `FramePacingPolicy` a `OnDemandRendering.renderFrameInterval` (60/30 fps); `MotionDriver` arranca desarmado (nada se anima antes del primer cuadro presentado) |
 | §16 | *Bootstrapper* v3: `urp.tidy`, `player.window`, `ui.fonts` (9 `FontAsset`), `ui.panel` (`RowMatePanel.asset`, `UiAssets.asset`), `scene.boot` (`Boot.unity`, única escena del build); `ProjectBootstrapper.ApplyFromCommandLine` para aplicarlo fuera del postprocesado de importación |
 | §19 | `tools/build/build.ps1` → `BuildCli` (simulador por `extraScriptingDefines` y siempre Development; Mono temporal, D-16) y `BuildOutputInspector` en los builds normales. Arnés: `tools/unity/capture-snapshots.ps1` |
+
+## Cambios de la It. 3 (WP-B, implementación)
+
+Detalle en [03-rutinas/02-tech-design](../iterations/03-rutinas/02-tech-design.md) §1-§6 (con la sonda S-B3a en el Anexo A.3) y ADR 007 y 008.
+
+| Sección | Qué cambió |
+|---|---|
+| §2 | Infrastructure con `Database/` (apertura que nunca toca lo que no entiende, esquema v8, humo), `Routines/` (repositorio SQLite), `Threading/` (`SerialExecutor`) y `Diagnostics/`; Platform con `Storage/AppDataLocation` e `Input/{SystemClipboard,SoftKeyboard}`; Presentation con `Routines/`, las capas nuevas de `Shell/` y `Surface/RuntimePanelFactory`; Bootstrap con `DataLocation`; `Snapshots/RoutinesCatalog` (conjunto `it3`: 42 IDs, 47 archivos). Herramientas: `capture-snapshots.ps1 -Set it3\|it2`, `capture-cap27.ps1` (a pedido), `build.ps1 -DbSmoke`; `run-unity-tests.ps1` y `capture-snapshots.ps1` con `ROWMATE_DATA_DIR` temporal |
+| §6 | `SerialExecutor` en la app; `InlineDbExecutor` en las pruebas de UI y el arnés; `ConfigureAwait(false)` en Infrastructure |
+| §7.2 | `PopupLayer` entre los avisos y el simulador; `ExitLock`; obstáculos inferiores (el `+` y la llave); `RuntimePanelFactory` con los respaldos de fuente; la nota sobre `PanelSettings.textSettings` |
+| §7.6 | Texto del usuario sin texto enriquecido ni secuencias de escape (`<b>A</b>` y `Serie\n2` tal cual, DN3-22); el subtítulo del paso es la única etiqueta con texto enriquecido, generado por código, con la base opaca porque TextCore usa el alfa más chico entre el elemento y la etiqueta (S-B3a). `RmTextField` fija lo que el `TextField` de runtime hace distinto de Flutter: Tab no escribe `\t` y mueve el foco una vez, Escape no revierte, Enter en una línea quita el foco, pegar quita los saltos (el `Paste` de UI Toolkit los cambiaba por espacios) |
+| §8 | Escape nunca cierra páginas; "Atrás" un nivel por pulsación (P-08) |
+| §9.1 | Carpeta privada por plataforma, `ROWMATE_DATA_DIR` solo en desarrollo, `synchronous=FULL` |
+| §15 | PlayMode con SQLite real (`TempDatabase`, nunca la carpeta del usuario) y `UiTestHost.Reopen()`; `Settle` deja pasar un cuadro real cuando una animación espera su layout (`ILayoutBoundMotion`: lo nuevo que crece se mide en el cuadro siguiente) |
+| §19 | `BuildOutputInspector` suma `-rowmate-db-smoke`, `-rowmate-db-roundtrip` y `ROWMATE_DATA_DIR` (solo existen en desarrollo) |

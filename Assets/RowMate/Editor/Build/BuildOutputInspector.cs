@@ -5,22 +5,62 @@ using System.Text;
 
 namespace RowMate.EditorTools
 {
-    // Después de un build NORMAL busca rastros del simulador en la carpeta del build (AC-BLE-13-02, QA-G2-17): ningún
-    // RowMate.Simulator*.dll y ninguna de las cadenas propias del simulador, en UTF-8 o UTF-16, en los ensamblados y datos del
-    // player. BuildCli falla si encuentra alguno. Busca en *.dll, *.dat (metadatos de IL2CPP) y *.json (los catálogos).
+    // Después de un build NORMAL busca en la carpeta del build lo que ese build no puede llevar; BuildCli falla (código 2) si
+    // encuentra algo. En UTF-8 y UTF-16, en los ensamblados y los datos del player: *.dll, *.dat (metadatos de IL2CPP), *.json,
+    // *.assets (resources.assets, sharedassets*.assets) y los archivos sin extensión (level0, globalgamemanagers).
+    // - Simulador (AC-BLE-13-02, QA-G2-17): ningún RowMate.Simulator*.dll, ni sus tipos, ni los textos que el simulador
+    //   muestra (QA-V2-10: "Remo simulado", "Pulsómetro simulado", la cinta "SIMULADOR").
+    // - Diagnósticos de desarrollo (QA-V2-09): los argumentos -rowmate-color-probe y -rowmate-ui-pipeline (AppRoot y
+    //   ColorProbe solo los compilan en el Editor y en builds de desarrollo) y, desde la It. 3, -rowmate-db-smoke (el humo de
+    //   la base) y la variable ROWMATE_DATA_DIR (la carpeta de datos de las pruebas, Bootstrap/DataLocation).
+    // - Metadatos de tests (QA-V2-02): PerformanceTestRunInfo / PerformanceTestRunSettings, que el paquete
+    //   com.unity.test-framework.performance deja en Assets/Resources (PerformanceTestRunCleaner los borra antes de juntar).
     public static class BuildOutputInspector
     {
-        public static readonly string[] Needles =
+        public static readonly string[] SimulatorNeedles =
         {
             "RowMate.Simulator",
             "SimulatedRowerService",
             "SimulatedHeartRateService",
             "SimulatorLayerView",
+            "Remo simulado",
+            "Pulsómetro simulado",
+            "SIMULADOR",
         };
 
-        private static readonly string[] Extensions = { ".dll", ".dat", ".json" };
+        public static readonly string[] DiagnosticNeedles =
+        {
+            "-rowmate-color-probe",
+            "-rowmate-ui-pipeline",
+            "-rowmate-db-smoke",
+            "-rowmate-db-roundtrip",
+            "ROWMATE_DATA_DIR",
+        };
 
+        public static readonly string[] TestNeedles =
+        {
+            "PerformanceTestRunInfo",
+            "PerformanceTestRunSettings",
+        };
+
+        private static readonly string[] Extensions = { ".dll", ".dat", ".json", ".assets", "" };
+
+        // Todo lo que un build normal no puede llevar (lo que usa BuildCli).
+        public static List<string> FindForbiddenTraces(string buildFolder)
+        {
+            var needles = new List<string>(SimulatorNeedles);
+            needles.AddRange(DiagnosticNeedles);
+            needles.AddRange(TestNeedles);
+            return Find(buildFolder, needles);
+        }
+
+        // Solo los rastros del simulador (AC-BLE-13-02).
         public static List<string> FindSimulatorTraces(string buildFolder)
+        {
+            return Find(buildFolder, SimulatorNeedles);
+        }
+
+        private static List<string> Find(string buildFolder, IEnumerable<string> needles)
         {
             var traces = new List<string>();
             if (!Directory.Exists(buildFolder))
@@ -30,7 +70,7 @@ namespace RowMate.EditorTools
             }
 
             var patterns = new List<(string Needle, byte[] Bytes, string Encoding)>();
-            foreach (var needle in Needles)
+            foreach (var needle in needles)
             {
                 patterns.Add((needle, Encoding.UTF8.GetBytes(needle), "UTF-8"));
                 patterns.Add((needle, Encoding.Unicode.GetBytes(needle), "UTF-16"));

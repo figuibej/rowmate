@@ -66,7 +66,7 @@ namespace RowMate.Tests.EditMode.Localization
             }
 
             Assert.That(missing, Is.Empty, "claves del catálogo sin constante en L10nKeys: " + string.Join(", ", missing));
-            Assert.That(byValue.Count, Is.EqualTo(174));
+            Assert.That(byValue.Count, Is.EqualTo(190));
         }
 
         // Ningún texto del catálogo queda vacío (el usuario nunca ve un texto vacío en lugar de uno real).

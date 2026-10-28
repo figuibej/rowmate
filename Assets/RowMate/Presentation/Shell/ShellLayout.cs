@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
+using RowMate.Core.Design;
 using RowMate.Core.Ports;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace RowMate.Presentation.Shell
 {
-    // La regla ÚNICA de área segura (02-tech-design §3.1, QA-G2-06): cada margen lo consume una sola pieza, como en el legacy
-    // (AppBar = SafeArea(bottom: false), NavigationBar = SafeArea, cuerpo sin relleno):
+    // La regla ÚNICA de área segura (02-tech-design §3.1 de la It. 2, QA-G2-06): cada margen lo consume una sola pieza, como
+    // en el legacy (AppBar = SafeArea(bottom: false), NavigationBar = SafeArea, cuerpo sin relleno):
     // - #app-root: nada (sin padding, ocupa todo el panel).
     // - .rm-appbar: superior y laterales (padding-top = Top, padding-left/right = Left/Right; alto 56 + Top).
     // - #tab-bar: inferior y laterales (padding-bottom = Bottom, padding-left/right; alto 64 + Bottom).
@@ -15,17 +16,30 @@ namespace RowMate.Presentation.Shell
     //   (DN-23), leído de #tab-bar.layout.height en GeometryChangedEvent.
     // - #simulator-layer: nada (la cinta va en la esquina de la pantalla).
     // Poll() vuelve a mirar el área segura (una vez por cuadro, desde ShellHandle.Tick): rotar o redimensionar no recrea nada.
+    // It. 3 (03-rutinas/02-tech-design §4.8, DN3-13, DN3-14):
+    // - El alto de la barra se CONSERVA mientras está oculta (display: none con el editor encima): el último alto visible.
+    // - Obstáculos inferiores (el + de Rutinas, la llave del simulador): cada dueño registra su rectángulo en dp de la
+    //   ventana (x desde la izquierda, y desde ABAJO). Los usan el aviso (BottomObstacles.Lift, gap 8), la llave (gap 16) y
+    //   el relleno inferior de los contenidos desplazables (RegisterClearance: tope del obstáculo más alto que se cruza + 16).
     public sealed class ShellLayout
     {
         public const float AppBarHeight = 56;
         public const float TabBarHeight = 64;
 
+        // Aire entre el contenido desplazable y el obstáculo más alto que se cruza con él (DN3-14).
+        public const double ClearanceGapDp = 16;
+
         private readonly IDisplayMetrics _display;
         private readonly List<VisualElement> _appBars = new List<VisualElement>();
         private readonly List<(VisualElement Element, float Base)> _bottomPaddings = new List<(VisualElement, float)>();
+        private readonly List<(object Owner, BottomObstacle Obstacle)> _obstacles = new List<(object, BottomObstacle)>();
+        private readonly List<Clearance> _clearances = new List<Clearance>();
+        private readonly List<BottomObstacle> _scratch = new List<BottomObstacle>();
         private VisualElement? _tabBar;
+        private VisualElement? _window;
         private SafeInsets _insets;
         private float _tabBarHeight = TabBarHeight;
+        private Vector2 _windowSize;
 
         public ShellLayout(IDisplayMetrics display)
         {
@@ -35,11 +49,26 @@ namespace RowMate.Presentation.Shell
 
         public SafeInsets Insets => _insets;
 
-        // Alto real de la barra de pestañas (64 + margen inferior), del último layout.
+        // Alto real de la barra de pestañas (64 + margen inferior), del último layout VISIBLE (se conserva con la barra oculta).
         public float CurrentTabBarHeight => _tabBarHeight;
 
-        // Cambió el área segura o el alto real de la barra.
+        // Tamaño de la ventana en dp (el de #app-root), del último layout.
+        public Vector2 WindowSize => _windowSize;
+
+        // La barra se ve (Rutinas, Dispositivo) o la tapa una página (el editor).
+        public bool TabBarVisible => _tabBar != null && _tabBar.resolvedStyle.display != DisplayStyle.None;
+
+        // Cambió el área segura, el alto real de la barra o el tamaño de la ventana.
         public event Action? Changed;
+
+        // Cambió algún obstáculo inferior.
+        public event Action? ObstaclesChanged;
+
+        public void AttachWindow(VisualElement window)
+        {
+            _window = window;
+            window.RegisterCallback<GeometryChangedEvent>(OnWindowGeometry);
+        }
 
         public void AttachTabBar(VisualElement tabBar)
         {
@@ -54,11 +83,116 @@ namespace RowMate.Presentation.Shell
             ApplyAppBar(appBar);
         }
 
+        // Una página que se va (el editor) deja de recibir el área segura.
+        public void UnregisterAppBar(VisualElement appBar)
+        {
+            _appBars.Remove(appBar);
+        }
+
         // padding-bottom = basePadding + alto real de la barra, dentro del contenido desplazable de una pantalla.
         public void RegisterBottomPadding(VisualElement content, float basePadding)
         {
             _bottomPaddings.Add((content, basePadding));
             content.style.paddingBottom = basePadding + _tabBarHeight;
+        }
+
+        // padding-bottom del contenido de un desplazable que llega al borde inferior de la ventana: el tope del obstáculo más
+        // alto que se cruza con su ancho + 16, como mínimo minimum() (dp desde abajo); más extra() (teclado). DN3-14:
+        // Rutinas en TV, barra + 88 = 152 con el +, 208 con la llave encima; el editor, 24 sin obstáculos y 136 con la llave.
+        public void RegisterClearance(VisualElement scrollView, VisualElement content, Func<double> minimum, Func<double>? extra = null)
+        {
+            var entry = new Clearance(scrollView, content, minimum, extra);
+            _clearances.Add(entry);
+            scrollView.RegisterCallback<GeometryChangedEvent>(_ => ApplyClearance(entry));
+            ApplyClearance(entry);
+        }
+
+        public void UnregisterClearance(VisualElement scrollView)
+        {
+            for (var i = _clearances.Count - 1; i >= 0; i--)
+            {
+                if (ReferenceEquals(_clearances[i].ScrollView, scrollView))
+                {
+                    _clearances.RemoveAt(i);
+                }
+            }
+        }
+
+        // Vuelve a calcular los rellenos inferiores (el teclado cambió, el contenido se movió).
+        public void RefreshClearances()
+        {
+            for (var i = 0; i < _clearances.Count; i++)
+            {
+                ApplyClearance(_clearances[i]);
+            }
+        }
+
+        // Pone (o con null saca) el obstáculo de owner. Los dueños: RoutinesScreenView (el +) y SimulatorLayerView (la llave).
+        public void SetBottomObstacle(object owner, BottomObstacle? obstacle)
+        {
+            if (owner == null)
+            {
+                throw new ArgumentNullException(nameof(owner));
+            }
+
+            for (var i = 0; i < _obstacles.Count; i++)
+            {
+                if (!ReferenceEquals(_obstacles[i].Owner, owner))
+                {
+                    continue;
+                }
+
+                if (obstacle == null)
+                {
+                    _obstacles.RemoveAt(i);
+                    NotifyObstacles();
+                    return;
+                }
+
+                var old = _obstacles[i].Obstacle;
+                var value = obstacle.Value;
+                if (Math.Abs(old.Left - value.Left) < 0.01 && Math.Abs(old.Right - value.Right) < 0.01 && Math.Abs(old.Bottom - value.Bottom) < 0.01
+                    && Math.Abs(old.Height - value.Height) < 0.01)
+                {
+                    return;
+                }
+
+                _obstacles[i] = (owner, value);
+                NotifyObstacles();
+                return;
+            }
+
+            if (obstacle != null)
+            {
+                _obstacles.Add((owner, obstacle.Value));
+                NotifyObstacles();
+            }
+        }
+
+        // Los obstáculos actuales (sin el de except), en la lista dada.
+        public void CopyObstacles(List<BottomObstacle> into, object? except = null)
+        {
+            into.Clear();
+            for (var i = 0; i < _obstacles.Count; i++)
+            {
+                if (!ReferenceEquals(_obstacles[i].Owner, except))
+                {
+                    into.Add(_obstacles[i].Obstacle);
+                }
+            }
+        }
+
+        public bool HasObstacle(object owner)
+        {
+            for (var i = 0; i < _obstacles.Count; i++)
+            {
+                if (ReferenceEquals(_obstacles[i].Owner, owner))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void Poll()
@@ -76,7 +210,35 @@ namespace RowMate.Presentation.Shell
             }
 
             ApplyTabBar();
+            RefreshClearances();
             Changed?.Invoke();
+        }
+
+        private void NotifyObstacles()
+        {
+            RefreshClearances();
+            ObstaclesChanged?.Invoke();
+        }
+
+        private void ApplyClearance(Clearance entry)
+        {
+            var bounds = entry.ScrollView.worldBound;
+            var origin = _window != null ? _window.worldBound.xMin : 0;
+            var left = bounds.width > 0 ? bounds.xMin - origin : 0;
+            var right = bounds.width > 0 ? bounds.xMax - origin : _windowSize.x;
+            CopyObstacles(_scratch);
+            var value = BottomObstacles.ClearanceAbove(left, right, _scratch, ClearanceGapDp, entry.Minimum());
+            if (entry.Extra != null)
+            {
+                value += entry.Extra();
+            }
+
+            var padding = (float)value;
+            var current = entry.Content.style.paddingBottom;
+            if (current.keyword != StyleKeyword.Undefined || Math.Abs(current.value.value - padding) > 0.01f)
+            {
+                entry.Content.style.paddingBottom = padding;
+            }
         }
 
         private void ApplyAppBar(VisualElement appBar)
@@ -102,6 +264,7 @@ namespace RowMate.Presentation.Shell
 
         private void OnTabBarGeometry(GeometryChangedEvent evt)
         {
+            // Con la barra oculta (display: none) llega 0: se conserva el último alto visible (la llave no salta, §4.8).
             var height = evt.newRect.height;
             if (!(height > 0) || Mathf.Abs(height - _tabBarHeight) < 0.01f)
             {
@@ -115,6 +278,20 @@ namespace RowMate.Presentation.Shell
                 entry.Element.style.paddingBottom = entry.Base + height;
             }
 
+            RefreshClearances();
+            Changed?.Invoke();
+        }
+
+        private void OnWindowGeometry(GeometryChangedEvent evt)
+        {
+            var size = evt.newRect.size;
+            if (!(size.x > 0) || (Mathf.Abs(size.x - _windowSize.x) < 0.01f && Mathf.Abs(size.y - _windowSize.y) < 0.01f))
+            {
+                return;
+            }
+
+            _windowSize = size;
+            RefreshClearances();
             Changed?.Invoke();
         }
 
@@ -122,6 +299,25 @@ namespace RowMate.Presentation.Shell
         {
             return Math.Abs(a.Left - b.Left) < 0.01 && Math.Abs(a.Top - b.Top) < 0.01 && Math.Abs(a.Right - b.Right) < 0.01
                    && Math.Abs(a.Bottom - b.Bottom) < 0.01;
+        }
+
+        private sealed class Clearance
+        {
+            public Clearance(VisualElement scrollView, VisualElement content, Func<double> minimum, Func<double>? extra)
+            {
+                ScrollView = scrollView;
+                Content = content;
+                Minimum = minimum;
+                Extra = extra;
+            }
+
+            public VisualElement ScrollView { get; }
+
+            public VisualElement Content { get; }
+
+            public Func<double> Minimum { get; }
+
+            public Func<double>? Extra { get; }
         }
     }
 }

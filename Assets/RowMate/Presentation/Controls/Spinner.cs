@@ -5,7 +5,8 @@ using UnityEngine.UIElements;
 
 namespace RowMate.Presentation.Controls
 {
-    // Indicador de espera (04-design-notes §4.7): arco de 270° con Painter2D, 16 dp, trazo 2 con extremos redondeados, una
+    // Indicador de espera (04-design-notes §4.7): arco de 270° con Painter2D, 16 dp, trazo 2 con extremos redondeados (desde
+    // la It. 3, tamaño y trazo por parámetro: el de la carga de Rutinas es de 32 con trazo 3, DN3-15), una
     // vuelta cada 900 ms lineal por MotionDriver (continua: no cuenta para Settle). El color es el resuelto del elemento
     // (USS: accent.primary en la tarjeta, text.primary en el botón primario). Sigue girando con reducir movimiento (indica
     // espera). Gira solo mientras está en el panel y visible.
@@ -16,15 +17,18 @@ namespace RowMate.Presentation.Controls
         public const float StrokeDp = 2;
 
         private readonly MotionDriver? _motion;
+        private readonly float _strokeDp;
         private bool _shown = true;
 
-        public Spinner(MotionDriver? motion)
+        public Spinner(MotionDriver? motion, float sizeDp = SizeDp, float strokeDp = StrokeDp)
         {
             _motion = motion;
+            _strokeDp = strokeDp;
+            SizeInDp = sizeDp;
             AddToClassList(UssClass);
             pickingMode = PickingMode.Ignore;
-            style.width = SizeDp;
-            style.height = SizeDp;
+            style.width = sizeDp;
+            style.height = sizeDp;
             style.flexShrink = 0;
             generateVisualContent += Draw;
             RegisterCallback<AttachToPanelEvent>(_ => UpdateRegistration());
@@ -32,6 +36,10 @@ namespace RowMate.Presentation.Controls
         }
 
         public bool IsFinite => false;
+
+        public float SizeInDp { get; }
+
+        public float StrokeInDp => _strokeDp;
 
         public bool IsShown => _shown;
 
@@ -76,7 +84,7 @@ namespace RowMate.Presentation.Controls
         private void Draw(MeshGenerationContext context)
         {
             var rect = contentRect;
-            var radius = Mathf.Min(rect.width, rect.height) / 2 - StrokeDp / 2;
+            var radius = Mathf.Min(rect.width, rect.height) / 2 - _strokeDp / 2;
             if (radius <= 0)
             {
                 return;
@@ -84,7 +92,7 @@ namespace RowMate.Presentation.Controls
 
             var painter = context.painter2D;
             painter.strokeColor = resolvedStyle.color;
-            painter.lineWidth = StrokeDp;
+            painter.lineWidth = _strokeDp;
             painter.lineCap = LineCap.Round;
             painter.BeginPath();
             painter.Arc(rect.center, radius, new Angle(-90, AngleUnit.Degree),

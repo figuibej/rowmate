@@ -29,3 +29,14 @@ El legacy guarda rutinas, pasos, sesiones y telemetría en SQLite (`sqflite`, es
 - El mismo código de repositorio corre en Unity y en `dotnet`.
 - `link.xml` preserva los DTOs (sqlite-net mapea por reflexión).
 - Si el PO pide importar, la columna `origin` de las sesiones legacy se infiere con una heurística que hay que validar.
+
+## Cambios de la It. 3 (WP-A y WP-B)
+
+Detalle en [03-rutinas/02-tech-design](../../iterations/03-rutinas/02-tech-design.md) §2 y Anexo A.1.
+
+- **Carpeta** (AC-HIS-17-01): `Application.persistentDataPath` solo fuera de Android (en Windows `LocalLow/iguisoft/RowMate`). En Android, el almacenamiento **interno** de la app (`getDatabasePath(...).getParentFile()` por JNI, el mismo lugar que usa `sqflite`): `persistentDataPath` es el externo, visible por USB. Lo resuelve `Platform/Storage/AppDataLocation` en el hilo principal; `Bootstrap/DataLocation` lo reemplaza por `ROWMATE_DATA_DIR` **solo** en el Editor y en builds de desarrollo (tests, arnés y humo: AC-HIS-20-04; `BuildOutputInspector` lo busca en el build normal).
+- **Archivo**: solo `AppRoot` elige el nombre, con `DatabaseFiles.NameFor(BuildFlags.IsSimulator)` (`rower_app.db` / `rower_app_dev.db`, AC-HIS-20-01, -02).
+- **Pragmas**: `synchronous = FULL` (DT-07: con WAL y `NORMAL` un *commit* puede perderse ante un corte de luz), además de `journal_mode = WAL` y `foreign_keys = OFF`. La baja de una rutina borra sus pasos explícitamente en la misma transacción.
+- **Nunca tocar lo que no se entiende** (AC-HIS-17-04, -05): sonda de solo lectura antes de abrir para escribir (encabezado y `user_version`, también desde el WAL); un archivo que no es una base, más corto que 100 bytes, de otra versión o sin reconocer queda con sus bytes intactos y la pantalla muestra el error de carga.
+- **Hilos**: `SerialExecutor` (un hilo propio, cola, `Dispose` que termina lo encolado) en la app; `InlineDbExecutor` en las pruebas y el arnés (determinista cuadro a cuadro).
+- **Humo en un *player*** (R3-01): `-rowmate-db-smoke <carpeta>` y `-rowmate-db-roundtrip` (solo en desarrollo; `tools/build/build.ps1 -DbSmoke`).

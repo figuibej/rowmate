@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using RowMate.App.Device;
+using RowMate.App.Routines;
 using RowMate.App.Scene;
 using RowMate.App.Shell;
 using RowMate.Core.Common;
 using RowMate.Core.Localization;
+using RowMate.Core.Models;
 using RowMate.Core.Ports;
 
 namespace RowMate.App.Composition
@@ -16,6 +18,7 @@ namespace RowMate.App.Composition
     public sealed class AppContext : IDisposable
     {
         public const string HrmTag = "HRM";
+        public const string DbTag = RoutinesStore.Tag;
 
         private readonly DeviceBackend _devices;
         private readonly DerivedObservable<AppLanguage, Localizer> _texts;
@@ -23,7 +26,7 @@ namespace RowMate.App.Composition
         private bool _disposed;
 
         internal AppContext(DeviceBackend devices, DeviceStore device, HeartRateStore heartRate, ShellStore shell, SceneSettings scene,
-                            LanguageState language, DerivedObservable<AppLanguage, Localizer> texts,
+                            RoutinesStore routines, LanguageState language, DerivedObservable<AppLanguage, Localizer> texts,
                             IReadOnlyObservable<AccessibilitySnapshot> accessibility, IScheduler scheduler, IAppLogger logger)
         {
             _devices = devices;
@@ -31,6 +34,7 @@ namespace RowMate.App.Composition
             HeartRate = heartRate;
             Shell = shell;
             Scene = scene;
+            Routines = routines;
             Language = language;
             _texts = texts;
             Accessibility = accessibility;
@@ -46,6 +50,10 @@ namespace RowMate.App.Composition
 
         public SceneSettings Scene { get; }
 
+        // La colección de rutinas (F-RUT-09): la cargan Start() y Reintentar; la comparten Rutinas y el editor (y Workout en
+        // la It. 4a).
+        public RoutinesStore Routines { get; }
+
         public LanguageState Language { get; }
 
         // El Localizer del idioma vigente (DerivedObservable sobre Language.Current): cambia en vivo (AC-APP-09-05).
@@ -60,9 +68,11 @@ namespace RowMate.App.Composition
         // El backend con el que se armó (para la capa del simulador y los tests); AppContext no lo dispone.
         public DeviceBackend Devices => _devices;
 
-        // = main.dart:68-79 y el primer oyente del remo simulado (D-05). Se llama una vez, después de armar la UI:
-        // el remo empieza a escuchar (el simulado se conecta) y el pulsómetro intenta la reconexión al sensor recordado sin
-        // esperar; si falla, solo queda en el registro como "[HRM] autoConnect: <error>" (AC-APP-01-04).
+        // = main.dart:68-83 y el primer oyente del remo simulado (D-05). Se llama una vez, después de armar la UI:
+        // el remo empieza a escuchar (el simulado se conecta), las rutinas se cargan sin esperar aunque nadie vaya a Rutinas
+        // (AC-RUT-09-01, AC-APP-01-09; una falla queda en la pantalla y como "[DB] carga de rutinas: …") y el pulsómetro
+        // intenta la reconexión al sensor recordado sin esperar; si falla, solo queda en el registro como
+        // "[HRM] autoConnect: <error>" (AC-APP-01-04).
         public void Start()
         {
             if (_disposed || _started)
@@ -72,6 +82,7 @@ namespace RowMate.App.Composition
 
             _started = true;
             _devices.Rower.Start();
+            Routines.LoadAsync().Forget(Logger, DbTag);
 
             Task autoConnect;
             try
@@ -91,6 +102,17 @@ namespace RowMate.App.Composition
             }
 
             _ = ObserveAutoConnect(autoConnect);
+        }
+
+        // El editor de una rutina (null = nueva). Los ids de serie usan el Scheduler; lo dispone la página del editor.
+        public RoutineEditorStore CreateEditor(Routine? existing)
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(AppContext));
+            }
+
+            return new RoutineEditorStore(existing, Routines, Scheduler, Logger);
         }
 
         // Al recuperar el foco (AC-APP-09-05): la lista de idiomas del sistema se vuelve a resolver; si el idioma cambia,
@@ -114,6 +136,7 @@ namespace RowMate.App.Composition
             }
 
             _disposed = true;
+            Routines.Dispose();
             _texts.Dispose();
             HeartRate.Dispose();
             Device.Dispose();

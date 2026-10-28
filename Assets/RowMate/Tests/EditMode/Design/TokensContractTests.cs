@@ -88,20 +88,21 @@ namespace RowMate.Tests.EditMode.Design
             Check(Tokens.PhaseFinished, "phase.finished", "#EF476F", 100, ColorRole.Graphic);
             Check(Tokens.StateOffTarget, "state.offTarget", "#FF4444", 100, ColorRole.Graphic);
             Check(Tokens.BrandStrava, "brand.strava", "#FC4C02", 100, ColorRole.Graphic);
-            Check(Tokens.MetricSplitHud, "metric.split.hud", "#FEA845", 100, ColorRole.HudValue);
-            Check(Tokens.MetricSpmHud, "metric.spm.hud", "#38CBEF", 100, ColorRole.HudValue);
+            // Variantes del HUD: valores de la It. 3 (QA-V2-12, margen de 1 LSB contra el vidrio renderizado; 03-rutinas/00-deuda-diseno §2).
+            Check(Tokens.MetricSplitHud, "metric.split.hud", "#FFAA47", 100, ColorRole.HudValue);
+            Check(Tokens.MetricSpmHud, "metric.spm.hud", "#3ACCF1", 100, ColorRole.HudValue);
             Check(Tokens.MetricWattsHud, "metric.watts.hud", "#FFD60A", 100, ColorRole.HudValue);
-            Check(Tokens.MetricDistanceHud, "metric.distance.hud", "#4CC9F0", 100, ColorRole.HudValue);
+            Check(Tokens.MetricDistanceHud, "metric.distance.hud", "#4ECBF2", 100, ColorRole.HudValue);
             Check(Tokens.MetricTimeHud, "metric.time.hud", "#E0E0E0", 100, ColorRole.HudValue);
             Check(Tokens.MetricKcalHud, "metric.kcal.hud", "#06D6A0", 100, ColorRole.HudValue);
             Check(Tokens.TextHudPrimary, "text.hudPrimary", "#FFFFFF", 100, ColorRole.HudValue);
-            Check(Tokens.MetricHrHud, "metric.hr.hud", "#FF5A7E", 100, ColorRole.HudValueRed);
-            Check(Tokens.StateOffTargetHud, "state.offTarget.hud", "#FF5F59", 100, ColorRole.HudValueRed);
-            Check(Tokens.StepWorkHud, "step.work.hud", "#FF5A7E", 100, ColorRole.HudText);
+            Check(Tokens.MetricHrHud, "metric.hr.hud", "#FF5D7F", 100, ColorRole.HudValueRed);
+            Check(Tokens.StateOffTargetHud, "state.offTarget.hud", "#FF625B", 100, ColorRole.HudValueRed);
+            Check(Tokens.StepWorkHud, "step.work.hud", "#FF5D7F", 100, ColorRole.HudText);
             Check(Tokens.StepRestHud, "step.rest.hud", "#06D6A0", 100, ColorRole.HudText);
             Check(Tokens.StepWarmupHud, "step.warmup.hud", "#FFD166", 100, ColorRole.HudText);
-            Check(Tokens.StepCooldownHud, "step.cooldown.hud", "#35A0C9", 100, ColorRole.HudText);
-            Check(Tokens.StepUnknownHud, "step.unknown.hud", "#7C9AA8", 100, ColorRole.HudText);
+            Check(Tokens.StepCooldownHud, "step.cooldown.hud", "#37A2CB", 100, ColorRole.HudText);
+            Check(Tokens.StepUnknownHud, "step.unknown.hud", "#7D9BA9", 100, ColorRole.HudText);
             Check(Tokens.GlassFallback, "glass.fallback", "#070D16", 86, ColorRole.Surface);
         }
 

@@ -1,6 +1,7 @@
 /* Dueño: WP-D (Designer). Aspecto de la app sobre las clases de contrato de 02-tech-design §3.12 ("Lo que es de WP-D"):
    capas de estado (hover y presionado), botón tonal, anillo y halo de foco por control, brillos y vidrio de la barra.
-   Fuente: 04-design-notes de la It. 2, §4.1-§4.7 y §4.10 (y §15, lo que cambió al implementarlo). No cambia las
+   Fuente: 04-design-notes de la It. 2, §4.1-§4.7 y §4.10 (y §15, lo que cambió al implementarlo); desde la It. 3, también
+   03-rutinas/04-design-notes §4, §5.9 y §16 y el contrato de 03-rutinas/02-tech-design §7.5 (al final). No cambia las
    propiedades de contrato (las verifican los tests PlayMode): fondos, radios de tarjeta, bordes superiores, tamaños de
    ícono, alturas mínimas, colores de texto de contrato.
    Reglas: ningún color literal (solo var(--rm-…)); los "blanco al N %" son la capa blanca de Base.uss con opacity; ningún
@@ -147,4 +148,184 @@
 .rm-switch-row > .rm-focus-ring {
     left: -8px;
     right: -8px;
+}
+
+/* ════ It. 3 — Rutinas, editor, diálogos, menús y campos (03-rutinas/04-design-notes §4, §5.9 y §16) ════
+   Lo mismo que arriba: hover 4 % solo en escritorio, presionado = :hover:active (puntero o dedo apoyado) y nunca :active
+   solo, que el arnés deja 100 ms de reloj real al tocar con NavigationSubmitEvent. Geometría, fondos, bordes y colores de
+   contrato están en Base.uss (WP-B); acá van las capas de estado, los anillos que faltaban y los ajustes de lectura que
+   salieron de mirar las capturas (04-design-notes §16.2: fila de 56, texto del campo en la columna de la etiqueta, aire en
+   el diálogo que se desplaza). */
+
+/* Tarjeta de rutina (§4.2): capa común r.card, hover 4 %, presionado 8 %, sin escala (superficie grande). El resaltado de lo
+   editado es otra capa (.rm-highlight, por código), así el hover nunca la pisa. */
+.rm-desktop .rm-routine-card:hover > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-routine-card:hover:active > .rm-button__state,
+.rm-desktop .rm-routine-card:hover:active > .rm-button__state {
+    opacity: 0.08;
+}
+
+/* Botón flotante + (§4.1): hover 4 %; presionado = fondo accent.primaryPressed sin capa, como el primario (la escala 0,94 está
+   en Motion.uss). Base.uss pone el fondo presionado también con :active solo: acá queda solo con el puntero apoyado. */
+.rm-fab:active {
+    background-color: var(--rm-accent-primary);
+}
+
+.rm-fab:hover:active {
+    background-color: var(--rm-accent-primary-pressed);
+}
+
+.rm-desktop .rm-fab:hover > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-fab:hover:active > .rm-button__state,
+.rm-desktop .rm-fab:hover:active > .rm-button__state {
+    opacity: 0;
+}
+
+/* Chip ×N (§4.7, DN3-04): la capa vive en la cápsula, no en la caja táctil de 48 (las reglas de .rm-chip de arriba miran
+   solo un hijo directo). Hover 4 % (accent.onTonal 5,030:1), presionado 8 %; la escala 0,97 de .rm-chip en Motion.uss
+   achica la caja transparente con la cápsula centrada adentro, que es lo mismo que achicar la cápsula. */
+.rm-desktop .rm-chip--repeat:hover .rm-chip__pill > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-chip--repeat:hover:active .rm-chip__pill > .rm-button__state,
+.rm-desktop .rm-chip--repeat:hover:active .rm-chip__pill > .rm-button__state {
+    opacity: 0.08;
+}
+
+/* Selectores (§4.11). Tiempo / distancia: capa sin radio (la cápsula recorta con overflow), hover 4 %, presionado 8 %, sin
+   escala. Mosaicos de tipo: capa r.s 6 (adentro del borde de 2), hover 4 %, presionado 8 % y escala 0,97 (Motion.uss); el
+   fondo y el borde del elegido los pinta el código y no tienen transición. */
+.rm-segmented .rm-segmented__option > .rm-button__state {
+    border-radius: 0;
+}
+
+.rm-segmented--tiles .rm-segmented__option > .rm-button__state {
+    border-radius: 6px;
+}
+
+.rm-desktop .rm-segmented .rm-segmented__option:hover > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-segmented .rm-segmented__option:hover:active > .rm-button__state,
+.rm-desktop .rm-segmented .rm-segmented__option:hover:active > .rm-button__state {
+    opacity: 0.08;
+}
+
+/* Anillo de la opción de tiempo / distancia (§4.14, cambio de WP-D): la cápsula recorta lo que sale de ella (overflow
+   hidden), así que el anillo va ADENTRO, a 2 dp del borde, con las esquinas de afuera redondeadas (19 − 2 = 17) y las del
+   divisor casi rectas; sin halo. Sobre la opción elegida (brand.seed) el anillo es blanco: focus.ring daría 1,9:1 y el
+   blanco da 4,868:1 (R24); sobre la no elegida, focus.ring sobre surface.overlay da 5,071:1 (R27). Solo hay dos opciones:
+   la primera no lleva --divided y la segunda sí. */
+.rm-segmented .rm-segmented__option > .rm-focus-ring {
+    left: 2px;
+    top: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-top-left-radius: 17px;
+    border-bottom-left-radius: 17px;
+    border-top-right-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+
+.rm-segmented .rm-segmented__option--divided > .rm-focus-ring {
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
+    border-top-right-radius: 17px;
+    border-bottom-right-radius: 17px;
+}
+
+.rm-segmented .rm-segmented__option > .rm-focus-ring > .rm-focus-ring__halo {
+    display: none;
+}
+
+.rm-segmented .rm-segmented__option--selected > .rm-focus-ring {
+    border-color: var(--rm-text-primary);
+}
+
+/* Anillo del mosaico (§4.14): radio del mosaico + 4 (12) y halo + 4 (16), por fuera. El mosaico tiene borde de 2 y lo
+   absoluto se mide desde adentro del borde: −6 deja el anillo a 4 dp del borde de afuera, con los 2 dp de aire de los demás
+   controles. Va después de las reglas del segmentado para ganarles con la misma especificidad. */
+.rm-segmented--tiles .rm-segmented__option > .rm-focus-ring {
+    left: -6px;
+    top: -6px;
+    right: -6px;
+    bottom: -6px;
+    border-radius: 12px;
+}
+
+.rm-segmented--tiles .rm-segmented__option > .rm-focus-ring > .rm-focus-ring__halo {
+    display: flex;
+    border-radius: 16px;
+}
+
+.rm-segmented--tiles .rm-segmented__option--selected > .rm-focus-ring {
+    border-color: var(--rm-focus-ring);
+}
+
+/* Menús (§4.4, DN3-11): ítem común con capa blanca, hover 4 % (11,093:1), presionado 8 % (9,802); ítem de peligro con su
+   capa OSCURA (overlay.scrim, Base.uss), hover 12 % (5,147:1, R25) y presionado 24 % (5,603): con la blanca daría 4,174. */
+.rm-desktop .rm-menu__item:hover > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-menu__item:hover:active > .rm-button__state,
+.rm-desktop .rm-menu__item:hover:active > .rm-button__state {
+    opacity: 0.08;
+}
+
+.rm-desktop .rm-menu__item--danger:hover > .rm-button__state {
+    opacity: 0.12;
+}
+
+.rm-menu__item--danger:hover:active > .rm-button__state,
+.rm-desktop .rm-menu__item--danger:hover:active > .rm-button__state {
+    opacity: 0.24;
+}
+
+/* Campos (§4.8, DN3-09): hover en escritorio = borde text.tertiary (54 %); con foco o con error manda su borde, también con
+   el puntero encima (no dependen de :hover). */
+.rm-desktop .rm-field__box:hover {
+    border-color: var(--rm-text-tertiary);
+}
+
+.rm-desktop .rm-field--focused .rm-field__box:hover {
+    border-color: var(--rm-accent-primary);
+}
+
+.rm-desktop .rm-field--error .rm-field__box:hover {
+    border-color: var(--rm-state-danger);
+}
+
+/* Texto y etiqueta alineados (§4.8, cambio de WP-D): el TextElement interno del campo de UI Toolkit trae un margen propio que
+   corre el texto ≈ 2 dp a la derecha de la etiqueta (medido en CAP-10 y CAP-13: la etiqueta a 13 dp del borde de afuera y el
+   valor a 15). Sin ese margen la etiqueta flotante, la ayuda, la selección y el texto empiezan en la misma columna, como en
+   el legacy. Una línea y multilínea. */
+.rm-field .rm-field__input .unity-text-element--inner-input-field-component,
+.rm-field .rm-field__input .unity-base-text-field__input--single-line > .unity-text-element {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+/* Fila de paso (§4.6, cambio de WP-D): relleno vertical 4. Con 8 arriba y 8 abajo, las cajas táctiles de 48 del lápiz y la
+   cruz dejaban cada fila en 64 y la vista previa del diálogo (sin botones) en 56. Con 4 las dos miden 56, el alto del
+   contrato (min-height), y el subtítulo en dos líneas lleva la fila a 57 (era 65). */
+.rm-step-row {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+/* Diálogos (§4.9, cambio de WP-D): mientras el contenido se desplaza (líneas finas arriba y abajo), 8 dp de aire entre la
+   línea y lo primero o lo último del contenido; sin esto la vista previa de CAP-23 y el último campo de CAP-15b tocaban la
+   línea. Sin desplazamiento, el contenido queda pegado al título como en M3 (16 del relleno del título). */
+.rm-dialog__content--scrolls .rm-dialog__content-body {
+    padding-top: 8px;
+    padding-bottom: 8px;
 }

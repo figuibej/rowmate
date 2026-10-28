@@ -5,11 +5,13 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using RowMate.App.Composition;
 using RowMate.App.Device;
+using RowMate.App.Routines;
 using RowMate.App.Shell;
 using RowMate.Core.Ble;
 using RowMate.Core.Ble.Unavailable;
 using RowMate.Core.Common;
 using RowMate.Core.Localization;
+using RowMate.Core.Models;
 using RowMate.Core.Ports;
 using RowMate.Tests.EditMode.Localization;
 using RowMate.Tests.Support;
@@ -28,6 +30,7 @@ namespace RowMate.Tests.EditMode.Composition
         private DeviceBackend _backend = null!;
         private FakeSystemLocale _locale = null!;
         private FakeAccessibilitySettings _accessibility = null!;
+        private InMemoryRoutineRepository _routines = null!;
 
         [SetUp]
         public void SetUp()
@@ -39,12 +42,13 @@ namespace RowMate.Tests.EditMode.Composition
             _backend = new DeviceBackend(_rower, _hrm, null);
             _locale = new FakeSystemLocale("es-AR");
             _accessibility = new FakeAccessibilitySettings(1.15, reduceMotion: true);
+            _routines = new InMemoryRoutineRepository(RoutineSeeds.Lista.Routines);
         }
 
-        private AppContext Compose(bool profileTab = false)
+        private AppContext Compose(bool profileTab = false, IRoutineRepository? routines = null, IClock? creationClock = null)
         {
-            return AppComposer.Compose(new AppServices(_backend, _scheduler, _logger, LocalizationFixture.Set, _locale, _accessibility,
-                new ShellOptions(profileTab)));
+            return AppComposer.Compose(new AppServices(_backend, routines ?? _routines, _scheduler, _logger, LocalizationFixture.Set, _locale,
+                _accessibility, new ShellOptions(profileTab)) { CreationClock = creationClock });
         }
 
         [Test]
@@ -177,8 +181,70 @@ namespace RowMate.Tests.EditMode.Composition
         public void ComposerRejectsIncompleteServices()
         {
             Assert.Throws<ArgumentNullException>(() => AppComposer.Compose(null!));
-            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, _scheduler, _logger, LocalizationFixture.Set,
+            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, _routines, _scheduler, _logger, LocalizationFixture.Set,
                 null!, _accessibility, new ShellOptions(false))));
+            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, null!, _scheduler, _logger, LocalizationFixture.Set,
+                _locale, _accessibility, new ShellOptions(false))), "sin repositorio de rutinas");
+        }
+
+        // AC-RUT-09-01, AC-APP-01-09 (main.dart:83, routines_provider.dart:12-14): Start() carga las rutinas sin esperar, aunque
+        // nadie vaya a Rutinas; una sola vez. Armar no carga nada.
+        [Test, Category("AC-RUT-09-01"), Category("AC-APP-01-09")]
+        public void StartLoadsRoutines()
+        {
+            var app = Compose();
+            Assert.That(app.Routines.State.Value.Phase, Is.EqualTo(RoutinesPhase.Loading));
+            Assert.That(_routines.GetAllCalls, Is.EqualTo(0), "armar no lee la base");
+            app.Start();
+            Assert.That(_routines.GetAllCalls, Is.EqualTo(1));
+            Assert.That(app.Routines.State.Value.Phase, Is.EqualTo(RoutinesPhase.Ready), "la lista ya está antes de la primera visita");
+            Assert.That(app.Routines.State.Value.Routines.Count, Is.EqualTo(4));
+            app.Start();
+            Assert.That(_routines.GetAllCalls, Is.EqualTo(1), "cambiar de pestaña o volver a llamar no vuelve a leer");
+            Assert.That(_logger.Lines, Is.Empty);
+            app.Dispose();
+        }
+
+        // Una carga lenta no demora el arranque ni cambia lo que muestra Dispositivo (AC-APP-01-09).
+        [Test, Category("AC-APP-01-09")]
+        public void SlowLoadDoesNotBlockTheStart()
+        {
+            var slow = new ScriptedRoutineRepository(_scheduler, RoutineSeeds.Lista.Routines) { LoadDelay = TimeSpan.FromSeconds(2) };
+            var app = Compose(routines: slow);
+            app.Start();
+            Assert.That(_rower.StartCalls, Is.EqualTo(1), "el remo arrancó igual");
+            Assert.That(app.Routines.State.Value.Phase, Is.EqualTo(RoutinesPhase.Loading));
+            _scheduler.Advance(TimeSpan.FromSeconds(2));
+            Assert.That(app.Routines.State.Value.Phase, Is.EqualTo(RoutinesPhase.Ready));
+            app.Dispose();
+        }
+
+        // El editor sale de la app armada: los ids de serie con el Scheduler y la fecha de creación con CreationClock
+        // (QA-G3-19); sin CreationClock, el Scheduler. Dispose de la app dispone la colección.
+        [Test, Category("AC-RUT-08-06")]
+        public void EditorUsesTheSchedulerAndCreationsTheCreationClock()
+        {
+            var clock = new SequenceClock();
+            var app = Compose(creationClock: clock);
+            app.Start();
+            var editor = app.CreateEditor(null);
+            Assert.That(editor.IsNew, Is.True);
+            editor.Name = "Nueva";
+            editor.AddSeries();
+            Assert.That(editor.Template[0].GroupId, Is.EqualTo("g" + _scheduler.UtcNow.ToUnixTimeMilliseconds() + "_0"));
+            Assert.That(editor.SaveAsync().Result, Is.EqualTo(SaveOutcome.Saved));
+            Assert.That(clock.Reads, Is.EqualTo(1), "una lectura por alta");
+            Assert.That(app.Routines.State.Value.Routines[0].CreatedAt, Is.EqualTo(SequenceClock.DefaultStart));
+            var edit = app.CreateEditor(app.Routines.State.Value.Routines[1]);
+            Assert.That(edit.IsNew, Is.False);
+            app.Dispose();
+            Assert.That(app.Routines.LoadAsync().IsCompleted, Is.True, "dispuesta, no carga");
+            Assert.Throws<ObjectDisposedException>(() => app.CreateEditor(null));
+            var withScheduler = Compose(routines: new InMemoryRoutineRepository());
+            withScheduler.Start();
+            var created = withScheduler.Routines.CreateAsync("X", "", new IntervalStep[0]).Result;
+            Assert.That(created!.CreatedAt, Is.EqualTo(_scheduler.UtcNow), "sin CreationClock, el Scheduler");
+            withScheduler.Dispose();
         }
 
         // Pulsómetro cuya reconexión tarda (como la real, hasta 15 s) y falla cuando el test quiere.

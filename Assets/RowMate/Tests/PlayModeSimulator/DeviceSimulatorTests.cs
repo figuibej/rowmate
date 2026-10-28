@@ -85,6 +85,63 @@ namespace RowMate.Tests.PlayMode.Simulator
             Assert.That(H.IsTextVisible("No se encontraron dispositivos"), Is.True);
         }
 
+        // QA-V2-01 (It. 3): al desconectar con el botón de la barra, la vista conectada que sale (120 ms, ViewSwap) sigue con
+        // "Remo simulado" + "Conectado" en todos sus cuadros; nunca "Rower" (el legacy desmonta _ConnectedView en el acto,
+        // device_screen.dart:33-38, y con el simulador nunca muestra 'Rower', :98).
+        [UnityTest, Category("AC-BLE-11-02")]
+        public IEnumerator DisconnectKeepsTheNameWhileTheConnectedViewLeaves()
+        {
+            CreateSim(DeviceProfile.TV);
+            yield return Advance(3);
+            yield return Frames();
+            H.Tap("device-disconnect");
+            yield return AssertOutgoingHeaderKeepsTheName();
+        }
+
+        // QA-V2-01 (It. 3): lo mismo con "Simular desconexión" del panel (la caída que vuelve a los 3 s).
+        [UnityTest, Category("AC-BLE-11-02"), Category("AC-BLE-15-10")]
+        public IEnumerator SimulatedDropKeepsTheNameWhileTheConnectedViewLeaves()
+        {
+            CreateSim(DeviceProfile.TV);
+            yield return Advance(3);
+            yield return Tap("sim-open");
+            if (H.WhyNotTappable("sim-drop-rower") != null)
+            {
+                H.ScrollTo("sim-drop-rower");
+                yield return Frames();
+            }
+
+            H.Tap("sim-drop-rower");
+            yield return AssertOutgoingHeaderKeepsTheName();
+        }
+
+        // A los 60 ms la conectada todavía se ve (la prueba mira la transición, no su final) y en cada cuadro de 1/60 s hasta
+        // que se oculta la cabecera dice el nombre del remo que se fue, con la insignia.
+        private IEnumerator AssertOutgoingHeaderKeepsTheName()
+        {
+            yield return null;
+            var screen = H.DeviceScreen!;
+            var connected = screen.Connected;
+            Assert.That(screen.View, Is.EqualTo(DeviceViewKind.Scan), "el remo ya no está conectado");
+            H.Advance(0.06);
+            yield return null;
+            Assert.That(connected.style.display.value, Is.EqualTo(DisplayStyle.Flex), "a los 60 ms la vista conectada sigue saliendo");
+            Assert.That(connected.style.opacity.value, Is.InRange(0.01f, 0.99f), "a los 60 ms está a mitad de la salida");
+            Assert.That(H.TextOf("device-name"), Is.EqualTo("Remo simulado"), "60 ms");
+            Assert.That(connected.Header.BadgeLabel.text, Is.EqualTo("Conectado"), "60 ms");
+            var frames = 0;
+            while (connected.style.display.value == DisplayStyle.Flex && frames < 30)
+            {
+                frames++;
+                H.Step();
+                yield return null;
+                Assert.That(H.TextOf("device-name"), Is.EqualTo("Remo simulado"), "cuadro " + frames + " de la salida");
+            }
+
+            Assert.That(connected.style.display.value, Is.EqualTo(DisplayStyle.None), "la salida terminó");
+            Assert.That(H.HasText(DeviceScreenRules.FallbackRowerName), Is.False, "ningún texto 'Rower' con el simulador");
+        }
+
         [UnityTest, Category("AC-BLE-07-03")]
         public IEnumerator NoAutoReconnectAfterDisconnect()
         {
@@ -270,7 +327,15 @@ namespace RowMate.Tests.PlayMode.Simulator
                 Assert.Ignore("el manifest no tiene CAP-01");
             }
 
-            CreateSim(DeviceProfile.TV);
+            // Como la captura: el perfil TV es el teléfono (UiHostOptions.IsDesktop = false, QA-V2-13).
+            Create(new UiHostOptions
+            {
+                Profile = DeviceProfile.TV,
+                IsDesktop = !DeviceProfile.TV.IsPhone,
+                Backend = HostBackends.Simulator(false),
+                SimulatorLayer = SimulatorLayerMode.Full,
+                LanguageTags = new[] { "es-AR" },
+            });
             yield return Advance(60.55);
             yield return Settle();
             yield return Frames(3);

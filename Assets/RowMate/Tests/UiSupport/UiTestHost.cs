@@ -11,6 +11,7 @@ using RowMate.Core.Ports;
 using RowMate.Presentation.Controls;
 using RowMate.Presentation.Device;
 using RowMate.Presentation.Diagnostics;
+using RowMate.Presentation.Routines;
 using RowMate.Presentation.Shell;
 using RowMate.Presentation.Surface;
 using RowMate.Tests.Support;
@@ -25,10 +26,13 @@ using RowMate.Simulator;
 
 namespace RowMate.Tests.UiSupport
 {
-    // Host de UI determinista sobre una RT (02-tech-design §4.2, §5.1). Lo usan las pruebas PlayMode (con yield) y el arnés
-    // de capturas en modo edición (con EditorApplication.update): misma UI, mismo PanelSettings y misma tubería de color que
-    // la app. Arma la app con AppComposer + ShellHost, igual que AppRoot.Start, con FakeScheduler (hora local fija), idioma,
-    // accesibilidad y densidad de prueba, y la fábrica de backend que se le pase.
+    // Host de UI determinista sobre una RT (02-tech-design §4.2, §5.1 de la It. 2; 03-rutinas/02-tech-design §5.2). Lo usan las
+    // pruebas PlayMode (con yield) y el arnés de capturas en modo edición (con EditorApplication.update): misma UI, mismo
+    // PanelSettings (copia hecha por RuntimePanelFactory con los respaldos de fuente del MISMO UiAssets.asset que la app,
+    // QA-G3-12) y misma tubería de color que la app. Arma la app con AppComposer + ShellHost, igual que AppRoot.Start, con
+    // FakeScheduler (hora local fija), idioma, accesibilidad y densidad de prueba, la fábrica de backend y la de rutinas que se
+    // le pasen (SQLite real en una carpeta temporal, de guion o en memoria), un SequenceClock para las fechas de creación,
+    // un FakeClipboard y un FakeSoftKeyboard. Nunca usa la carpeta de datos del usuario (AC-HIS-20-04).
     // El documento se crea con el patrón "GameObject inactivo → UIDocument → copia del panel → activo" (sonda §8.3): la raíz
     // existe al volver, en modo edición y en Play. Nunca modifica el asset del panel (R2-05).
     public sealed class UiTestHost : IDisposable
@@ -38,13 +42,14 @@ namespace RowMate.Tests.UiSupport
         private readonly GameObject _host;
         private readonly PanelSettings _panel;
         private readonly HostLogger _logger;
+        private readonly IBackButtonPolicy _backButton;
         private RenderTexture _target;
         private bool _disposed;
 
         private UiTestHost(UiHostOptions options, GameObject host, PanelSettings panel, RenderTexture target, UIDocument document,
                            HostLogger logger, FakeScheduler scheduler, FakeDisplayMetrics display, FakeSystemLocale locale,
-                           FakeAccessibilitySettings accessibility, DeviceBackend backend, AppContext app, ShellHandle handle,
-                           IBackButtonPolicy backButton)
+                           FakeAccessibilitySettings accessibility, IBackButtonPolicy backButton, HostRoutineSet routines, IClock creationClock,
+                           IClipboard clipboard, FakeSoftKeyboard keyboard)
         {
             Options = options;
             _host = host;
@@ -56,11 +61,15 @@ namespace RowMate.Tests.UiSupport
             Display = display;
             Locale = locale;
             Accessibility = accessibility;
-            Backend = backend;
-            App = app;
-            Handle = handle;
-            BackButton = backButton;
+            _backButton = backButton;
+            Routines = routines;
+            CreationClock = creationClock;
+            Clipboard = clipboard;
+            Keyboard = keyboard;
             Profile = options.Profile;
+            Backend = null!;
+            App = null!;
+            Handle = null!;
         }
 
         public UiHostOptions Options { get; }
@@ -75,13 +84,27 @@ namespace RowMate.Tests.UiSupport
 
         public FakeAccessibilitySettings Accessibility { get; }
 
-        public AppContext App { get; }
+        public AppContext App { get; private set; }
 
-        public DeviceBackend Backend { get; }
+        public DeviceBackend Backend { get; private set; }
 
-        public ShellHandle Handle { get; }
+        public ShellHandle Handle { get; private set; }
 
-        public IBackButtonPolicy BackButton { get; }
+        public IBackButtonPolicy BackButton => _backButton;
+
+        // Las rutinas del host (la base temporal, el repositorio de guion o el de memoria).
+        public HostRoutineSet Routines { get; }
+
+        public IClock CreationClock { get; }
+
+        public IClipboard Clipboard { get; }
+
+        public FakeClipboard? TestClipboard => Clipboard as FakeClipboard;
+
+        public FakeSoftKeyboard Keyboard { get; }
+
+        // Veces que se armó la app sobre la misma base (Reopen).
+        public int Generation { get; private set; }
 
         public UIDocument Document { get; }
 
@@ -100,9 +123,18 @@ namespace RowMate.Tests.UiSupport
 
         public HeartRateCardView? HeartRateCard => DeviceScreen?.Card;
 
+        public RoutinesScreenView? RoutinesScreen => Handle.Shell.RoutinesScreen;
+
+        // El editor de arriba (la página que no está saliendo), si hay.
+        public RoutineEditorPage? Editor => Handle.Shell.Pages.Top as RoutineEditorPage;
+
+        public ModalDialog? TopDialog => Handle.Shell.Dialogs.Top;
+
         public ControllableRowerService? TestRower => Backend.Rower as ControllableRowerService;
 
         public ScriptedHeartRateService? TestHeartRate => Backend.HeartRate as ScriptedHeartRateService;
+
+        public ScriptedRoutineRepository? ScriptedRoutines => Routines.Scripted;
 
 #if ROWMATE_SIMULATOR
         public SimulatorDeviceBackend? Simulator => Backend as SimulatorDeviceBackend;
@@ -120,7 +152,6 @@ namespace RowMate.Tests.UiSupport
 
             var logger = new HostLogger();
             var scheduler = new FakeScheduler(options.StartUtc, options.LocalOffset);
-            var backend = options.Backend(scheduler, logger);
             var display = new FakeDisplayMetrics(options.Profile.Density, options.Insets);
             var tags = new string[options.LanguageTags.Count];
             for (var i = 0; i < tags.Length; i++)
@@ -130,13 +161,14 @@ namespace RowMate.Tests.UiSupport
 
             var locale = new FakeSystemLocale(tags);
             var accessibility = new FakeAccessibilitySettings(options.TextScale, options.ReduceMotion, logger);
-            var texts = LocalizationSet.Load(UiAssetsLocator.StringsEs(), UiAssetsLocator.StringsEn());
-            var app = AppComposer.Compose(new AppServices(backend, scheduler, logger, texts, locale, accessibility,
-                new ShellOptions(options.ProfileTab)));
+            var routines = options.Routines(scheduler, logger);
+            var creationClock = options.CreationClock ?? new SequenceClock();
+            var clipboard = options.Clipboard ?? new FakeClipboard();
+            var keyboard = new FakeSoftKeyboard();
 
             var target = CreateTarget(options.Profile, options.Pipeline);
-            var panel = Object.Instantiate(UiAssetsLocator.Panel());
-            panel.name = "RowMate.TestPanel";
+            var panel = RuntimePanelFactory.Create(UiAssetsLocator.Panel(), UiAssetsLocator.IconsOutlineFallback(), UiAssetsLocator.EmojiFallback(),
+                "RowMate.TestPanel");
             panel.hideFlags = HideFlags.HideAndDontSave;
             Configure(panel, target, options.Profile, options.Pipeline);
 
@@ -148,21 +180,45 @@ namespace RowMate.Tests.UiSupport
             var root = document.rootVisualElement;
             if (root == null)
             {
+                routines.Dispose();
                 throw new InvalidOperationException("UiTestHost: el UIDocument no tiene raíz después de activarlo.");
             }
 
             var backButton = options.BackButton ?? new CountingBackButtonPolicy();
-            var handle = ShellHost.Build(app, root, new ShellHostOptions(scheduler, options.IsDesktop, backButton, display,
-                TopLayerFor(options, backend, app, scheduler)) { Pipeline = options.Pipeline });
-            var result = new UiTestHost(options, host, panel, target, document, logger, scheduler, display, locale, accessibility, backend, app,
-                handle, backButton);
+            var result = new UiTestHost(options, host, panel, target, document, logger, scheduler, display, locale, accessibility, backButton,
+                routines, creationClock, clipboard, keyboard);
+            result.Compose(routines.Repository);
+            return result;
+        }
+
+        // Reabrir la app sobre la MISMA base (DEMO-10, AC-RUT-08-09, RPS.ReopenShowsTheSame): dispone la UI, la app y el
+        // backend, cierra la base y la vuelve a abrir sobre el mismo archivo, y arma todo de nuevo (sin tocar el reloj).
+        public void Reopen()
+        {
+            Handle.Dispose();
+            App.Dispose();
+            Backend.Dispose();
+            var repository = Routines.Reopen(_logger);
+            Generation++;
+            Compose(repository);
+        }
+
+        private void Compose(IRoutineRepository repository)
+        {
+            var options = Options;
+            Backend = options.Backend(Scheduler, _logger);
+            var texts = LocalizationSet.Load(UiAssetsLocator.StringsEs(), UiAssetsLocator.StringsEn());
+            App = AppComposer.Compose(new AppServices(Backend, repository, Scheduler, _logger, texts, Locale, Accessibility,
+                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock });
+            Handle = ShellHost.Build(App, Root, new ShellHostOptions(Scheduler, options.IsDesktop, _backButton, Display,
+                TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard) { Pipeline = options.Pipeline });
+            Handle.Shell.Ui.TextMenuTouchMode = options.TextMenuTouchMode;
             if (options.StartApp)
             {
-                app.Start();
+                App.Start();
             }
 
-            handle.Tick();
-            return result;
+            Handle.Tick();
         }
 
         // ── Tiempo ────────────────────────────────────────────────────────────
@@ -185,18 +241,25 @@ namespace RowMate.Tests.UiSupport
             Advance(FrameSeconds);
         }
 
-        // = pumpAndSettle: de a 1/60 s hasta que no haya animaciones finitas (latido y spinner no cuentan). Tope 2 s.
-        public void Settle(TimeSpan? max = null)
+        // = pumpAndSettle: de a 1/60 s hasta que no haya animaciones finitas (latido y spinner no cuentan). Tope 2 s. Si alguna
+        // espera el layout del cuadro siguiente (lo nuevo que crece), corta sin gastar reloj: el que llama deja pasar un cuadro
+        // real y vuelve a llamar (UiTestBase.Settle, ScenarioScript.Settle). Devuelve el reloj que avanzó.
+        public double Settle(TimeSpan? max = null)
         {
             var limit = (max ?? TimeSpan.FromSeconds(2)).TotalSeconds;
             var elapsed = 0.0;
             Handle.Tick();
-            while (Handle.Motion.HasFiniteMotions && elapsed < limit)
+            while (Handle.Motion.HasFiniteMotions && elapsed < limit && !Handle.Motion.WaitingForLayout)
             {
                 Step();
                 elapsed += FrameSeconds;
             }
+
+            return elapsed;
         }
+
+        // Alguna animación espera el layout del cuadro siguiente.
+        public bool WaitingForLayout => Handle.Motion.WaitingForLayout;
 
         // Cuadros reales de Unity (PlayMode: yield de un cuadro; arnés: un EditorApplication.update) para layout y dibujo.
         public IEnumerator Frames(int count = 2)
@@ -253,11 +316,189 @@ namespace RowMate.Tests.UiSupport
             Submit(FindRequired(elementName));
         }
 
+        // Un toque "real" en el centro del elemento: lo recibe lo que haya ahí (Pick), aunque ya no sea el elemento (lo que sale
+        // no responde y el toque pasa a lo de atrás: RED.TapDuringTheExitCreatesNothing). Devuelve lo que lo recibió.
+        public VisualElement? TapThrough(string elementName)
+        {
+            var element = FindRequired(elementName);
+            return TapAt(element.worldBound.center);
+        }
+
+        // Un toque en un punto del panel: el elemento que da Pick recibe un NavigationSubmitEvent (que burbujea).
+        public VisualElement? TapAt(Vector2 point)
+        {
+            var picked = Root.panel.Pick(point);
+            if (picked != null)
+            {
+                Submit(picked);
+            }
+
+            return picked;
+        }
+
+        // Tocar el velo del diálogo de arriba, lejos del diálogo (= cancelar).
+        public void TapScrim()
+        {
+            var window = Root.worldBound;
+            var box = TopDialog?.Box.worldBound ?? Rect.zero;
+            var point = new Vector2(window.center.x, Mathf.Max(window.yMin + 4, box.yMin - 12));
+            if (box.Contains(point))
+            {
+                point = new Vector2(window.center.x, Mathf.Min(window.yMax - 4, box.yMax + 12));
+            }
+
+            TapAt(point);
+        }
+
         // Motivo por el que un toque fallaría (null = se puede tocar).
         public string? WhyNotTappable(string elementName)
         {
             var element = Find(elementName);
             return element == null ? "no existe #" + elementName : HitTestProblem(element);
+        }
+
+        // Clic derecho en el centro del elemento (el menú del texto, AC-RUT-11-09): PointerDownEvent con el botón 1.
+        public void RightClick(string elementName)
+        {
+            var element = FindRequired(elementName);
+            var center = element.worldBound.center;
+            var target = Root.panel.Pick(center) ?? element;
+            using (var down = PointerDownEvent.GetPooled(new Event { type = EventType.MouseDown, button = 1, mousePosition = center, clickCount = 1 }))
+            {
+                down.target = target;
+                target.SendEvent(down);
+            }
+        }
+
+        // Puntero que entra y sale (ayudas en escritorio, AC-APP-03-06).
+        public void PointerEnter(string elementName)
+        {
+            var element = FindRequired(elementName);
+            using (var enter = PointerEnterEvent.GetPooled(new Event { type = EventType.MouseMove, mousePosition = element.worldBound.center }))
+            {
+                enter.target = element;
+                element.SendEvent(enter);
+            }
+        }
+
+        public void PointerLeave(string elementName)
+        {
+            var element = FindRequired(elementName);
+            using (var leave = PointerLeaveEvent.GetPooled(new Event { type = EventType.MouseMove, mousePosition = element.worldBound.center }))
+            {
+                leave.target = element;
+                element.SendEvent(leave);
+            }
+        }
+
+        // Presionar y soltar con el dedo (mantener presionado = presionar, avanzar el reloj, soltar).
+        public void PointerDown(string elementName, int button = 0)
+        {
+            var element = FindRequired(elementName);
+            using (var down = PointerDownEvent.GetPooled(new Event { type = EventType.MouseDown, button = button, mousePosition = element.worldBound.center }))
+            {
+                down.target = element;
+                element.SendEvent(down);
+            }
+        }
+
+        public void PointerUp(string elementName, int button = 0)
+        {
+            var element = FindRequired(elementName);
+            using (var up = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, button = button, mousePosition = element.worldBound.center }))
+            {
+                up.target = element;
+                element.SendEvent(up);
+            }
+        }
+
+        // ── Teclado ───────────────────────────────────────────────────────────
+
+        // El elemento con foco (null = nada).
+        public Focusable? Focused => Root.panel?.focusController?.focusedElement;
+
+        // El RmTextField con foco (null si el foco no está en un campo).
+        public RmTextField? FocusedField
+        {
+            get
+            {
+                for (var e = Focused as VisualElement; e != null; e = e.hierarchy.parent)
+                {
+                    if (e is RmTextField field)
+                    {
+                        return field;
+                    }
+                }
+
+                return null;
+            }
+        }
+
+        // Escribe en un campo como el usuario: le da el foco y cambia el valor (el campo filtra y avisa al store).
+        public void Type(string fieldName, string text)
+        {
+            var field = Find<RmTextField>(fieldName) ?? throw new InvalidOperationException("Type: no existe el campo #" + fieldName);
+            if (!field.IsFocused)
+            {
+                field.FocusInput(false);
+            }
+
+            field.Input.value = text;
+        }
+
+        // "Atrás" (BackSource.SystemBack = la tecla de Android; Escape = la de la PC, que no cierra páginas: P-08).
+        public void PressBack(BackSource source)
+        {
+            Handle.HandleBack(source);
+            Handle.Tick();
+        }
+
+        // Una tecla a la hoja con foco (o a la raíz), como la manda UI Toolkit: en un campo, el TextElement interno (S-B3a:
+        // focusedElement devuelve el TextField, la raíz del compuesto, y un evento dirigido a él no llega al editor de texto).
+        public void PressKey(KeyCode key, char character = '\0', EventModifiers modifiers = EventModifiers.None)
+        {
+            var target = KeyTarget();
+            using (var down = KeyDownEvent.GetPooled(character, key, modifiers))
+            {
+                down.target = target;
+                target.SendEvent(down);
+            }
+        }
+
+        // Tab (y Mayús+Tab): la tecla y la navegación que genera UI Toolkit.
+        public void PressTab(bool shift = false)
+        {
+            PressKey(KeyCode.Tab, '\t', shift ? EventModifiers.Shift : EventModifiers.None);
+            var target = KeyTarget();
+            using (var move = NavigationMoveEvent.GetPooled(shift ? NavigationMoveEvent.Direction.Previous : NavigationMoveEvent.Direction.Next))
+            {
+                move.target = target;
+                target.SendEvent(move);
+            }
+        }
+
+        // Enter: la tecla y el NavigationSubmitEvent que genera UI Toolkit sobre el elemento con foco.
+        public void PressEnter()
+        {
+            PressKey(KeyCode.Return, '\n');
+            if (Focused == null)
+            {
+                return;
+            }
+
+            Submit(KeyTarget());
+        }
+
+        // La hoja que recibe el teclado: el TextElement interno de un campo con foco, el elemento con foco o la raíz.
+        public VisualElement KeyTarget()
+        {
+            var focused = Focused as VisualElement;
+            if (focused is TextField field)
+            {
+                return (VisualElement?)field.Q(TextField.textInputUssName)?.Q<TextElement>() ?? field;
+            }
+
+            return focused ?? Root;
         }
 
         // = ensureVisible: desplaza el ScrollView ancestro hasta que el elemento quede entero en la zona visible NO tapada
@@ -271,7 +512,7 @@ namespace RowMate.Tests.UiSupport
             var top = viewport.yMin;
             var bottom = viewport.yMax;
             var tabBar = Root.Q("tab-bar");
-            if (tabBar != null && tabBar.worldBound.yMin < bottom && tabBar.worldBound.yMax > top)
+            if (tabBar != null && tabBar.resolvedStyle.display != DisplayStyle.None && tabBar.worldBound.yMin < bottom && tabBar.worldBound.yMax > top)
             {
                 bottom = Mathf.Min(bottom, tabBar.worldBound.yMin);
             }
@@ -298,8 +539,16 @@ namespace RowMate.Tests.UiSupport
 
         public void ScrollToEnd(string scrollViewName)
         {
-            var scroll = Root.Q<ScrollView>(scrollViewName) ?? throw new InvalidOperationException("ScrollToEnd: no existe #" + scrollViewName);
+            var scroll = Root.Q<ScrollView>(scrollViewName) ?? (Root.Q(scrollViewName) as ScrollView)
+                ?? throw new InvalidOperationException("ScrollToEnd: no existe #" + scrollViewName);
             scroll.scrollOffset = new Vector2(0, float.MaxValue);
+        }
+
+        // El contenido desplazable del diálogo de arriba, hasta el final.
+        public void ScrollDialogToEnd()
+        {
+            var dialog = TopDialog ?? throw new InvalidOperationException("ScrollDialogToEnd: no hay un diálogo abierto.");
+            dialog.ContentScroll.scrollOffset = new Vector2(0, float.MaxValue);
         }
 
         public float ScrollOffsetOf(string scrollViewName)
@@ -421,6 +670,7 @@ namespace RowMate.Tests.UiSupport
             Handle.Dispose();
             App.Dispose();
             Backend.Dispose();
+            Routines.Dispose();
             if (_host != null)
             {
                 DestroyObject(_host);
@@ -429,7 +679,7 @@ namespace RowMate.Tests.UiSupport
             if (_panel != null)
             {
                 _panel.targetTexture = null;
-                DestroyObject(_panel);
+                RuntimePanelFactory.Destroy(_panel);
             }
 
             DestroyTarget(_target);

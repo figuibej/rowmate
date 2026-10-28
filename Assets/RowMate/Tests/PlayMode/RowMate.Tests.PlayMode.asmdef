@@ -6,6 +6,7 @@
         "RowMate.Tests.UiSupport",
         "RowMate.Core",
         "RowMate.App",
+        "RowMate.Infrastructure",
         "RowMate.Presentation",
         "RowMate.Scene",
         "RowMate.Bootstrap",

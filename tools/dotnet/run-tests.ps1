@@ -121,7 +121,7 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
         foreach ($xml in $unityFiles) { Add-NUnitResults $xml.FullName $byId 'unity' }
     }
 
-    # Lista completa de las specs: TODOS los It0*Ids.cs (It. 1: 139 AC y 19 LT; It. 2: 125 AC y 15 LT), con sus bloques
+    # Lista completa de las specs: TODOS los It0*Ids.cs (It. 1: 139 AC y 19 LT; It. 2: 125 AC y 15 LT; It. 3: 102 AC), con sus bloques
     # UnityOnlyIds (PENDIENTE UNITY) y WorkPackageBIds (PENDIENTE WP-B).
     $traceDir = Join-Path $repo 'Assets\RowMate\Tests\EditMode\Traceability'
     $expected = New-Object System.Collections.Generic.List[string]

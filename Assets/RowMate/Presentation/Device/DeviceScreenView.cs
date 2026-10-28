@@ -116,11 +116,18 @@ namespace RowMate.Presentation.Device
             _disconnect.SetLabel(texts.Get(L10nKeys.DeviceDisconnect));
             _disconnect.style.display = DeviceScreenRules.ShowDisconnectAction(state.Status) ? DisplayStyle.Flex : DisplayStyle.None;
 
-            Connected.Header.Render(DeviceScreenRules.DeviceName(state.ConnectedDeviceName), texts.Get(L10nKeys.DeviceConnected));
-            Connected.Grid.Render(DeviceScreenRules.Tiles(state.Data, texts));
+            // La vista conectada solo se dibuja con el remo conectado (QA-V2-01, AC-BLE-11-02). Al desconectar queda congelada
+            // con lo último que mostró mientras sale (120 ms): el legacy la desmonta en el acto (device_screen.dart:33-38) y
+            // nunca dibuja la cabecera sin remo; si se la dibujara acá, ConnectedDeviceName ya es null y diría "Rower" (:98).
+            var view = DeviceScreenRules.ViewFor(state.Status);
+            if (view == DeviceViewKind.Connected)
+            {
+                Connected.Header.Render(DeviceScreenRules.DeviceName(state.ConnectedDeviceName), texts.Get(L10nKeys.DeviceConnected));
+                Connected.Grid.Render(DeviceScreenRules.Tiles(state.Data, texts));
+            }
+
             Scan.Render(DeviceScreenRules.Scan(state.Status, _hrmScanning, state.ScanResults.Count), texts);
 
-            var view = DeviceScreenRules.ViewFor(state.Status);
             if (_view == view)
             {
                 return;

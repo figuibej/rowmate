@@ -80,5 +80,88 @@ namespace RowMate.Core.Design
         // ── Spinner (04-design-notes §4.7): arco de 270°, una vuelta en 900 ms, lineal ──
         public const double SpinnerTurnMs = 900;
         public const double SpinnerArcDegrees = 270;
+
+        // ════ It. 3 — Rutinas y editor (03-rutinas/04-design-notes §5.0-§5.11, DN3-16). Los dueños de las animaciones son de
+        // WP-B (Presentation/Motion: PageTransition, DialogTransition, ToastTransition, GrowMotion, CollapseMotion…). ════
+
+        // ── Pila: abrir y cerrar el editor (§5.1). Entra x +24 → 0 en 0-240 (ease.enter) y opacidad 0 → 1 en 0-160; sale
+        // x 0 → +24 en 0-200 (ease.exit) y opacidad 1 → 0 en 40-200. Lo de atrás se oscurece a 0,08. Reducir movimiento:
+        // fundido de 120 (ease.linear) sin desplazamientos. ──
+        public const double PageInMs = 240;
+        public const double PageInFadeMs = 160;
+        public const double PageOutMs = 200;
+        public const double PageOutFadeStartMs = 40;
+        public const double PageDimOpacity = 0.08;
+        public const double ReducedPageFadeMs = 120;
+
+        // shift.xl (24): el desplazamiento de la página.
+        public static double PageShiftDp => Tokens.ShiftXl.Value;
+
+        // ── Diálogos y velo (§5.2): velo 0 → 0,6 en 0-200 (ease.move); diálogo escala 0,96 → 1 y fundido en 0-220 (ease.enter);
+        // sale a escala 0,98 y opacidad 0 en 150 (ease.exit). ──
+        public const double DialogScrimOpacity = 0.6;
+        public const double DialogScrimInMs = 200;
+        public const double DialogInMs = 220;
+        public const double DialogInScaleFrom = 0.96;
+        public const double DialogOutMs = 150;
+        public const double DialogOutScaleTo = 0.98;
+
+        // ── Menú y ayuda (§5.3): menú escala 0,96 → 1 y fundido en 120 (ease.enter), sale en 90; ayuda: fundido 120 / 90. ──
+        public const double MenuInMs = 120;
+        public const double MenuInScaleFrom = 0.96;
+        public const double MenuOutMs = 90;
+        public const double TooltipInMs = 120;
+        public const double TooltipOutMs = 90;
+
+        // ── Aviso (§5.4, §4.12): entra 220, sale 160 bajando 8; reemplazo con empujón 1 → 1,02 (0-90) → 1 (90-240) y cruce
+        // de texto (el viejo funde en 0-80, el nuevo entra en 80-200). Se aparta 8 dp de los obstáculos que se cruzan. ──
+        public const double ToastInMs = 220;
+        public const double ToastOutMs = 160;
+        public const double ToastOutShiftDp = 8;
+        public const double ToastBumpScale = 1.02;
+        public const double ToastBumpPeakMs = 90;
+        public const double ToastBumpEndMs = 240;
+        public const double ToastTextOutMs = 80;
+        public const double ToastTextInEndMs = 200;
+        public const double BottomObstacleGapDp = 8;
+
+        // ── Lista de rutinas (§5.5): la primera carga con la pestaña a la vista escalona 35 ms por tarjeta, hasta 8, y cada
+        // una entra en 240; el vacío y el error suben shift.s (8). Indicador: gracia de 120 antes del fundido (DN3-15). ──
+        public const double ListStaggerMs = 35;
+        public const int ListStaggerMax = 8;
+        public const double ListItemInMs = 240;
+        public const double LoadingGraceMs = 120;
+
+        // shift.s (8): el vacío y el error al entrar.
+        public static double EmptyInShiftDp => Tokens.ShiftS.Value;
+
+        // ── Crecer, colapsar y resaltar (§5.5, §5.6): lo nuevo crece (alto y márgenes con spring.smooth) y funde en 60-260;
+        // lo borrado funde en 0-120 y colapsa en 80-280; la serie nueva escalona sus piezas cada 40; lo editado se ilumina
+        // 0,08 → 0 en 600 (ease.move). Hojas de la serie: alto 0 ↔ 3 y opacidad en 160. ──
+        public const double GrowOmega = CriticalSpring.SmoothOmega;
+        public const double GrowFadeStartMs = 60;
+        public const double GrowFadeEndMs = 260;
+        public const double CollapseFadeMs = 120;
+        public const double CollapseStartMs = 80;
+        public const double CollapseEndMs = 280;
+        public const double SeriesStaggerMs = 40;
+        public const double HighlightPeak = 0.08;
+        public const double HighlightMs = 600;
+        public const double StackLayerMs = 160;
+
+        // ── Campos y diálogo de paso (§5.7): la etiqueta flota con escala 0,8; el campo del modo que llega funde en 120. ──
+        public const double FieldLabelScale = 0.8;
+        public const double ModeSwapInMs = 120;
+
+        // ── Llave, teclado y desplazamientos (§5.8): resortes críticos. Lo nuevo se muestra con ω 12; el primer error, el
+        // foco por Tab y el teclado, con ω 22 (responden a una acción inmediata); 16 dp de aire. ──
+        public const double KeyOmega = CriticalSpring.SnappyOmega;
+        public const double KeyboardOmega = CriticalSpring.SnappyOmega;
+        public const double ScrollToNewOmega = CriticalSpring.SmoothOmega;
+        public const double ScrollToFocusOmega = CriticalSpring.SnappyOmega;
+        public const double ScrollMarginDp = 16;
+
+        // P2 (DN3-19): Guardar muestra un spinner de 16 si el guardado tarda más de 300 ms.
+        public const double SaveSpinnerDelayMs = 300;
     }
 }

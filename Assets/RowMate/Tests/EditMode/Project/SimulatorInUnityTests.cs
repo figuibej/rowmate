@@ -21,6 +21,10 @@ namespace RowMate.Tests.EditMode.Project
         private const string GuardPath = "Assets/RowMate/Editor/Simulator/SimulatorBuildGuard.cs";
         private const string TestRunVariable = "ROWMATE_SIMULATOR_TEST_RUN";
 
+        // El mismo aviso por línea de comandos: el CI de Unity (ci-unity.yml, QA-V2-14) no puede pasarle variables de entorno
+        // al contenedor de GameCI y se lo pasa a Unity con customParameters.
+        public const string TestRunArgument = "-rowmateSimulatorTestRun";
+
         [Test, Category("AC-BASE-08"), Category("QA-V-05")]
         public void OnlySimulatorDefineChangesScriptingDefines()
         {
@@ -137,7 +141,8 @@ namespace RowMate.Tests.EditMode.Project
         // R-01 en el repositorio: ROWMATE_SIMULATOR no puede quedar en los ajustes versionados (ProjectSettings/*.asset o un
         // Build Profile). Sin ProjectSettings.asset (antes del primer open) o sin el define: pasa.
         // - Con la marca de SimulatorDefine (Library/RowMate/simulator-tests.txt) y ROWMATE_SIMULATOR_TEST_RUN=1 (lo pone
-        //   run-unity-tests.ps1 -Simulator solo para la corrida de tests): es este mismo test dentro de esa corrida → pasa.
+        //   run-unity-tests.ps1 -Simulator solo para la corrida de tests), o el argumento -rowmateSimulatorTestRun (el CI de
+        //   Unity, QA-V2-14): es este mismo test dentro de esa corrida → pasa.
         //   Antes salía Inconclusive, y Unity sale con 2 ("One or more tests failed") si hay uno (primer open real, It. 2).
         // - Con la marca y sin la variable: una corrida cortada → Inconclusive, también en el CI (-RestoreOnly).
         // - Sin la marca: en el CI falla; en la PC queda Inconclusive (el modo simulador del Editor es legítimo mientras se
@@ -162,7 +167,7 @@ namespace RowMate.Tests.EditMode.Project
             var where = Symbol + " está en " + string.Join(", ", found) + ". ";
             if (File.Exists(RepoPaths.Combine("Library/RowMate/simulator-tests.txt")))
             {
-                if (Environment.GetEnvironmentVariable(TestRunVariable) == "1")
+                if (Environment.GetEnvironmentVariable(TestRunVariable) == "1" || Array.IndexOf(Environment.GetCommandLineArgs(), TestRunArgument) >= 0)
                 {
                     Assert.Pass(where + "Es la corrida de tests del simulador en curso (run-unity-tests.ps1 -Simulator), que lo "
                         + "restaura al terminar.");

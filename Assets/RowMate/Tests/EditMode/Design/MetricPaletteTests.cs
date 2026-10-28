@@ -26,9 +26,10 @@ namespace RowMate.Tests.EditMode.Design
         [Test, Category("AC-APP-06-01")]
         public void LabelAndIconColors()
         {
-            // Ícono y etiqueta al 100 % del color de la métrica; el pulso, metric.hr.hud (#FF5A7E, el mismo matiz más claro; DV-03).
+            // Ícono y etiqueta al 100 % del color de la métrica; el pulso, metric.hr.hud (#FF5D7F, el mismo matiz más claro; DV-03;
+            // era #FF5A7E hasta QA-V2-12, It. 3).
             Assert.That(MetricPalette.LabelFor(MetricKind.HeartRate), Is.SameAs(Tokens.MetricHrHud));
-            Assert.That(MetricPalette.LabelFor(MetricKind.HeartRate).Rgb.ToHex(), Is.EqualTo("#FF5A7E"));
+            Assert.That(MetricPalette.LabelFor(MetricKind.HeartRate).Rgb.ToHex(), Is.EqualTo("#FF5D7F"));
             foreach (var kind in new[] { MetricKind.Split, MetricKind.Spm, MetricKind.Watts, MetricKind.Distance })
             {
                 Assert.That(MetricPalette.LabelFor(kind), Is.SameAs(MetricPalette.For(kind)), kind.ToString());

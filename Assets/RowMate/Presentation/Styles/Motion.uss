@@ -99,11 +99,73 @@
     transition-timing-function: var(--rm-ease-move);
 }
 
+/* ════ It. 3 (03-rutinas/04-design-notes §5.9): las mismas reglas y los mismos tiempos. Lo que mueve el código (crecer y
+   colapsar, resaltado, colores del tipo, cápsula ×N, hojas, etiqueta del campo, pila, diálogo, menú, aviso, llave) no tiene
+   ninguna transición acá. ════ */
+
+/* Capas de estado de la tarjeta, el +, la cápsula, los selectores y los menús: hacia el estado dur.micro ease.enter (la
+   vuelta, dur.fast ease.exit, es la de .rm-button__state de arriba). */
+.rm-desktop .rm-routine-card:hover > .rm-button__state,
+.rm-routine-card:hover:active > .rm-button__state,
+.rm-desktop .rm-fab:hover > .rm-button__state,
+.rm-desktop .rm-chip--repeat:hover .rm-chip__pill > .rm-button__state,
+.rm-chip--repeat:hover:active .rm-chip__pill > .rm-button__state,
+.rm-desktop .rm-segmented .rm-segmented__option:hover > .rm-button__state,
+.rm-segmented .rm-segmented__option:hover:active > .rm-button__state,
+.rm-desktop .rm-menu__item:hover > .rm-button__state,
+.rm-menu__item:hover:active > .rm-button__state {
+    transition-duration: var(--rm-dur-micro);
+    transition-timing-function: var(--rm-ease-enter);
+}
+
+/* Botón +: escala 0,94 y fondo accent.primaryPressed al presionar (hacia 90; vuelta 240 la escala y 160 el fondo), como el
+   primario. Nadie anima su escala por código; su posición (bottom) la pone el código sin transición. */
+.rm-fab {
+    transition-property: scale;
+    transition-duration: var(--rm-dur-base);
+    transition-timing-function: var(--rm-ease-enter);
+}
+
+.rm-fab:hover {
+    transition-property: scale, background-color;
+    transition-duration: var(--rm-dur-base), var(--rm-dur-fast);
+    transition-timing-function: var(--rm-ease-enter), var(--rm-ease-enter);
+}
+
+.rm-fab:hover:active {
+    scale: 0.94 0.94;
+    transition-duration: var(--rm-dur-micro), var(--rm-dur-micro);
+}
+
+/* Mosaicos de tipo: escala 0,97 al presionar (la del chip ×N ya la da .rm-chip). Solo la escala: el fondo y el borde del
+   elegido los pinta el código. */
+.rm-segmented--tiles .rm-segmented__option {
+    transition-property: scale;
+    transition-duration: var(--rm-dur-base);
+    transition-timing-function: var(--rm-ease-enter);
+}
+
+.rm-segmented--tiles .rm-segmented__option:hover:active {
+    scale: 0.97 0.97;
+    transition-duration: var(--rm-dur-micro);
+}
+
+/* Borde del campo hacia el hover en 90 ms ease-out-cubic, solo en escritorio y solo bajo :hover (regla 1). La vuelta es en el
+   acto: una transición en la regla base también correría al perder el foco o al pasar a error, sin puntero, y quedaría
+   congelada en una captura. Con foco o con error el borde no cambia con el puntero (Skin.uss): no hay nada que transicionar. */
+.rm-desktop .rm-field__box:hover {
+    transition-property: border-color;
+    transition-duration: var(--rm-dur-micro);
+    transition-timing-function: var(--rm-ease-enter);
+}
+
 /* ── Reducir movimiento (AC-APP-05-08; §5.10): sin escala al presionar ── */
 .rm-reduce-motion .rm-button:hover:active,
 .rm-reduce-motion .rm-chip:hover:active,
 .rm-reduce-motion .rm-icon-button:hover:active,
 .rm-reduce-motion .rm-sim-fab:hover:active,
-.rm-reduce-motion .rm-tab:hover:active .rm-tab__icon-box {
+.rm-reduce-motion .rm-tab:hover:active .rm-tab__icon-box,
+.rm-reduce-motion .rm-fab:hover:active,
+.rm-reduce-motion .rm-segmented--tiles .rm-segmented__option:hover:active {
     scale: 1 1;
 }

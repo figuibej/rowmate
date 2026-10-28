@@ -89,6 +89,64 @@ namespace RowMate.Tests.PlayMode
             Assert.That(H.TextOf("device-name"), Is.EqualTo("Rower"), "sin nombre: Rower (device_screen.dart:98)");
         }
 
+        // QA-V2-01 (It. 3): la vista conectada que sale (120 ms) queda congelada con lo último que mostró: el nombre del remo
+        // que se fue (no "Rower") y la grilla con la última lectura, en cada cuadro de 1/60 s (legacy: device_screen.dart:33-38
+        // desmonta _ConnectedView en el acto; nunca dibuja la conectada sin remo conectado).
+        [UnityTest, Category("AC-BLE-11-02")]
+        public IEnumerator OutgoingConnectedViewIsFrozen()
+        {
+            yield return Connected(DeviceProfile.TV, Image01);
+            var connected = H.DeviceScreen!.Connected;
+            H.TestRower!.Emit(BleStatus.Disconnected);
+            H.TestRower.EmitData(new RowingData { StrokeRate = 0, PowerWatts = 0, DistanceMeters = 0, Pace500mSeconds = 0 });
+            yield return null;
+            H.Advance(0.06);
+            yield return null;
+            Assert.That(connected.style.display.value, Is.EqualTo(DisplayStyle.Flex), "a los 60 ms la vista conectada sigue saliendo");
+            var frames = 0;
+            while (connected.style.display.value == DisplayStyle.Flex && frames < 30)
+            {
+                Assert.That(H.TextOf("device-name"), Is.EqualTo("Remo de prueba"), "cuadro " + frames + " de la salida");
+                Assert.That(connected.Header.BadgeLabel.text, Is.EqualTo("Conectado"));
+                Assert.That(Tile(MetricKind.Watts), Is.EqualTo("149"), "la grilla saliente no cambia");
+                frames++;
+                H.Step();
+                yield return null;
+            }
+
+            Assert.That(connected.style.display.value, Is.EqualTo(DisplayStyle.None), "la salida terminó");
+            Assert.That(frames, Is.GreaterThan(0));
+        }
+
+        // QA-V2-13 (It. 3): en el teléfono ninguna vista desplazable de Dispositivo muestra la barra vertical (Flutter en
+        // Android no la dibuja) y se sigue desplazando; en escritorio la barra aparece cuando el contenido no entra.
+        [UnityTest, Category("AC-BLE-11-07"), Category("QA-V2-13")]
+        public IEnumerator VerticalScrollbarOnlyOnDesktop()
+        {
+            string[] scrolls = { "device-connected-scroll", "device-empty-area", "hrm-card-slot-scan" };
+            foreach (var desktop in new[] { false, true })
+            {
+                Create(new UiHostOptions { Profile = DeviceProfile.TH, IsDesktop = desktop });
+                H.TestRower!.ConnectedName = "Remo de prueba";
+                H.TestRower.Emit(BleStatus.Connected);
+                yield return Settle();
+                yield return Frames(3);
+                foreach (var name in scrolls)
+                {
+                    Assert.That(H.Find<ScrollView>(name)!.verticalScrollerVisibility,
+                        Is.EqualTo(desktop ? ScrollerVisibility.Auto : ScrollerVisibility.Hidden), name + (desktop ? " escritorio" : " teléfono"));
+                    Assert.That(H.Find<ScrollView>(name)!.horizontalScrollerVisibility, Is.EqualTo(ScrollerVisibility.Hidden), name);
+                }
+
+                var connected = H.Find<ScrollView>("device-connected-scroll")!;
+                Assert.That(connected.verticalScroller.resolvedStyle.display, Is.EqualTo(desktop ? DisplayStyle.Flex : DisplayStyle.None),
+                    "TH: el contenido no entra; la barra solo en escritorio");
+                H.ScrollToEnd("device-connected-scroll");
+                yield return Frames();
+                Assert.That(H.ScrollOffsetOf("device-connected-scroll"), Is.GreaterThan(0f), "se desplaza igual");
+            }
+        }
+
         [UnityTest, Category("AC-BLE-11-03")]
         public IEnumerator FourTilesInOrder()
         {

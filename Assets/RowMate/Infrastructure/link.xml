@@ -1,0 +1,9 @@
+<!--
+  IL2CPP (R3-01, RA-05): sqlite-net llena las filas por reflexión (RoutineRow, IntervalStepRow y sus setters), así que el
+  stripping no puede sacar nada de estos dos ensamblados. Los atributos [Column] del paquete ya heredan de
+  UnityEngine.Scripting.PreserveAttribute; esto cubre lo demás. Lo prueba DatabaseSmoke en un player (-rowmate-db-smoke).
+-->
+<linker>
+  <assembly fullname="RowMate.Infrastructure" preserve="all" />
+  <assembly fullname="Gilzoide.SqliteNet" preserve="all" />
+</linker>

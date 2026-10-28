@@ -16,3 +16,5 @@ MonoBehaviour:
   _stringsEs: {fileID: 4900000, guid: 6318638c6bd4b164ab738ac508c0a132, type: 3}
   _stringsEn: {fileID: 4900000, guid: 695bb7a6ca8adab408e331873c1debf3, type: 3}
   _presentMaterial: {fileID: 0}
+  _iconsOutlineFallback: {fileID: 11400000, guid: 846fc2a2adfad4346a05315267d02f20, type: 2}
+  _emojiFallback: {fileID: 11400000, guid: c236429d7054a6f488ae563d4449e91b, type: 2}

@@ -20,6 +20,8 @@ namespace RowMate.Snapshots
     // escenario a la vez: arma el UiTestHost, corre su Arrange (yield return null = un update), aplica la regla de toma de la
     // foto fija (DN-21) o graba el video cuadro a cuadro, lee la RT, recorta, guarda el PNG, audita el layout, mide las sondas
     // y anota todo en manifest.json e INDEX.md. Un escenario que falla queda con su error y la corrida sigue.
+    // It. 3 (03-rutinas/02-tech-design §5.1): secuencias (una armada, varias tomas: DEMO), el título del INDEX por conjunto y la
+    // regla de toma con "ninguna transición de capa en curso" (AppShellView.IsSettled).
     // Códigos de salida: 0 todo bien; 1 alguna toma falló (error, sonda que no es de aspecto, auditoría o comprobación);
     // 3 venció el tope de 15 min.
     public sealed class SnapshotRunner
@@ -43,13 +45,15 @@ namespace RowMate.Snapshots
         private bool _finished;
         private Rt1Measurement? _rt1;
 
-        public SnapshotRunner(IReadOnlyList<SnapshotScenario> scenarios, string outputFolder, UiColorPipeline pipeline, bool partial, Action<int> exit)
+        public SnapshotRunner(IReadOnlyList<SnapshotScenario> scenarios, string outputFolder, UiColorPipeline pipeline, bool partial, Action<int> exit,
+                              string title = "It. 2")
         {
             _scenarios = new List<SnapshotScenario>(scenarios);
             _output = outputFolder;
             _pipeline = pipeline;
             _partial = partial;
             _exit = exit;
+            _manifest.Title = title;
         }
 
         public void Start()
@@ -141,12 +145,109 @@ namespace RowMate.Snapshots
             _host.Root.RegisterCallback<TransitionRunEvent>(_ => _transitions++, TrickleDown.TrickleDown);
             _host.Root.RegisterCallback<TransitionEndEvent>(_ => _transitions--, TrickleDown.TrickleDown);
             _host.Root.RegisterCallback<TransitionCancelEvent>(_ => _transitions--, TrickleDown.TrickleDown);
+            if (scenario.Kind == SnapshotKind.Sequence)
+            {
+                // La secuencia no tiene registro propio: cada Shot lleva el suyo.
+                _record = null;
+                _sequence = scenario;
+                _sequenceTaken.Clear();
+                _stack.Push(SequenceRoutine(scenario, _host));
+                return true;
+            }
+
             _stack.Push(scenario.Kind == SnapshotKind.Video ? VideoRoutine(scenario, _host) : StillRoutine(scenario, _host));
             return true;
         }
 
+        private SnapshotScenario? _sequence;
+        private readonly HashSet<string> _sequenceTaken = new HashSet<string>(StringComparer.Ordinal);
+
+        private IEnumerator SequenceRoutine(SnapshotScenario scenario, UiTestHost host)
+        {
+            var script = new ScenarioScript(host) { OnShot = (id, checks) => ShotRoutine(scenario, host, id, checks) };
+            yield return script.Frames(3);
+            if (scenario.Arrange != null)
+            {
+                yield return scenario.Arrange(script);
+            }
+        }
+
+        // Una toma de la secuencia: registro propio, regla de toma, captura y al manifest.
+        private IEnumerator ShotRoutine(SnapshotScenario scenario, UiTestHost host, string id, Func<UiTestHost, IEnumerable<string>>? checks)
+        {
+            var spec = FindShot(scenario, id);
+            var record = NewRecord(scenario);
+            record.Id = id;
+            record.File = spec.Stem + ".png";
+            record.State = spec.State;
+            _record = record;
+            var clock = Stopwatch.StartNew();
+            Debug.Log("[SNAPSHOT] " + id + " (" + record.File + ")");
+            yield return TakeRule(scenario, host);
+            yield return new ScenarioScript(host).Frames(3);
+            Capture(scenario, host, record.File, null, new List<PixelProbe>(), checks);
+            record.DurationMs = clock.Elapsed.TotalMilliseconds;
+            _manifest.Add(record);
+            _sequenceTaken.Add(id);
+            Debug.Log("[SNAPSHOT] " + id + ": " + (record.Passed ? "ok" : "FALLA " + Summary(record)));
+            _record = null;
+        }
+
+        private static (string Id, string Stem, string State) FindShot(SnapshotScenario scenario, string id)
+        {
+            foreach (var shot in scenario.SequenceShots)
+            {
+                if (shot.Id == id)
+                {
+                    return shot;
+                }
+            }
+
+            throw new InvalidOperationException("la secuencia " + scenario.Id + " no declara la toma " + id);
+        }
+
+        // Lo que una secuencia cortada no llegó a tomar queda en el manifest como falla (nunca falta en silencio).
+        private void CloseSequence(string? error)
+        {
+            var scenario = _sequence;
+            _sequence = null;
+            if (scenario == null)
+            {
+                return;
+            }
+
+            foreach (var shot in scenario.SequenceShots)
+            {
+                if (_sequenceTaken.Contains(shot.Id))
+                {
+                    continue;
+                }
+
+                var record = NewRecord(scenario);
+                record.Id = shot.Id;
+                record.File = shot.Stem + ".png";
+                record.State = shot.State;
+                record.Error = "la secuencia " + scenario.Id + " no llegó a esta toma" + (error != null ? " (" + error + ")" : "");
+                _manifest.Add(record);
+            }
+        }
+
         private void EndScenario()
         {
+            if (_sequence != null)
+            {
+                if (_record != null)
+                {
+                    // Una toma que falló a mitad: su registro ya tiene el error.
+                    _record.DurationMs = _shotClock.Elapsed.TotalMilliseconds;
+                    _manifest.Add(_record);
+                    _sequenceTaken.Add(_record.Id);
+                    _record = null;
+                }
+
+                CloseSequence(null);
+            }
+
             if (_record != null)
             {
                 _record.DurationMs = _shotClock.Elapsed.TotalMilliseconds;
@@ -173,7 +274,7 @@ namespace RowMate.Snapshots
 
             yield return TakeRule(scenario, host);
             yield return script.Frames(3);
-            Capture(scenario, host);
+            Capture(scenario, host, scenario.FileName, scenario.CropElement, scenario.Probes, scenario.Checks);
         }
 
         // Regla de toma de una foto fija (DN-21; 04-design-notes §7.1): sin animaciones finitas, corazón en reposo y sin
@@ -210,7 +311,7 @@ namespace RowMate.Snapshots
             var retried = false;
             while (true)
             {
-                if (!host.HasFiniteMotions && host.IsHeartAtRest() && _transitions <= 0)
+                if (!host.HasFiniteMotions && host.IsHeartAtRest() && _transitions <= 0 && host.Shell.IsSettled)
                 {
                     break;
                 }
@@ -240,27 +341,28 @@ namespace RowMate.Snapshots
             _record!.TakenAtSeconds = host.Scheduler.MonotonicSeconds;
         }
 
-        private void Capture(SnapshotScenario scenario, UiTestHost host)
+        private void Capture(SnapshotScenario scenario, UiTestHost host, string fileName, string? cropElement, List<PixelProbe> probes,
+                             Func<UiTestHost, IEnumerable<string>>? checks)
         {
             var record = _record!;
             var frame = host.ReadPixels();
             try
             {
                 Texture2D image = frame;
-                if (scenario.CropElement != null)
+                if (cropElement != null)
                 {
-                    var element = host.Find(scenario.CropElement) ?? throw new InvalidOperationException("recorte: no existe #" + scenario.CropElement);
+                    var element = host.Find(cropElement) ?? throw new InvalidOperationException("recorte: no existe #" + cropElement);
                     var crop = RtReader.ToPixels(element.worldBound, host.Profile.Density, CropMarginDp);
                     image = RtReader.Read(host.Target, crop);
                 }
 
-                File.WriteAllBytes(Path.Combine(_output, scenario.FileName), image.EncodeToPNG());
+                File.WriteAllBytes(Path.Combine(_output, fileName), image.EncodeToPNG());
                 if (!ReferenceEquals(image, frame))
                 {
                     Object.DestroyImmediate(image);
                 }
 
-                foreach (var probe in scenario.Probes)
+                foreach (var probe in probes)
                 {
                     var result = probe.Measure(host.Root, frame, host.Profile.Density);
                     record.Probes.Add(new ProbeRecord
@@ -284,9 +386,9 @@ namespace RowMate.Snapshots
             var audit = host.Audit();
             record.Overflows.AddRange(audit.Overflows);
             record.ClippedTexts.AddRange(audit.ClippedTexts);
-            if (scenario.Checks != null)
+            if (checks != null)
             {
-                record.Problems.AddRange(scenario.Checks(host));
+                record.Problems.AddRange(checks(host));
             }
 
             if (host.HasErrors())
@@ -431,7 +533,14 @@ namespace RowMate.Snapshots
                 }
             }
 
-            Debug.Log("[SNAPSHOT] listo: " + _manifest.Shots.Count + " tomas, " + failed + " con problemas → " + _output);
+            // Las sondas de aspecto no hacen fallar la corrida, pero se cuentan y se avisan (QA-V2-04).
+            var aspect = SnapshotManifest.FailingAspectProbes(_manifest.Shots);
+            if (aspect > 0)
+            {
+                Debug.LogWarning("[SNAPSHOT] " + aspect + " sondas de aspecto fallan (ver la columna Sondas de INDEX.md)");
+            }
+
+            Debug.Log("[SNAPSHOT] listo: " + _manifest.Shots.Count + " tomas, " + failed + " con problemas, " + aspect + " sondas de aspecto que fallan → " + _output);
             return failed == 0 ? 0 : 1;
         }
 

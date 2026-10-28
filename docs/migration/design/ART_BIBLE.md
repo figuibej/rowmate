@@ -56,7 +56,7 @@ El gate, el valor por defecto y si se le confirma al usuario están en [ROADMAP 
 
 ## 2. Tokens de diseño
 
-Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/Tokens.cs` (`RowMate.Core.Design.Tokens`, 122 tokens desde la It. 1, ADR 016). De ahí `tools/tokens` genera las variables USS (`--rm-*`) para UI Toolkit, y los tests de contraste de dotnet leen la misma clase. **Si esta biblia y `Tokens.cs` no coinciden, manda `Tokens.cs`.** Los valores exactos, el rol de contraste de cada token y los contrastes verificados están en [04-design-notes §2 y §4](../iterations/01-fundaciones/04-design-notes.md). Cada token tiene un solo valor: el texto y su fondo, el anillo y su halo, y cada tamaño tipográfico son tokens separados (`state.connected` / `state.connectedBg`, `focus.ring` / `focus.ringHalo`, `num.m` / `num.band`).
+Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/Tokens.cs` (`RowMate.Core.Design.Tokens`, ADR 016): 122 tokens en la It. 1, 127 desde la It. 2 (`bodyM`, `bodyXs`, `button`, `accent.tonalBg`, `accent.onTonal`) y **133** desde la It. 3 (`overlay.scrim`, `border.input`, `text.selection`, `titleXs`, `headerS`, `buttonS`). De ahí `tools/tokens` genera las variables USS (`--rm-*`, `Tokens.uss`) y las clases de tipo (`Typography.uss`) para UI Toolkit, y los tests de contraste de dotnet leen la misma clase. **Si esta biblia y `Tokens.cs` no coinciden, manda `Tokens.cs`.** Los valores exactos, el rol de contraste de cada token y los contrastes verificados están en [04-design-notes de la It. 1 §2 y §4](../iterations/01-fundaciones/04-design-notes.md), en [04-design-notes de la It. 2 §2.1 y §8](../iterations/02-dispositivo-simulador/04-design-notes.md) y, para las variantes del HUD, en [03-rutinas/00-deuda-diseno §2](../iterations/03-rutinas/00-deuda-diseno.md); los de Rutinas y el editor, en [03-rutinas/04-design-notes §2 y §8](../iterations/03-rutinas/04-design-notes.md). Cada token tiene un solo valor: el texto y su fondo, el anillo y su halo, y cada tamaño tipográfico son tokens separados (`state.connected` / `state.connectedBg`, `focus.ring` / `focus.ringHalo`, `accent.onTonal` / `accent.tonalBg`, `num.m` / `num.band`).
 
 ### 2.1 Fondos, superficies, texto y bordes de la app
 
@@ -67,11 +67,13 @@ Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/
 | `surface.card` | `#1A2E45` | tarjetas (dispositivo, rutinas, historial, editor) | [CONTRATO] |
 | `surface.raised` | `#23364C` | filas internas, tarjeta presionada, elemento seleccionado de lista | legacy medido |
 | `surface.overlay` | `#1E3550` | diálogos, menús, hojas inferiores | nuevo |
+| `overlay.scrim` | `#000000` | velo de los diálogos (opacidad 0,6), oscurecido de lo de atrás en la pila (0,08) y capa de estado del ítem de peligro del menú (12 / 24 %); la opacidad la pone el código | It. 3 |
 | `surface.nav` | `#0A1622 @92 %`, **sin desenfoque**, + borde superior 1 px `border.subtle` | barra de pestañas translúcida (§3.11). UI Toolkit no desenfoca lo que queda debajo y el desenfoque de la escena no está detrás de la barra (QA-P-22). Peor caso, con texto blanco debajo: `accent.primary` 6,0:1, `text.secondary` 8,0:1 | nuevo (reemplaza `#1C2024` de M3) |
 | `nav.indicator` | `#00B4D8 @18 %` | pastilla del destino seleccionado | nuevo |
 | `border.subtle` | `#FFFFFF @8 %` | borde de vidrio, separadores de barra | legacy |
 | `border.default` | `#FFFFFF @12 %` | separadores, miniatura no elegida | legacy |
-| `border.strong` | `#FFFFFF @24 %` | botón contorno neutro, foco inactivo | legacy |
+| `border.strong` | `#FFFFFF @24 %` | botón contorno neutro, foco inactivo, segmentado | legacy |
+| `border.input` | `#FFFFFF @40 %` | borde de la caja de los campos en reposo: 3,807:1 contra `bg.sunken` (con `border.strong` daba 2,132) | It. 3 |
 | `focus.ring` | `#00B4D8` | anillo de foco de teclado (desktop), grosor `stroke.focus` 2. 5,6:1 sobre card | nuevo |
 | `focus.ringHalo` | `#00B4D8 @30 %` | halo del foco, grosor `stroke.focusHalo` 4 (decorativo: el anillo cumple solo) | nuevo |
 | `text.primary` | `#FFFFFF` | 13,8:1 sobre `surface.card` | legacy |
@@ -79,9 +81,12 @@ Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/
 | `text.tertiary` | `#FFFFFF @54 %` (≈ `#969FA9`) | fechas, ejes, ayudas | 5,1:1 [DECIDIR D-ART-03] |
 | `text.disabled` | `#FFFFFF @38 %` | solo deshabilitado o decorativo | 3,3:1 (permitido para deshabilitado) |
 | `text.onAccent` | `#04131C` | texto sobre cian, menta, amarillo | 7,6:1 sobre `#00B4D8` |
-| `brand.seed` | `#0077B6` | segmento seleccionado, encabezado de serie (`@12 %`, pie `@6 %`) | [CONTRATO] |
-| `accent.primary` | `#00B4D8` | acento general (íconos de remo/rutina, borde de miniatura elegida, chip ×N, índices) | [CONTRATO] |
+| `text.selection` | `#00B4D8 @35 %` | selección de texto en los campos (blanco encima 9,586:1) | It. 3 |
+| `brand.seed` | `#0077B6` | segmento seleccionado (texto blanco 4,868:1), riel de la serie, encabezado de serie (`@12 %`), cuerpo y pie (`@6 %`), hojas (`@20 %` / `@12 %`) | [CONTRATO] |
+| `accent.primary` | `#00B4D8` | acento general (íconos de remo/rutina, borde de miniatura elegida, `Serie` y el botón del pie de la serie, cápsula del chip ×N a `@20 %`, índices) | [CONTRATO] |
 | `accent.primaryPressed` | `#0096B4` | botón primario presionado | variante |
+| `accent.tonalBg` | `#00B4D8 @12 %` | fondo del botón tonal (decorativo) | It. 2 (con `@16 %` el acento encima no llegaba a AA) |
+| `accent.onTonal` | `#38CBEF` | texto e ícono del botón tonal: 5,9:1 sobre el tonal en la tarjeta, 5,2:1 con *hover* | It. 2. Mismo matiz que `accent.primary`, más claro; coincide con el `metric.spm.hud` de la It. 1, pero es un token independiente (no sigue sus cambios, §2.3). Desde la It. 3, también el número del chip `×N`: 5,620:1 sobre su cápsula (`accent.primary` daba 4,370) |
 
 ### 2.2 Semántica — métricas, pasos, fases y estados [CONTRATO]
 
@@ -104,7 +109,7 @@ Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/
 | | `phase.finished` | `#EF476F` | FINALIZADO |
 | Estado | `state.offTarget` | `#FF4444` | valor fuera de objetivo |
 | | `state.success` | `#06D6A0` | completado, reanudar (texto `text.onAccent`) |
-| | `state.connected` | `#69F0AE` | texto e ícono del chip "Conectado", RECEIVING (9,7:1 sobre card; 7,0:1 sobre su chip) |
+| | `state.connected` | `#69F0AE` | texto e ícono del chip "Conectado", RECEIVING (9,7:1 sobre card; 7,0:1 sobre su chip en la tarjeta; 8,8:1 sobre la insignia de Dispositivo, que va sobre `bg.app`) |
 | | `state.connectedBg` | `#4CAF50 @20 %` | fondo del chip "Conectado" |
 | | `state.warning` | `#FF9800` | texto del aviso "remo no conectado" (6,4:1 sobre card; 5,0:1 sobre su aviso) |
 | | `state.warningBg` | `#FF9800 @15 %` | fondo del aviso |
@@ -119,28 +124,34 @@ Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/
 
 Íconos por tipo de paso [CONTRATO]: calentamiento `whatshot`, trabajo `fitness_center`, descanso `pause_circle`, enfriamiento `ac_unit` (Material Symbols Rounded, ver ASSET_SLOTS `ui.icons`). El descanso usa `pause_circle` (`E1A2`) de la fuente **sin relleno**, que es el `pause_circle_outline` del legacy (P-07).
 
+**Regla de color de tipo (It. 3; también fuera del HUD):** el **texto y los íconos** del tipo usan la variante `step.*.hud` (título de la fila del editor, ícono de su insignia, mosaico del diálogo, vista previa); los **gráficos** usan el color base (borde izquierdo de la fila, fondo de la insignia y del mosaico elegido `@20 %`, borde del mosaico elegido, tramos de la mini-barra). Con la base, el título del trabajo daba 3,815:1 sobre la tarjeta y el ícono del enfriamiento 2,744 sobre su insignia; con `.hud`, 4,685 y 3,723 ([03-rutinas/04-design-notes §2.3](../iterations/03-rutinas/04-design-notes.md); DV-12 ampliada).
+
 ### 2.3 Variantes de luminancia para el HUD (`*.hud`)
 
-Se calcularon con OKLCH (mismo matiz, solo sube la claridad y baja el croma si sale de gamut) contra el **peor fondo posible del vidrio**: vidrio `#070D16 @86 %` (token `glass.fallback`, que es también el alfa máximo del vidrio adaptativo, §3.2) sobre una nube blanca = `#2A2F37` (luminancia 0,028). Script de cálculo reproducible: ver §11 (test de contraste en Core).
+Se calculan con OKLCH (mismo matiz que la base, solo sube la claridad y baja el croma si sale de gamut) contra el **peor fondo posible del vidrio**: vidrio `#070D16 @86 %` (token `glass.fallback`, que es también el alfa máximo del vidrio adaptativo, §3.2) sobre una nube blanca = `(41,72; 46,88; 54,62)`, que en pantalla es `#2A2F37` (luminancia 0,028).
 
-| Token | Hex | Contraste peor caso | Regla |
+**Criterio con margen de render (It. 3, QA-V2-12).** Cada variante llega a su umbral contra **`#2B3038`**: el peor vidrio ya renderizado en 8 bits (`#2A2F37`, el que midió R-T1 en la It. 2: la mezcla se cuantiza hacia arriba) más 1 por canal (GPU, dithering, sonda). Equivale a ≈ 1,7 % de margen sobre el cálculo sin redondear. Con el criterio anterior (umbral contra el cálculo sin redondear, sin margen) el pulso daba 4,508 en el cálculo y **4,497 en el píxel real**, y el Split 7,004 y 6,987: los dos por debajo del umbral en pantalla. Detalle y números en [03-rutinas/00-deuda-diseno §2](../iterations/03-rutinas/00-deuda-diseno.md); lo prueba `ContrastTests.HudKeepsItsThresholdOnTheRenderedWorstGlass` (§11).
+
+| Token | Hex | Contraste (:1): cálculo sin redondear · contra `#2B3038` | Regla |
 |---|---|---|---|
-| `metric.split.hud` | `#FEA845` | 7,0:1 | valor de Split en HUD |
-| `metric.spm.hud` | `#38CBEF` | 7,0:1 | valor de SPM en HUD |
-| `metric.watts.hud` | `#FFD60A` (= base) | 9,6:1 | |
-| `metric.distance.hud` | `#4CC9F0` (= base) | 7,0:1 | |
-| `metric.time.hud` | `#E0E0E0` (= base) | 10,2:1 | |
-| `metric.kcal.hud` | `#06D6A0` (= base) | 7,2:1 | |
-| `metric.hr.hud` | `#FF5A7E` | 4,5:1 | [DECIDIR D-ART-01]; a 7:1 sería `#FFA1AD` (rosa pálido) |
-| `state.offTarget.hud` | `#FF5F59` | 4,5:1 | + flecha ▲/▼ + borde `@70 %` (D-ART-01); a 7:1 sería `#FFA29A` |
-| `step.*.hud` (texto de tipo y chips) | work `#FF5A7E`, rest `#06D6A0`, warmup `#FFD166`, cooldown `#35A0C9`, unknown `#7C9AA8` | ≥ 4,5:1 | texto chico de la barra de pasos |
-| `text.hudPrimary` | `#FFFFFF` | 13,5:1 | valor con objetivo cumplido (Q-60) |
+| `metric.split.hud` | `#FFAA47` (era `#FEA845`) | 7,127 · 7,009 | valor de Split en HUD |
+| `metric.spm.hud` | `#3ACCF1` (era `#38CBEF`) | 7,124 · 7,006 | valor de SPM en HUD |
+| `metric.watts.hud` | `#FFD60A` (= base) | 9,557 · 9,399 | |
+| `metric.distance.hud` | `#4ECBF2` (era `#4CC9F0`, la base) | 7,163 · 7,044 | |
+| `metric.time.hud` | `#E0E0E0` (= base) | 10,221 · 10,052 | |
+| `metric.kcal.hud` | `#06D6A0` (= base) | 7,154 · 7,035 | |
+| `metric.hr.hud` | `#FF5D7F` (era `#FF5A7E`) | 4,577 · 4,502 | D-ART-01; a 7:1 sería `#FFA1AD` (rosa pálido). También es la etiqueta, el título y la unidad del pulso en Dispositivo (4,685:1 sobre card) |
+| `state.offTarget.hud` | `#FF625B` (era `#FF5F59`) | 4,594 · 4,518 | + flecha ▲/▼ + borde `@70 %` (D-ART-01); a 7:1 sería `#FFA29A` |
+| `step.*.hud` (texto de tipo y chips) | work `#FF5D7F` (= `metric.hr.hud`), rest `#06D6A0`, warmup `#FFD166`, cooldown `#37A2CB` (era `#35A0C9`), unknown `#7D9BA9` (era `#7C9AA8`) | ≥ 4,5:1 contra `#2B3038` | texto chico de la barra de pasos y, desde la It. 3, título e ícono de tipo en el editor, los mosaicos y la vista previa (§2.2) |
+| `text.hudPrimary` | `#FFFFFF` | 13,493 · 13,269 | valor con objetivo cumplido (Q-60) |
 
-Las **etiquetas** del HUD ("SPM", "Split /500m"…) usan el color base de la métrica (≥ 4,5:1 salvo hr, que usa `metric.hr.hud`). Los **rellenos gráficos** (píldoras, bordes, glow, líneas del gráfico) usan siempre el **hex base**: son elementos gráficos, no texto.
+Los cambios de la It. 3 suben la claridad OKLCH entre 0,003 y 0,006 (ΔE OK ≤ 0,0062, por debajo de lo que se distingue a simple vista) y no tocan ningún color de contrato.
+
+Las **etiquetas** del HUD ("SPM", "Split /500m"…) usan el color base de la métrica (≥ 4,5:1 salvo hr, que usa `metric.hr.hud`). Los **rellenos gráficos** (píldoras, bordes, glow, líneas del gráfico) usan siempre el **hex base**: son elementos gráficos, no texto. Ningún texto del HUD se apoya sobre el reflejo interior del vidrio ni sobre el glow, ni baja su opacidad en pausa (§3.2): los tres se comen el margen.
 
 ### 2.4 Espaciado, radios, bordes y profundidad
 
-- **Unidad:** 1 px de USS = 1 dp (PanelSettings en *Constant Physical Size*, 160 DPI de referencia).
+- **Unidad:** 1 px de USS = 1 dp. `PanelSettings` en `ConstantPixelSize` con `scale` = densidad del sistema (Android `DisplayMetrics.density`, Windows `dpi / 96`): "1 dp = 1 px × densidad", igual que el legacy (D-03 de la It. 2; *Constant Physical Size* a 160 dpi usaba los dpi físicos y podía dar un 2-5 % distinto).
 - **Espaciado** (`space.dp<N>`; un segmento de nombre no puede empezar con un dígito): `space.dp2` 2 · `space.dp4` 4 · `space.dp6` 6 · `space.dp8` 8 · `space.dp12` 12 · `space.dp16` 16 · `space.dp20` 20 · `space.dp24` 24 · `space.dp32` 32 · `space.dp40` 40 · `space.dp48` 48.
 - **Radios:** `r.xs 4` (píldora de paso), `r.s 6` (chips chicos), `r.m 8` (chips, cajas internas), `r.l 12` (botones, avisos, miniaturas), `r.glass 14` (vidrio HUD) [CONTRATO], `r.card 16` (tarjetas), `r.full 999` (banda tiempo/distancia, píldoras de nav).
 - **Grosores** (`stroke.*`): `stroke.hairline` 1 (vidrio, separadores) · `stroke.target` 1,5 (tarjeta con objetivo activo, contornos de botón) · `stroke.focus` 2 (anillo de foco, campo con foco) · `stroke.selected` 2,5 (miniatura de escenario elegida [CONTRATO]) · `stroke.accent` 3 (acento superior del tablero y borde izquierdo de paso [CONTRATO]) · `stroke.focusHalo` 4 (halo del foco).
@@ -158,23 +169,26 @@ Tecnología (ARCHITECTURE §7): **UI Toolkit (UXML + USS)** con **UI Shader Grap
 
 | Parte | Spec |
 |---|---|
-| Contenedor | `surface.card`, `r.card`, padding 16, sin borde salvo el superior |
-| Acento superior | 3 px del color base de la métrica + debajo un degradé vertical del mismo color `@18 % → 0` en 24 px (luz de tablero) |
-| Encabezado | ícono 14 + etiqueta `label` 12/600 en mayúsculas, tracking 0,08 em, centrado. Ícono y etiqueta en el **color base `@100 %`** (sobre card: split 6,7:1, SPM 5,6, watts 9,8, distancia 7,2). El **pulso** usa `metric.hr.hud` (4,6:1), porque la base da 3,8. Antes decía `@85 %`, que no llega a 4,5:1 en SPM (4,48) ni en pulso (3,07) |
-| Valor | `num.xl` (52, Barlow Semi Condensed 700, cifras tabulares), color base de la métrica (texto grande, ≥ 3:1: el mínimo es el pulso con 3,8:1), centrado, `FittedBox` equivalente: se achica hasta 40 si no entra |
-| Unidad | 14/500 Inter `text.secondary`, línea base alineada al valor |
-| Estado "dato nuevo" | el acento superior se ilumina `@100 % → @60 %` en 300 ms al llegar un valor distinto (ANIMATION_BIBLE §2.4) |
-| Grilla | 2 columnas (ancho ≤ 600, aspecto 1,3) o 3 (aspecto 1,6), separación 12 [CONTRATO]; tablet ≥ 840: 4 columnas |
-| Pulsómetro | misma tarjeta a ancho completo, acento `metric.hr`; el corazón late a la frecuencia real (ANIMATION_BIBLE §2.9); corazón `@40 %` sin conexión [CONTRATO]. El corazón del encabezado es siempre el glifo `favorite` **relleno**, como el legacy (`heart_rate_card.dart:39`); el contorno queda para las filas de pulsómetros encontrados (`favorite_border`, `:138`). El título "PULSÓMETRO" va en `metric.hr.hud` (4,6:1): el `@70 %` del legacy da 2,5:1 |
+| Contenedor | `surface.card`, `r.card` 16, padding 16, sin sombra ni borde salvo el superior [contrato]. No es accionable: sin *hover* ni presión |
+| Acento superior | `stroke.accent` 3 dp del color base de la métrica **`@60 %` en reposo** (legacy `withOpacity(0.6)`): split `#A3722C`, SPM `#0A7E9D`, vatios `#A39322`, distancia `#388BAC`, pulso `#9A3D5E` sobre la tarjeta. Es decorativo (no es texto) |
+| Brillo (luz de tablero) | degradé vertical del color de la métrica que baja **24 dp** desde el borde superior: una textura blanca de 1 × 64 con alfa `smoothstep` (1 arriba → 0 abajo), generada al arrancar y teñida desde USS (`-unity-background-image-tint-color`), radios superiores 14, estirada (`stretch-to-fill`). Opacidad **0,084 en reposo** (= pico 0,14 × 0,60) y **0,14** al llegar un dato. Con 18 % (el valor anterior) el brillo se volvía una bruma gris sobre la tarjeta azul en naranja y amarillo |
+| Encabezado | fila centrada: ícono 14 + 6 + etiqueta `label` 12/600, tracking 0,08 em. Ícono y etiqueta en el **color base `@100 %`** (sobre card: split 6,7:1, SPM 5,6, watts 9,8, distancia 7,2; con el brillo a la altura de la etiqueta, ≥ 5,4). El **pulso** usa `metric.hr.hud` (4,685:1; 4,58 con el brillo), porque la base da 3,8 (DV-03). Las etiquetas llegan del catálogo con su caja (`SPLIT 500m`): no hay mayúsculas por USS |
+| Valor | `num.xl` (52, Barlow Semi Condensed 700, cifras tabulares con `TabularNumber`), color base de la métrica (texto grande, ≥ 3:1: el mínimo es el pulso con 3,8:1). Centrado en el espacio bajo el encabezado, con la **banda de las mayúsculas** centrada en su caja (centrado óptico: en Barlow la banda queda 0,05 em por debajo del centro de la caja de línea). Si no entra, `FitBox` lo achica **sin tope inferior** (D-10; `123456m` en 2 columnas a 411 dp: escala 0,707); cuando el largo cambia, la escala sigue un resorte (ANIMATION_BIBLE §2.13) |
+| Marcadores (`--:--`, `0.0`, `0`, `0m`) | mismos colores y tamaño que el valor (paridad); el guion ocupa su avance real (0,37 em), así `--` se lee como dos guiones |
+| Unidad | en el tablero no hay unidad aparte: `226m` es parte del número (paridad). La única es `bpm` en la tarjeta del pulsómetro (fila Pulsómetro) |
+| Estado "dato nuevo" | solo en las tarjetas cuyo **texto** cambió: el acento sube a `@100 %` y el brillo a 0,14, y vuelven a `@60 %` y 0,084 en 300 ms (`ease.pulse`, ANIMATION_BIBLE §2.4) |
+| Grilla | ancho = ventana − 40; > 600 → 3 columnas y aspecto 1,6; si no, 2 y 1,3; separación 12 [CONTRATO]. 4 columnas en tablet: propuesta fuera de paridad, no implementada (P-02 de la It. 2) |
+| Pulsómetro | misma tarjeta a ancho completo (`margin-top` 12 bajo la grilla y 64 dp de aire hasta el final del contenido), con acento `metric.hr @60 %` **fijo** y brillo en reposo (sin destello: su signo vital es el corazón). Encabezado alineado a la izquierda: corazón `favorite` **relleno** 14 `metric.hr` (como el legacy, `heart_rate_card.dart:39`; el contorno queda para las filas de pulsómetros encontrados, `favorite_border`, `:138`) + 6 + título `label` en `metric.hr.hud` (el `@70 %` del legacy da 2,5:1). Corazón pleno conectado (late solo con pulso > 0, ANIMATION_BIBLE §2.9) y `@40 %` en cualquier otro estado [CONTRATO]. Conectado: nombre `bodyM` 14 `text.secondary` + valor `num.xl` `metric.hr` + 6 + unidad `bpm` en `bodyM` 14/400 **`metric.hr.hud`** en la misma línea de base que el número (DV-04, QA-G2-08: con `text.secondary` era blanca y con `metric.hr` daba 3,8:1) + `Desconectar` (texto peligro). Error: texto suelto `bodyXs` `state.dangerText`, hasta 3 líneas, **sin** la caja de §3.10 (paridad). Cuerpo por estado (sin sensor, buscando, conectando, conectado, recordado): [04-design-notes de la It. 2 §4.6](../iterations/02-dispositivo-simulador/04-design-notes.md) |
+| Cabecera de Dispositivo | fila centrada que puede ajustar (`flex-wrap`): ícono `rowing` 32 `accent.primary` + 12 + nombre `title` con "…" + 12 + insignia `Conectado` (relleno 4 / 10, radio 12, `state.connectedBg`, ícono 12 + 4 + `bodyXs`, `state.connected`). Si no entra (360 dp con letra 1,3×), la insignia baja a una segunda línea centrada |
 
 ### 3.2 HUD glass (tarjetas del entrenamiento)
 
 **Material del vidrio** (`RowMate/UI/Glass`, UI Shader Graph):
 
 1. Fondo = textura global `_RmHudBlur`, muestreada en coordenadas de pantalla. La genera `HudBlurFeature` (ARCHITECTURE §7.4): copia la escena a 1/4 de resolución y la desenfoca con 3 pasadas Kawase. El resultado va a un `RTHandle` **persistente** que se publica como global al final de la pasada, porque la UI en *Screen Space Overlay* se dibuja fuera del Render Graph de la cámara y una textura transitoria ya no existiría (QA-P-16). Llega en la It. 6b (P-04); antes, y en el nivel Bajo, se usa el respaldo de abajo.
-2. Tinte `#070D16` con **alfa adaptativo**: `a = lerp(0,72; 0,86; smoothstep(0,15; 0,70; L(fondo)))`, donde `L(fondo)` es la luminancia de `_RmHudBlur` bajo el píxel. Garantiza el peor caso de §2.3.
-3. Brillo de borde: 1 px `#FFFFFF @10 %` [CONTRATO] + reflejo interior superior `#FFFFFF @6 % → 0` en el 40 % superior (sensación de vidrio).
-4. Glow por SDF del rectángulo redondeado: con objetivo activo, color de la métrica `@20 %`, radio 12 [CONTRATO]; en el pulso de fin de paso, 0,3→0,7 (ANIMATION_BIBLE §2.6).
+2. Tinte `#070D16` con **alfa adaptativo**: `a = lerp(0,72; 0,86; smoothstep(0,10; 0,70; L(fondo)))`, donde `L(fondo)` es la luminancia de `_RmHudBlur` bajo el píxel. Con el borde inferior en 0,10 el peor caso es el blanco (el de §2.3) en todo el cubo RGB. Con el 0,15 de la versión anterior no: sobre un celeste de cielo (`(120; 160; 220)`, alfa 0,760) el compuesto quedaba **más claro** que el vidrio sobre blanco (luminancia 0,0292 contra 0,0278), y el pulso nuevo bajaba a 4,496 (It. 3, QA-V2-12; [03-rutinas/00-deuda-diseno §2.6](../iterations/03-rutinas/00-deuda-diseno.md)). El test de la 6b: el compuesto nunca supera la luminancia del vidrio sobre blanco.
+3. Brillo de borde: 1 px `#FFFFFF @10 %` [CONTRATO] + reflejo interior superior `#FFFFFF @6 % → 0` en los **8 dp superiores** (sensación de vidrio), dentro del relleno superior de la pieza: **nunca debajo de un texto**. Con el reflejo en el 40 % superior (versión anterior), a la altura de la etiqueta vale ≈ 3 % y baja el contraste un 9 %: el pulso caía a 4,1:1 y el SPM base a 5,0:1 (QA-V2-12).
+4. Glow por SDF del rectángulo redondeado: con objetivo activo, color de la métrica `@20 %`, radio 12 [CONTRATO]; en el pulso de fin de paso, 0,3→0,7 (ANIMATION_BIBLE §2.6). **Solo por fuera del borde**: no tiñe el interior del vidrio. Si lo tiñera (como pasa con un `BoxShadow` debajo de una tarjeta translúcida), el valor fuera de objetivo en una tarjeta de SPM caería a 3,3:1 (QA-V2-12).
 
 **Respaldo sin desenfoque** (QA-P-17). Se usa en las It. 4a a 6a (el desenfoque llega en la 6b), en el nivel Bajo y en todo equipo donde `_RmHudBlur` no esté disponible:
 
@@ -203,7 +217,7 @@ En la It. 4a el fondo es provisorio y oscuro, así que el respaldo se ve casi ig
 | Normal | `metric.*.hud` | etiqueta color base; borde `border.subtle` 1 px | — |
 | Con objetivo, cumple | `text.hudPrimary` (blanco) | etiqueta color base; borde color base `@70 %` 1,5 px + glow `@20 %` (Q-60) | si D-ART-09: "obj. 26" 12/600 `@70 %` debajo |
 | Con objetivo, fuera | `state.offTarget.hud` | igual que "cumple" | flecha ▲ (subir SPM/W) o ▼ (bajar split) de 0,4 em a la izquierda del valor (D-ART-01) |
-| Pausa | valores siguen actualizándose (contrato); la tarjeta baja a `@85 %` de opacidad bajo el velo | | |
+| Pausa | valores siguen actualizándose (contrato) y **al 100 %**: ni la tarjeta ni su texto bajan de opacidad (el legacy tampoco lo hace) | igual | la pausa la dicen el velo de la escena (ANIMATION_BIBLE §2.11), el botón Reanudar y el chip de fase. Con la tarjeta al 85 % (versión anterior), sobre una nube blanca el pulso daba 3,2:1 y el Split 4,8:1 (QA-V2-12) |
 
 **Banda tiempo │ distancia** [CONTRATO]: cápsula `r.full`, mismo vidrio con alfa base 0,68, padding 20×10; ícono cronómetro 16 `@70 %` + valor `num.band` 34 `metric.time.hud`; divisor 1×32 `@12 %` con 16 a cada lado; ícono regla + valor `num.band` `metric.distance.hud` + "m" 13 `@55 %`.
 
@@ -226,35 +240,56 @@ Mismo vidrio; ancho colapsado mín. 140, **expandido fijo 200** [CONTRATO] (en t
 | Pausa | mismo vidrio del HUD, contorno `border.strong` 1,5 px, ícono pausa 22 + texto 16/600 blanco, mín. 148×56 |
 | Reanudar | relleno `state.success`, texto `text.onAccent` 16/700 (10,0:1), ícono play, mín. 148×56 |
 | Diálogo (terminar, completado) | `surface.overlay` `@92 %` + vidrio, `r.card`, padding 24, título 20/700, cuerpo 15 `text.secondary`, botones a la derecha (texto + relleno). Diálogo de completado: check `state.success` 32, caja de resumen `#FFFFFF @4 %` `r.m` con Tiempo/Distancia/Calorías en `num.m` |
+| Diálogo de la app (It. 3: eliminar, paso, repeticiones) | `surface.overlay` opaco (sin vidrio), `r.card`, borde 1 `border.default`, sin sombra; ancho `min(máx; ventana − 80)` con mínimo 280 y máximo 400 (eliminar, repeticiones) o 560 (paso); alto máximo ventana − 48; relleno 24 (16 con la ventana de menos de 480 dp de alto); título `title`; contenido desplazable con líneas `border.subtle` arriba y abajo y 8 dp de aire mientras se desplaza; acciones abajo a la derecha (texto + relleno, o peligro relleno); velo `overlay.scrim` al 60 %. Escala 0,96 → 1 al entrar y 0,98 al salir (ANIMATION_BIBLE §2.2) |
 
 ### 3.6 Botones de la app
 
-| Tipo | Fondo | Texto | Borde | Alto | Uso |
-|---|---|---|---|---|---|
-| Primario | `accent.primary` | `text.onAccent` 15/700 | — | 48 (56 en Workout) | "Entrenamiento libre", "Iniciar", "Guardar" |
-| Tonal | `#00B4D8 @16 %` | `accent.primary` 15/600 | — | 44 | "Buscar", acciones secundarias |
-| Contorno | transparente | blanco 15/600 | `border.strong` 1 px | 44 | "Cancelar" en contexto denso |
-| Texto | transparente | `accent.primary` 15/600 | — | 40 | acciones terciarias, "Hora real" |
-| Peligro | transparente / `state.dangerFill` | `state.dangerText` / blanco | `state.danger` | 44 | desconectar / borrar |
-| Strava | **asset oficial** "Connect with Strava" (slot `brand.strava`) | — | — | 48 | conexión; botones de subida en `brand.strava` con texto blanco 15/700 (3,4:1: excepción de marca documentada) |
-| FAB | `accent.primary`, 56 círculo, ícono 24 `text.onAccent` | | | | "+" en Rutinas |
+Etiqueta de todo botón, chip y acción de texto: **`button`** 14/600 (It. 2; M3 `labelLarge` del legacy). Ícono dentro del botón 18, separación 8. Alturas como **`min-height`** y `flex-shrink: 0` en botones, íconos y filas (en UI Toolkit `flex-shrink` vale 1 por defecto y un contenedor alto fijo los comprime). La etiqueta va en **una línea con "…"** (`nowrap`): a 1,3× un texto largo se corta con "…" en lugar de pasar a dos líneas, porque en filas de ancho automático UI Toolkit mide la etiqueta en dos líneas dentro de una caja de una (medido en la It. 2, 04-design-notes §15.6).
 
-Estados comunes: hover (desktop) `+6 %` de blanco encima; presionado escala 0,97 y `accent.primaryPressed`; deshabilitado `@38 %` sin interacción; foco `focus.ring`. Área táctil mínima 48×48 aunque el dibujo sea menor.
+| Tipo | Fondo | Texto e ícono | Borde | `min-height` · relleno horizontal | Uso |
+|---|---|---|---|---|---|
+| Primario | `accent.primary`; presionado `accent.primaryPressed` | `text.onAccent` (7,6 / 5,4:1) | — | 48 (56 en Workout) · 16 | "Buscar dispositivos", "Entrenamiento libre", "Iniciar", "Guardar" |
+| Tonal | `accent.tonalBg` (`#00B4D8 @12 %`; sobre la tarjeta `#173E57`) | **`accent.onTonal`** `#38CBEF` (5,9:1; 5,2 con *hover*) | — | 44 · 16 | "Buscar" y "Conectar" del pulsómetro, acciones secundarias. Con `@16 %` y `accent.primary` daba 4,25:1 |
+| Contorno | transparente | `text.primary` | `stroke.hairline` `border.strong` | 44 · 16 (12 en el panel del simulador) | "Buscar otro", "Cancelar" en contexto denso, fallas del simulador |
+| Texto | transparente | `accent.primary` (5,6 sobre card · 5,1 sobre `surface.overlay`) | — | 40 · 12 | acciones terciarias: "Olvidar", "Hora real" |
+| Texto peligro | transparente | `state.dangerText` (6,5 sobre `bg.app` · 5,2 sobre card) | — | 40 · 12 | "Desconectar" (remo y pulsómetro) |
+| Peligro relleno | `state.dangerFill` | `text.primary` (5,0:1) | — | 44 · 16 | confirmar "Borrar" |
+| Ícono | transparente; capa de estado circular de 40 | ícono 24 `text.primary` (cerrar: `text.secondary`) | — | caja 48 × 48 | cerrar, ± del panel del simulador |
+| Strava | **asset oficial** "Connect with Strava" (slot `brand.strava`) | — | — | 48 | conexión; botones de subida en `brand.strava` con texto blanco 15/700 (3,4:1: excepción de marca documentada) |
+| FAB | `accent.primary`, círculo de 56; presionado `accent.primaryPressed` y escala 0,94 | ícono `add` 24 `text.onAccent` (7,641:1) | — | 56 · — | "+" en Rutinas, a 16 de la derecha y 16 sobre la barra (It. 3); anillo 32 / halo 36 |
+
+**Estados** (todo control accionable lleva una capa de estado absoluta, `inset 0`, con su mismo radio, que no recibe eventos; no hay colores nuevos: es blanco con opacidad):
+
+| Estado | Spec |
+|---|---|
+| *Hover* (solo escritorio, nunca en el destino elegido) | capa `text.primary` `opacity 0,04`. Con 6 % (la versión anterior), el texto peligro sobre la tarjeta bajaba a 4,34:1 |
+| Presionado | **`:hover:active`** (puntero o dedo apoyado sobre el control): capa 0,08 y escala 0,97 (botones de ícono, pestañas y llave del simulador: 0,94). El primario cambia el fondo a `accent.primaryPressed`, sin capa. Con teclado (Enter, Espacio) el control responde y lo marca el anillo de foco, sin "presionado". Se usa `:hover:active` y no `:active` solo porque el clic simulado de UI Toolkit deja `:active` 100 ms de reloj real, que en capturas y videos es "para siempre" (04-design-notes de la It. 2 §15.3). En Android falta verificar en equipo que el dedo apoyado marque `:hover` |
+| Deshabilitado | `opacity 0,38` en todo el control, sin *hover* ni presión, sin transición |
+| Foco (solo navegando con teclado) | anillo `stroke.focus` 2 `focus.ring`, por fuera del control (`inset −4`, radio del control + 4), con halo `stroke.focusHalo` 4 `focus.ringHalo` (radio + 4 más). Aparece sin animación. Va también en pestañas, filas, chips, la llave y el interruptor. Excepción (It. 3): dentro de un contenedor que recorta (el ítem del menú, la opción de tiempo / distancia del segmentado) el anillo va **adentro**, a 2 dp, sin halo; sobre la opción elegida (`brand.seed`) en blanco (4,868:1). Los campos de texto no llevan anillo: su borde de 2 dp en `accent.primary` es el indicador |
+
+Área táctil mínima 48 × 48 aunque el dibujo sea menor. Excepciones de contraste (no se prueban como umbral): presionado (dura lo que el toque: `accent.primary` sobre el panel 3,98) y `state.dangerText` sobre el panel con *hover* (4,17; no hay botones de peligro en el panel).
+
+**Chip** (`ActionChip` del legacy): `min-height` 32, relleno 0 / 12, `r.m` 8, borde 1 `border.default`, etiqueta `button` `text.primary`, capa de estado `r.m`; separación 8 en una fila que ajusta. Sin estado "elegido" (paridad).
+
+**Interruptor** (`SwitchListTile`): renglón `min-height` 48 con el rótulo `bodyM` que crece; pista 40 × 24 `r.full` a la derecha, centrada en el renglón; perilla 20 × 20. Apagado: pista `bg.sunken` + borde 1 `border.strong`, perilla `text.secondary` a escala 0,8. Encendido: pista `accent.primary` (5,07:1 sobre el panel), perilla `text.onAccent` a escala 1, desplazada 15 dp.
+
+**Spinner**: arco de 270° (falta 90°), 16 × 16, trazo 2 con extremos redondeados; `accent.primary` en tarjetas y `text.primary` dentro del botón primario. Movimiento en ANIMATION_BIBLE §2.12.
 
 ### 3.7 Listas y tarjetas de lista
 
-- **Rutina** (Rutinas y Workout): `surface.card` `r.card` padding 16; ícono `accent.primary` 22 en chip 36 `@14 %` `r.m`; nombre 16/600; resumen 13 `text.secondary`; descripción 12 `text.tertiary`; chevron 18 `@38 %`. [EXR] debajo del resumen, **mini-barra de estructura**: las píldoras de los pasos expandidos (alto 4, radio 2, separación 2, colores `step.*`). Deshabilitada sin remo: `@50 %` [CONTRATO].
+- **Rutina** (Rutinas desde la It. 3; Workout desde la 4a): `surface.card` `r.card`, relleno 16 / 4 / 16 / 16, **sin** borde superior; ícono `fitness_center` 22 `accent.primary` en una caja 36 `accent.tonalBg` (`#173E57` sobre la tarjeta, 4,572:1) `r.m`; nombre `titleS` 16/600 `text.primary`; descripción, si hay, `bodyXs` 12 **`text.secondary`**; resumen `bodyS` 13 **`text.tertiary`** (el orden y los colores del legacy; la mini-barra ya cuenta la estructura); en Rutinas, **`⋮`** 24 `text.secondary` con `margin-top` −14, en la columna de 28 dp del borde derecho (la misma de la cruz y el tacho del editor); el *chevron* 18 queda solo para Workout. Nombre y descripción ajustan y se muestran tal cual (sin marcas ni escapes). *Hover* 4 %, presionado 8 %, sin escala; lo editado se ilumina (capa blanca 0,08 → 0). [EXR] Debajo del resumen, la **mini-barra de estructura**: un renglón de 4 dp con tramos de radio 2 y separación 2 en el color base de su tipo, alineados a la izquierda, de ancho `min(24; (W − 2·(n − 1)) / n)` con mínimo 2 (el largo de la franja también cuenta cuántos tramos tiene); si no entran (`n` > `⌊(W + 2) / 4⌋`), los que caben a 2 dp y los últimos 6 que se apagan; con 0 tramos, una pista `border.default` de todo el ancho. Deshabilitada sin remo: `@50 %` [CONTRATO].
 - **Sesión** (Historial): padding 16; ícono remo 18 `accent.primary`; nombre 15/600; ícono Strava 14 `brand.strava`; fecha `dd/MM/yyyy  HH:mm` 12 `text.tertiary`; fila de 6 stats: valor `num.stat` 16/700 en color de métrica + etiqueta 11/500 `text.tertiary`. Split vacío `--:--`.
-- **Dispositivo encontrado** (búsqueda): ícono remo, nombre 15/600, MAC 11 mono `text.tertiary`, chevron o spinner 16.
+- **Dispositivo encontrado** (búsqueda; medido en la It. 2 con los pulsómetros): fila accionable `min-height` 56, relleno vertical 8, capa de estado `r.m` que se extiende 8 dp a cada lado del texto; ícono 24 (pulsómetro: `favorite` **contorno** `metric.hr`; remo: `rowing` `accent.primary`) + 16 + columna con el nombre `body` 15 `text.primary` con "…" y el identificador (`SIM:HRM`, MAC) `caption` 11 `text.tertiary`; a la derecha `chevron_right` 18 **`text.tertiary`** (5,1:1: es la señal de "tocar para conectar"; antes `@38 %`) o spinner 16.
 - Separación vertical entre tarjetas 10; lista con margen 16.
 
 ### 3.8 Editor de rutinas
 
-- **Paso:** contenedor `surface.card` `r.l` (legacy 10 → 12), **borde izquierdo 3 px del color del paso** [CONTRATO], chip 32×32 `r.s` color `@20 %` con ícono 16 del tipo, título 14/600 en `step.*` (color base: es texto sobre card, todos ≥ 3,8:1; cooldown usa `#35A0C9` para 4,5:1), subtítulo 12 `text.secondary` (`duración · objetivo`), acciones editar (`accent.primary`) y borrar (`state.dangerText`), handle de arrastre reservado (BKL-12).
-- **Serie:** encabezado `brand.seed @12 %` con radio superior 12 + borde izquierdo 3 px `brand.seed` [CONTRATO]; "Serie" 13/700 `accent.primary`; chip `×N` `num.stat` 16/800 `accent.primary` sobre `@20 %` `r.l`; pasos con sangría 16; pie `@6 %` con "+ Agregar paso a la serie" (botón texto).
-- **Campos:** outlined, fondo `bg.sunken`, borde `border.default` 1 px → `accent.primary` 2 px con foco, `r.m`, alto 52, etiqueta flotante 12/500; error: borde `state.danger` + texto 12 `state.dangerText`.
-- **Selector de tipo de paso:** 4 chips segmentados con ícono + nombre, el elegido con fondo color `@24 %` y borde color.
+- **Paso:** `surface.card` `r.l` 12, `min-height` 56, relleno 4 / 4 / 4 / 12, **borde izquierdo 3 dp del color base del paso** [CONTRATO]; insignia 32 × 32 `r.s` con el color base `@20 %` y el ícono 16 en `step.*.hud`; título `titleXs` 14/600 en `step.*.hud` (4,685:1 el trabajo y 4,730:1 el enfriamiento sobre la tarjeta; DV-12 ampliada, §2.2); subtítulo `bodyXs` 12 `text.secondary`, que ajusta, con `trending_up` en `metric.distance` a 1,17 em dentro del renglón; acciones en cajas de 48 con ícono 20: lápiz `text.secondary` (neutro, como el legacy) y cruz `state.dangerText`; sin *hover* en la fila (no es accionable: lo son el lápiz y la cruz); handle de arrastre reservado (BKL-12).
+- **Serie:** un bloque cerrado con un **riel continuo** de 3 dp `brand.seed` del encabezado al pie [CONTRATO del borde izquierdo]. Encabezado de 48 `brand.seed @12 %` con radios superiores 12: `repeat` 16 + `Serie` `headerS` 13/700 `accent.primary` + cápsula `×N` (alto 28, radio 14, `accent.primary @20 %`, número `num.stat` 16/700 en `accent.onTonal`, dentro de una caja táctil de 48) + tacho 20 `state.dangerText`. Cuerpo `@6 %` con los pasos a 16 dp del riel. Pie de 48 `@6 %` con radios inferiores 12 y `+ Agregar paso a serie` (`buttonS` 12/600; sin "la"). Debajo del pie, una o dos **hojas** apiladas (`@20 %` y `@12 %`; ×2 una, ×3 o más dos) que dejan intuir las repeticiones. 8 dp de aire arriba y abajo: 16 entre dos series contiguas.
+- **Campos:** caja `bg.sunken` `r.m` 8 con borde 1 `border.input` (3,807:1) → 2 `accent.primary` con foco o 2 `state.danger` con error; alto mínimo 52 (descripción 72, dos líneas; crecen con la letra); etiqueta **adentro** de la caja, `body` 15 `text.secondary` en reposo y 12 (escala 0,8) al flotar, con foco en `accent.primary` y con error en `state.dangerText`; ayuda (`Ej: 2`) en `text.tertiary`, visible con el campo vacío; error `bodyXs` `state.dangerText` debajo; selección `text.selection` y cursor `accent.primary`; etiqueta, texto, ayuda, cursor y selección en la misma columna. Sin anillo de foco: el borde de 2 es el indicador. *Hover* en escritorio: borde `text.tertiary`.
+- **Selector de tipo de paso:** **mosaicos** (ícono 20 `.hud` arriba, nombre `buttonS` abajo), 2 × 2 en el teléfono y 4 en fila desde 400 dp de contenido; `min-height` 56, `r.m`, borde 2 (`border.default`; el elegido, en el color base) y el elegido con el fondo del tipo `@20 %` y el nombre en `text.primary`. Así los 4 nombres se leen enteros a 1,3×. Tiempo / distancia: segmentado de 40 `r.full` con la opción elegida en `brand.seed` [CONTRATO de §3.9].
 - **Progresiones:** el emoji 📈 del legacy se reemplaza por el ícono `trending_up` 14 en `metric.distance` (Q-10 lo permite).
+- Medidas por tamaño de ventana y contrastes: [03-rutinas/04-design-notes §3, §4.5-§4.11 y §8](../iterations/03-rutinas/04-design-notes.md).
 
 ### 3.9 Gráficos (detalle de sesión)
 
@@ -275,19 +310,26 @@ Dibujados con `Painter2D` de UI Toolkit (vector), alto 220 (tablet 280).
 
 | Estado | Spec |
 |---|---|
-| Vacío | ícono 56 `@24 %` (línea, Material Symbols), título 17/600 blanco, ayuda 14 `text.secondary` máx. 2 líneas, acción tonal opcional; centrado vertical al 40 % del alto |
-| Error en línea | caja `state.danger @15 %`, `r.l`, padding 12, ícono `error` 18 + texto 13 `state.dangerText`, hasta 3 líneas, detalle técnico 11 `text.tertiary` (Q-42) |
+| Vacío de Rutinas (It. 3, paridad; base para las listas que siguen) | `fitness_center` 56 `text.primary` `opacity 0,12` (apenas visible, a propósito: AC-RUT-10-02) → 12 → título `body` `text.secondary` → 8 → ayuda `bodyS` 13 `text.tertiary`; ancho máximo 320, centrado en los dos ejes entre las dos barras |
+| Vacío de Dispositivo (It. 2, paridad) | `bluetooth_disabled` **48** `text.primary` `opacity 0,24` (D-11) → 12 → `deviceNoResults` en `body` **`text.secondary`** (8,97:1; el legacy lo pone al 54 %: sube un escalón porque con D-ART-03 la ayuda también queda al 54 % y no deben verse iguales, DV-05) → 8 → ayuda `bodyXs` 12 `text.tertiary`, dos líneas; todo centrado en los dos ejes de su mitad |
+| Pantalla provisoria (pestañas de iteraciones futuras) | barra superior con el título y, centrado entre las dos barras, el glifo sin elegir de su pestaña, 56 `text.primary` `opacity 0,24`. Nada más |
+| Error en línea | caja `state.danger @15 %`, `r.l`, padding 12, ícono `error` 18 + texto 13 `state.dangerText`, hasta 3 líneas, detalle técnico 11 `text.tertiary` (Q-42). Excepción: la tarjeta del pulsómetro muestra el error como texto suelto `bodyXs` sin caja ni ícono, como el legacy (§3.1) |
 | Error de pantalla (Bluetooth apagado, sin permiso) | ícono 64 `state.danger`, título 20/700, ayuda 14 `text.secondary`, botón primario |
-| Cargando lista | 3 tarjetas *skeleton* `surface.card` con bloques `#FFFFFF @6 %` y barrido de brillo `@8 %` (ANIMATION_BIBLE §2.11); nunca un spinner eterno (Q-13) |
-| Cargando acción | spinner circular 16–20, trazo 2, `accent.primary`, dentro del botón (el texto se mantiene) |
-| Aviso (toast) | vidrio `surface.overlay`, `r.l`, abajo sobre la barra de pestañas, 14/500, ícono de estado, 4 s |
+| Error de carga de Rutinas (It. 3) | `error` 48 `state.dangerText` → 12 → texto `body` `text.secondary` (ancho máximo 280) → 16 → `Reintentar` tonal con `refresh`; centrado entre las barras, con la forma del vacío |
+| Cargando lista | **indicador circular de 32 dp, trazo 3, `accent.primary`**, centrado entre las barras; aparece solo si la carga sigue a los 120 ms, con fundido de 160, y no hay nada más en el cuerpo. Manda la spec (AC-RUT-10-02 pide el indicador del legacy): las tarjetas *skeleton* salieron de esta biblia en la It. 3 (DT-20). Nunca un indicador eterno (Q-13) |
+| Cargando acción | spinner de §3.6 (16, trazo 2) en el lugar del ícono del botón; el texto se mantiene, salvo que el legacy lo cambie (`Buscar dispositivos` → `deviceSearching`, deshabilitado al 38 %). En el primario va en `text.primary`; en una tarjeta, `accent.primary` junto al texto de estado (`Buscando…`, `Conectando a …`) |
+| Aviso (toast) | `surface.overlay` con borde 1 `border.default`, `r.l`, relleno 12 / 16, `min-height` 48, `bodyM` 14 `text.primary` que ajusta hasta 3 líneas, **sin ícono** (los avisos se explican solos); ancho de 16 a 16 con la ventana de menos de 600 dp y si no `clamp(texto + 32; 344; 560)` centrado; abajo, a 16 de la barra visible (o del borde), y sube sobre cualquier obstáculo inferior que **se cruce** con él (el `+`, la llave) con 8 dp de aire; 4 s, y el nuevo reemplaza al visible (It. 3) |
 
 ### 3.11 Navegación y extras
 
-- **Barra de pestañas:** `surface.nav` (translúcida `@92 %`, **sin desenfoque**, con borde superior 1 px `border.subtle`; QA-P-22), alto 64 + safe area, íconos 24, etiqueta 12/600. El contenido de la pestaña corre por debajo de la barra, con padding inferior = alto de la barra + safe area: así la translucidez se nota al hacer scroll y el último elemento queda accesible. Seleccionado: ícono y texto `accent.primary` (con la variante rellena del ícono cuando existe, ASSET_SLOTS §4.3) + `nav.indicator` (píldora 56×32 `r.full`) que se desliza; no seleccionado `text.secondary`. La píldora va **detrás del ícono** y la etiqueta **debajo** de la píldora, nunca adentro: `accent.primary` sobre la píldora da 4,4:1 en el peor caso, que alcanza para el ícono (gráfico, ≥ 3:1) pero no para texto (fuera de la píldora, 6,0:1). Glifos por destino: ASSET_SLOTS §4.3 (la tabla de la It. 2 está en [00-deuda-diseno §3.5](../iterations/02-dispositivo-simulador/00-deuda-diseno.md)).
-- **AppBar:** `bg.app`, título 20/600, acciones 24; sin elevación.
+- **Barra de pestañas:** `surface.nav` (translúcida `@92 %`, **sin desenfoque**, con borde superior 1 px `border.subtle`; QA-P-22), alto 64 + safe area, íconos 24, etiqueta 12/600. El contenido de la pestaña corre por debajo de la barra, con padding inferior = alto de la barra + safe area: así la translucidez se nota al hacer scroll y el último elemento queda accesible. Seleccionado: ícono y texto `accent.primary` (con la variante rellena del ícono cuando existe, ASSET_SLOTS §4.3) + `nav.indicator` (píldora 56×32 `r.full`) que se desliza; no seleccionado `text.secondary`. La píldora va **detrás del ícono** y la etiqueta **debajo** de la píldora, nunca adentro: `accent.primary` sobre la píldora da 4,4:1 en el peor caso, que alcanza para el ícono (gráfico, ≥ 3:1) pero no para texto (fuera de la píldora, 6,0:1). Glifos por destino: ASSET_SLOTS §4.3 (la tabla de la It. 2 está en [00-deuda-diseno §3.5](../iterations/02-dispositivo-simulador/00-deuda-diseno.md), con dos cambios de color de [04-design-notes §1](../iterations/02-dispositivo-simulador/04-design-notes.md): la llave del simulador en `accent.primary` sobre `surface.overlay` y los *chevron* en `text.tertiary`; el ícono de la insignia mide 12 y el del vacío 48, D-11).
+- **Barra de pestañas, medidas de la It. 2:** alto 64 + área segura (el legacy, 80: DV-07). Primer hijo, un **brillo superior de vidrio**: la textura de degradé del tablero (§3.1) teñida `text.primary` a `opacity 0,05`, de 5 % en el borde superior a 0 en 32 dp (no llega a la etiqueta, que empieza en y ≥ 42). Píldora 56 × 32 a 6 dp del borde superior, centrada en el ícono del destino. Cada destino es una columna `flex 1 1 0` (área táctil ≥ 82 × 64): caja del ícono 56 × 32 con su capa de estado `r.full` (*hover* 0,04; presionado 0,08 y escala 0,94 de la caja), ícono 24, y 4 dp más abajo la etiqueta `label` (12/600, tracking 0,08 em), siempre visible. Ritmo: 6 + 32 + 4 + 14,9 = 56,9, quedan 7,1 dp abajo (2,7 con letra 1,3×). Sobre `bg.app` la barra se ve `#0A1623` y la píldora `#083343`.
+- **AppBar:** alto 56, fondo `bg.app`, sin línea ni sombra; relleno 16 a la izquierda y 4 a la derecha (un botón de texto con relleno 12 deja su texto a 16 del borde, como el legacy); título `title` 20/600 `text.primary` en una línea con "…"; acciones 24.
+- **Barras de desplazamiento** (toda `ScrollView` de la app, superpuestas al contenido): sin flechas, carril transparente, *dragger* de 4 dp `r.full` `border.strong` con margen derecho 2. **En escritorio**, visibilidad automática (aparece si el contenido no entra). **En teléfono** (sin puntero), ocultas, como el legacy en Android, que no las dibuja: el desplazamiento se ve por el contenido que corre. Es la posición del Designer sobre QA-V2-13 (lo implementa el Architect; [03-rutinas/00-deuda-diseno §3](../iterations/03-rutinas/00-deuda-diseno.md)).
+- **Padding inferior de cada pantalla**: el alto de la barra va **dentro** del contenido desplazable (no por fuera de la `ScrollView`): así el último elemento sube por encima de la barra y la translucidez se ve al desplazar.
 - **Selector de escenario** (Workout): tarjetas 152×96 (legacy 120×80; [EXR] más grandes) `r.l`, borde elegido `accent.primary` 2,5 [CONTRATO] / no elegido `border.default` 1; nombre 13 (700 blanco elegido / 400 `@70 %`); miniatura = render horneado de la escena real (§7.6).
-- **Cinta SIMULADOR:** `dev.simulator`, texto 11/800 tracking 0,1 em `dev.simulatorText` (`#1A0A00`, 6,1:1), esquina superior izquierda a 45° (paridad).
+- **Cinta SIMULADOR:** caja de 80 × 12 rotada −45° alrededor de su centro, con el centro en (24; 24) dp de la esquina superior izquierda de la capa del simulador (la geometría del `Banner topStart` de Flutter), sin insets propios: sigue la regla única de área segura de la app (en Windows, 0). Fondo `dev.simulator`; texto `SIMULADOR` Inter **700, 10 dp, sin tracking**, `dev.simulatorText` (`#1A0A00`, 6,1:1; texto oscuro a propósito, DV-01), centrado: mide 60,2 dp y entra entero en la franja visible. No escala con la letra del sistema, no recibe eventos, siempre encima y sin animación. Antes decía 11/800 con 0,1 em: mediría 76 dp y la ventana cortaría la S y la R, y el repositorio no tiene Inter 800.
+- **Llave y panel del simulador** (solo builds con simulador): llave 40 × 40 `r.l`, fondo `surface.overlay`, borde 1 `border.default`, ícono `build` 24 `accent.primary` (5,07:1), a 16 dp de la derecha y 16 dp sobre la barra de pestañas; discreta a propósito (la misma superficie que el panel que abre). **En Rutinas** (It. 3, DV-13), mientras se ve su `+` y ninguna página la tapa, la llave sube a 16 dp sobre el `+` (88 sobre la barra), con los bordes derechos alineados; se mueve solo en y, con resorte. Con el editor abierto (la barra en `display: none`, con su alto conservado) vuelve a 16 sobre la barra. El panel se abre siempre en el mismo lugar (AC-BLE-16-03); en Rutinas tapa el `+`, como en el legacy, y mientras está abierto la llave no se ve. Panel de 280 de ancho, `surface.overlay`, `r.card`, borde 1 `border.default` (sin sombra: el borde lo separa del tablero), cabecera de 48 con línea inferior `border.subtle`, renglones ± de 48 con el valor en `num.stat` sobre 64 dp, chips e interruptor de §3.6. Detalle en [04-design-notes de la It. 2 §4.9](../iterations/02-dispositivo-simulador/04-design-notes.md).
 
 ---
 
@@ -318,9 +360,15 @@ UI Toolkit no garantiza activar `tnum` desde USS. Se resuelve de dos formas, sin
 | `title` | Inter | 20 / 28 | 600 | AppBar, diálogos |
 | `titleS` | Inter | 16 / 22 | 600 | secciones, nombres en tarjetas |
 | `body` | Inter | 15 / 22 | 400 | texto general |
+| `bodyM` | Inter | 14 / 20 | 400 | nombres y estados dentro de tarjetas, unidad `bpm`, rótulos del panel del simulador (It. 2; el legacy usa 14) |
 | `bodyS` | Inter | 13 / 18 | 400 | subtítulos, resúmenes |
-| `label` | Inter | 12 / 16 | 600, mayúsculas, tracking 0,08 em | etiquetas de métrica |
-| `caption` | Inter | 11 / 14 | 500 | fechas, ayudas, ejes (mínimo legible) |
+| `bodyXs` | Inter | 12 / 16 | 400 | ayudas, errores en línea, texto de la insignia `Conectado` (It. 2) |
+| `label` | Inter | 12 / 16 | 600, mayúsculas, tracking 0,08 em | etiquetas de métrica, etiquetas de la barra de pestañas |
+| `button` | Inter | 14 / 20 | 600 | etiqueta de botones, chips y acciones de texto (It. 2; M3 `labelLarge` 14) |
+| `titleXs` | Inter | 14 / 20 | 600 | título de la fila de paso, `Pasos (N)` (It. 3) |
+| `headerS` | Inter | 13 / 18 | 700 | `Serie` del encabezado del bloque (It. 3; el legacy usa 13/700) |
+| `buttonS` | Inter | 12 / 16 | 600 | `Agregar paso a serie` y nombres de los mosaicos de tipo (It. 3) |
+| `caption` | Inter | 11 / 14 | 500 | fechas, identificadores, ejes (mínimo legible) |
 | `num.hero` | Barlow SC | 64 / 64 | 800 | SPM del HUD |
 | `num.xl` | Barlow SC | 52 / 52 | 700 | tablero de Dispositivo, pulso |
 | `num.l` | Barlow SC | 44 / 44 | 700 | Split y Watts del HUD |
@@ -331,7 +379,15 @@ UI Toolkit no garantiza activar `tnum` desde USS. Se resuelve de dos formas, sin
 | `num.s` | Barlow SC | 20 / 22 | 700 | cuenta regresiva, reloj |
 | `num.stat` | Barlow SC | 16 / 20 | 700 | stats de historial, chips numéricos |
 
-Reglas: mayúsculas solo en etiquetas cortas y chips de fase; nunca texto de párrafo bajo 13; los valores numéricos van con la unidad separada (más chica, `@55 %`), como el legacy.
+Reglas: mayúsculas solo en etiquetas cortas y chips de fase; nunca texto de párrafo bajo 13 (las ayudas de una o dos líneas usan `bodyXs` 12); los valores numéricos van con la unidad separada (más chica, `@55 %`), como el legacy.
+
+**Cómo se aplica en UI Toolkit 6000.3** (medido en la It. 2, 04-design-notes §2.2):
+
+- El tamaño, el peso y la fuente salen **solo** de las clases `.rm-type-*` que genera `tools/tokens` (`Typography.uss`); ningún otro USS pone `font-size`. La letra del sistema escala con `.rm-text-scale-*`, hasta 1,3× (P-03).
+- **`letter-spacing: N px` agrega N/100 em por letra** (es la unidad de TextCore, no píxeles). El tracking de 0,08 em de `label` se escribe `letter-spacing: 8px` y vale igual a cualquier tamaño.
+- USS no tiene `line-height`: el "alto de línea" de la tabla es el ritmo de diseño. Unity usa la caja de línea de la fuente (Inter 12 → 14,9 dp, Inter 14 → 17,1 dp; Barlow SC 52 → 62,9 dp) y el ritmo vertical se arma con márgenes sobre esas cajas.
+- Centrado óptico: en Inter la banda de las mayúsculas queda centrada en la caja y alcanza con `align-items: center`; en Barlow SC queda 0,05 em por debajo del centro (2,6 dp a 52), así que `TabularNumber` centra la banda de las mayúsculas, no la caja.
+- Nunca mayúsculas por USS: las etiquetas llegan del catálogo con su caja (`SPLIT 500m`, `PULSÓMETRO` con `ToUpperInvariant`), porque transformar todo rompería `500m`.
 
 ---
 
@@ -346,7 +402,7 @@ Se decide por el **lado corto** de la ventana (dp) y la orientación (horizontal
 | Teléfono vertical | lado corto < 600, alto ≥ ancho | 4 / 16 / 12 | Referencia 390×844 |
 | Teléfono horizontal | lado corto < 600, ancho > alto | 8 / 24 + safe area / 16 | Referencia 844×390; contenido no inmersivo con ancho máx. 720 centrado |
 | Tablet | lado corto 600–899 | 8 (vertical) o 12 (horizontal) / 24 / 16 | Contenido máx. 840; tablero de 3–4 columnas |
-| Desktop | lado corto ≥ 600 y puntero (Windows/macOS) o ancho ≥ 1200 | 12 / 32 / 24 | Ventana inicial 1280×720 (Windows) / 800×600 (macOS) (Q-88); hover y foco visibles; contenido máx. 960 |
+| Desktop | lado corto ≥ 600 y puntero (Windows/macOS) o ancho ≥ 1200 | 12 / 32 / 24 | Ventana inicial 1280×720 (Windows) / 800×600 (macOS) (Q-88); hover y foco visibles; contenido máx. 960 (no se aplica todavía: en la It. 3 la lista y el editor de Rutinas van a todo el ancho, como el legacy y CAP-11) |
 
 Navegación: **una sola columna** en todas las clases (paridad de navegación). El maestro-detalle en tablet/desktop queda como propuesta de backlog.
 
@@ -615,8 +671,8 @@ Objetivo (R-12): **60 fps sostenidos durante 30 min** en el dispositivo de refer
 
 | Elemento | Umbral | Verificación |
 |---|---|---|
-| Valores del HUD (texto grande) | ≥ 7:1 en blanco y métricas no rojas; ≥ 4,5:1 (AAA texto grande) en familia roja (D-ART-01) | test de contraste en Core contra el peor caso del vidrio (§2.3) |
-| Texto de interfaz | ≥ 4,5:1 (AA), primario ≥ 7:1 | tokens de §2.1 |
+| Valores del HUD (texto grande) | ≥ 7:1 en blanco y métricas no rojas; ≥ 4,5:1 (AAA texto grande) en familia roja (D-ART-01). Con margen de render: también contra el peor vidrio renderizado + 1 por canal (`#2B3038`, §2.3) | test de contraste en Core contra el peor caso del vidrio, sin redondear y renderizado (§2.3, §11); el texto nunca sobre el reflejo interior ni sobre el glow, ni con opacidad de pausa (§3.2) |
+| Texto de interfaz | ≥ 4,5:1 (AA), primario ≥ 7:1 | tokens de §2.1; pares de pantalla con la pila real de capas (brillo de la tarjeta a la altura de la etiqueta, *hover* al 4 %, brillo de la barra), `ContrastTests.ItTwoDesignerPairs`; desde la It. 3, `ItThreeDesignerPairs` (R1-R28: lista, editor, serie, campos, diálogos, menús y anillos, con las capas de la serie y del *hover*) |
 | Componentes gráficos (bordes, píldoras hechas, íconos) | ≥ 3:1 | píldoras pendientes `@18 %` son contrato (estado "tenue" a propósito) |
 
 ### 10.2 Lectura a 1,5 m
@@ -653,7 +709,7 @@ Prueba de aceptación: teléfono de 6,1" a 1,5 m, tres personas leen SPM, Split 
 
 | Qué | Dónde (propuesta al Architect) | Verificación |
 |---|---|---|
-| Tokens como datos | `Core/Design/Tokens.cs` (colores, radios, tamaños, durations) + generador de `Tokens.uss` (QA-P-05) | test dotnet: todo token semántico tiene el hex del legacy; contraste de §10.1 contra el peor caso calculado (luminancia WCAG, composición del vidrio adaptativo y del respaldo `@86 %`, §3.2) |
+| Tokens como datos | `Core/Design/Tokens.cs` (colores, radios, tamaños, durations) + generador de `Tokens.uss` y `Typography.uss` (`tools/tokens`, QA-P-05; `--check` sale con 0 si están al día) | test dotnet: todo token semántico tiene el hex del legacy; contraste de §10.1 contra el peor caso calculado (luminancia WCAG, composición del respaldo `@86 %`, §3.2) y contra el peor vidrio renderizado + 1 (`HudKeepsItsThresholdOnTheRenderedWorstGlass`, It. 3). En la 6b, además: el compuesto del vidrio adaptativo nunca más claro que el vidrio sobre blanco |
 | Íconos | `Core/Design/Icons.cs` (constantes de codepoints, ASSET_SLOTS §4.2) + fuente "RowMate Icons" en `Assets/RowMate/UI/Icons/` | test dotnet: cada nombre y su codepoint coinciden con el `.codepoints` versionado |
 | Paleta por hora y derivados | `Core/Scene/SceneTimeOfDay.cs` (legacy) + `HourLighting.cs` (tabla §6.3) + `CelestialPlacement.cs` (§6.2) + `MoonPhase.cs` | tests: continuidad a medianoche y 5 h (legacy), acimut dentro de ±24,5°, elevación de pantalla ≤ 17°, puesta gradual sin saltos > 0,5° por minuto, fase lunar de fechas conocidas |
 | Shaders | `Assets/RowMate/Art/Shaders/` (ARCHITECTURE §2): Water, Sky, Prop, Foliage, Fabric, Skin y Glass (este en `Art/Shaders/UI/`) | capturas de aceptación: 4 entornos × 6, 12, 18, 22 h (prueba manual del legacy) × 3 niveles |
@@ -699,3 +755,44 @@ Deuda de diseño de la It. 1 (QA-V-09 y [04-design-notes §6](../iterations/01-f
 | §3.5 | Terminar: `state.dangerText` `#FF7272`, 5,1:1 en el peor vidrio (decía `#FF6B6B` y 4,9:1) |
 | §3.11 | La etiqueta de la pestaña va debajo de la píldora `nav.indicator` (adentro, el acento da 4,4:1); la cinta SIMULADOR nombra `dev.simulatorText` |
 | §3 y §4.1 (QA-P-09) | Íconos: queda **cerrado** el punto abierto con ARCHITECTURE §1.2. Son glifos de "RowMate Icons", sin paquete ni módulo de SVG; sin la fuente, íconos provisorios dibujados por código (ASSET_SLOTS §4.4) |
+
+---
+
+## Cambios al iniciar la It. 3
+
+Deuda de diseño de la It. 2: alineación con lo que se decidió e implementó ([04-design-notes de la It. 2 §11 y §15.6](../iterations/02-dispositivo-simulador/04-design-notes.md)) y QA-V2-12 (margen del HUD). Detalle, números y verificación en [iterations/03-rutinas/00-deuda-diseno.md](../iterations/03-rutinas/00-deuda-diseno.md), 2026-10-27. Manda `Assets/RowMate/Core/Design/Tokens.cs`; lo único de esta tabla que cambió valores de `Tokens.cs` son las 8 variantes del HUD de §2.3 (ningún color de contrato).
+
+| Dónde | Qué cambió |
+|---|---|
+| §2 | 127 tokens desde la It. 2; `Typography.uss` también sale de `tools/tokens` |
+| §2.1 | `accent.tonalBg` (`#00B4D8 @12 %`) y `accent.onTonal` (`#38CBEF`), los tokens del botón tonal |
+| §2.2 | `state.connected` sobre la insignia de Dispositivo (`bg.app`): 8,8:1 |
+| §2.3 (QA-V2-12) | Criterio con margen de render: umbral contra `#2B3038` (peor vidrio renderizado + 1 por canal). Cambian `metric.split.hud` `#FFAA47`, `metric.spm.hud` `#3ACCF1`, `metric.distance.hud` `#4ECBF2`, `metric.hr.hud` y `step.work.hud` `#FF5D7F`, `state.offTarget.hud` `#FF625B`, `step.cooldown.hud` `#37A2CB` y `step.unknown.hud` `#7D9BA9` (ΔE OK ≤ 0,0062). Contrastes con tres decimales |
+| §2.4 | `ConstantPixelSize` con la densidad (D-03), en lugar de *Constant Physical Size* |
+| §3.1 | Acento `@60 %` en reposo; brillo de 24 dp con textura de degradé, 0,084 en reposo y 0,14 al llegar un dato (era `@18 %`); valor que se achica sin tope (D-10) con centrado óptico; marcadores; sin unidad aparte en el tablero; destello solo si cambió el texto; grilla > 600 → 3 columnas y 4 en tablet como propuesta (P-02); tarjeta del pulsómetro con `bpm` en `metric.hr.hud` (QA-G2-08, DV-04) y error sin caja; cabecera que ajusta |
+| §3.2 (QA-V2-12) | Vidrio adaptativo con `smoothstep(0,10; 0,70)` (con 0,15 el peor caso no era el blanco); reflejo interior solo en los 8 dp superiores, nunca bajo texto; glow de objetivo solo por fuera del borde; en pausa, tarjeta y texto al 100 % |
+| §3.6 | Etiqueta `button` 14/600 en una línea con "…" (DN-20 no adoptado); `min-height`; tonal con `accent.tonalBg` + `accent.onTonal`; variantes texto peligro, peligro relleno e ícono; *hover* 4 % (era 6 %), presionado `:hover:active` con capa 8 % y escala 0,97 / 0,94; foco con halo; chip, interruptor y spinner |
+| §3.7 | Fila de dispositivo encontrado con las medidas de la It. 2 y *chevron* en `text.tertiary` |
+| §3.10 | Vacío de Dispositivo (ícono 48, título `body` `text.secondary`, ayuda `bodyXs`; DV-05, D-11); pantalla provisoria; error del pulsómetro sin caja; spinner en botones |
+| §3.11 | Barra de pestañas con brillo superior de vidrio (5 %, 32 dp) y medidas; AppBar 56; barras de desplazamiento (ocultas en teléfono: posición sobre QA-V2-13); padding inferior dentro del contenido; cinta SIMULADOR 10/700 sin tracking (era 11/800 con 0,1 em) con la geometría del `Banner`; llave y panel del simulador |
+| §4.3 | `bodyM` 14/400, `bodyXs` 12/400 y `button` 14/600; reglas de UI Toolkit: `letter-spacing` en 1/100 em, cajas de línea, centrado óptico de Barlow, sin mayúsculas por USS |
+| §10.1, §11 | Contraste del HUD con margen de render y el test que lo prueba; test pendiente para el vidrio adaptativo de la 6b |
+
+---
+
+## Cambios de la It. 3
+
+Rutinas: lista, editor, diálogos, menús, campos y avisos. Fuente: [03-rutinas/04-design-notes](../iterations/03-rutinas/04-design-notes.md) §2-§4, §8, §12 y §16 (lo que cambió al implementarlo), 2026-10-28. Manda `Assets/RowMate/Core/Design/Tokens.cs`: ningún token existente cambió de valor.
+
+| Dónde | Qué cambió |
+|---|---|
+| §2, §2.1, §4.3 | **133 tokens**: `overlay.scrim`, `border.input`, `text.selection`, `titleXs`, `headerS` y `buttonS`. Usos nuevos de `brand.seed` (riel, cuerpo y hojas de la serie), `accent.primary` (cápsula `×N` a `@20 %`) y `accent.onTonal` (número del `×N`) |
+| §2.2, §2.3 | Regla de color de tipo también fuera del HUD: texto e íconos en `step.*.hud`, gráficos en el color base (resuelve DT-19: el enfriamiento en `#37A2CB`) |
+| §3.5 | Diálogos de la app: `surface.overlay`, `r.card`, borde, anchos 400 / 560, relleno 24 (16 compacto), contenido desplazable con 8 dp de aire, velo `@60 %` |
+| §3.6 | FAB con presionado `accent.primaryPressed` y escala 0,94; el anillo va adentro en los contenedores que recortan (ítem de menú, tiempo / distancia) |
+| §3.7 | Tarjeta de rutina: caja del ícono en `accent.tonalBg` (no `@14 %`); `⋮` en Rutinas y *chevron* solo en Workout; descripción 12 `text.secondary` y resumen 13 `text.tertiary`; reglas de la mini-barra (ancho, desborde, pista vacía); lista a 16 de los bordes con 10 entre tarjetas |
+| §3.8 | Fila de paso (`titleXs` e ícono en `.hud`, lápiz `text.secondary`, acciones 20 en cajas de 48, alto 56 con relleno 4); serie (riel continuo, encabezado de 48, `headerS`, cápsula 28 con `accent.onTonal`, cuerpo `@6 %`, pie de 48 con `Agregar paso a serie`, hojas); campos (`border.input`, etiqueta adentro 15 → 12, 52 / 72, foco y error de 2 dp, selección, una sola columna); selector de tipo en **mosaicos** en lugar de chips |
+| §3.10 | Vacío de Rutinas (56 al 12 %, `text.secondary` / `text.tertiary`, centrado entre las barras) en lugar de "56 `@24 %`, 17/600"; error de carga (ícono 48 + texto + tonal); **cargando: indicador de 32 con gracia de 120** (salen los *skeleton*, DT-20); aviso sin ícono, con las reglas de ancho y de obstáculos |
+| §3.11 | Llave en Rutinas: 16 dp sobre el `+`, solo en y (DV-13, AC-BLE-16-02); el panel se abre siempre en el mismo lugar |
+| §5.1 | Sin ancho máximo de contenido en escritorio en esta iteración (paridad con el legacy y CAP-11) |
+| §10.1 | Los pares de la It. 3 en `ContrastTests.ItThreeDesignerPairs` (75 casos) y sus valores a 3 decimales en `ItThreeControlValuesMatchTheDesignNotes` |

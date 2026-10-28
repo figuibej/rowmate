@@ -1,7 +1,7 @@
 {
     "version": 3,
     "editorVersion": "6000.3.27f1",
-    "appliedAtUtc": "2026-10-27T20:27:17.9289870Z",
+    "appliedAtUtc": "2026-10-28T05:19:24.9157400Z",
     "steps": [
         {
             "id": "player.identity",
@@ -56,17 +56,17 @@
         {
             "id": "ui.fonts",
             "status": "ok",
-            "detail": "FontAsset creados: 0, ya existían: 9; USS reimportados"
+            "detail": "FontAsset creados: 1, ya existían: 9; getFontFeatures apagado en 7; USS reimportados"
         },
         {
             "id": "ui.panel",
             "status": "ok",
-            "detail": "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app"
+            "detail": "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app; respaldos: íconos, Noto Emoji"
         },
         {
             "id": "scene.boot",
             "status": "ok",
-            "detail": "creada: AppRoot _assets UiCamera; única escena del build"
+            "detail": "reparada; única escena del build"
         },
         {
             "id": "defines.check",

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using RowMate.Core.Design;
 using RowMate.Presentation;
 using RowMate.Presentation.Binding;
@@ -21,6 +22,12 @@ namespace RowMate.Simulator.Presentation
     // #sim-close lo cierra y vuelve la llave (AC-BLE-16-02). Abrir: PopTransition (opacidad 160, escala 0,92 → 1 en 240);
     // cerrar: el panel se oculta en el acto y la llave vuelve con 0,85 → 1 en 160 (DN-14). Con store == null (UiTestHost,
     // capturas "Prueba", QA-G2-05) la capa tiene cinta y llave, sin panel: tocar la llave no hace nada.
+    // It. 3 (DV-13, DN3-14; AC-BLE-16-02 con el texto nuevo): la llave se aparta de los obstáculos inferiores (el + de
+    // Rutinas, mientras Rutinas es la pestaña visible y ninguna página la tapa) con SimulatorPanelLayout.FabBottom: barra + 16,
+    // o 16 dp sobre el + (barra + 88), con la x fija; va de un lugar al otro solo en y con un resorte ω 22 (en el acto con
+    // reducir movimiento) y se puede tocar mientras se mueve. La barra usa su alto CONSERVADO (con el editor encima no salta).
+    // La llave también es un obstáculo (para el aviso y el relleno del contenido) mientras se ve. El panel se abre SIEMPRE en
+    // el mismo lugar: PanelBottom(barra) = barra + 16.
     public sealed class SimulatorLayerView : VisualElement, IDisposable
     {
         private readonly SimulatorPanelStore? _store;
@@ -28,6 +35,8 @@ namespace RowMate.Simulator.Presentation
         private readonly VisualElement _tabBar;
         private readonly PopTransition _panelIn;
         private readonly PopTransition _fabIn;
+        private readonly SpringMotion _fabBottom;
+        private readonly List<BottomObstacle> _obstacles = new List<BottomObstacle>();
         private bool? _open;
         private bool _disposed;
 
@@ -67,8 +76,10 @@ namespace RowMate.Simulator.Presentation
             Ribbon = new SimulatorRibbon();
             Add(Ribbon);
 
+            _fabBottom = new SpringMotion(ui.Motion, OnFabBottom);
             RegisterCallback<GeometryChangedEvent>(_ => Place());
             _layout.Changed += Place;
+            _layout.ObstaclesChanged += Place;
             if (store != null)
             {
                 this.Bind(store.State, OnState);
@@ -87,6 +98,12 @@ namespace RowMate.Simulator.Presentation
 
         public bool IsOpen => _open == true;
 
+        // La llave se está moviendo (regla de toma: ningún resorte en curso).
+        public bool IsMoving => _fabBottom.IsRunning;
+
+        // Distancia actual de la llave al borde inferior, en dp.
+        public double FabBottom => _fabBottom.HasValue ? _fabBottom.Value : SimulatorPanelLayout.FabBottom(_layout.CurrentTabBarHeight);
+
         public void Dispose()
         {
             if (_disposed)
@@ -96,6 +113,9 @@ namespace RowMate.Simulator.Presentation
 
             _disposed = true;
             _layout.Changed -= Place;
+            _layout.ObstaclesChanged -= Place;
+            _fabBottom.Stop();
+            _layout.SetBottomObstacle(this, null);
             _store?.Dispose();
         }
 
@@ -116,6 +136,7 @@ namespace RowMate.Simulator.Presentation
             if (state.IsOpen)
             {
                 Fab.style.display = DisplayStyle.None;
+                _layout.SetBottomObstacle(this, null);
                 Panel.style.display = DisplayStyle.Flex;
                 if (!first)
                 {
@@ -127,6 +148,7 @@ namespace RowMate.Simulator.Presentation
                 _panelIn.Finish();
                 Panel.style.display = DisplayStyle.None;
                 Fab.style.display = DisplayStyle.Flex;
+                UpdateObstacle();
                 if (!first)
                 {
                     _fabIn.Play();
@@ -134,24 +156,52 @@ namespace RowMate.Simulator.Presentation
             }
         }
 
-        // Llave y panel a FabBottom(alto real de la barra) del borde inferior; alto máximo del panel con la regla de D-26.
+        // Llave en FabBottom(barra, obstáculos) (DV-13) y panel en PanelBottom(barra) (siempre el mismo lugar); alto máximo del
+        // panel con la regla de D-26.
         private void Place()
         {
-            var bottom = (float)SimulatorPanelLayout.FabBottom(_layout.CurrentTabBarHeight);
-            Fab.style.bottom = bottom;
+            if (_disposed)
+            {
+                return;
+            }
+
+            var bar = _layout.CurrentTabBarHeight;
+            var width = _layout.WindowSize.x > 0 ? _layout.WindowSize.x : layout.width;
+            _layout.CopyObstacles(_obstacles, this);
+            var target = width > 0 ? SimulatorPanelLayout.FabBottom(width, bar, _obstacles) : SimulatorPanelLayout.FabBottom(bar);
             Fab.style.right = (float)SimulatorPanelLayout.FabRight;
+            _fabBottom.MoveTo(target, MotionSpecs.KeyOmega);
             if (Panel == null)
             {
                 return;
             }
 
-            Panel.style.bottom = bottom;
+            Panel.style.bottom = (float)SimulatorPanelLayout.PanelBottom(bar);
             Panel.style.right = (float)SimulatorPanelLayout.FabRight;
             var height = layout.height > 0 ? layout.height : _tabBar.panel?.visualTree.layout.height ?? 0;
             if (height > 0)
             {
                 Panel.style.maxHeight = (float)SimulatorPanelLayout.MaxHeight(height, _layout.Insets);
             }
+        }
+
+        private void OnFabBottom(double bottom)
+        {
+            Fab.style.bottom = (float)bottom;
+            UpdateObstacle();
+        }
+
+        // La llave como obstáculo inferior mientras se ve (el aviso no la tapa ni ella al aviso, DN3-13).
+        private void UpdateObstacle()
+        {
+            var width = _layout.WindowSize.x;
+            if (_disposed || IsOpen || !(width > 0))
+            {
+                _layout.SetBottomObstacle(this, null);
+                return;
+            }
+
+            _layout.SetBottomObstacle(this, SimulatorPanelLayout.FabObstacle(width, FabBottom));
         }
     }
 }

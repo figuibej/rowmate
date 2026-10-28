@@ -9,6 +9,7 @@ using RowMate.Presentation.Device;
 using RowMate.Tests.Support;
 using RowMate.Tests.UiSupport;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace RowMate.Snapshots
 {
@@ -19,6 +20,17 @@ namespace RowMate.Snapshots
     public static class SnapshotCatalog
     {
         public const string HrmRow = "hrm-device-SIM:HRM";
+
+        // El catálogo de un conjunto (03-rutinas/02-tech-design §5.1): it2 = este (sin cambios), it3 = RoutinesCatalog.
+        public static IReadOnlyList<SnapshotScenario> For(string set)
+        {
+            return string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase) ? All : RoutinesCatalog.All;
+        }
+
+        public static string TitleFor(string set)
+        {
+            return string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase) ? "It. 2" : "It. 3 (Rutinas)";
+        }
 
         public static IReadOnlyList<SnapshotScenario> All
         {
@@ -171,8 +183,13 @@ namespace RowMate.Snapshots
                 ("sin llave", !host.IsShown("sim-open")));
             all.Add(cap16);
 
-            all.Add(Sim("CAP-17", "CAP-17-panel-p800-final", DeviceProfile.P800, "es-AR", "Panel desplazado al final, con la hora forzada en 14:00",
-                s => Steps(s.Tap("sim-open"), s.Tap("sim-hour-plus"), s.ScrollToEnd("sim-panel-scroll"))));
+            // QA-V2-05 (aceptada por el PO): en P800 el renglón 14:00 queda arriba, fuera de la foto; el valor lo comprueba el catálogo.
+            var cap17 = Sim("CAP-17", "CAP-17-panel-p800-final", DeviceProfile.P800, "es-AR", "Panel desplazado al final, con la hora forzada en 14:00",
+                s => Steps(s.Tap("sim-open"), s.Tap("sim-hour-plus"), s.ScrollToEnd("sim-panel-scroll")));
+            cap17.Checks = host => Expect(host, ("Hora escena 14:00", host.TextOf("sim-hour-value") == "14:00"),
+                ("Hora real", host.IsShown("sim-hour-real")), ("Remando", host.IsShown("sim-rowing")),
+                ("las dos fallas", host.IsShown("sim-drop-rower") && host.IsShown("sim-drop-hrm")));
+            all.Add(cap17);
             var cap18 = Sim("CAP-18", "CAP-18-panel-tv", DeviceProfile.TV, "es-AR", "Panel abierto sobre Dispositivo", s => s.Tap("sim-open"));
             cap18.Checks = host => Expect(host, ("entra entero", host.WhyNotTappable("sim-drop-hrm") == null));
             all.Add(cap18);
@@ -193,8 +210,15 @@ namespace RowMate.Snapshots
 
             all.Add(Crop(Sim("CAP-20e", "CAP-20e-barra-en", DeviceProfile.TV, "en-US", "Barra en inglés, Dispositivo elegido", s => s.Frames(2)), "tab-bar"));
 
-            var places = new[] { ("a", "tab-workout", "screen-workout", "workout", "Entrenamiento"), ("b", "tab-routines", "screen-routines", "rutinas", "Rutinas"),
-                ("c", "tab-history", "screen-history", "historial", "Historial") };
+            var places = new[] { ("a", "tab-workout", "screen-workout", "workout", "Entrenamiento"), ("c", "tab-history", "screen-history", "historial", "Historial") };
+
+            // CAP-21b: desde la It. 3 Rutinas ya no es provisoria (AC-APP-02-08): la toma muestra la pantalla real con la base
+            // vacía (las capturas de Rutinas son las del conjunto it3, 03-rutinas/snapshots/).
+            var cap21b = Sim("CAP-21b", "CAP-21b-rutinas", DeviceProfile.TV, "es-AR", "Rutinas (desde la It. 3 la pantalla real, base vacía)",
+                s => s.Tap("tab-routines"));
+            cap21b.Checks = host => Expect(host, ("título Rutinas", host.IsTextVisible("Rutinas")), ("vacío", host.IsShown("routines-empty")),
+                ("sin ícono provisorio", host.Find("screen-routines")?.Q(className: "rm-placeholder__icon") == null), ("+", host.IsShown("routines-add")));
+            all.Add(cap21b);
             foreach (var (suffix, tab, screen, label, title) in places)
             {
                 var tabName = tab;
@@ -230,9 +254,16 @@ namespace RowMate.Snapshots
                 .At(8.5, h => h.Tap("tab-device"));
             all.Add(vid02);
 
-            var vid03 = Sim("VID-03", "VID-03-caida-remo", DeviceProfile.TV, "es-AR", "Simular desconexión y vuelta; 8 s", s => s.Advance(59.5));
+            // QA-V2-15: la caída sale de tocar "Simular desconexión" en el panel (con hit-test, como el usuario) y el panel se
+            // cierra en el mismo cuadro (cerrar lo oculta en el acto, DN-14) para que se vea entero el "apagar" de 120 ms.
+            var vid03 = Sim("VID-03", "VID-03-caida-remo", DeviceProfile.TV, "es-AR", "Simular desconexión (desde el panel) y vuelta; 8 s",
+                s => Steps(s.Advance(59.5), s.Tap("sim-open")));
             vid03.Kind = SnapshotKind.Video;
-            vid03.Video = new VideoSpec(8).At(1, h => h.Simulator!.SimRower.SimulateDisconnect());
+            vid03.Video = new VideoSpec(8).At(1, h =>
+            {
+                h.Tap("sim-drop-rower");
+                h.Tap("sim-close");
+            });
             all.Add(vid03);
 
             // Sin pedido del PO: útiles para QA.
@@ -252,8 +283,9 @@ namespace RowMate.Snapshots
                     scrolledToEnd ? s.ScrollToEnd("device-connected-scroll") : s.Do(h => h.Find<UnityEngine.UIElements.ScrollView>("device-connected-scroll")!.scrollOffset = Vector2.zero)));
             if (scrolledToEnd)
             {
-                scenario.WithProbe(PixelProbe.Dominant("metric.hr", "hrm-bpm", Tokens.MetricHr.Rgb.ToHex()))
-                    .WithProbe(PixelProbe.Dominant("metric.hr.hud:bpm", "hrm-bpm-unit", Tokens.MetricHrHud.Rgb.ToHex(), 3), true);
+                // Sin la sonda de "bpm" (QA-V2-04): a densidad 1 el trazo de Inter 14/400 no tiene píxeles de cobertura
+                // plena y el color más frecuente es un borde suavizado. El color de "bpm" se mide en CAP-12b (2,625).
+                scenario.WithProbe(PixelProbe.Dominant("metric.hr", "hrm-bpm", Tokens.MetricHr.Rgb.ToHex()));
                 scenario.Checks = host => Expect(host, ("142", host.TextOf("hrm-bpm") == "142"),
                     ("64 dp sobre la barra", Math.Abs(host.BoundsOf("tab-bar").yMin - host.BoundsOf("hrm-card").yMax - 64) <= 1.01f));
             }
@@ -277,6 +309,7 @@ namespace RowMate.Snapshots
             var options = new UiHostOptions
             {
                 Profile = profile,
+                IsDesktop = !profile.IsPhone,
                 Backend = HostBackends.Simulator(false),
                 SimulatorLayer = SimulatorLayerMode.Full,
                 LanguageTags = new[] { language },
@@ -286,7 +319,7 @@ namespace RowMate.Snapshots
 
         private static SnapshotScenario Prueba(string id, string stem, DeviceProfile profile, string state, Func<ScenarioScript, IEnumerator> arrange)
         {
-            var options = new UiHostOptions { Profile = profile, Backend = HostBackends.TestDevices, SimulatorLayer = SimulatorLayerMode.ChromeOnly };
+            var options = new UiHostOptions { Profile = profile, IsDesktop = !profile.IsPhone, Backend = HostBackends.TestDevices, SimulatorLayer = SimulatorLayerMode.ChromeOnly };
             return new SnapshotScenario(id, stem, options, state, arrange) { BackendName = "Prueba", SkipReadingWindow = true };
         }
 #endif

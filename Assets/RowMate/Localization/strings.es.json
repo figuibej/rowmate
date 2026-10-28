@@ -329,5 +329,59 @@
         "type": "String"
       }
     }
-  }
+  },
+  "navBack": "Atrás",
+  "menuShow": "Mostrar menú",
+  "textCut": "Cortar",
+  "textCopy": "Copiar",
+  "textPaste": "Pegar",
+  "textSelectAll": "Seleccionar todo",
+  "editorRepeatCount": "×{count}",
+  "@editorRepeatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorErrorRange": "Fuera de rango: hasta ±{max}",
+  "@editorErrorRange": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "editorErrorRangeRep": "Fuera de rango en la repetición {rep}: hasta ±{max}",
+  "@editorErrorRangeRep": {
+    "placeholders": {
+      "rep": {
+        "type": "int"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "editorRepetitionsMax": "Máximo {max}",
+  "@editorRepetitionsMax": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "editorRepetitionsOutOfRange": "Con ×{count}, un objetivo queda fuera de rango",
+  "@editorRepetitionsOutOfRange": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorStepOutOfRange": "Hay un paso con valores fuera de rango",
+  "editorSaveError": "No se pudo guardar la rutina",
+  "routineDeleteError": "No se pudo eliminar la rutina",
+  "routinesLoadError": "No se pudieron cargar las rutinas",
+  "retry": "Reintentar"
 }

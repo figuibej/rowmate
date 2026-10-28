@@ -215,7 +215,7 @@ Aviso naranja si no hay remo; "Escenario" + `EnvironmentPicker` (alto 112, minia
 
 ### 5.4 Rutinas y editor
 
-- Lista: tarjeta M3 con ícono cian, nombre, resumen 12, descripción 11 `@54 %`; FAB "+"; borrar con confirmación (`#D32F2F`).
+- Lista: tarjeta M3 con ícono cian, nombre w600, **descripción 12** (si hay; color del subtítulo de `ListTile`) y debajo **resumen 11 `@54 %`** (`routines_screen.dart:56-61`); `PopupMenuButton` (`⋮`) con Editar y Eliminar; FAB "+"; borrar con confirmación (`#D32F2F`). Corregido en la It. 3: antes decía "resumen 12, descripción 11 `@54 %`", una lectura invertida, no un valor de otro momento del legacy (01-po-spec §15).
 - Editor: paso = contenedor `#1A2E45` radio 10, borde izquierdo 3 px del color del paso, chip 28×28 radio 6 `@20 %` con ícono 14, título 13 w600 color del paso, subtítulo 11 (`duración · objetivo`), editar / borrar (`#E57373`). Serie: encabezado `#0077B6 @12 %` radio superior 12 + borde izquierdo 3 px `#0077B6`, "Series" 13 w700 cian, chip `×N` 14 w800 cian sobre `@20 %` radio 12, papelera; pasos de la serie con sangría 16; pie `@6 %` con "+ Agregar paso a la serie".
 - `IntervalTile` (widget compartido): radio 12, borde izquierdo 4, chip 36×36 radio 8 con número, activo `@15 %`.
 
@@ -522,3 +522,11 @@ Todas son **solo visuales**: no cambian distancia, velocidad media ni métricas.
 - EXR: [features](https://exrgame.com/features) · [HUD](https://exrgame.com/support/hud) · [otros botes](https://exrgame.com/support/other-boats) · [segmentos](https://exrgame.com/support/segments) · [avatar](https://exrgame.com/support/customize-rower) · [hardware](https://exrgame.com/support/compatible-hardware) · [update 1.12](https://exrgame.com/blog/update-1.12) · [update 1.13](https://exrgame.com/blog/update-1.13) · [update 1.54](https://exrgame.com/blog/article/update-1.54) · [lugares olímpicos](https://exrgame.com/blog/article/olympians-rowing-locations) · [Concept2 blog](https://www.concept2.com/blog/concept2-compatible-apps-try-exr) · [British Rowing](https://www.britishrowing.org/2024/05/british-rowing-announces-new-partnership-with-indoor-rowing-online-platform-exr/) · [Garage Gym Life](https://garagegymlifemedia.com/?p=18036)
 - Biomecánica: [Kleshnev, recuperación (row2k)](https://www.row2k.com/features/5722/the-biomechanics-of-the-recovery-phase-by-dr-valery-kleshnev/) · [Kleshnev, perfil de pala (row2k)](https://www.row2k.com/features/5655/blade-work-profile-during-recovery-by-dr-valery-kleshnev/) · [Kleshnev, boat check (row2k)](https://www.row2k.com/features/5467/on-the-topic-of-boat-check/) · [Kleshnev, análisis temporal (ISBS)](https://ojs.ub.uni-konstanz.de/cpa/article/view/486) · [British Rowing Plus, timing](https://plus.britishrowing.org/2022/06/10/the-rowing-stroke-timing-and-micro-moments/) · [World Rowing, Practical Boat Rigging](https://worldrowing.com/wp-content/uploads/2020/10/Practical-Boat-Rigging-Gianni-Postilione-Conny-Draper.pdf) · [ISBS, ángulos](https://ojs.ub.uni-konstanz.de/cpa/article/view/6682/6038) · [Concept2 technique](https://www.concept2.com/technique) · [Concept2 NZ drive](https://www.concept2.co.nz/BLOG/x_post/Understanding-rowing-technique-catch-drive-and-finish-00054.html) · [Concept2 NZ recovery](https://concept2.co.nz/Blog/x_post/Understanding-rowing-technique-the-recovery-sequence-00059.html) · [Wikipedia: Rowing stroke](https://en.wikipedia.org/wiki/Rowing_stroke) · [Physics Today: Row bots](https://physicstoday.aip.org/quick-study/row-bots)
 - Unity (referencia técnica de agua URP gratis): [Unity BoatAttack (Gerstner, reflejos planares, cáusticas, flotación)](https://github.com/Verasl/BoatAttack). Revisar su `LICENSE.md` antes de reutilizar código.
+
+---
+
+## Cambios de la It. 3
+
+| Dónde | Qué cambió |
+|---|---|
+| §5.4 | Lista de rutinas: descripción 12 y resumen 11 `@54 %`, en ese orden, y el menú `⋮` (estaba invertido; corrección de lectura, 03-rutinas/01-po-spec §15 y 04-design-notes §12) |

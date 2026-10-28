@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+using RowMate.Core.Common;
 using RowMate.Core.Ports;
+using RowMate.Presentation.Controls;
 using RowMate.Presentation.Surface;
 
 namespace RowMate.Tests.UiSupport
 {
-    // Cómo se arma un UiTestHost (02-tech-design §4.2). Por defecto: TV, dispositivos de prueba, sin capa del simulador, sin
-    // área segura, español de Argentina, letra 1, sin reducir movimiento, sin Perfil, GammaRt (la tubería de la app) y el
-    // reloj de prueba a las 13:45 hora local del 27/10/2026 (así "Hora escena" + da 14:00).
+    // Cómo se arma un UiTestHost (02-tech-design §4.2 de la It. 2; 03-rutinas/02-tech-design §5.2). Por defecto: TV, dispositivos
+    // de prueba, sin capa del simulador, sin área segura, español de Argentina, letra 1, sin reducir movimiento, sin Perfil,
+    // GammaRt (la tubería de la app), el reloj de prueba a las 13:45 hora local del 27/10/2026 (así "Hora escena" + da 14:00),
+    // rutinas en memoria y vacías, la fecha de creación de un SequenceClock propio (13:00:00.000Z y un minuto más por rutina),
+    // un FakeClipboard vacío y el teclado del teléfono oculto.
     public enum SimulatorLayerMode
     {
         None,
@@ -22,6 +26,18 @@ namespace RowMate.Tests.UiSupport
 
         public DeviceProfile Profile = DeviceProfile.TV;
         public HostBackendFactory Backend = HostBackends.TestDevices;
+
+        // Las rutinas (03-rutinas/02-tech-design §5.2): en memoria vacías, SQLite real sembrada (Seeded), F-ROTA, de guion…
+        public HostRoutineFactory Routines = HostRoutines.Empty;
+
+        // Reloj de la fecha de creación (lo lee SOLO RoutinesStore; QA-G3-19); null = un SequenceClock nuevo por host.
+        public IClock? CreationClock;
+
+        // Portapapeles del menú de texto; null = un FakeClipboard vacío por host (ninguna prueba toca el real, R3-10).
+        public IClipboard? Clipboard;
+
+        // Menú de texto al mantener presionado en el teléfono (R3-13).
+        public TextMenuTouchMode TextMenuTouchMode = TextMenuTouchMode.SystemMenu;
 
         // Full exige el backend del simulador; ChromeOnly: cinta y llave sin panel. Sin el define, solo None.
         public SimulatorLayerMode SimulatorLayer = SimulatorLayerMode.None;

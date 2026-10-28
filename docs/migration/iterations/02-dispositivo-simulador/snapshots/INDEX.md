@@ -1,6 +1,6 @@
 # Capturas de la It. 2
 
-Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 02-tech-design §4) en modo edición, con la tubería GammaRt. Detalle de cada toma (sondas, auditoría, elementos) en [manifest.json](manifest.json); la medición de R-T1 en [rt1-measurement.json](rt1-measurement.json).
+Generadas por el arnés (`tools/unity/capture-snapshots.ps1 -Set it2`, 02-tech-design §4) en modo edición, con la tubería GammaRt. Detalle de cada toma (sondas, auditoría, elementos) en [manifest.json](manifest.json); la medición de R-T1 en [rt1-measurement.json](rt1-measurement.json).
 
 | ID | Archivo | Perfil | Backend | Estado | Sondas | Auditoría | Comprobaciones |
 |---|---|---|---|---|---|---|---|
@@ -10,7 +10,7 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 02-tech-design §4
 | CAP-02 | [CAP-02-dispositivo-tv-en.png](CAP-02-dispositivo-tv-en.png) | TV | Sim | Igual que CAP-01, con el sistema en inglés | 0/0 | sin desbordes | ok |
 | CAP-03 | [CAP-03-dispositivo-l640.png](CAP-03-dispositivo-l640.png) | L640 | Sim | Igual que CAP-01 en 640 × 360 | 1/1 | sin desbordes | ok |
 | CAP-04a | [CAP-04a-dispositivo-w1280.png](CAP-04a-dispositivo-w1280.png) | W1280 | Sim | Pulsómetro conectado (60 s); Dispositivo sin desplazar | 0/0 | sin desbordes | ok |
-| CAP-04b | [CAP-04b-dispositivo-w1280-hrm.png](CAP-04b-dispositivo-w1280-hrm.png) | W1280 | Sim | Pulsómetro conectado (60 s); Dispositivo desplazada hasta el final | 1/2 | sin desbordes | ok |
+| CAP-04b | [CAP-04b-dispositivo-w1280-hrm.png](CAP-04b-dispositivo-w1280-hrm.png) | W1280 | Sim | Pulsómetro conectado (60 s); Dispositivo desplazada hasta el final | 1/1 | sin desbordes | ok |
 | CAP-05 | [CAP-05-dispositivo-th.png](CAP-05-dispositivo-th.png) | TH | Sim | Igual que CAP-01 en el teléfono horizontal | 0/0 | sin desbordes | ok |
 | CAP-06 | [CAP-06-grilla-pulso.png](CAP-06-grilla-pulso.png) | TV | Prueba | Remo de prueba conectado que manda 140 de pulso por FTMS | 2/2 | sin desbordes | ok |
 | CAP-07 | [CAP-07-valores-largos.png](CAP-07-valores-largos.png) | TV | Prueba | Remo de prueba: split 6001 s, 40,5 spm, 1999 W, 123 456 m | 0/0 | sin desbordes | ok |
@@ -36,7 +36,7 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 02-tech-design §4
 | CAP-20d | [CAP-20d-barra-historial.png](CAP-20d-barra-historial.png) | TV | Sim | Destino elegido: historial | 0/0 | sin desbordes | ok |
 | CAP-20e | [CAP-20e-barra-en.png](CAP-20e-barra-en.png) | TV | Sim | Barra en inglés, Dispositivo elegido | 0/0 | sin desbordes | ok |
 | CAP-21a | [CAP-21a-workout.png](CAP-21a-workout.png) | TV | Sim | Pestaña provisoria: Entrenamiento | 1/1 | sin desbordes | ok |
-| CAP-21b | [CAP-21b-rutinas.png](CAP-21b-rutinas.png) | TV | Sim | Pestaña provisoria: Rutinas | 1/1 | sin desbordes | ok |
+| CAP-21b | [CAP-21b-rutinas.png](CAP-21b-rutinas.png) | TV | Sim | Rutinas (desde la It. 3 la pantalla real, base vacía) | 0/0 | sin desbordes | ok |
 | CAP-21c | [CAP-21c-historial.png](CAP-21c-historial.png) | TV | Sim | Pestaña provisoria: Historial | 1/1 | sin desbordes | ok |
 | CAP-22 | [CAP-22-build-normal-w1280.png](CAP-22-build-normal-w1280.png) | W1280 | Unavailable | Build normal (sin simulador): equipo sin Bluetooth LE, vista de búsqueda vacía | 1/1 | sin desbordes | ok |
 | CAP-23 | [CAP-23-medicion-rt1.png](CAP-23-medicion-rt1.png) | 400x240 | — | Muestra de medición de R-T1 (AC-BASE-05): las dos composiciones lado a lado | 1/1 | sin desbordes | ok |
@@ -44,4 +44,4 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 02-tech-design §4
 | CAP-25 | [CAP-25-strava-5-destinos.png](CAP-25-strava-5-destinos.png) | TV | Sim | Configuración de prueba con Strava | 0/0 | sin desbordes | ok |
 | VID-01 | [VID-01-tablero.mp4](VID-01-tablero.mp4) | TV | Sim | Remo y pulsómetro conectados, a 150 W y 24 spm, desde los 60 s; 10 s | 0/0 | sin desbordes | ok |
 | VID-02 | [VID-02-pestanas.mp4](VID-02-pestanas.mp4) | TV | Sim | Recorrido por las 4 pestañas; 10 s | 0/0 | sin desbordes | ok |
-| VID-03 | [VID-03-caida-remo.mp4](VID-03-caida-remo.mp4) | TV | Sim | Simular desconexión y vuelta; 8 s | 0/0 | sin desbordes | ok |
+| VID-03 | [VID-03-caida-remo.mp4](VID-03-caida-remo.mp4) | TV | Sim | Simular desconexión (desde el panel) y vuelta; 8 s | 0/0 | sin desbordes | ok |

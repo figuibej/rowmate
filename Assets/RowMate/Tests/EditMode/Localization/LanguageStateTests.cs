@@ -53,7 +53,7 @@ namespace RowMate.Tests.EditMode.Localization
         }
 
         [Test, Category("AC-APP-09-04")]
-        [Ignore("NO VERIFICABLE → It. 2: [Editor] la app no muestra ningún selector de idioma y el idioma se resuelve en cada arranque")]
+        [Ignore("Se verifica en PlayMode con el simulador: LanguageOnScreenTests.NoLanguageSelectorAndNoMemory (It. 2). [Device] Android: QA en equipo (05-qa-verification de la It. 2)")]
         public void NoSelectorOnScreen()
         {
         }
@@ -113,7 +113,7 @@ namespace RowMate.Tests.EditMode.Localization
         }
 
         [Test, Category("AC-APP-09-05")]
-        [Ignore("NO VERIFICABLE → It. 2: [Editor]/[Device] la interfaz cambia de idioma sin reiniciar la app cuando cambia el sistema")]
+        [Ignore("Se verifica en PlayMode con el simulador: LanguageOnScreenTests.LiveLanguageChangeKeepsEverythingElse (It. 2). [Device] Android: QA en equipo (05-qa-verification de la It. 2)")]
         public void VisibleChangeWithoutRestart()
         {
         }

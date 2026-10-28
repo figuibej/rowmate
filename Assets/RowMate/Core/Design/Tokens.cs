@@ -22,6 +22,7 @@ namespace RowMate.Core.Design
         public static readonly ColorToken BorderSubtle = ColorToken.HexAlpha("border.subtle", "#FFFFFF", 8);                   // borde de vidrio, separadores de barra
         public static readonly ColorToken BorderDefault = ColorToken.HexAlpha("border.default", "#FFFFFF", 12);                // separadores, miniatura no elegida
         public static readonly ColorToken BorderStrong = ColorToken.HexAlpha("border.strong", "#FFFFFF", 24);                  // botón contorno neutro, foco inactivo
+        public static readonly ColorToken BorderInput = ColorToken.HexAlpha("border.input", "#FFFFFF", 40, ColorRole.Graphic);  // borde de la caja del campo en reposo (It. 3, DN3-01: 3,807 contra bg.sunken)
         public static readonly ColorToken FocusRing = ColorToken.Hex("focus.ring", "#00B4D8", ColorRole.Graphic);              // anillo de foco 2 dp (desktop)
         public static readonly ColorToken FocusRingHalo = ColorToken.HexAlpha("focus.ringHalo", "#00B4D8", 30);                // halo del foco 4 dp
         public static readonly ColorToken TextPrimary = ColorToken.Contract("text.primary", "#FFFFFF", ColorRole.UiTextPrimary); // texto de la barra superior, theme.dart:20-21
@@ -71,21 +72,26 @@ namespace RowMate.Core.Design
         public static readonly ColorToken DevSimulatorText = ColorToken.Hex("dev.simulatorText", "#1A0A00");                   // texto de la cinta SIMULADOR (par verificado)
         public static readonly ColorToken DevBleDebug = ColorToken.Hex("dev.bleDebug", "#18FFFF");                             // texto mono del diagnóstico BLE (par verificado)
         public static readonly ColorToken DevBleDebugBg = ColorToken.HexAlpha("dev.bleDebugBg", "#000000", 38);                // fondo del diagnóstico BLE
+        public static readonly ColorToken OverlayScrim = ColorToken.Hex("overlay.scrim", "#000000", ColorRole.Graphic);        // velo de diálogos (0,6), oscurecido de la pila (0,08), capa del ítem de peligro (It. 3)
+        public static readonly ColorToken TextSelection = ColorToken.HexAlpha("text.selection", "#00B4D8", 35, ColorRole.Surface); // selección de los campos de texto (It. 3, DN3-01: blanco encima 9,586)
 
-        // ── 2.3 Variantes del HUD (mismo matiz, contra el peor vidrio #2A2F37) ────
-        public static readonly ColorToken MetricSplitHud = ColorToken.Hex("metric.split.hud", "#FEA845", ColorRole.HudValue);
-        public static readonly ColorToken MetricSpmHud = ColorToken.Hex("metric.spm.hud", "#38CBEF", ColorRole.HudValue);
+        // ── 2.3 Variantes del HUD (mismo matiz OKLCH que la base) ──────────────────
+        // Umbral contra el peor vidrio RENDERIZADO + 1 por canal (#2B3038 = #2A2F37 + 1 LSB), no contra el cálculo sin
+        // redondear: con margen de 1 LSB, el píxel real también llega (It. 3, QA-V2-12; docs/migration/iterations/03-rutinas/
+        // 00-deuda-diseno.md §2). Los 8 que cambiaron daban 4,497-4,515 / 6,987-7,023 en el píxel de 8 bits.
+        public static readonly ColorToken MetricSplitHud = ColorToken.Hex("metric.split.hud", "#FFAA47", ColorRole.HudValue);       // era #FEA845
+        public static readonly ColorToken MetricSpmHud = ColorToken.Hex("metric.spm.hud", "#3ACCF1", ColorRole.HudValue);           // era #38CBEF
         public static readonly ColorToken MetricWattsHud = ColorToken.Hex("metric.watts.hud", "#FFD60A", ColorRole.HudValue);       // = base
-        public static readonly ColorToken MetricDistanceHud = ColorToken.Hex("metric.distance.hud", "#4CC9F0", ColorRole.HudValue); // = base
+        public static readonly ColorToken MetricDistanceHud = ColorToken.Hex("metric.distance.hud", "#4ECBF2", ColorRole.HudValue); // era = base #4CC9F0
         public static readonly ColorToken MetricTimeHud = ColorToken.Hex("metric.time.hud", "#E0E0E0", ColorRole.HudValue);         // = base
         public static readonly ColorToken MetricKcalHud = ColorToken.Hex("metric.kcal.hud", "#06D6A0", ColorRole.HudValue);         // = base
-        public static readonly ColorToken MetricHrHud = ColorToken.Hex("metric.hr.hud", "#FF5A7E", ColorRole.HudValueRed);          // D-ART-01 (familia roja, ≥ 4,5:1)
-        public static readonly ColorToken StateOffTargetHud = ColorToken.Hex("state.offTarget.hud", "#FF5F59", ColorRole.HudValueRed); // D-ART-01 + flecha ▲/▼ + borde
-        public static readonly ColorToken StepWorkHud = ColorToken.Hex("step.work.hud", "#FF5A7E", ColorRole.HudText);
+        public static readonly ColorToken MetricHrHud = ColorToken.Hex("metric.hr.hud", "#FF5D7F", ColorRole.HudValueRed);          // D-ART-01 (familia roja, ≥ 4,5:1); era #FF5A7E
+        public static readonly ColorToken StateOffTargetHud = ColorToken.Hex("state.offTarget.hud", "#FF625B", ColorRole.HudValueRed); // D-ART-01 + flecha ▲/▼ + borde; era #FF5F59
+        public static readonly ColorToken StepWorkHud = ColorToken.Hex("step.work.hud", "#FF5D7F", ColorRole.HudText);              // = metric.hr.hud (misma base); era #FF5A7E
         public static readonly ColorToken StepRestHud = ColorToken.Hex("step.rest.hud", "#06D6A0", ColorRole.HudText);              // = base
         public static readonly ColorToken StepWarmupHud = ColorToken.Hex("step.warmup.hud", "#FFD166", ColorRole.HudText);          // = base
-        public static readonly ColorToken StepCooldownHud = ColorToken.Hex("step.cooldown.hud", "#35A0C9", ColorRole.HudText);
-        public static readonly ColorToken StepUnknownHud = ColorToken.Hex("step.unknown.hud", "#7C9AA8", ColorRole.HudText);
+        public static readonly ColorToken StepCooldownHud = ColorToken.Hex("step.cooldown.hud", "#37A2CB", ColorRole.HudText);      // era #35A0C9
+        public static readonly ColorToken StepUnknownHud = ColorToken.Hex("step.unknown.hud", "#7D9BA9", ColorRole.HudText);        // era #7C9AA8
         public static readonly ColorToken TextHudPrimary = ColorToken.Hex("text.hudPrimary", "#FFFFFF", ColorRole.HudValue);        // valor con objetivo cumplido (Q-60)
 
         // ── 3.2 Vidrio del HUD: respaldo sin desenfoque (QA-P-17, P-08) ───────────
@@ -153,6 +159,9 @@ namespace RowMate.Core.Design
         public static readonly TypeScaleToken BodyM = TypeScaleToken.Of("bodyM", FontFamilyRole.Ui, 14, 20, 400);        // nombres y estado en tarjetas, rótulos del panel (It. 2, DN-01; legacy 14)
         public static readonly TypeScaleToken BodyS = TypeScaleToken.Of("bodyS", FontFamilyRole.Ui, 13, 18, 400);        // subtítulos, resúmenes
         public static readonly TypeScaleToken BodyXs = TypeScaleToken.Of("bodyXs", FontFamilyRole.Ui, 12, 16, 400);      // ayudas, errores, insignia (It. 2, DN-01; spec 12 dp)
+        public static readonly TypeScaleToken TitleXs = TypeScaleToken.Of("titleXs", FontFamilyRole.Ui, 14, 20, 600);    // título de la fila de paso, Pasos (N) (It. 3, DN3-01)
+        public static readonly TypeScaleToken HeaderS = TypeScaleToken.Of("headerS", FontFamilyRole.Ui, 13, 18, 700);    // "Serie" del encabezado (It. 3, DN3-01; legacy 13/700)
+        public static readonly TypeScaleToken ButtonS = TypeScaleToken.Of("buttonS", FontFamilyRole.Ui, 12, 16, 600);    // Agregar paso a serie, nombres de los mosaicos (It. 3, DN3-01)
         public static readonly TypeScaleToken Label = TypeScaleToken.Of("label", FontFamilyRole.Ui, 12, 16, 600);        // etiquetas de métrica (mayúsculas, tracking 0,08 em en USS)
         public static readonly TypeScaleToken Caption = TypeScaleToken.Of("caption", FontFamilyRole.Ui, 11, 14, 500);    // fechas, ayudas, ejes (mínimo legible)
         public static readonly TypeScaleToken Button = TypeScaleToken.Of("button", FontFamilyRole.Ui, 14, 20, 600);      // etiqueta de botones, chips y acciones de texto (It. 2, DN-01; M3 labelLarge 14)

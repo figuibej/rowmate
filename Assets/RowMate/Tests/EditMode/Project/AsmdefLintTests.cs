@@ -50,6 +50,13 @@ namespace RowMate.Tests.EditMode.Project
             "UnityEditor.TestRunner",
         };
 
+        // Paquetes de terceros que se referencian por nombre (It. 3, 02-tech-design §1.2): solo Infrastructure, y con su par
+        // de NuGet en tools/dotnet (Gilzoide.SqliteNet ↔ sqlite-net-pcl, el mismo SQLite.cs de sqlite-net).
+        private static readonly Dictionary<string, string> PackageAssemblies = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            { "Gilzoide.SqliteNet", "Infrastructure" },
+        };
+
         // Orden de claves que escribe Unity.
         private static readonly string[] KeyOrder =
         {
@@ -141,7 +148,7 @@ namespace RowMate.Tests.EditMode.Project
                 foreach (var reference in References(entry.Key))
                 {
                     Assert.That(reference.StartsWith("GUID:", StringComparison.Ordinal), Is.False, entry.Value + " referencia por GUID: " + reference);
-                    Assert.That(ours.Contains(reference) || UnityPackageAssemblies.Contains(reference), Is.True,
+                    Assert.That(ours.Contains(reference) || UnityPackageAssemblies.Contains(reference) || PackageAssemblies.ContainsKey(reference), Is.True,
                         entry.Value + " referencia un assembly desconocido: " + reference);
                     Assert.That(reference, Is.Not.EqualTo(entry.Value), entry.Value + " se referencia a sí mismo");
                 }
@@ -258,7 +265,7 @@ namespace RowMate.Tests.EditMode.Project
             // ARCHITECTURE §3.2: las flechas apuntan hacia el Core.
             Assert.That(References("Core"), Is.Empty, "Core no referencia nada");
             Assert.That(References("App"), Is.EquivalentTo(new[] { "RowMate.Core" }));
-            Assert.That(References("Infrastructure"), Is.EquivalentTo(new[] { "RowMate.Core" }));
+            Assert.That(References("Infrastructure"), Is.EquivalentTo(new[] { "RowMate.Core", "Gilzoide.SqliteNet" }), "It. 3: sqlite-net (§1.2)");
             Assert.That(References("Simulator"), Is.EquivalentTo(new[] { "RowMate.Core", "RowMate.App" }));
             foreach (var forbidden in new[] { "RowMate.Scene", "RowMate.Platform", "RowMate.Infrastructure" })
             {
@@ -325,6 +332,35 @@ namespace RowMate.Tests.EditMode.Project
             }
 
             AssertAcyclic();
+        }
+
+        // It. 3 (02-tech-design §1.2): solo Infrastructure nombra Gilzoide.SqliteNet, y su .csproj espejo trae el par de NuGet
+        // fijado (sqlite-net-pcl 1.9.172 + SQLitePCLRaw.bundle_green 2.1.11); ningún otro proyecto lo pide directo.
+        [Test, Category("AC-BASE-10"), Category("AC-HIS-17-02")]
+        public void OnlyInfrastructureNamesTheSqlitePackage()
+        {
+            foreach (var entry in Expected)
+            {
+                foreach (var package in PackageAssemblies)
+                {
+                    var names = References(entry.Key).Contains(package.Key);
+                    Assert.That(names, Is.EqualTo(entry.Key == package.Value), entry.Value + " y " + package.Key);
+                }
+            }
+
+            var infrastructure = RepoPaths.Combine("tools/dotnet/RowMate.Infrastructure/RowMate.Infrastructure.csproj");
+            Assert.That(PackageVersion(infrastructure, "sqlite-net-pcl"), Is.EqualTo("1.9.172"));
+            Assert.That(PackageVersion(infrastructure, "SQLitePCLRaw.bundle_green"), Is.EqualTo("2.1.11"), "fijado: SQLite 3.49.1 (DT-16)");
+            foreach (var project in Projects())
+            {
+                if (RepoPaths.Relative(project) == "tools/dotnet/RowMate.Infrastructure/RowMate.Infrastructure.csproj")
+                {
+                    continue;
+                }
+
+                Assert.That(PackageVersion(project, "sqlite-net-pcl"), Is.Null, RepoPaths.Relative(project));
+                Assert.That(PackageVersion(project, "SQLitePCLRaw.bundle_green"), Is.Null, RepoPaths.Relative(project));
+            }
         }
 
         [Test, Category("AC-BASE-10")]

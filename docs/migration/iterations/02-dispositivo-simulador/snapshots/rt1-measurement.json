@@ -3,6 +3,6 @@
   "direct": { "pipeline": "Overlay", "glassOnWhite": "#6A6A6C", "textSecondaryOnCard": "#DADBDC" },
   "expectedSrgb": { "glassOnWhite": "#2A2F37", "textSecondaryOnCard": "#BAC0C7" },
   "expectedLinear": { "glassOnWhite": "#696A6B", "textSecondaryOnCard": "#DADBDC" },
-  "contrast": { "text.hudPrimary/glass": 13.46, "metric.split.hud/glass": 6.99, "metric.hr.hud/glass": 4.50, "text.secondary(medido)/surface.card": 7.61 },
+  "contrast": { "text.hudPrimary/glass": 13.46, "metric.split.hud/glass": 7.11, "metric.hr.hud/glass": 4.57, "text.secondary(medido)/surface.card": 7.61 },
   "verdict": "sRGB"
 }

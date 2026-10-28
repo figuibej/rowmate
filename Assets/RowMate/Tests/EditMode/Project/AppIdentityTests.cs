@@ -7,7 +7,7 @@ using RowMate.Tests.Support;
 namespace RowMate.Tests.EditMode.Project
 {
     // F-APP-16 (también toca): nombre, empresa, versión, identificadores provisionales y mínimos (R-14, Q-85, Q-90, D-02).
-    // La parte estática es dotnet; lo visible en equipos es NO VERIFICABLE hasta la It. 2 (y la 10b en Apple).
+    // La parte estática es dotnet; lo visible en equipos lo verifica QA en la PC (It. 2) y en Android y Apple cuando haya equipo.
     [TestFixture]
     public sealed class AppIdentityTests
     {
@@ -80,22 +80,22 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(AppIdentity.IosMinimumVersion, Is.EqualTo("15.0"));
         }
 
-        [Test, Category("AC-APP-16-01"), Ignore("NO VERIFICABLE → [Editor]/[Device] It. 2 (nombre visible en Android y Windows); [Apple] It. 10b")]
+        [Test, Category("AC-APP-16-01"), Ignore("Windows: QA en equipo (05-qa-verification de la It. 2: RowMate.exe, título y registro). [Device] Android: cuando estén el módulo y el teléfono; [Apple] It. 10b")]
         public void VisibleNameOnDevices()
         {
         }
 
-        [Test, Category("AC-APP-16-02"), Ignore("NO VERIFICABLE → [Device] It. 2: carpeta LocalLow/iguisoft/RowMate en Windows y convivencia; [Apple] It. 10b")]
+        [Test, Category("AC-APP-16-02"), Ignore("Windows: QA en equipo (05-qa-verification de la It. 2: LocalLow/iguisoft/RowMate y las preferencias del legacy intactas). [Device] Android: cuando estén el módulo y el teléfono; [Apple] It. 10b")]
         public void WindowsDataFolderAndCoexistence()
         {
         }
 
-        [Test, Category("AC-APP-16-03"), Ignore("NO VERIFICABLE → [Device] It. 2: instalar junto al legacy en Android y Windows; [Apple] It. 10b")]
+        [Test, Category("AC-APP-16-03"), Ignore("[Device] QA en equipo: abrir la app legacy después de instalar la nueva en Windows (prerrequisito opcional del usuario) y en Android cuando estén el módulo y el teléfono; [Apple] It. 10b")]
         public void InstallsNextToTheLegacyApp()
         {
         }
 
-        [Test, Category("AC-APP-16-04"), Ignore("NO VERIFICABLE → [Device] It. 2: no instala en Android 7.x ni en 32 bits (final en la It. 14)")]
+        [Test, Category("AC-APP-16-04"), Ignore("[Device] QA en equipo cuando estén el módulo de Android y un teléfono: no instala en Android 7.x ni en 32 bits (final en la It. 14)")]
         public void AndroidMinimumOnDevices()
         {
         }

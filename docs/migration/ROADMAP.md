@@ -172,7 +172,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 **También toca.** F-APP-01 (las rutinas se cargan al arrancar).
 
 **Tests legacy a portar.** Ninguno (no hay). **Criterios nuevos:**
-- Casos 16-21 de RUT §5.3: nombre vacío → `editorNameEmpty`; sin pasos → `editorNoSteps`; "Serie" agrega Trabajo 120 s + Descanso 60 s ×3; repeticiones "abc"/"0"/"−2"/"5"; agregar paso a una serie; diálogo con campos vacíos; crear arriba, editar sin reordenar, borrar con confirmación.
+- Casos 16-21 de RUT §5.3: nombre vacío → `editorNameEmpty`; sin pasos → `editorNoSteps`; "Serie" agrega Trabajo 120 s + Descanso 60 s ×3; repeticiones "abc" → ×1, "0" o "-2" (con guion) → sin cambio, "−2" (con el signo menos tipográfico, que `int.tryParse` no reconoce) → ×1 y "5" → ×5; agregar paso a una serie; diálogo con campos vacíos; crear arriba, editar sin reordenar, borrar con confirmación.
 - Persistencia y reapertura.
 - Base `rower_app_dev.db` separada en simulador.
 - La base nace ya con el formato propio v8 (P-02).
@@ -212,6 +212,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 - Semáforo (F-WKT-10) con los colores de §6 (D-ART-01).
 - Formatos 1-15 de F-WKT-11.
 - Comportamiento en segundo plano según Q-91 (QA-P-06): el spec de la 4a lo fija con criterios verificables.
+- Una rutina con valores fuera de los topes de Q-92 (solo posible tocando la base a mano, `F-RARA` de la It. 3) no cuelga la app al iniciarla: el spec de la 4a fija qué ve el usuario (R3-08 de la It. 3).
 
 **Demo.** Con el simulador:
 - (a) "Entrenamiento libre": HUD funcional con SPM grande, Split, Watts, kcal, BPM, tiempo y distancia sobre tarjetas con el respaldo del vidrio `glass.fallback` (`#070D16 @86 %`, ART_BIBLE §3.2) y el borde legacy; pausa y reanudación; "Terminar" con confirmación.
@@ -548,6 +549,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 - Orientaciones y ventanas de F-APP-15.
 - 60 fps en un teléfono de gama media durante el entrenamiento (R-12), incluido todo lo que haya quedado NO VERIFICABLE en las It. 6a-8.
 - Pipeline que compila las 4 plataformas y corre `dotnet test` sin credenciales versionadas.
+- Lectores de pantalla (DT-05 de la It. 3): el lector del sistema (TalkBack en Android, Narrador en Windows y VoiceOver en la tanda Apple) lee los textos, los botones y las ayudas de la app, como en el legacy (AC-APP-03-06 de la It. 3, que quedó NO VERIFICABLE en esa parte).
 - Todos los criterios [Apple] pendientes (§4.1).
 
 **Demo.** Builds instalables de Android, iOS, Windows y macOS con nombre, ícono y arranque "RowMate"; recorrido completo de la app (Dispositivo → rutina → entrenamiento en los 4 escenarios → historial → Strava) en es y en, con transiciones fluidas y sin textos fijos.
@@ -867,3 +869,4 @@ Correcciones por el gate de armonía del plan ([QA_PLAN_REVIEW.md](QA_PLAN_REVIE
 | It. 1 (PO) | Prerrequisito opcional nuevo: repositorio remoto en GitHub para que corra `ci-core.yml`; sin él, el CI queda NO VERIFICABLE. Enlace a la spec de la It. 1 |
 | It. 1 (cierre, PO) | Q-92 nueva (QA-V-11): tope de los números del paso y sus progresiones, en la It. 3 (criterio nuevo y "Decisiones aplicadas") y en la tabla de §6, gate 3 |
 | It. 2 (gate, PO) | Demo de la It. 2: la cantidad de columnas depende del ancho de la ventana (hasta 640 dp, 2; más, 3), no de la orientación ([spec de la It. 2](iterations/02-dispositivo-simulador/01-po-spec.md) AC-BLE-11-05 y §15; QA-G2-18) |
+| It. 3 (cierre, PO) | Pendientes de la [spec de la It. 3 §15](iterations/03-rutinas/01-po-spec.md): en la It. 3, repeticiones `-2` con guion (sin cambio) y `−2` con el signo menos tipográfico (×1), como AC-RUT-14-05; en la It. 14, criterio nuevo de lectores de pantalla (DT-05). Además, en la It. 4a, criterio nuevo para una rutina fuera de los topes de Q-92 cargada a mano (R3-08) |

@@ -22,6 +22,9 @@ namespace RowMate.Snapshots
             _shots.Add(shot);
         }
 
+        // El conjunto del INDEX.md ("It. 2", "It. 3 (Rutinas)").
+        public string Title { get; set; } = "It. 2";
+
         public void Write(string folder, string pipeline)
         {
             Directory.CreateDirectory(folder);
@@ -47,25 +50,25 @@ namespace RowMate.Snapshots
         public string ToMarkdown(string pipeline)
         {
             var md = new StringBuilder();
-            md.Append("# Capturas de la It. 2\n\n");
-            md.Append("Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 02-tech-design §4) en modo edición, con la tubería ")
-                .Append(pipeline).Append(". Detalle de cada toma (sondas, auditoría, elementos) en [manifest.json](manifest.json); la medición de R-T1 en ")
-                .Append("[rt1-measurement.json](rt1-measurement.json).\n\n");
+            md.Append("# Capturas de la ").Append(Title).Append("\n\n");
+            if (Title == "It. 2")
+            {
+                md.Append("Generadas por el arnés (`tools/unity/capture-snapshots.ps1 -Set it2`, 02-tech-design §4) en modo edición, con la tubería ")
+                    .Append(pipeline).Append(". Detalle de cada toma (sondas, auditoría, elementos) en [manifest.json](manifest.json); la medición de R-T1 en ")
+                    .Append("[rt1-measurement.json](rt1-measurement.json).\n\n");
+            }
+            else
+            {
+                md.Append("Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 03-rutinas/02-tech-design §5) en modo edición, con la tubería ")
+                    .Append(pipeline).Append(", bases de prueba (TempDatabase) y el reloj de prueba. Detalle de cada toma (sondas, auditoría, elementos) en ")
+                    .Append("[manifest.json](manifest.json). CAP-27 (ventana del build normal) no es del arnés: `tools/unity/capture-cap27.ps1`, a pedido.\n\n");
+            }
             md.Append("| ID | Archivo | Perfil | Backend | Estado | Sondas | Auditoría | Comprobaciones |\n|---|---|---|---|---|---|---|---|\n");
             foreach (var shot in _shots)
             {
-                var passed = 0;
-                foreach (var probe in shot.Probes)
-                {
-                    if (probe.Pass)
-                    {
-                        passed++;
-                    }
-                }
-
                 md.Append("| ").Append(shot.Id).Append(" | [").Append(shot.File).Append("](").Append(shot.File).Append(") | ")
                     .Append(shot.Profile).Append(" | ").Append(shot.Backend).Append(" | ").Append(Escape(shot.State)).Append(" | ")
-                    .Append(passed).Append("/").Append(shot.Probes.Count).Append(" | ")
+                    .Append(Escape(ProbeCell(shot))).Append(" | ")
                     .Append(shot.Overflows.Count == 0 && shot.ClippedTexts.Count == 0 ? "sin desbordes" : Escape(string.Join("; ", shot.Overflows) + " " + string.Join("; ", shot.ClippedTexts)))
                     .Append(" | ").Append(shot.Problems.Count == 0 ? (shot.Error == null ? "ok" : "") : Escape(string.Join("; ", shot.Problems)))
                     .Append(shot.Error == null ? "" : " ERROR: " + Escape(shot.Error)).Append(" |\n");
@@ -120,6 +123,45 @@ namespace RowMate.Snapshots
         public static string N(double value)
         {
             return value.ToString("0.##", CultureInfo.InvariantCulture);
+        }
+
+        // "pasan/total" y, si una sonda de aspecto falla (no hace fallar la toma), un aviso con su nombre y lo medido
+        // (QA-V2-04: antes quedaba solo "1/2" y la toma decía "ok").
+        public static string ProbeCell(ShotRecord shot)
+        {
+            var passed = 0;
+            var warnings = new List<string>();
+            foreach (var probe in shot.Probes)
+            {
+                if (probe.Pass)
+                {
+                    passed++;
+                }
+                else if (probe.Aspect)
+                {
+                    warnings.Add(probe.Name + " " + probe.Actual + " vs " + probe.Expected);
+                }
+            }
+
+            var cell = passed.ToString(CultureInfo.InvariantCulture) + "/" + shot.Probes.Count.ToString(CultureInfo.InvariantCulture);
+            return warnings.Count == 0 ? cell : cell + " ⚠ aspecto: " + string.Join("; ", warnings);
+        }
+
+        public static int FailingAspectProbes(IReadOnlyList<ShotRecord> shots)
+        {
+            var count = 0;
+            foreach (var shot in shots)
+            {
+                foreach (var probe in shot.Probes)
+                {
+                    if (!probe.Pass && probe.Aspect)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
         }
 
         private static string Escape(string text)

@@ -60,6 +60,39 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(checkedCount, Is.GreaterThanOrEqualTo(14));
         }
 
+        // QA-V2-12 (It. 3, 03-rutinas/00-deuda-diseno §2): margen de render. Cada token del HUD llega a su umbral también
+        // contra el peor vidrio RENDERIZADO en 8 bits (#2A2F37, el que midió R-T1) más 1 por canal (#2B3038): la mezcla se
+        // cuantiza hacia arriba (41,72 → 42…) y la GPU o la sonda pueden dar 1 más. Equivale a ≈ 1,7 % sobre el cálculo
+        // sin redondear de HudAgainstWorstGlass; con #FF5A7E el pulso daba 4,497 en el píxel real.
+        [Test, Category("AC-BASE-05")]
+        public void HudKeepsItsThresholdOnTheRenderedWorstGlass()
+        {
+            var glass = Contrast.WorstGlassBackground();
+            var rendered = (DartMath.Round(glass.R) + 1, DartMath.Round(glass.G) + 1, DartMath.Round(glass.B) + 1);
+            Assert.That(new Rgb((byte)rendered.Item1, (byte)rendered.Item2, (byte)rendered.Item3).ToHex(), Is.EqualTo("#2B3038"));
+            var checkedCount = 0;
+            foreach (var token in TokenCatalog.All)
+            {
+                if (!(token is ColorToken color))
+                {
+                    continue;
+                }
+
+                var threshold = HudThreshold(color.Role);
+                if (threshold == 0)
+                {
+                    continue;
+                }
+
+                checkedCount++;
+                var ratio = Contrast.RatioOver(color, rendered);
+                TestContext.Out.WriteLine(color.Name + " sobre #2B3038: " + Fmt.Fixed(ratio, 3) + " (umbral " + Fmt.DartToString(threshold) + ")");
+                Assert.That(ratio, Is.GreaterThanOrEqualTo(threshold), color.Name + " (" + color.Role + ") contra el peor vidrio renderizado + 1");
+            }
+
+            Assert.That(checkedCount, Is.GreaterThanOrEqualTo(14));
+        }
+
         // Los tokens HUD de 02-tech-design §4.4 tienen AL MENOS esos roles: el Designer no puede bajarlos.
         [Test, Category("AC-BASE-05")]
         public void HudRolesAreNotLowered()
@@ -141,18 +174,48 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(ratio, Is.GreaterThanOrEqualTo(threshold));
         }
 
+        // It. 3 (03-rutinas/04-design-notes §8.1, R1-R28): lista, editor, serie, campos, diálogos, menús y anillos. Mismo formato de
+        // pila que la It. 2: "bg.app|brand.seed@12|accent.primary@20" es la cápsula del chip sobre el encabezado de la serie y
+        // "|text.primary@4" el hover blanco. Datos del test, nunca hex.
+        [TestCaseSource(nameof(ItThreePairCases))]
+        public void ItThreeDesignerPairs(string front, string layers, double threshold)
+        {
+            var ratio = Contrast.RatioOver(TokenCatalog.Color(front), Stack(layers));
+            TestContext.Out.WriteLine(front + " / " + layers + ": " + Fmt.Fixed(ratio, 3) + " (umbral " + Fmt.DartToString(threshold) + ")");
+            Assert.That(ratio, Is.GreaterThanOrEqualTo(threshold));
+        }
+
+        // Los valores que citan 04-design-notes de la It. 3 (§2.3, §4, §8.1) y QA, a 3 decimales: si cambia un token, cambia acá.
+        [Test, Category("AC-BASE-05")]
+        public void ItThreeControlValuesMatchTheDesignNotes()
+        {
+            Assert.That(Ratio("step.work.hud", "surface.card"), Is.EqualTo(4.685).Within(0.0006), "R1 título del trabajo");
+            Assert.That(Ratio("step.cooldown.hud", "surface.card"), Is.EqualTo(4.730).Within(0.0006), "R1 título del enfriamiento (DT-19)");
+            Assert.That(Ratio("step.work", "surface.card"), Is.EqualTo(3.815).Within(0.0006), "R3 tramo del trabajo (el legacy lo usaba como texto)");
+            Assert.That(Ratio("step.cooldown.hud", "surface.card|step.cooldown@20"), Is.EqualTo(3.723).Within(0.0006), "R2 ícono del enfriamiento");
+            Assert.That(Ratio("accent.onTonal", "bg.app|brand.seed@12|accent.primary@20"), Is.EqualTo(5.620).Within(0.0006), "R7 ×N");
+            Assert.That(Ratio("accent.primary", "bg.app|brand.seed@12|accent.primary@20"), Is.EqualTo(4.370).Within(0.0006), "×N con el color del legacy (se corrige)");
+            Assert.That(Ratio("border.input", "bg.sunken"), Is.EqualTo(3.807).Within(0.0006), "R18 borde del campo");
+            Assert.That(Ratio("border.strong", "bg.sunken"), Is.EqualTo(2.132).Within(0.0006), "border.strong no llegaba (por eso border.input)");
+            Assert.That(Ratio("state.dangerText", "surface.overlay|overlay.scrim@12"), Is.EqualTo(5.147).Within(0.0006), "R25 ítem de peligro con su hover oscuro");
+            Assert.That(Ratio("state.dangerText", "surface.overlay|text.primary@4"), Is.EqualTo(4.174).Within(0.0006), "con la capa blanca no llegaba");
+            Assert.That(Ratio("text.primary", "bg.sunken|text.selection"), Is.EqualTo(9.586).Within(0.0006), "R20 selección");
+            Assert.That(Ratio("text.primary", "brand.seed"), Is.EqualTo(4.868).Within(0.0006), "R24 y R28 segmento elegido y su anillo interior");
+        }
+
         // Valores de control (02-tech-design §4.4 y 04-design-notes §4): mismos números que el Designer y QA, a 3 decimales.
+        // Los del HUD, con los valores de la It. 3 (QA-V2-12; antes 7,004 · 7,016 · 7,040 · 4,508 · 4,519 · 4,512).
         [Test, Category("AC-BASE-05")]
         public void ControlValuesMatchTheDesignNotes()
         {
             var glass = Contrast.WorstGlassBackground();
-            Assert.That(Contrast.RatioOver(Tokens.MetricSplitHud, glass), Is.EqualTo(7.004).Within(0.0006));
-            Assert.That(Contrast.RatioOver(Tokens.MetricDistanceHud, glass), Is.EqualTo(7.016).Within(0.0006));
-            Assert.That(Contrast.RatioOver(Tokens.MetricSpmHud, glass), Is.EqualTo(7.040).Within(0.0006));
+            Assert.That(Contrast.RatioOver(Tokens.MetricSplitHud, glass), Is.EqualTo(7.127).Within(0.0006));
+            Assert.That(Contrast.RatioOver(Tokens.MetricDistanceHud, glass), Is.EqualTo(7.163).Within(0.0006));
+            Assert.That(Contrast.RatioOver(Tokens.MetricSpmHud, glass), Is.EqualTo(7.124).Within(0.0006));
             Assert.That(Contrast.RatioOver(Tokens.TextHudPrimary, glass), Is.EqualTo(13.493).Within(0.0006));
-            Assert.That(Contrast.RatioOver(Tokens.MetricHrHud, glass), Is.EqualTo(4.508).Within(0.0006));
-            Assert.That(Contrast.RatioOver(Tokens.StateOffTargetHud, glass), Is.EqualTo(4.519).Within(0.0006));
-            Assert.That(Contrast.RatioOver(Tokens.StepCooldownHud, glass), Is.EqualTo(4.512).Within(0.0006));
+            Assert.That(Contrast.RatioOver(Tokens.MetricHrHud, glass), Is.EqualTo(4.577).Within(0.0006));
+            Assert.That(Contrast.RatioOver(Tokens.StateOffTargetHud, glass), Is.EqualTo(4.594).Within(0.0006));
+            Assert.That(Contrast.RatioOver(Tokens.StepCooldownHud, glass), Is.EqualTo(4.622).Within(0.0006));
             Assert.That(PairRatio("step.unknown", "surface.card", null), Is.EqualTo(3.159).Within(0.0006));
             Assert.That(PairRatio("state.dangerText", "surface.raised", null), Is.EqualTo(4.639).Within(0.0006));
             Assert.That(PairRatio("text.tertiary", "surface.card", null), Is.EqualTo(5.140).Within(0.0006));
@@ -268,6 +331,88 @@ namespace RowMate.Tests.EditMode.Design
             }
 
             yield return ItTwoCase("N13", "metric.hr.hud", "surface.card", 4.5);
+        }
+
+        // R1-R27 de 04-design-notes de la It. 3 §8.1, más R28 (WP-D: el anillo interior del segmento elegido). Insignia = tarjeta
+        // + tipo @20 %; cuerpo y pie de la serie = bg.app + brand.seed @6 %; encabezado = @12 %; cápsula = encabezado +
+        // accent.primary @20 %; mosaico elegido = surface.overlay + tipo @20 %; selección = bg.sunken + text.selection.
+        private static IEnumerable<TestCaseData> ItThreePairCases()
+        {
+            const string Hover = "|text.primary@4";
+            const string Header = "bg.app|brand.seed@12";
+            const string Body = "bg.app|brand.seed@6";
+            const string Pill = Header + "|accent.primary@20";
+            var types = new[] { "work", "rest", "warmup", "cooldown" };
+            foreach (var type in types)
+            {
+                yield return ItTwoCase("R1", "step." + type + ".hud", "surface.card", 4.5);
+                yield return ItTwoCase("R2", "step." + type + ".hud", "surface.card|step." + type + "@20", 3.0);
+                yield return ItTwoCase("R3", "step." + type, "surface.card", 3.0);
+            }
+
+            yield return ItTwoCase("R4", "metric.distance", "surface.card", 3.0);
+            yield return ItTwoCase("R4", "text.secondary", "surface.card" + Hover, 3.0);
+            yield return ItTwoCase("R4", "state.dangerText", "surface.card" + Hover, 3.0);
+            yield return ItTwoCase("R5", "brand.seed", "bg.app", 3.0);
+            yield return ItTwoCase("R5", "brand.seed", Body, 3.0);
+            yield return ItTwoCase("R6", "accent.primary", Header, 4.5);
+            yield return ItTwoCase("R6", "accent.primary", Body + Hover, 4.5);
+            yield return ItTwoCase("R7", "accent.onTonal", Pill, 4.5);
+            yield return ItTwoCase("R7", "accent.onTonal", Pill + Hover, 4.5);
+            yield return ItTwoCase("R8", "state.dangerText", Header + Hover, 3.0);
+            yield return ItTwoCase("R9", "text.secondary", "surface.card" + Hover, 4.5);
+            yield return ItTwoCase("R9", "text.tertiary", "surface.card" + Hover, 4.5);
+            yield return ItTwoCase("R10", "accent.primary", "surface.card|accent.tonalBg", 3.0);
+            yield return ItTwoCase("R11", "text.onAccent", "accent.primary", 4.5);
+            yield return ItTwoCase("R11", "accent.primary", "surface.card", 3.0);
+            yield return ItTwoCase("R12", "text.secondary", "bg.app", 4.5);
+            yield return ItTwoCase("R12", "text.tertiary", "bg.app", 4.5);
+            yield return ItTwoCase("R12", "state.dangerText", "bg.app", 3.0);
+            yield return ItTwoCase("R13", "accent.onTonal", "bg.app|accent.tonalBg" + Hover, 4.5);
+            yield return ItTwoCase("R14", "text.secondary", "surface.overlay", 4.5);
+            yield return ItTwoCase("R14", "text.tertiary", "surface.overlay", 4.5);
+            yield return ItTwoCase("R14", "accent.primary", "surface.overlay" + Hover, 4.5);
+            yield return ItTwoCase("R15", "text.primary", "state.dangerFill" + Hover, 4.5);
+            foreach (var front in new[] { "text.primary", "text.secondary", "accent.primary", "state.dangerText", "text.tertiary" })
+            {
+                yield return ItTwoCase("R16", front, "bg.sunken", 4.5);
+            }
+
+            yield return ItTwoCase("R17", "state.dangerText", "surface.overlay", 4.5);
+            yield return ItTwoCase("R17", "state.dangerText", "bg.app", 4.5);
+            foreach (var front in new[] { "border.input", "accent.primary", "state.danger" })
+            {
+                yield return ItTwoCase("R18", front, "bg.sunken", 3.0);
+            }
+
+            yield return ItTwoCase("R19", "border.input", "surface.overlay", 3.0);
+            yield return ItTwoCase("R19", "border.input", "bg.app", 3.0);
+            yield return ItTwoCase("R20", "text.primary", "bg.sunken|text.selection", 4.5);
+            yield return ItTwoCase("R21", "text.secondary", "surface.overlay" + Hover, 4.5);
+            foreach (var type in types)
+            {
+                yield return ItTwoCase("R21", "text.primary", "surface.overlay|step." + type + "@20", 4.5);
+                yield return ItTwoCase("R22", "step." + type + ".hud", "surface.overlay", 3.0);
+                yield return ItTwoCase("R22", "step." + type + ".hud", "surface.overlay|step." + type + "@20", 3.0);
+                yield return ItTwoCase("R23", "step." + type, "surface.overlay", 3.0);
+            }
+
+            yield return ItTwoCase("R24", "text.primary", "brand.seed", 4.5);
+            yield return ItTwoCase("R24", "text.secondary", "surface.overlay" + Hover, 4.5);
+            yield return ItTwoCase("R25", "state.dangerText", "surface.overlay|overlay.scrim@12", 4.5);
+            yield return ItTwoCase("R26", "text.primary", "surface.overlay" + Hover, 7.0);
+            yield return ItTwoCase("R26", "text.primary", "surface.overlay", 7.0);
+            foreach (var background in new[] { "surface.overlay", "surface.card", "bg.app", Header })
+            {
+                yield return ItTwoCase("R27", "focus.ring", background, 3.0);
+            }
+
+            yield return ItTwoCase("R28", "text.primary", "brand.seed", 3.0);
+        }
+
+        private static double Ratio(string front, string layers)
+        {
+            return Contrast.RatioOver(TokenCatalog.Color(front), Stack(layers));
         }
 
         private static TestCaseData ItTwoCase(string group, string front, string layers, double threshold)

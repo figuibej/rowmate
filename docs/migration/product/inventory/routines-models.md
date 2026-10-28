@@ -548,9 +548,9 @@ Siglas de otras áreas que se citan como dependencias: **DB** (persistencia), **
 - Interpretación al confirmar (cada texto se recorta y se interpreta como entero; si no es un entero válido, se toma como vacío):
   - Modo tiempo: duración = minutos × 60 + segundos, donde un campo vacío/inválido vale 0. Se guarda **siempre** una duración (aunque sea 0) y la distancia queda vacía.
   - Modo distancia: distancia = metros (vacío/inválido → sin distancia); la duración queda vacía.
-  - Vatios mín, vatios máx, SPM, progresiones: entero o vacío. Se aceptan negativos y el signo "+".
+  - Vatios mín, vatios máx, SPM, progresiones: entero o vacío. Se aceptan negativos, el signo "+", ceros a la izquierda (`0150` = 150) y hexadecimal (`0x10` = 16): es la regla de `int.tryParse` de Dart (`<flutter-sdk>/bin/cache/dart-sdk/lib/_internal/vm_shared/lib/integers_patch.dart:84-123`). Un número con decimales (`5.0`, `1,5`, `1e3`), con el signo menos tipográfico (`−2`) o con dígitos de ancho completo cuenta como vacío.
   - Split: total = minutos × 60 + segundos (vacíos valen 0); si el total es ≤ 0, **no hay** objetivo de split.
-- Precarga en modo editar: tipo; modo = distancia si el paso tiene distancia, si no tiempo; duración desglosada en minutos (división entera) y segundos (resto) sin ceros a la izquierda (90 s → "1" y "30"; 45 s → "0" y "45"); metros; vatios; SPM; split desglosado igual (125 → "2" y "5"); progresiones.
+- Precarga en modo editar: tipo; modo = distancia si el paso tiene distancia, si no tiempo; duración desglosada en minutos (división entera) y segundos (resto) sin ceros a la izquierda (90 s → "1" y "30"; 45 s → "0" y "45"); metros; vatios; SPM; split desglosado igual (125 → "2" y "5"); progresiones. Con una duración negativa (solo posible escribiéndola) vale la regla de Dart, con el resto nunca negativo: −90 s se precarga "-1" y "30", y al confirmar sin tocar nada queda −30 s (la etiqueta dice `30s` antes y después); −30 s se precarga "0" y "30" y queda 30 s. Un paso sin meta (`?`) se abre en modo tiempo con los campos vacíos y, al confirmar, queda de 0 s.
 - Cambiar de modo no borra lo escrito en el otro modo mientras el diálogo esté abierto, pero al confirmar solo se usa el modo elegido.
 - Se pueden cargar segundos > 59 (p. ej. 0 min 90 s = 90 s; al reabrir se ve 1 min 30 s).
 
@@ -893,7 +893,7 @@ Los valores salen de leer el código; QA debe confirmarlos contra el legacy.
 15. Formatos: split 0 → `--:--`, 125 → `02:05`, 6000 → `100:00`; duración 59 → `00:59`, 3600 → `1:00:00`, 3661 → `1:01:01`.
 16. Editor: nombre "   " → `editorNameEmpty`; nombre válido sin pasos → `editorNoSteps`; nombre "  Mi rutina  " → se guarda "Mi rutina".
 17. Editor: "Serie" agrega Trabajo 120 s + Descanso 60 s, ×3, al final.
-18. Editor: repeticiones "abc" → ×1; "0" o "−2" → sin cambio; "5" → ×5 en todos los pasos de la serie.
+18. Editor: repeticiones "abc" → ×1; "0" o "-2" (con guion) → sin cambio; "−2" (con el signo menos tipográfico, que `int.tryParse` no reconoce) → ×1; "5" → ×5 en todos los pasos de la serie.
 19. Editor: agregar paso a una serie lo inserta después del último paso de esa serie, con sus repeticiones.
 20. Diálogo: modo tiempo vacío → 0 s; modo distancia vacío → sin meta (`?`); split 0:00 → sin objetivo de split.
 21. Lista: crear agrega arriba; editar no reordena; eliminar pide confirmación con el nombre.
@@ -949,3 +949,13 @@ Correcciones por el gate de armonía del plan ([QA_PLAN_REVIEW.md](../../QA_PLAN
 | ID | Qué cambió |
 |---|---|
 | QA-P-04 | F-RUT-05: la tabla del resumen ahora tiene la columna legacy (oráculo) y las columnas es/en de la app nueva, con singular (Q-02) y "series" → *interval* en inglés. F-RUT-03 y F-RUT-04: en la app nueva salen del catálogo con el mismo texto en es y en. Nueva §3.1 con las 15 claves nuevas de la It. 1 (valores es/en, parámetros y cuándo se usa cada una). Casos 9-11 de §5.3 y pregunta abierta 1 (§8) actualizados. `workoutStartContent` con `¿` |
+
+## Cambios al cerrar la It. 3
+
+Pendientes del PO de la [spec de la It. 3 §15](../../iterations/03-rutinas/01-po-spec.md), releídos en el legacy (`routine_editor_screen.dart:173`, `:498-521`, `:531-562`), 2026-10-28.
+
+| Dónde | Qué cambió |
+|---|---|
+| F-RUT-13, interpretación | Además de negativos y el signo "+", `int.tryParse` acepta ceros a la izquierda y hexadecimal; lo que tiene decimales, el signo menos tipográfico o dígitos de ancho completo cuenta como vacío (AC-RUT-13-05 de la It. 3) |
+| F-RUT-13, precarga | La regla de Dart con duraciones negativas (resto nunca negativo: −90 s → "-1" y "30" → −30 s; −30 s → "0" y "30" → 30 s) y el paso sin meta, que se abre en modo tiempo y queda de 0 s (AC-RUT-13-10) |
+| §5.3, caso 18 | Se distinguen `-2` con guion (sin cambio) y `−2` con el signo menos tipográfico (×1, porque no es un número para Dart) (AC-RUT-14-05) |
