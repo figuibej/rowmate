@@ -36,6 +36,21 @@ namespace RowMate.Tests.EditMode.Design
             }
         }
 
+        // It. 4a: el valor del HUD sin objetivo va en la variante .hud de su métrica (los hex de AC-APP-06-01; la medida en la
+        // captura es de IHT.HudColors, en PlayMode, y por eso esta prueba no lleva la categoría del AC).
+        [TestCase(MetricKind.Split, "#FFAA47")]
+        [TestCase(MetricKind.Spm, "#3ACCF1")]
+        [TestCase(MetricKind.Watts, "#FFD60A")]
+        [TestCase(MetricKind.Distance, "#4ECBF2")]
+        [TestCase(MetricKind.Time, "#E0E0E0")]
+        [TestCase(MetricKind.Calories, "#06D6A0")]
+        [TestCase(MetricKind.HeartRate, "#FF5D7F")]
+        public void HudValueColors(MetricKind kind, string hex)
+        {
+            Assert.That(MetricPalette.HudFor(kind).Rgb.ToHex(), Is.EqualTo(hex));
+            Assert.That(MetricPalette.HudFor(kind).IsOpaque, Is.True);
+        }
+
         [Test, Category("AC-APP-06-01")]
         public void AccentRestsAtSixtyPercent()
         {

@@ -5,10 +5,12 @@ using RowMate.App.Device;
 using RowMate.App.Routines;
 using RowMate.App.Scene;
 using RowMate.App.Shell;
+using RowMate.App.Workout;
 using RowMate.Core.Common;
 using RowMate.Core.Localization;
 using RowMate.Core.Models;
 using RowMate.Core.Ports;
+using RowMate.Core.Workout;
 
 namespace RowMate.App.Composition
 {
@@ -20,14 +22,18 @@ namespace RowMate.App.Composition
         public const string HrmTag = "HRM";
         public const string DbTag = RoutinesStore.Tag;
 
+        // El tag del legacy para el remo ("[BLE]"): lo usan las acciones de la pestaña Dispositivo al registrar una falla.
+        public const string BleTag = "BLE";
+
         private readonly DeviceBackend _devices;
         private readonly DerivedObservable<AppLanguage, Localizer> _texts;
         private bool _started;
         private bool _disposed;
 
         internal AppContext(DeviceBackend devices, DeviceStore device, HeartRateStore heartRate, ShellStore shell, SceneSettings scene,
-                            RoutinesStore routines, LanguageState language, DerivedObservable<AppLanguage, Localizer> texts,
-                            IReadOnlyObservable<AccessibilitySnapshot> accessibility, IScheduler scheduler, IAppLogger logger)
+                            RoutinesStore routines, WorkoutEngine workout, WorkoutStore workoutRest, LanguageState language,
+                            DerivedObservable<AppLanguage, Localizer> texts, IReadOnlyObservable<AccessibilitySnapshot> accessibility,
+                            IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger)
         {
             _devices = devices;
             Device = device;
@@ -35,6 +41,9 @@ namespace RowMate.App.Composition
             Shell = shell;
             Scene = scene;
             Routines = routines;
+            Workout = workout;
+            WorkoutRest = workoutRest;
+            Lifecycle = lifecycle;
             Language = language;
             _texts = texts;
             Accessibility = accessibility;
@@ -50,9 +59,18 @@ namespace RowMate.App.Composition
 
         public SceneSettings Scene { get; }
 
-        // La colección de rutinas (F-RUT-09): la cargan Start() y Reintentar; la comparten Rutinas y el editor (y Workout en
-        // la It. 4a).
+        // La colección de rutinas (F-RUT-09): la cargan Start() y Reintentar; la comparten Rutinas, el editor y Workout
+        // (AC-WKT-12-05).
         public RoutinesStore Routines { get; }
+
+        // El motor de la sesión (It. 4a): vive con la app (legacy: WorkoutProvider en el MultiProvider, main.dart:82).
+        public WorkoutEngine Workout { get; }
+
+        // Workout en reposo (F-WKT-12): el remo conectado, la colección compartida, iniciar y los avisos.
+        public WorkoutStore WorkoutRest { get; }
+
+        // El ciclo de vida con que se armó (ForegroundLifecycle si AppServices no trajo uno).
+        public IAppLifecycle Lifecycle { get; }
 
         public LanguageState Language { get; }
 
@@ -115,6 +133,17 @@ namespace RowMate.App.Composition
             return new RoutineEditorStore(existing, Routines, Scheduler, Logger);
         }
 
+        // El HUD de un inmersivo (F-WKT-10, -13, -14, -16, -17, -20): uno por página; lo dispone la página al salir.
+        public WorkoutHudStore CreateHud()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(AppContext));
+            }
+
+            return new WorkoutHudStore(Workout, Texts, Logger);
+        }
+
         // Al recuperar el foco (AC-APP-09-05): la lista de idiomas del sistema se vuelve a resolver; si el idioma cambia,
         // Texts avisa y las vistas cambian de texto sin rearmarse. La accesibilidad la relee Platform (su observable avisa solo).
         public void RefreshSystemSettings(IReadOnlyList<string> languageTags)
@@ -127,7 +156,9 @@ namespace RowMate.App.Composition
             Language.Refresh(languageTags);
         }
 
-        // Dispone los stores en orden inverso a su creación. NO dispone el backend: lo dispone quien lo creó, después.
+        // Dispone los stores en orden inverso a su creación: Workout en reposo y el motor primero (una sesión en curso queda
+        // cortada con lo que ya tenía, P-03), después las rutinas y el resto. NO dispone el backend ni los repositorios: los
+        // dispone quien los creó, después.
         public void Dispose()
         {
             if (_disposed)
@@ -136,6 +167,8 @@ namespace RowMate.App.Composition
             }
 
             _disposed = true;
+            WorkoutRest.Dispose();
+            Workout.Dispose();
             Routines.Dispose();
             _texts.Dispose();
             HeartRate.Dispose();

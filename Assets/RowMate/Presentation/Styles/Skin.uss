@@ -329,3 +329,52 @@
     padding-top: 8px;
     padding-bottom: 8px;
 }
+
+/* ════ It. 4a — Workout y el HUD (04a-motor-hud-funcional/04-design-notes §4.1, §4.6 y §5.12) ════
+   Workout en reposo usa lo de arriba sin cambios: Entrenamiento libre es el primario (presionado accent.primaryPressed,
+   anillo 16 / halo 20), Reintentar el tonal y la tarjeta con chevron la de Rutinas (capa 4 / 8 %, sin escala, anillo 20 / halo
+   24; el chevron no cambia de color: W3, 4,785:1 con el hover). Acá, lo propio de los controles del HUD, que van sobre el
+   vidrio y la escena: Pausa y Reanudar con la capa blanca de siempre (4 % y 8 %: H4 11,944 y H5 10,172 / 10,367:1). */
+
+/* Terminar: capa OSCURA (overlay.scrim), hover 12 % y presionado 24 % (H2: 5,483 y 5,892:1). Con la capa blanca del 4 % el
+   texto state.dangerText bajaba a 4,494:1 sobre el peor vidrio (§9.2), igual que el ítem de peligro de los menús (It. 3). */
+.rm-button--hud-danger > .rm-button__state {
+    background-color: var(--rm-overlay-scrim);
+}
+
+.rm-desktop .rm-button--hud-danger:hover > .rm-button__state {
+    opacity: 0.12;
+}
+
+.rm-button--hud-danger:hover:active > .rm-button__state,
+.rm-desktop .rm-button--hud-danger:hover:active > .rm-button__state {
+    opacity: 0.24;
+}
+
+/* Terminar y Pausa llevan contorno de 1,5: la capa (absoluta, adentro del borde) sigue la curva de adentro, 12 − 1,5. */
+.rm-button--hud-danger > .rm-button__state,
+.rm-button--hud-outline > .rm-button__state {
+    border-radius: 10.5px;
+}
+
+/* Anillo de foco del HUD (DN4a-10, H17): blanco de 2 dp a −4 del borde de afuera del control (radio 12 + 4 = 16) con un halo
+   overlay.scrim al 50 % de 4 dp pegado por fuera (radio 20): 3,977:1 contra su halo y el halo contra una nube blanca, sobre
+   cualquier fondo de la escena. El cian de la app daba 2,465:1 sobre una nube. Solo navegando con teclado, sin animación
+   (las reglas de display son las de Base.uss). Con el contorno de 1,5 de Terminar y Pausa, lo absoluto se mide desde adentro
+   del borde: −5,5 deja el anillo a 4 dp del borde de afuera. */
+.rm-hud .rm-button > .rm-focus-ring {
+    border-color: var(--rm-text-primary);
+}
+
+.rm-hud .rm-button > .rm-focus-ring > .rm-focus-ring__halo {
+    border-color: var(--rm-overlay-scrim);
+    opacity: 0.5;
+}
+
+.rm-hud .rm-button--hud-danger > .rm-focus-ring,
+.rm-hud .rm-button--hud-outline > .rm-focus-ring {
+    left: -5.5px;
+    top: -5.5px;
+    right: -5.5px;
+    bottom: -5.5px;
+}

@@ -11,7 +11,8 @@ namespace RowMate.Tests.PlayMode.Simulator
 {
     // RSL · Rutinas con la capa del simulador (AC-APP-03-07, AC-BLE-16-01, AC-RUT-10-04, -09, AC-HIS-20-03, AC-APP-03-05;
     // 03-rutinas/02-tech-design §4.8; 04-design-notes §4.12-§4.13): la capa queda encima de todo, la cinta no recibe
-    // toques, la llave sube sobre el + y ni la llave ni el aviso se pisan con nada.
+    // toques, la llave queda abajo a la izquierda (D-ART-10 desde la It. 4a; antes subía sobre el +) y ni la llave ni el aviso
+    // se pisan con nada.
     public sealed class RoutinesSimulatorLayerTests : SimulatorUiTestBase
     {
         private UiTestHost CreateWithRoutines(RoutineSeed seed, DeviceProfile? profile = null)
@@ -85,9 +86,12 @@ namespace RowMate.Tests.PlayMode.Simulator
             yield return Settle();
             var fab = H.BoundsOf("routines-add");
             var wrench = H.BoundsOf("sim-open");
+            var window = H.Root.worldBound;
             Assert.That(Overlap(fab, wrench), Is.False, "la llave no tapa el +");
-            Assert.That(fab.yMin - wrench.yMax, Is.EqualTo(16).Within(0.6f), "16 dp sobre el +");
-            Assert.That(H.Root.worldBound.yMax - wrench.yMax, Is.EqualTo(64 + 88).Within(0.6f), "barra + 88");
+            // D-ART-10 (It. 4a, DV-39): el + solo en su rincón y la llave del otro lado, abajo a la izquierda.
+            Assert.That(window.xMax - fab.xMax, Is.EqualTo(16).Within(0.6f), "el + a 16 del borde derecho");
+            Assert.That(wrench.xMin - window.xMin, Is.EqualTo(16).Within(0.6f), "la llave a 16 del borde izquierdo");
+            Assert.That(window.yMax - wrench.yMax, Is.EqualTo(64 + 16).Within(0.6f), "barra + 16");
         }
 
         [UnityTest, Category("AC-RUT-10-04")]
@@ -142,7 +146,9 @@ namespace RowMate.Tests.PlayMode.Simulator
                 Assert.That(Overlap(toast, H.BoundsOf("routines-add")), Is.False, "ni el +");
                 if (profile.Code == "TV")
                 {
-                    Assert.That(H.Root.worldBound.yMax - toast.yMax, Is.EqualTo(200).Within(0.6f), "TV con la llave: 200 (04-design-notes §4.13)");
+                    // D-ART-10 (It. 4a): la llave ya no está sobre el +, así que el aviso vuelve a 144, como sin simulador
+                    // (04a-motor-hud-funcional/00-deuda-diseno §1.6).
+                    Assert.That(H.Root.worldBound.yMax - toast.yMax, Is.EqualTo(144).Within(0.6f), "TV: 144, sobre el + (como sin simulador)");
                 }
                 else
                 {

@@ -185,15 +185,16 @@ Los porcentajes de este documento ("negro 55 %") son opacidades.
 **Casos borde y errores**
 
 - Un paquete FTMS sin el dato de distancia llega como distancia 0. En ese tick el recorrido da negativo y el paso no termina; al tick siguiente se corrige solo.
-- Si el monitor se reinicia a mitad de un paso por distancia, la distancia vuelve a 0 y el paso no termina hasta que el monitor supere la distancia que tenía al empezar el paso. Acá no hay saneamiento, a diferencia de los parciales (F-WKT-07).
+- Si el monitor se reinicia a mitad de un paso por distancia, la distancia vuelve a 0 y el paso no termina hasta que el monitor supere la distancia que tenía al empezar el paso. Acá no hay saneamiento, a diferencia de los parciales (F-WKT-07). En la app el paso usa el saneamiento de los parciales (Q-55; It. 4a, DV-26).
 - Si el monitor se desconecta, los datos quedan congelados en el último paquete. Los pasos por tiempo siguen avanzando; los de distancia quedan detenidos.
-- Un paso sin tiempo ni distancia no terminaría nunca. No debería existir, porque lo controla el editor de rutinas (RUT).
+- Un paso sin tiempo ni distancia (sin meta) no termina nunca solo: la sesión se termina con `Terminar`. El editor lo permite (Q-25), y la cuenta regresiva del inmersivo muestra `nullm` (`immersive_workout_screen.dart:456-458`). En la app se ve `?`, como en el editor (It. 4a, DV-25).
+- Un paso de duración negativa (el editor deja escribir un `Min` negativo y los topes de Q-92 van por valor absoluto) también termina en el primer tick, pero mientras dura el inmersivo falla: el restante usa `clamp(0, d)` con `d < 0`, que lanza (`workout_provider.dart:103`). En la app la cuenta muestra `0:00` (It. 4a, DV-37).
 
 **UI:** se ve en la barra de pasos (F-WKT-14), en el semáforo (F-WKT-10) y en el diálogo final (F-WKT-21).
 
 **Datos persistidos:** el índice y el tipo del paso viajan en cada punto de telemetría (F-WKT-06).
 
-**Archivos legacy:** `lib/core/models/routine.dart:210-251` (expansión con progresiones), `:255-278` (posiciones); `workout_provider.dart:120-131`, `:175-187`, `:192-218`.
+**Archivos legacy:** `lib/core/models/routine.dart:29-70` (expansión con progresiones), `:74-97` (posiciones); `workout_provider.dart:120-131`, `:175-187`, `:192-218`.
 
 **Tests legacy:** `test/routine_positions_test.dart` ("las posiciones quedan alineadas con flattenedSteps"). Con un calentamiento suelto, una serie ×3 de (trabajo 500 m + enfriamiento 60 s) y un enfriamiento suelto, afirma que:
 
@@ -521,7 +522,7 @@ Ningún test cubre las progresiones ni el fin de paso.
 1. El semáforo aplica solo a las tarjetas de SPM, Split y Vatios, y solo cuando el paso actual define ese objetivo.
 2. **SPM:** rojo `#FF4444` si el SPM actual es menor que el objetivo; blanco si no.
 3. **Vatios:** rojo si los vatios actuales son menores que los vatios mínimos; blanco si no. Los vatios máximos se ignoran.
-4. **Split:** rojo si el split actual es mayor (más lento) que el objetivo; blanco si no. Un split 0 (sin dato, que se ve `--:--`) da blanco.
+4. **Split:** rojo si el split actual es mayor (más lento) que el objetivo; blanco si no (`val > target`, sin casos especiales: `immersive_workout_screen.dart:579-583`). Un split 0 (sin dato, que se ve `--:--`) da blanco con un objetivo positivo o 0. Con un objetivo 0, cualquier split mayor que 0 da rojo, y con un objetivo negativo da rojo siempre, también `--:--`. Esos objetivos los deja una progresión negativa, que los topes de Q-92 permiten porque van por valor absoluto (It. 4a, AC-WKT-10-04).
 5. Sin objetivo, la tarjeta usa su color propio de métrica (ver "Constantes visuales").
 6. Con objetivo, la tarjeta suma un borde del color de estado al 70 % de 1,5 px y un halo del mismo color al 20 %, con desenfoque 12. Sin objetivo el borde es blanco al 10 %, de 1 px, y no hay halo.
 7. Se evalúa con cada lectura, sin promedios ni margen de tolerancia.
@@ -582,7 +583,7 @@ Ningún test cubre las progresiones ni el fin de paso.
 
 **Datos persistidos:** ninguno.
 
-**Archivos legacy:** `lib/core/models/rowing_data.dart:24-29`; `lib/core/models/interval_step.dart:79-109`; `routine.dart:281-286`; `lib/features/workout/series_panels.dart:9-24`, `:98`; `immersive_workout_screen.dart:456-458`, `:569-577`, `:965-971`.
+**Archivos legacy:** `lib/core/models/rowing_data.dart:24-29`; `lib/core/models/interval_step.dart:79-109`; `routine.dart:100-105`; `lib/features/workout/series_panels.dart:9-24`, `:98`; `immersive_workout_screen.dart:456-458`, `:569-577`, `:965-971`.
 
 **Tests legacy:** `test/series_panels_test.dart`, caso **"formatos"**: `formatLapTime(166.667)` da `2:46.7`; `formatLapTime(65)` da `1:05.0`; `formatSplit(114.4)` da `1:54`; `formatMeters(1245)` da `1.245 m`.
 
@@ -627,6 +628,7 @@ Ningún test cubre las progresiones ni el fin de paso.
 - La conexión solo se controla al iniciar. Si el remo se desconecta durante la sesión, la sesión sigue (F-WKT-03).
 - La clave `workoutStartTitle` existe en los `.arb` pero no se usa: el título del diálogo es el nombre de la rutina.
 - Tocar afuera del diálogo equivale a cancelar.
+- Dos toques rápidos en `workoutFree` o en `workoutStart` pueden crear dos sesiones y abrir dos pantallas inmersivas: `startFree()` y `startWithRoutine()` no se esperan (`workout_screen.dart:88-89`, `:164-165`). En la app, un toque crea una sesión (It. 4a, DV-30).
 
 **UI:** tres estados (desconectado, sin rutinas, con rutinas) que se combinan. Interacciones: elegir escenario, iniciar libre, elegir rutina y confirmar o cancelar.
 
@@ -706,8 +708,8 @@ Ningún test cubre las progresiones ni el fin de paso.
    - aparece con el restante entre 0 y 15 s y un paso siguiente (F-WKT-04);
    - texto fijo `"Up next: "` en blanco 60 % de 10 (en inglés en los dos idiomas), seguido del tipo del paso siguiente localizado, en su color, de 10 y en negrita;
    - fondo del color del paso siguiente al 25 %, borde al 50 %, radio 8, padding 7×3;
-   - la opacidad pulsa entre 0,6 y 1,0 en un ciclo de 600 ms de ida y vuelta.
-5. **Cuenta regresiva:** formato de F-WKT-11, puntos 7 y 8. Normalmente es blanca, de 18 y peso 800. **Por terminar** (de 1 a 5 s) pasa a tamaño 20 y su color oscila entre blanco y el color del paso, al mismo ritmo de 600 ms.
+   - la opacidad pulsa entre 0,6 y 1,0: 600 ms de ida y 600 de vuelta (`AnimationController(600 ms)..repeat(reverse: true)`, `:319-322`).
+5. **Cuenta regresiva:** formato de F-WKT-11, puntos 7 y 8. Normalmente es blanca, de 18 y peso 800. **Por terminar** (de 1 a 5 s) pasa a tamaño 20 y su color oscila entre blanco y el color del paso, al mismo ritmo de 600 + 600 ms. Un paso sin meta muestra `nullm` (`:456-458`; en la app, `?`: DV-25).
 6. **Píldora en curso por terminar:** suma un halo del color del paso que pulsa entre 30 % y 70 % de opacidad, con desenfoque 8, expansión 2 y radio 5.
 7. No muestra "paso N de M" ni el nombre de la rutina.
 8. Con la rutina terminada, la barra sigue visible: el último paso queda "en curso" con la píldora llena y la cuenta en `0:00`.
@@ -852,6 +854,7 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
 - Con un bpm 0, la tarjeta desaparece.
 - Los paquetes FTMS que no traen algún campo lo muestran como 0 hasta el paquete siguiente. Puede verse un parpadeo de distancia o split en monitores que reparten los datos en varios paquetes (BLE).
 - En pantallas de 360 dp, los paneles expandidos tienen un ancho fijo de 200 para no invadir la columna de Split y Watts (F-WKT-18).
+- **Zonas que se enciman en un teléfono horizontal.** En 914 × 411 y 640 × 360 la tarjeta kcal se encima con la de Watts: Split y Watts ocupan de 90 a 242 desde arriba y kcal termina a 140 del borde inferior (en 411 de alto, de 208 a 271). En 640 × 360 la banda se encima además con los controles (calculado sobre `immersive_workout_screen.dart:639-663`, `:709-733`). En la app, en horizontal, kcal y BPM van en fila a la altura de los controles y la banda es compacta (It. 4a, DV-33; LEGACY_VISUAL_AUDIT §8, hallazgo 17).
 
 **UI:** HUD superpuesto sin interacciones, salvo los paneles.
 
@@ -1202,3 +1205,18 @@ Para cada pregunta, la opción por defecto es hacer lo que hace el legacy hoy, s
 | `test/session_stats_test.dart` (HIS/DB) | 3 | F-WKT-06 (relacionado) |
 
 **Sin ningún test legacy** (necesitan criterios de aceptación nuevos): F-WKT-01, 02, 04, 06 (el guardado), 10, 12, 13, 14, 16, 17, 19, 20, 21 y 22. Lo más crítico para escribir criterios en el Core puro: las fases y el reloj (01/02), el avance y el fin de pasos con progresiones (03), el estado del paso (04), la telemetría y las estadísticas de la sesión (06) y el semáforo (10).
+
+---
+
+## Cambios al cerrar la It. 4a
+
+Pendientes del PO de la [spec de la It. 4a §15](../../iterations/04a-motor-hud-funcional/01-po-spec.md), releídos en el legacy (`lib/core/models/routine.dart:25-106`; `lib/features/workout/immersive_workout_screen.dart:317-323`, `:451-460`, `:576-603`; `lib/features/workout/workout_screen.dart:84-92`, `:160-170`), 2026-10-29. Describen el legacy; lo que la app hace distinto lleva su DV de la It. 4a.
+
+| Dónde | Qué cambió |
+|---|---|
+| F-WKT-03 y F-WKT-11, archivos legacy | `routine.dart` tiene 138 líneas: la expansión está en `:29-70`, las posiciones en `:74-97` y el resumen en `:100-105` (antes decía `:210-251`, `:255-278` y `:281-286`) |
+| F-WKT-03, casos borde | El paso sin meta sí existe: el editor lo permite (Q-25) y la cuenta muestra `nullm` (DV-25). El paso de duración negativa hace fallar el inmersivo (DV-37). El reinicio del monitor, con la nota de Q-55 (DV-26) |
+| F-WKT-10, punto 4 | El split se evalúa con `val > target`, sin casos especiales: con un objetivo 0 o negativo cambia lo que da un split 0 (AC-WKT-10-04) |
+| F-WKT-12, casos borde | Dos toques rápidos pueden crear dos sesiones (DV-30) |
+| F-WKT-14, puntos 4 y 5 | El pulso es de 600 ms de ida y 600 de vuelta, y la cuenta de un paso sin meta muestra `nullm` |
+| F-WKT-17, casos borde | En un teléfono horizontal, kcal se encima con Watts, y en 640 × 360 la banda con los controles (DV-33) |

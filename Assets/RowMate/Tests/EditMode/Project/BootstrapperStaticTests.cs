@@ -128,7 +128,9 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(Code("UrpProvisioner.cs"), Does.Contain("UniversalRenderPipelineAsset.Create("));
         }
 
-        [Test, Category("AC-BASE-10"), Category("AC-APP-16-04"), Category("AC-APP-16-05")]
+        // It. 4a (QA-G4aT-09): runInBackground = true es la parte de configuración de AC-WKT-02-09 (en Windows, minimizada o sin
+        // foco, la app sigue andando); la ventana real la mide QA en el equipo.
+        [Test, Category("AC-BASE-10"), Category("AC-APP-16-04"), Category("AC-APP-16-05"), Category("AC-WKT-02-09")]
         public void PlatformMinimumsComeFromAppIdentity()
         {
             var player = Code("PlayerSettingsStep.cs");

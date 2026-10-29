@@ -131,6 +131,31 @@ namespace RowMate.Tests.Support
         // CAP-27: la rutina SINTÉTICA de la ventana del build normal: Escalera SPM de F-LISTA, sola (nunca datos del usuario).
         public static RoutineSeed Cap27 => Single("CAP-27", EscaleraSpm());
 
+        // F-4A (04a-motor-hud-funcional/01-po-spec §0.4; 02-tech-design §7.2 de la It. 4a), de la más nueva a la más vieja:
+        // Prueba 4a, Corta, Distancia 100 y Sin meta (se guardan de la más vieja a la más nueva).
+        public static RoutineSeed F4A => new RoutineSeed("F-4A", new[] { SinMeta(), DistanciaCien(), Corta(), PruebaCuatroA() }, NoRaw);
+
+        // Las F-RARA con los nombres de la spec de la 4a (§0.4), cada una en su base: "Serie enorme" (una serie ×2 000 000 000
+        // de trabajo 60 s), "Vatios imposibles" (un trabajo de 60 s con vatios mín. 50 000), "Serie ×0" (solo una serie ×0 de
+        // trabajo 60 s) y "Sprint" (un paso de tipo sprint, cambiado en SQL: la carga falla, AC-WKT-12-06).
+        public static RoutineSeed Rara4a(string name)
+        {
+            switch (name)
+            {
+                case "Serie enorme":
+                    return Single("F-RARA-4A-HUGE", Make("Serie enorme", Day(24), Step(K, dur: 60, g: SeriesId(Day(24), 0), rep: 2000000000)));
+                case "Vatios imposibles":
+                    return Single("F-RARA-4A-W", Make("Vatios imposibles", Day(24), Step(K, dur: 60, wMin: 50000)));
+                case "Serie ×0":
+                    return Single("F-RARA-4A-ZERO", Make("Serie ×0", Day(24), Step(K, dur: 60, g: SeriesId(Day(24), 0), rep: 0)));
+                case "Sprint":
+                    return new RoutineSeed("F-RARA-4A-SPRINT", new[] { Make("Sprint", Day(24), Step(K, dur: 30)) },
+                        new[] { new KeyValuePair<int, string>(0, "UPDATE interval_steps SET type = 'sprint' WHERE routine_id = ?") });
+                default:
+                    throw new ArgumentException("F-RARA de la 4a desconocida: " + name, nameof(name));
+            }
+        }
+
         // F-LISTA + Rutina 01…Rutina nn (CAP-06: 26), más nuevas que las de F-LISTA.
         public static RoutineSeed ListaPlus(int extra)
         {
@@ -191,6 +216,37 @@ namespace RowMate.Tests.Support
             var g = SeriesId(Day(23), 0);
             return Make("Escalera SPM", Day(23), Step(W, dur: 300), Step(K, dur: 300, spm: 18, g: g, rep: 3, pSpm: 2), Step(R, dur: 120, g: g, rep: 3),
                 Step(C, dur: 300));
+        }
+
+        // ── Las rutinas de F-4A (04a §0.4) ──
+
+        // 2026-10-27: calentamiento 30 s; serie ×2 [trabajo 60 s, vatios mín. 160, SPM 22, progresión SPM +2; descanso 30 s];
+        // enfriamiento 30 s. Expandida: 6 pasos, 240 s; resumen "1 serie · 1 descanso". La de la demo (b).
+        public static Routine PruebaCuatroA()
+        {
+            var g = SeriesId(Day(27), 0);
+            return Make("Prueba 4a", Day(27), Step(W, dur: 30), Step(K, dur: 60, wMin: 160, spm: 22, g: g, rep: 2, pSpm: 2),
+                Step(R, dur: 30, g: g, rep: 2), Step(C, dur: 30));
+        }
+
+        // 2026-10-26: serie ×2 [trabajo 10 s, SPM 18, progresión SPM +2; descanso 5 s]: trabajo 10 (18), descanso 5, trabajo
+        // 10 (20), descanso 5 = 30 s.
+        public static Routine Corta()
+        {
+            var g = SeriesId(Day(26), 0);
+            return Make("Corta", Day(26), Step(K, dur: 10, spm: 18, g: g, rep: 2, pSpm: 2), Step(R, dur: 5, g: g, rep: 2));
+        }
+
+        // 2026-10-25: trabajo 100 m; descanso 5 s (sueltos).
+        public static Routine DistanciaCien()
+        {
+            return Make("Distancia 100", Day(25), Step(K, dist: 100), Step(R, dur: 5));
+        }
+
+        // 2026-10-24 12:00: un trabajo sin meta (ni duración ni distancia: la cuenta muestra ?) y descanso 5 s.
+        public static Routine SinMeta()
+        {
+            return Make("Sin meta", Day(24).AddHours(-1), Step(K), Step(R, dur: 5));
         }
 
         // F-BORDE (AC-RUT-12-06): los 11 pasos, en el orden de la tabla.

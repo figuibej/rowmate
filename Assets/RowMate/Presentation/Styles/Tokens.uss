@@ -4,6 +4,8 @@
     --rm-accent-primary: #00B4D8;
     --rm-accent-primary-pressed: #0096B4;
     --rm-accent-tonal-bg: rgba(0, 180, 216, 0.12);
+    --rm-backdrop-sky: #0B4FA8;
+    --rm-backdrop-water: #0E4F8F;
     --rm-bg-app: #0D1B2A;
     --rm-bg-sunken: #08131F;
     --rm-body-size: 15px;

@@ -178,6 +178,18 @@ namespace RowMate.Infrastructure.Database
             });
         }
 
+        // Espera acotada a que el ejecutor termine lo encolado (It. 4a: al pasar a segundo plano, AC-WKT-06-15). Después de
+        // Dispose, true (Dispose ya terminó lo encolado).
+        public bool WaitForPendingWork(TimeSpan timeout)
+        {
+            if (_disposed)
+            {
+                return true;
+            }
+
+            return _executor.WaitIdle(timeout);
+        }
+
         // Cierra la conexión EN el hilo de la base y dispone el ejecutor (que termina lo encolado: un guardado en vuelo se
         // completa antes). Idempotente.
         public void Dispose()

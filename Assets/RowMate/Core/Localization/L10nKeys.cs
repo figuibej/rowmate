@@ -1,8 +1,8 @@
 namespace RowMate.Core.Localization
 {
-    // Las 190 claves del catálogo (F-APP-10): las 159 del legacy en su orden (lib/l10n/app_es.arb), las 15 nuevas de la
-    // It. 1 (01-po-spec §4.17.2) y las 16 de la It. 3 (03-rutinas/01-po-spec §11.2) al final. Nombre de la constante = la
-    // clave en PascalCase. Se mantiene a mano (D-05): L10nKeysTests falla si una constante no existe en los dos catálogos o si
+    // Las 202 claves del catálogo (F-APP-10): las 159 del legacy en su orden (lib/l10n/app_es.arb), las 15 nuevas de la
+    // It. 1 (01-po-spec §4.17.2), las 16 de la It. 3 (03-rutinas/01-po-spec §11.2) y las 12 de la It. 4a
+    // (04a-motor-hud-funcional/01-po-spec §11.2) al final. Nombre de la constante = la clave en PascalCase. Se mantiene a mano (D-05): L10nKeysTests falla si una constante no existe en los dos catálogos o si
     // una clave del catálogo no tiene constante.
     public static class L10nKeys
     {
@@ -210,5 +210,23 @@ namespace RowMate.Core.Localization
         public const string RoutineDeleteError = "routineDeleteError";
         public const string RoutinesLoadError = "routinesLoadError";
         public const string Retry = "retry";
+
+        // ── Nuevas de la It. 4a (Q-01; 04a-motor-hud-funcional/01-po-spec §11.2) ──
+        // Textos del HUD que el legacy tiene fijos (immersive_workout_screen.dart): tarjetas, unidades, barra libre, "a
+        // continuación" (DV-24) y el objetivo debajo del valor (D-ART-09).
+        public const string HudSpm = "hudSpm";
+        public const string HudSplit = "hudSplit";
+        public const string HudWatts = "hudWatts";
+        public const string HudUnitWatts = "hudUnitWatts";
+        public const string HudKcal = "hudKcal";
+        public const string HudBpm = "hudBpm";
+        public const string HudUnitMeters = "hudUnitMeters";
+        public const string HudFreeTitle = "hudFreeTitle";
+        public const string HudUpNext = "hudUpNext";
+        public const string HudTarget = "hudTarget";
+
+        // Avisos nuevos (Q-13: AC-WKT-01-11, AC-WKT-06-12; R3-08: AC-WKT-12-08).
+        public const string WorkoutSaveError = "workoutSaveError";
+        public const string WorkoutRoutineCannotStart = "workoutRoutineCannotStart";
     }
 }

@@ -54,6 +54,12 @@ namespace RowMate.Tests.Support
             });
         }
 
+        // En línea no queda nada encolado (It. 4a: AC-WKT-06-15).
+        public bool WaitIdle(TimeSpan timeout)
+        {
+            return true;
+        }
+
         public void Dispose()
         {
             _disposed = true;

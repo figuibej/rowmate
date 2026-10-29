@@ -80,7 +80,7 @@ namespace RowMate.Tests.EditMode.Models
         }
 
         [Test, Category("AC-RUT-01-04")]
-        [Ignore("NO VERIFICABLE → It. 3: [Editor] el ícono de cada tipo en el editor de rutinas (glifo sin relleno para descanso, P-07)")]
+        [Ignore("Se verifica en PlayMode: RoutineEditorTests.StepRowIcons (It. 3, el glifo de cada tipo en la fila del editor; descanso sin relleno, P-07) y en CAP-10 / CAP-11")]
         public void IconsInEditor()
         {
         }

@@ -4,8 +4,9 @@
 #
 #   tools/dotnet/run-tests.ps1 [-Filter "<expresion>"] [-Ci] [-Demo] [-Matrix] [-UnityResults <carpeta>] [-ArtifactsPath <carpeta>]
 #
-# 1. dotnet build de la solucion ENTERA (9 proyectos: tambien RowMate.Tests.UnityApiCheck, contra NUnit 3.5.0, y
-#    RowMate.Tokens). Si falla, sale con ese codigo y NO corre tests (con --no-build correrian binarios viejos).
+# 1. dotnet build de la solucion ENTERA (10 proyectos: tambien RowMate.Tests.UnityApiCheck, contra NUnit 3.5.0, y las
+#    herramientas RowMate.Tokens y RowMate.SessionList, It. 4a). Si falla, sale con ese codigo y NO corre tests (con --no-build
+#    correrian binarios viejos; SessionListToolTests corre la herramienta compilada en el mismo -ArtifactsPath).
 # 2. dotnet test --no-build de la misma solucion, con los mismos binarios.
 # 3. -Matrix: arma <artifacts>/TestResults/ac-matrix.md (AC -> test -> resultado) desde los .trx, aunque haya rojos.
 # 4. Sale con el codigo del dotnet test: propaga el PRIMER codigo distinto de 0.
@@ -121,7 +122,7 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
         foreach ($xml in $unityFiles) { Add-NUnitResults $xml.FullName $byId 'unity' }
     }
 
-    # Lista completa de las specs: TODOS los It0*Ids.cs (It. 1: 139 AC y 19 LT; It. 2: 125 AC y 15 LT; It. 3: 102 AC), con sus bloques
+    # Lista completa de las specs: TODOS los It0*Ids.cs (It. 1: 139 AC y 19 LT; It. 2: 125 AC y 15 LT; It. 3: 102 AC; It. 4a: 162 AC y 11 LT), con sus bloques
     # UnityOnlyIds (PENDIENTE UNITY) y WorkPackageBIds (PENDIENTE WP-B).
     $traceDir = Join-Path $repo 'Assets\RowMate\Tests\EditMode\Traceability'
     $expected = New-Object System.Collections.Generic.List[string]

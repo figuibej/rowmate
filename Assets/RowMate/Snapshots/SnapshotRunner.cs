@@ -22,6 +22,9 @@ namespace RowMate.Snapshots
     // y anota todo en manifest.json e INDEX.md. Un escenario que falla queda con su error y la corrida sigue.
     // It. 3 (03-rutinas/02-tech-design §5.1): secuencias (una armada, varias tomas: DEMO), el título del INDEX por conjunto y la
     // regla de toma con "ninguna transición de capa en curso" (AppShellView.IsSettled).
+    // It. 4a (QA-V3-06): antes de la primera toma precarga los atlas de las fuentes (FontAtlasWarmup), así los bytes no dependen
+    // de qué se dibujó antes: dos corridas, la de un conjunto después del otro o una con -Filter dan lo mismo. En cada foto fija
+    // corren además WrenchAudit (con simulador) y HudOverlap (en el inmersivo): DD4a-04, 02-tech-design §7.1 de la 4a.
     // Códigos de salida: 0 todo bien; 1 alguna toma falló (error, sonda que no es de aspecto, auditoría o comprobación);
     // 3 venció el tope de 15 min.
     public sealed class SnapshotRunner
@@ -60,6 +63,8 @@ namespace RowMate.Snapshots
         {
             Directory.CreateDirectory(_output);
             Debug.Log("[SNAPSHOT] " + _scenarios.Count + " tomas → " + _output + " (" + _pipeline + ")");
+            // Antes de la primera toma: los atlas de las fuentes en un estado fijo (QA-V3-06; FontAtlasWarmup).
+            Debug.Log(FontAtlasWarmup.Run());
             EditorApplication.update += Update;
         }
 
@@ -322,6 +327,9 @@ namespace RowMate.Snapshots
                     if (!scenario.SkipReadingWindow && !retried)
                     {
                         retried = true;
+                        Debug.Log("[SNAPSHOT] " + (_record?.Id ?? scenario.Id) + ": la ventana de la lectura no alcanzó (animaciones finitas: "
+                                  + host.Handle.Motion.DescribeFinite() + "; corazón en reposo: " + host.IsHeartAtRest() + "; transiciones USS: " + _transitions
+                                  + "; capas quietas: " + host.Shell.IsSettled + PulseState(host) + "); se prueba la siguiente");
                         var next = windowEnd + 0.55;
                         host.Advance(next - host.Scheduler.MonotonicSeconds);
                         windowEnd += 1;
@@ -339,6 +347,19 @@ namespace RowMate.Snapshots
             }
 
             _record!.TakenAtSeconds = host.Scheduler.MonotonicSeconds;
+        }
+
+        // El estado del pulso de la fila del paso (para el registro de la regla de toma).
+        private static string PulseState(UiTestHost host)
+        {
+            var pulse = host.Immersive?.View.Steps?.Pulse;
+            if (pulse == null)
+            {
+                return "";
+            }
+
+            return "; pulso: finito " + pulse.IsFinite + ", rampa " + pulse.Ramp.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) + ", escala "
+                   + pulse.Scale.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture) + ", ahora " + host.Scheduler.MonotonicSeconds.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private void Capture(SnapshotScenario scenario, UiTestHost host, string fileName, string? cropElement, List<PixelProbe> probes,
@@ -390,6 +411,11 @@ namespace RowMate.Snapshots
             {
                 record.Problems.AddRange(checks(host));
             }
+
+            // It. 4a (DD4a-04; 04a-motor-hud-funcional/02-tech-design §7.1): la auditoría de la llave en toda toma con simulador y
+            // HudOverlap en toda toma del inmersivo. Lo que encuentran hace fallar la toma (no son sondas de aspecto).
+            record.Problems.AddRange(WrenchAudit.Run(host));
+            record.Problems.AddRange(WrenchAudit.HudOverlap(host));
 
             if (host.HasErrors())
             {

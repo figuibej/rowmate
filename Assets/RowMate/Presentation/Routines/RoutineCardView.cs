@@ -21,24 +21,47 @@ namespace RowMate.Presentation.Routines
     //   ├── #routine-menu-<n> IconButton more_vert          ayuda menuShow; frena el toque (no abre el editor)
     //   └── .rm-focus-ring
     // n = posición en la lista (0 = la más nueva); RoutineListView lo renumera después de cada cambio.
+    // It. 4a (AC-WKT-12-04, DV-21; DN4a-19; 02-tech-design §6.1): la misma tarjeta en Workout, con RoutineCardTrailing.Chevron:
+    // en lugar del ⋮, .rm-routine-card__chevron, una caja de 48 × 48 en la misma columna de 28 dp del borde derecho (la columna
+    // de texto mide igual que en Rutinas) con chevron_right 18 en text.tertiary, centrada en el alto de la tarjeta y sin
+    // toques (la tarjeta entera es la acción). La nombra quien la usa (SetName: workout-routine-<n>).
+    public enum RoutineCardTrailing
+    {
+        Menu,
+        Chevron,
+    }
+
     public sealed class RoutineCardView : VisualElement
     {
         public const string UssClass = "rm-routine-card";
 
         private readonly UiContext _ui;
         private readonly Action<Routine> _open;
-        private readonly Action<Routine, VisualElement> _menu;
+        private readonly Action<Routine, VisualElement>? _menu;
+        private readonly IconButton? _menuButton;
         private readonly Label _name;
         private readonly Label _description;
         private readonly Label _summary;
         private Routine _routine;
 
         public RoutineCardView(UiContext ui, Routine routine, Action<Routine> open, Action<Routine, VisualElement> menu)
+            : this(ui, routine, open, menu ?? throw new ArgumentNullException(nameof(menu)), RoutineCardTrailing.Menu)
+        {
+        }
+
+        // La tarjeta de Workout: un toque o Enter/Espacio la elige; sin menú.
+        public RoutineCardView(UiContext ui, Routine routine, Action<Routine> open)
+            : this(ui, routine, open, null, RoutineCardTrailing.Chevron)
+        {
+        }
+
+        private RoutineCardView(UiContext ui, Routine routine, Action<Routine> open, Action<Routine, VisualElement>? menu, RoutineCardTrailing trailing)
         {
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             _routine = routine ?? throw new ArgumentNullException(nameof(routine));
             _open = open ?? throw new ArgumentNullException(nameof(open));
-            _menu = menu ?? throw new ArgumentNullException(nameof(menu));
+            _menu = menu;
+            Trailing = trailing;
             AddToClassList(UssClass);
             focusable = true;
             Add(Controls.RmButton.StateLayer());
@@ -72,15 +95,30 @@ namespace RowMate.Presentation.Routines
             text.Add(Bar);
             Add(text);
 
-            MenuButton = new IconButton("", Icons.MoreVert, () => _menu(_routine, MenuButton!));
-            MenuButton.AddToClassList(UssClass + "__menu");
-            MenuButton.SetTooltip(ui, () => _ui.Texts.Get(L10nKeys.MenuShow));
-            // El ⋮ abre SOLO el menú: el toque no llega a la tarjeta (RLT.MenuButtonDoesNotOpenTheEditor).
-            MenuButton.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
-            MenuButton.RegisterCallback<PointerUpEvent>(evt => evt.StopPropagation());
-            MenuButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
-            MenuButton.RegisterCallback<NavigationSubmitEvent>(evt => evt.StopPropagation());
-            Add(MenuButton);
+            if (trailing == RoutineCardTrailing.Menu)
+            {
+                var menuButton = new IconButton("", Icons.MoreVert, () => _menu!(_routine, _menuButton!));
+                _menuButton = menuButton;
+                menuButton.AddToClassList(UssClass + "__menu");
+                menuButton.SetTooltip(ui, () => _ui.Texts.Get(L10nKeys.MenuShow));
+                // El ⋮ abre SOLO el menú: el toque no llega a la tarjeta (RLT.MenuButtonDoesNotOpenTheEditor).
+                menuButton.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+                menuButton.RegisterCallback<PointerUpEvent>(evt => evt.StopPropagation());
+                menuButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+                menuButton.RegisterCallback<NavigationSubmitEvent>(evt => evt.StopPropagation());
+                Add(menuButton);
+            }
+            else
+            {
+                Chevron = new VisualElement();
+                Chevron.AddToClassList(UssClass + "__chevron");
+                Chevron.pickingMode = PickingMode.Ignore;
+                var chevronIcon = new IconView(Icons.ChevronRight, false, 18);
+                chevronIcon.pickingMode = PickingMode.Ignore;
+                Chevron.Add(chevronIcon);
+                Add(Chevron);
+            }
+
             Add(Controls.RmButton.FocusRing());
 
             this.AddManipulator(new Clickable(Activate));
@@ -96,7 +134,13 @@ namespace RowMate.Presentation.Routines
 
         public Routine Routine => _routine;
 
-        public IconButton MenuButton { get; }
+        public RoutineCardTrailing Trailing { get; }
+
+        // El ⋮ (solo en Rutinas).
+        public IconButton MenuButton => _menuButton ?? throw new InvalidOperationException("RoutineCardView: la tarjeta de Workout no tiene ⋮.");
+
+        // La caja del chevron (solo en Workout).
+        public VisualElement? Chevron { get; }
 
         public StructureBarView Bar { get; }
 
@@ -114,7 +158,19 @@ namespace RowMate.Presentation.Routines
         public void SetIndex(int index)
         {
             name = index >= 0 ? "routine-card-" + index : "";
-            MenuButton.name = index >= 0 ? "routine-menu-" + index : "";
+            if (_menuButton != null)
+            {
+                _menuButton.name = index >= 0 ? "routine-menu-" + index : "";
+            }
+        }
+
+        // El nombre de contrato que le pone quien la usa (Workout: workout-routine-<n>).
+        public void SetName(string elementName)
+        {
+            if (name != elementName)
+            {
+                name = elementName;
+            }
         }
 
         public void Render(Routine routine, Localizer texts)

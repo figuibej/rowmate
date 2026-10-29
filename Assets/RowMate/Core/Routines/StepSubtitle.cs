@@ -1,4 +1,3 @@
-using System;
 using RowMate.Core.Localization;
 using RowMate.Core.Models;
 
@@ -9,23 +8,16 @@ namespace RowMate.Core.Routines
     // - Text: el texto completo, IGUAL al del legacy, con el 📈 (StepLabels.EditorSubtitle). Es lo que comparan los tests.
     // - Before, HasTrend, After: lo de antes del 📈, si está, y lo de después (con el espacio que sigue al emoji:
     //   "5m  ·  18 spm · " + ícono + " SPM +2/rep"). Sin progresiones: Before = Text, After = "".
-    // El 📈 sale de stepTargetProgressions ("📈 {list}", igual en es y en) y el subtítulo no lleva texto del usuario, así
-    // que el primer 📈 es siempre el de las progresiones.
+    // La partición es la de TrendText (la misma del HUD de la It. 4a, DV-35).
     public sealed record StepSubtitle(string Text, string Before, bool HasTrend, string After)
     {
         // U+1F4C8 (CHART WITH UPWARDS TREND), un par sustituto en UTF-16.
-        public const string TrendEmoji = "\U0001F4C8";
+        public const string TrendEmoji = TrendText.TrendEmoji;
 
         public static StepSubtitle For(IntervalStep step, Localizer l10n)
         {
-            var text = StepLabels.EditorSubtitle(step, l10n);
-            var at = text.IndexOf(TrendEmoji, StringComparison.Ordinal);
-            if (at < 0)
-            {
-                return new StepSubtitle(text, text, false, "");
-            }
-
-            return new StepSubtitle(text, text.Substring(0, at), true, text.Substring(at + TrendEmoji.Length));
+            var parts = TrendText.Split(StepLabels.EditorSubtitle(step, l10n));
+            return new StepSubtitle(parts.Text, parts.Before, parts.HasTrend, parts.After);
         }
     }
 }

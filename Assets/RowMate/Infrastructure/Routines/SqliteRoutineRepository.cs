@@ -12,17 +12,20 @@ namespace RowMate.Infrastructure.Routines
     // Rutinas sobre la base propia (F-RUT-08 + F-HIS-18; legacy: lib/core/database/database_service.dart:141-212), con lo
     // que el legacy no tiene: todo o nada (cada operación en UNA transacción, AC-RUT-08-07), la baja de los pasos (Q-17), el
     // orden estable (created_at DESC, id DESC: Q-18) y la carga en dos consultas (sin N+1).
-    // Dispone la base (y su ejecutor) al disponerse: AppRoot y UiTestHost lo crean y lo disponen.
+    // Con ownsDatabase (por defecto, la conducta de la It. 3) dispone la base (y su ejecutor) al disponerse; desde la It. 4a
+    // LocalStore lo arma sin ser dueño (la base es de las rutinas y de las sesiones, 02-tech-design §3.5).
     public sealed class SqliteRoutineRepository : IRoutineRepository, IDisposable
     {
         private const string SelectRoutines = "SELECT id, name, description, created_at FROM routines";
         private const string SelectSteps = "SELECT * FROM interval_steps";
 
         private readonly RowMateDatabase _database;
+        private readonly bool _ownsDatabase;
 
-        public SqliteRoutineRepository(RowMateDatabase database, IAppLogger logger)
+        public SqliteRoutineRepository(RowMateDatabase database, IAppLogger logger, bool ownsDatabase = true)
         {
             _database = database ?? throw new ArgumentNullException(nameof(database));
+            _ownsDatabase = ownsDatabase;
             if (logger == null)
             {
                 throw new ArgumentNullException(nameof(logger));
@@ -168,7 +171,10 @@ namespace RowMate.Infrastructure.Routines
 
         public void Dispose()
         {
-            _database.Dispose();
+            if (_ownsDatabase)
+            {
+                _database.Dispose();
+            }
         }
 
         private static IReadOnlyList<IntervalStep> InsertSteps(SQLiteConnection connection, long routineId, IReadOnlyList<IntervalStep> steps)

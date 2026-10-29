@@ -14,7 +14,8 @@ namespace RowMate.Presentation.Controls
     //   ├── .rm-field__box          borde por USS (foco y error por clase); min-height 52 (72 la descripción), nunca alto fijo
     //   │   ├── TextField .rm-field__input .rm-type-body   sin etiqueta propia; relleno superior calculado con la etiqueta
     //   │   └── .rm-field__label    .rm-type-body; flotando: arriba y escala 0,8 por código (160 ms, ease.move)
-    //   └── #<error> .rm-field__error .rm-type-body-xs   display none sin error
+    //   └── .rm-field__error-slot > #<error> .rm-field__error .rm-type-body-xs   display none sin error; se abre y se cierra
+    //                                en 160 ease.move (ErrorLine; QA-V3-02), la clase --error cambia en el acto
     // --floating = con foco, con texto o con ayuda (los tres de progresión tienen la etiqueta siempre arriba: DV-19).
     // Lo que fija del TextField de runtime (QA-G3-10; la respuesta del diseño ya decidida, §4.10):
     // - Tab (también en la descripción) pasa al control siguiente y nunca escribe \t: el KeyDown se frena en TrickleDown y
@@ -24,7 +25,11 @@ namespace RowMate.Presentation.Controls
     // - Escape: no revierte el texto ni suelta el foco (se frena); cerrar un menú o un diálogo llega por HandleBack.
     // - Enter en una línea: quita el foco y no confirma ni guarda (el NavigationSubmit no sale del campo). En la
     //   descripción agrega un salto de línea y no sigue.
-    // - Una línea: los saltos (\n, \r) y las tabulaciones se quitan al cambiar el valor (singleLineFormatter del legacy).
+    // - Una línea: los saltos (\n, \r) y las tabulaciones se quitan al cambiar el valor. El legacy solo quita \n
+    //   (FilteringTextInputFormatter.singleLineFormatter = deny('\n'), <flutter-sdk>/packages/flutter/lib/src/services/
+    //   text_formatter.dart:425); quitar también \r y \t es DV-20 (03-rutinas/01-po-spec §11.1, QA-V3-07: sin caracteres
+    //   invisibles en el nombre). En la descripción (multilínea) se quita solo \t: Tab nunca lo escribe y tampoco entra pegado
+    //   (QA-G3-10, 03-rutinas/02-tech-design §4.10).
     //   Pegar (Ctrl+V, Mayús+Insert y el comando Paste) lo hace este control con IClipboard: S-B3a midió que el Paste de UI
     //   Toolkit cambia cada salto por un espacio antes de cambiar el valor (TextEditingUtilities.ReplaceNewlinesWithSpaces),
     //   y la spec pide que el salto pegado se quite (AC-RUT-11-02).
@@ -45,6 +50,7 @@ namespace RowMate.Presentation.Controls
         private readonly VisualElement _box;
         private readonly Label _label;
         private readonly Label _error;
+        private readonly ErrorLine _errorLine;
         private readonly TextField _input;
         private readonly VisualElement? _textInput;
         private readonly TextElement? _textElement;
@@ -119,8 +125,8 @@ namespace RowMate.Presentation.Controls
             _error.AddToClassList("rm-type-body-xs");
             _error.pickingMode = PickingMode.Ignore;
             _error.enableRichText = false;
-            _error.style.display = DisplayStyle.None;
-            Add(_error);
+            _errorLine = new ErrorLine(ui.Motion, _error);
+            Add(_errorLine.Slot);
 
             _float = new LabelFloat(ui.Motion, this);
             RegisterCallback<DetachFromPanelEvent>(_ => ReleasePacing());
@@ -134,6 +140,8 @@ namespace RowMate.Presentation.Controls
 
         public Label ErrorLabel => _error;
 
+        public ErrorLine ErrorLine => _errorLine;
+
         public VisualElement Box => _box;
 
         public TextContextMenu ContextMenu { get; }
@@ -142,9 +150,10 @@ namespace RowMate.Presentation.Controls
 
         public bool IsFocused => _focused;
 
-        public bool HasError => _boxError || _error.resolvedStyle.display != DisplayStyle.None && _error.text.Length > 0;
+        public bool HasError => _boxError || _errorLine.HasText;
 
-        public string ErrorText => _error.style.display == DisplayStyle.None ? "" : _error.text;
+        // El error que vale ahora (la línea puede estar todavía abriéndose o yéndose).
+        public string ErrorText => _errorLine.Text;
 
         public string Value
         {
@@ -185,12 +194,10 @@ namespace RowMate.Presentation.Controls
             }
         }
 
-        // Texto de error debajo del campo (null o vacío = sin error).
+        // Texto de error debajo del campo (null o vacío = sin error): la caja cambia en el acto y la línea se mueve (ErrorLine).
         public void SetError(string? text)
         {
-            var has = !string.IsNullOrEmpty(text);
-            _error.text = has ? text! : "";
-            _error.style.display = has ? DisplayStyle.Flex : DisplayStyle.None;
+            _errorLine.Set(text);
             Refresh(true);
         }
 
@@ -473,7 +480,7 @@ namespace RowMate.Presentation.Controls
             var filled = Value.Length > 0;
             EnableInClassList(UssClass + "--focused", _focused);
             EnableInClassList(UssClass + "--filled", filled);
-            EnableInClassList(UssClass + "--error", _boxError || (_error.style.display != DisplayStyle.None && _error.text.Length > 0));
+            EnableInClassList(UssClass + "--error", _boxError || _errorLine.HasText);
             var floating = IsFloating;
             EnableInClassList(UssClass + "--floating", floating);
             _float.To(floating, animate);

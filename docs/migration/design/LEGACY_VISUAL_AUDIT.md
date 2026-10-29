@@ -412,6 +412,7 @@ No portarlos como "comportamiento"; el Architect y el PO deciden los que tocan p
 | 14 | Relleno del pill y valores saltan a 1 Hz. | Interpolar visualmente (sin cambiar el dato). |
 | 15 | Tipografía distinta por plataforma. | Fuente propia OFL. |
 | 16 | La salpicadura dura ≈ 0,2 s y son 6 puntos; los charcos casi no se ven (`@30 %`). | VFX reales de catch, gotas desde la pala en la recuperación y charcos con normales. |
+| 17 | **HUD horizontal en un teléfono**: con las zonas del HUD (`immersive_workout_screen.dart:639-663`, `:709-733`), en 914 × 411 y 640 × 360 la tarjeta kcal (desde abajo, `bottom 140`) se encima con la de Watts (desde arriba, `top + 90`), y en 640 × 360 la banda tiempo / distancia se encima con los controles. El escritorio no lo sufre porque el legacy no escala el HUD. | En Unity (It. 4a, DV-33): en horizontal, kcal y BPM van en fila a la altura de los controles (kcal en el rincón) y la banda es compacta; lo que no entra achica solo sus cifras. Nada se encima en los cinco perfiles medidos ([04a/04-design-notes §3.1, §3.7](../iterations/04a-motor-hud-funcional/04-design-notes.md); CAP-15, CAP-16, CAP-23, CAP-24) |
 
 ---
 
@@ -530,3 +531,15 @@ Todas son **solo visuales**: no cambian distancia, velocidad media ni métricas.
 | Dónde | Qué cambió |
 |---|---|
 | §5.4 | Lista de rutinas: descripción 12 y resumen 11 `@54 %`, en ese orden, y el menú `⋮` (estaba invertido; corrección de lectura, 03-rutinas/01-po-spec §15 y 04-design-notes §12) |
+
+---
+
+## Cambios de la It. 4a
+
+Fuente: [04a-motor-hud-funcional/04-design-notes](../iterations/04a-motor-hud-funcional/04-design-notes.md) (§3.1, §3.7, §11 y §13) y la spec corregida ([01-po-spec §11.1](../iterations/04a-motor-hud-funcional/01-po-spec.md): DV-31, DV-33, DV-38), 2026-10-28. Solo lectura del legacy (`lib/features/workout/immersive_workout_screen.dart`, `docs/image-03.png`).
+
+| Dónde | Qué cambió |
+|---|---|
+| §8 | Hallazgo 17 nuevo: el defecto del HUD horizontal del legacy en un teléfono (kcal sobre Watts; la banda sobre los controles en 640 × 360) y cómo lo resuelve la 4a (DV-33: la fila de abajo y la banda compacta) |
+
+Lo que la 4a cambió del aspecto del HUD frente al legacy queda en el registro de diferencias de la spec y en ART_BIBLE ("Cambios de la It. 4a"): las unidades en `.hud @80 %` en lugar del color base al 55 % (DV-31; §9 punto 2 sigue diciendo "unidades al 55 %" como contrato **del legacy**), las pastillas de la barra con el texto en blanco y el latido solo en el fondo y el borde de `Próximo` (DV-38), y el hueco de la flecha con `obj.` alineado con las cifras.

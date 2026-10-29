@@ -42,6 +42,7 @@ El gate, el valor por defecto y si se le confirma al usuario están en [ROADMAP 
 | D-ART-07 | PO | Cámaras extra (lateral, dron, popa) **especificadas** en §8.3 pero fuera de la paridad (BKL-02 / Q-66). En paridad: persecución legacy + "respiración" + entrada y salida cinematográficas. | Q-66 |
 | D-ART-08 | Usuario | Texturas CC0 opcionales (Poly Haven, ambientCG) y textura de luna de NASA (dominio público). Sin OK se usan los procedurales y el Terrain Sample Asset Pack de Unity. | La decisión del usuario enumera Mixamo, paquetes de Unity y procedural |
 | D-ART-09 | PO | Debajo del valor con objetivo, el objetivo en chico ("obj. 26"), como propone la ficha F-WKT-10. | Agrega texto al HUD |
+| D-ART-10 | PO (gate de la 4a) | Llave del simulador **abajo a la izquierda** fuera del entrenamiento (16 dp del borde; 16 sobre la barra o, en una pantalla apilada, sobre el borde) y **abajo a la derecha** en el entrenamiento; el panel se abre desde la llave (§3.11). Reemplaza DV-13 y cambia AC-BLE-16-02 y -03 | En el carril derecho la llave tapa en reposo las acciones de fila (`⋮`, lápiz, cruz, tacho, *chevron*), que Material pone al final (QA-V3-09; [04a/00-deuda-diseno §1](../iterations/04a-motor-hud-funcional/00-deuda-diseno.md)) |
 
 ---
 
@@ -56,7 +57,7 @@ El gate, el valor por defecto y si se le confirma al usuario están en [ROADMAP 
 
 ## 2. Tokens de diseño
 
-Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/Tokens.cs` (`RowMate.Core.Design.Tokens`, ADR 016): 122 tokens en la It. 1, 127 desde la It. 2 (`bodyM`, `bodyXs`, `button`, `accent.tonalBg`, `accent.onTonal`) y **133** desde la It. 3 (`overlay.scrim`, `border.input`, `text.selection`, `titleXs`, `headerS`, `buttonS`). De ahí `tools/tokens` genera las variables USS (`--rm-*`, `Tokens.uss`) y las clases de tipo (`Typography.uss`) para UI Toolkit, y los tests de contraste de dotnet leen la misma clase. **Si esta biblia y `Tokens.cs` no coinciden, manda `Tokens.cs`.** Los valores exactos, el rol de contraste de cada token y los contrastes verificados están en [04-design-notes de la It. 1 §2 y §4](../iterations/01-fundaciones/04-design-notes.md), en [04-design-notes de la It. 2 §2.1 y §8](../iterations/02-dispositivo-simulador/04-design-notes.md) y, para las variantes del HUD, en [03-rutinas/00-deuda-diseno §2](../iterations/03-rutinas/00-deuda-diseno.md); los de Rutinas y el editor, en [03-rutinas/04-design-notes §2 y §8](../iterations/03-rutinas/04-design-notes.md). Cada token tiene un solo valor: el texto y su fondo, el anillo y su halo, y cada tamaño tipográfico son tokens separados (`state.connected` / `state.connectedBg`, `focus.ring` / `focus.ringHalo`, `accent.onTonal` / `accent.tonalBg`, `num.m` / `num.band`).
+Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/Tokens.cs` (`RowMate.Core.Design.Tokens`, ADR 016): 122 tokens en la It. 1, 127 desde la It. 2 (`bodyM`, `bodyXs`, `button`, `accent.tonalBg`, `accent.onTonal`), 133 desde la It. 3 (`overlay.scrim`, `border.input`, `text.selection`, `titleXs`, `headerS`, `buttonS`) y **135** desde la It. 4a (`backdrop.sky`, `backdrop.water`: el fondo provisorio del inmersivo, §2.1). De ahí `tools/tokens` genera las variables USS (`--rm-*`, `Tokens.uss`) y las clases de tipo (`Typography.uss`) para UI Toolkit, y los tests de contraste de dotnet leen la misma clase. **Si esta biblia y `Tokens.cs` no coinciden, manda `Tokens.cs`.** Los valores exactos, el rol de contraste de cada token y los contrastes verificados están en [04-design-notes de la It. 1 §2 y §4](../iterations/01-fundaciones/04-design-notes.md), en [04-design-notes de la It. 2 §2.1 y §8](../iterations/02-dispositivo-simulador/04-design-notes.md) y, para las variantes del HUD, en [03-rutinas/00-deuda-diseno §2](../iterations/03-rutinas/00-deuda-diseno.md); los de Rutinas y el editor, en [03-rutinas/04-design-notes §2 y §8](../iterations/03-rutinas/04-design-notes.md). Cada token tiene un solo valor: el texto y su fondo, el anillo y su halo, y cada tamaño tipográfico son tokens separados (`state.connected` / `state.connectedBg`, `focus.ring` / `focus.ringHalo`, `accent.onTonal` / `accent.tonalBg`, `num.m` / `num.band`).
 
 ### 2.1 Fondos, superficies, texto y bordes de la app
 
@@ -87,6 +88,8 @@ Los tokens viven **como datos** en una sola fuente: `Assets/RowMate/Core/Design/
 | `accent.primaryPressed` | `#0096B4` | botón primario presionado | variante |
 | `accent.tonalBg` | `#00B4D8 @12 %` | fondo del botón tonal (decorativo) | It. 2 (con `@16 %` el acento encima no llegaba a AA) |
 | `accent.onTonal` | `#38CBEF` | texto e ícono del botón tonal: 5,9:1 sobre el tonal en la tarjeta, 5,2:1 con *hover* | It. 2. Mismo matiz que `accent.primary`, más claro; coincide con el `metric.spm.hud` de la It. 1, pero es un token independiente (no sigue sus cambios, §2.3). Desde la It. 3, también el número del chip `×N`: 5,620:1 sobre su cápsula (`accent.primary` daba 4,370) |
+| `backdrop.sky` | `#0B4FA8` | fondo provisorio del inmersivo, del borde de arriba al horizonte de la cámara (0,40 del alto en vertical, 0,42 en horizontal). Es el `skyTop` de las 12 h del legacy; el vidrio encima da `#08162A` y el blanco directo 7,783:1 | It. 4a (DN4a-03); se va, o queda como fondo de carga, con la escena de la 6a |
+| `backdrop.water` | `#0E4F8F` | el mismo fondo, del horizonte al borde de abajo (`waterNear` de las 12 h del legacy); el vidrio encima da `#081627`. Los dos tonos están a 0,008 de luminancia: se lee parejo, con el cielo apenas más vivo | It. 4a (DN4a-03) |
 
 ### 2.2 Semántica — métricas, pasos, fases y estados [CONTRATO]
 
@@ -202,31 +205,49 @@ Por qué `@86 %`: sin desenfoque no hay luminancia de fondo para medir, así que
 - Con `@80 %` no alcanza: el peor caso es `#393D45` y da split y SPM 5,6:1, pulso y fuera de objetivo 3,6:1.
 - El `#000000 @55 %` del legacy al que reemplaza da 4,8:1 en blanco en el peor caso.
 
-En la It. 4a el fondo es provisorio y oscuro, así que el respaldo se ve casi igual; el número importa desde la It. 6a, con el cielo real detrás.
+En la It. 4a el fondo es provisorio: dos tonos planos del mediodía del legacy, `backdrop.sky` arriba del horizonte y `backdrop.water` abajo, en **un solo elemento** con una textura de 1 × 100 (filtro *point*, sRGB, sin *mipmaps*: el horizonte queda recto y los tonos con su hex exacto). El vidrio se ve como un panel oscuro sobre el cielo (`#08162A`) y el agua (`#081627`); sobre `bg.app` daba `#080F19` y las tarjetas casi desaparecían. El número de `@86 %` importa desde la It. 6a, con el cielo real detrás (el contraste ya está calculado contra una nube blanca).
 
 **Scrims de pantalla** (detrás del HUD, delante de la escena): degradé superior `#06122A @38 % → 0` en el 24 % alto de la pantalla y degradé inferior `@32 % → 0` en el 18 % bajo. Nunca oscurecen la franja central donde va el bote.
 
 | Variante | Valor | Etiqueta | Unidad | Ancho mín. | Padding |
 |---|---|---|---|---|---|
-| Grande (SPM) | `num.hero` 64/800 | 13/600 tracking 0,08 em, color base | 14/500 `@55 %` | 140 | 16×10 |
-| Mediana (Split, Watts) | `num.l` 44/700 | 12/600 | 13/500 `@55 %` | 118 | 14×10 |
-| Chica (kcal, BPM) | `num.m` 32/700 | 11/600 | 12/500 `@55 %` | 96 | 12×8 |
+| Grande (SPM) | `num.hero` 64/800 | 13/600 tracking 0,08 em, color base | 14/500, `.hud` de su métrica `@80 %` | 140 | 16×10 |
+| Mediana (Split, Watts) | `num.l` 44/700 | 12/600 | 13/500, `.hud @80 %` (la `W` de Watts) | 118 | 14×10 |
+| Chica (kcal, BPM) | `num.m` 32/700 | 11/600 | 12/500, `.hud @80 %` | 96 | 12×8 |
+
+**Unidades (It. 4a, DV-31):** en la variante `.hud` de su métrica al 80 % (por código: USS no aplica alfa a un `var()`), en la línea de base de las cifras y sin cambiar con el semáforo. El color base al 55 % del legacy y de la versión anterior de esta biblia daba 3,967:1 (`W`) y 3,188 (`m`) en el peor vidrio; al 80 %, 6,678 y 5,157.
 
 | Estado | Valor | Etiqueta y borde | Extra |
 |---|---|---|---|
-| Normal | `metric.*.hud` | etiqueta color base; borde `border.subtle` 1 px | — |
-| Con objetivo, cumple | `text.hudPrimary` (blanco) | etiqueta color base; borde color base `@70 %` 1,5 px + glow `@20 %` (Q-60) | si D-ART-09: "obj. 26" 12/600 `@70 %` debajo |
-| Con objetivo, fuera | `state.offTarget.hud` | igual que "cumple" | flecha ▲ (subir SPM/W) o ▼ (bajar split) de 0,4 em a la izquierda del valor (D-ART-01) |
+| Normal | `metric.*.hud` | etiqueta color base; borde `#FFFFFF @10 %` 1 px | — |
+| Con objetivo, cumple | `text.hudPrimary` (blanco) | etiqueta color base; borde color base `@70 %` 1,5 px + glow `@20 %` solo por fuera (Q-60) | el **hueco de la flecha** vacío; `obj. 26` 12/600 `text.secondary` debajo (D-ART-09) |
+| Con objetivo, fuera | `state.offTarget.hud` | igual que "cumple" | ▲ (subir SPM/W) o ▼ (bajar split) en el hueco (D-ART-01) |
 | Pausa | valores siguen actualizándose (contrato) y **al 100 %**: ni la tarjeta ni su texto bajan de opacidad (el legacy tampoco lo hace) | igual | la pausa la dicen el velo de la escena (ANIMATION_BIBLE §2.11), el botón Reanudar y el chip de fase. Con la tarjeta al 85 % (versión anterior), sobre una nube blanca el pulso daba 3,2:1 y el Split 4,8:1 (QA-V2-12) |
 
-**Banda tiempo │ distancia** [CONTRATO]: cápsula `r.full`, mismo vidrio con alfa base 0,68, padding 20×10; ícono cronómetro 16 `@70 %` + valor `num.band` 34 `metric.time.hud`; divisor 1×32 `@12 %` con 16 a cada lado; ícono regla + valor `num.band` `metric.distance.hud` + "m" 13 `@55 %`.
+**Anatomía con objetivo (It. 4a, DN4a-07 y DN4a-15; [04a/04-design-notes §3.2](../iterations/04a-motor-hud-funcional/04-design-notes.md)):**
+
+- **El hueco de la flecha** mide 0,48 em del valor (30,7 dp a 64; 21,1 a 44) y existe **toda la duración de un paso con objetivo**, aunque se cumpla: al cruzar el umbral cambian solo el color y la flecha, y el número no se corre ("no baila"). Aparece y se va solo al cambiar de paso, con la coreografía de ANIMATION_BIBLE §2.7.
+- **La flecha**, Inter 700 a 0,4 em del valor, pegada a la izquierda del hueco, con su tinta centrada en la banda de las mayúsculas de las cifras: su línea de base va 0,196 em del valor (▲) o 0,214 em (▼) por encima de la de las cifras. Entre su tinta y la primera cifra quedan 0,084 em más el lado de la cifra.
+- **`obj.`** (`hudTarget`: `obj. 22`, `target 22`) 2 dp debajo del valor, con el `margin-left` del hueco: empieza donde empiezan las cifras, así el objetivo queda justo bajo el valor real.
+- Medidas en `em` y líneas de base las calcula el código en px (USS no tiene `em` ni `align-items: baseline`).
+
+```
+SPM            SPM
+   24.0     ▲  23.5
+   obj. 22     obj. 22
+```
+
+**Banda tiempo │ distancia** [CONTRATO]: cápsula `r.full`, mismo vidrio, padding 20×10; ícono cronómetro 16 `metric.time @70 %` centrado sobre el valor + valor `num.band` 34 `metric.time.hud`; divisor 1×32 `@12 %` con 16 a cada lado; ícono regla 16 `metric.distance @70 %` + valor `num.band` `metric.distance.hud` + 3 + `m` 13/500 en `metric.distance.hud @80 %` (DV-31), en la línea de base. **En horizontal, compacta** (It. 4a, DV-33): relleno 14 y 10 a cada lado del divisor, porque comparte la fila con los controles (`00:42 │ 1048 m` mide 216,1 en lugar de 240,1). Las dos cifras comparten **una sola escala** cuando no entran (la banda se lee pareja); el relleno, el divisor, los íconos y la unidad no se achican.
 
 ### 3.3 Barra de pasos y píldoras
 
 - **Contenedor** [CONTRATO]: margen horizontal 12, vidrio (alfa base 0,72), `r.glass`, borde `@8 %`. Padding píldoras 10/8/10/4; fila de info 12/0/12/8.
 - **Píldora** [CONTRATO]: alto 8, radio 4, separación 3, mismo ancho para todas. Estados: pendiente `@18 %`; en curso pista `@30 %` + relleno `@100 %` proporcional; hecha `@85 %`; hecha sin cumplir = interior `@18 %` + borde 1,5 px `@85 %`. [EXR] el relleno avanza continuo (ANIMATION_BIBLE §2.5) y la píldora en curso tiene un brillo especular de 1 px `#FFFFFF @25 %` en el borde superior del relleno.
-- **Fila de info:** tipo de paso 13/700 tracking 0,04 em en `step.*.hud`; chip de objetivo bg color `@20 %`, `r.s`, 6×2, 11/600, recorte con "…"; chip "Up next" (texto actual del legacy hasta que Q-01 lo localice) bg `@25 %`, borde `@50 %`, `r.m`, 7×3, 10 + tipo 10/700; cuenta regresiva `num.s` 20/700 blanca (22 en los últimos 5 s, con transición, no salto); reloj de pared 18/700 tabular con ícono 16 `@70 %`.
-- **Barra de libre:** ícono remo `accent.primary` 20, título 16/600, reloj, chip de fase (`phase.*` bg `@15 %`, borde `@50 %`, `r.m`, 8×3, 11/800 tracking 0,08 em) con punto "en vivo" de 6 px que late en EN MARCHA.
+- **Fila de info:** tipo de paso 13/700 tracking 0,04 em en `step.*.hud`; pastilla de objetivo bg color base `@20 %`, `r.s`, 6×2, 11/600 **`text.primary`** (blanco) con `trending_up` a 1,17 em en `metric.distance`, recorte con "…" (nunca empuja la cuenta); `Próximo:` / `Up next:` localizado (DV-24) en `text.secondary` 10/400 + el tipo siguiente **`text.primary`** 10/700, sobre un fondo del color base del paso siguiente `@20 %` con borde `@50 %`, `r.m`, 7×3, alto 20,4; cuenta regresiva `num.s` 20/700 blanca (escala 1,1 por terminar, con resorte, no salto, y el color blanco ↔ el del paso con el reloj común); reloj de pared 18/700 tabular con ícono 16 `@70 %` (4b).
+  - **Por qué blanco (It. 4a, DV-38, aceptada por el PO):** el texto en el color del tipo sobre su tinte daba 3,719:1 (trabajo) y 3,688 (enfriamiento) en el peor fondo, y `Up next:` al 60 % sobre el 25 % del legacy, 3,758. En blanco: 8,134 a 10,962; `Próximo:` al 70 % sobre el 20 %, 4,977 a 6,301 (04a/04-design-notes §4.5, §9.1).
+  - **Lo que late en `Próximo`** es solo su fondo y su borde (0,6 ↔ 1 en 600 + 600, ANIMATION_BIBLE §2.6); el texto queda siempre entero. Con el latido del legacy en toda la pastilla el texto bajaba a ≈ 3:1 en el punto más tenue.
+- **La barra de la 4a (sin píldoras, DN4a-04):** una sola fila de 22 de alto; borde 1, relleno 8, fila, relleno 8, borde 1: **40** de alto, igual que la barra libre, así SPM queda a la misma distancia en libre y con rutina. Relleno a los lados 12 (rutina) y 14 (libre). En la 4b, la fila de píldoras se suma arriba con las medidas de esta sección y la de información queda igual.
+- **Barra de libre:** ícono remo `accent.primary` 20, 8, título 16/600 blanco; en la 4b, el reloj y el chip de fase (`phase.*` bg `@15 %`, borde `@50 %`, `r.m`, 8×3, 11/800 tracking 0,08 em) con punto "en vivo" de 6 px que late en EN MARCHA.
 
 ### 3.4 Paneles de series (parciales y repeticiones)
 
@@ -238,9 +259,13 @@ Mismo vidrio; ancho colapsado mín. 140, **expandido fijo 200** [CONTRATO] (en t
 |---|---|
 | Terminar | contorno `state.dangerText` (`#FF7272`) 1,5 px, texto `state.dangerText` 16/600, **mismo vidrio del HUD** (adaptativo; respaldo `glass.fallback` `@86 %`): 5,1:1 en el peor caso. Antes era vidrio `@45 %` con `#FF5252`, que daba 1,0:1 sobre un cielo blanco. Mín. **128×56** (legacy 120×48; más grande para manos transpiradas), `r.l` |
 | Pausa | mismo vidrio del HUD, contorno `border.strong` 1,5 px, ícono pausa 22 + texto 16/600 blanco, mín. 148×56 |
-| Reanudar | relleno `state.success`, texto `text.onAccent` 16/700 (10,0:1), ícono play, mín. 148×56 |
-| Diálogo (terminar, completado) | `surface.overlay` `@92 %` + vidrio, `r.card`, padding 24, título 20/700, cuerpo 15 `text.secondary`, botones a la derecha (texto + relleno). Diálogo de completado: check `state.success` 32, caja de resumen `#FFFFFF @4 %` `r.m` con Tiempo/Distancia/Calorías en `num.m` |
+| Reanudar | relleno `state.success`, texto `text.onAccent` 16/700 (10,0:1), ícono play, mín. 148×56. `Pausa` y `Reanudar` miden lo mismo: el cambio no mueve nada |
+| Estados de los controles del HUD (It. 4a) | *Hover* (escritorio) y presionado (`:hover:active`) con la capa de la app, salvo `Terminar`, que lleva la capa **oscura** (`overlay.scrim` al 12 % y al 24 %: 5,483 y 5,892:1; con la blanca del 4 % daba 4,494), como el ítem de peligro de los menús; escala 0,97 al presionar (sin escala con reducir movimiento). **Anillo de foco del HUD**: blanco (`text.primary`) de 2 dp a −4 del borde de afuera (radio 16) con un halo `overlay.scrim` al 50 % de 4 dp pegado por fuera (radio 20): 3,977:1 sobre cualquier fondo de la escena (el cian de la app daba 2,465 sobre una nube). Tab: `Terminar` → `Pausa` / `Reanudar` → la llave (simulador). Al confirmar `Terminar`, los dos al 0,38 en el acto; si el guardado tarda más de 300 ms, `Terminar` muestra el *spinner* de 16 en `state.dangerText` a la izquierda de su texto, sin cambiar de ancho |
+| Diálogo de terminar (It. 4a) | **el diálogo de la app, opaco** (fila siguiente), de 331 en un teléfono de 411: título `title` 20/600 (`Terminar entrenamiento` entra en una línea), cuerpo `body` 15 `text.secondary`, `Cancelar` de texto y `Terminar` primario relleno. Sin desenfoque (6b), el "vidrio `@92 %`" de la versión anterior solo dejaba ver el HUD fantasma detrás del velo; es además la paridad (el legacy usa un `AlertDialog` estándar). La clase `.rm-dialog--hud` queda reservada, sin reglas, para el diálogo de completado de la 4b |
+| Diálogo de completado (4b) | `surface.overlay` `@92 %` + vidrio (cuando haya desenfoque), `r.card`, padding 24, título 20/700, cuerpo 15 `text.secondary`, botones a la derecha (texto + relleno); check `state.success` 32, caja de resumen `#FFFFFF @4 %` `r.m` con Tiempo/Distancia/Calorías en `num.m` |
 | Diálogo de la app (It. 3: eliminar, paso, repeticiones) | `surface.overlay` opaco (sin vidrio), `r.card`, borde 1 `border.default`, sin sombra; ancho `min(máx; ventana − 80)` con mínimo 280 y máximo 400 (eliminar, repeticiones) o 560 (paso); alto máximo ventana − 48; relleno 24 (16 con la ventana de menos de 480 dp de alto); título `title`; contenido desplazable con líneas `border.subtle` arriba y abajo y 8 dp de aire mientras se desplaza; acciones abajo a la derecha (texto + relleno, o peligro relleno); velo `overlay.scrim` al 60 %. Escala 0,96 → 1 al entrar y 0,98 al salir (ANIMATION_BIBLE §2.2) |
+| Menú emergente (It. 3: `⋮` de la tarjeta y menú de texto) | `surface.overlay`, `r.m` 8, borde 1 `border.default`, relleno 8 / 0, ancho 140-280. Ítems de `min-height` 48 con relleno 0 / 16, `bodyM` `text.primary` en una línea con "…"; en el menú de texto (`.rm-menu--dense`, solo escritorio), 36 y 0 / 12. Ítem de peligro en `state.dangerText` con capa de estado **oscura** (`overlay.scrim` al 12 % con *hover* y al 24 % presionado: con la capa blanca daba 4,174:1). Anillo de foco adentro, sin halo. Se abre debajo del ancla con 4 dp de aire y el borde derecho alineado (arriba si no entra), a ≥ 8 dp de los bordes; el de texto, en el puntero + (2; 2). Desde la It. 4a esquiva la llave del simulador como a un borde (04a/00-deuda-diseno, R6) |
+| Ayuda emergente (*tooltip* de los controles; It. 3) | `surface.overlay`, borde 1 `border.default`, `r.s` 6, relleno 4 / 8, `min-height` 24, `bodyXs` `text.primary`, ancho máximo 240 (ajusta); centrada 8 dp debajo del ancla (arriba si no entra) y a ≥ 8 dp de los bordes; nunca recibe toques. No es el *tooltip* del gráfico (§3.9) |
 
 ### 3.6 Botones de la app
 
@@ -265,7 +290,7 @@ Etiqueta de todo botón, chip y acción de texto: **`button`** 14/600 (It. 2; M3
 | *Hover* (solo escritorio, nunca en el destino elegido) | capa `text.primary` `opacity 0,04`. Con 6 % (la versión anterior), el texto peligro sobre la tarjeta bajaba a 4,34:1 |
 | Presionado | **`:hover:active`** (puntero o dedo apoyado sobre el control): capa 0,08 y escala 0,97 (botones de ícono, pestañas y llave del simulador: 0,94). El primario cambia el fondo a `accent.primaryPressed`, sin capa. Con teclado (Enter, Espacio) el control responde y lo marca el anillo de foco, sin "presionado". Se usa `:hover:active` y no `:active` solo porque el clic simulado de UI Toolkit deja `:active` 100 ms de reloj real, que en capturas y videos es "para siempre" (04-design-notes de la It. 2 §15.3). En Android falta verificar en equipo que el dedo apoyado marque `:hover` |
 | Deshabilitado | `opacity 0,38` en todo el control, sin *hover* ni presión, sin transición |
-| Foco (solo navegando con teclado) | anillo `stroke.focus` 2 `focus.ring`, por fuera del control (`inset −4`, radio del control + 4), con halo `stroke.focusHalo` 4 `focus.ringHalo` (radio + 4 más). Aparece sin animación. Va también en pestañas, filas, chips, la llave y el interruptor. Excepción (It. 3): dentro de un contenedor que recorta (el ítem del menú, la opción de tiempo / distancia del segmentado) el anillo va **adentro**, a 2 dp, sin halo; sobre la opción elegida (`brand.seed`) en blanco (4,868:1). Los campos de texto no llevan anillo: su borde de 2 dp en `accent.primary` es el indicador |
+| Foco (solo navegando con teclado) | anillo `stroke.focus` 2 `focus.ring`, por fuera del control (`inset −4` medido desde su borde de afuera: con un borde de 2 dp, como el mosaico de tipo, queda a −6 desde adentro; radio del control + 4), con halo `stroke.focusHalo` 4 `focus.ringHalo` (radio + 4 más). Aparece sin animación. Va también en pestañas, filas, chips, la llave y el interruptor. Excepción (It. 3): dentro de un contenedor que recorta (el ítem del menú, la opción de tiempo / distancia del segmentado) el anillo va **adentro**, a 2 dp, sin halo; sobre la opción elegida (`brand.seed`) en blanco (4,868:1). Los campos de texto no llevan anillo: su borde de 2 dp en `accent.primary` es el indicador |
 
 Área táctil mínima 48 × 48 aunque el dibujo sea menor. Excepciones de contraste (no se prueban como umbral): presionado (dura lo que el toque: `accent.primary` sobre el panel 3,98) y `state.dangerText` sobre el panel con *hover* (4,17; no hay botones de peligro en el panel).
 
@@ -277,7 +302,7 @@ Etiqueta de todo botón, chip y acción de texto: **`button`** 14/600 (It. 2; M3
 
 ### 3.7 Listas y tarjetas de lista
 
-- **Rutina** (Rutinas desde la It. 3; Workout desde la 4a): `surface.card` `r.card`, relleno 16 / 4 / 16 / 16, **sin** borde superior; ícono `fitness_center` 22 `accent.primary` en una caja 36 `accent.tonalBg` (`#173E57` sobre la tarjeta, 4,572:1) `r.m`; nombre `titleS` 16/600 `text.primary`; descripción, si hay, `bodyXs` 12 **`text.secondary`**; resumen `bodyS` 13 **`text.tertiary`** (el orden y los colores del legacy; la mini-barra ya cuenta la estructura); en Rutinas, **`⋮`** 24 `text.secondary` con `margin-top` −14, en la columna de 28 dp del borde derecho (la misma de la cruz y el tacho del editor); el *chevron* 18 queda solo para Workout. Nombre y descripción ajustan y se muestran tal cual (sin marcas ni escapes). *Hover* 4 %, presionado 8 %, sin escala; lo editado se ilumina (capa blanca 0,08 → 0). [EXR] Debajo del resumen, la **mini-barra de estructura**: un renglón de 4 dp con tramos de radio 2 y separación 2 en el color base de su tipo, alineados a la izquierda, de ancho `min(24; (W − 2·(n − 1)) / n)` con mínimo 2 (el largo de la franja también cuenta cuántos tramos tiene); si no entran (`n` > `⌊(W + 2) / 4⌋`), los que caben a 2 dp y los últimos 6 que se apagan; con 0 tramos, una pista `border.default` de todo el ancho. Deshabilitada sin remo: `@50 %` [CONTRATO].
+- **Rutina** (Rutinas desde la It. 3; Workout desde la 4a): `surface.card` `r.card`, relleno 16 / 4 / 16 / 16, **sin** borde superior; ícono `fitness_center` 22 `accent.primary` en una caja 36 `accent.tonalBg` (`#173E57` sobre la tarjeta, 4,572:1) `r.m`; nombre `titleS` 16/600 `text.primary`; descripción, si hay, `bodyXs` 12 **`text.secondary`**; resumen `bodyS` 13 **`text.tertiary`** (el orden y los colores del legacy; la mini-barra ya cuenta la estructura); en Rutinas, **`⋮`** 24 `text.secondary` con `margin-top` −14, en la columna de 28 dp del borde derecho (la misma de la cruz y el tacho del editor); en Workout (It. 4a, DV-21), en esa misma columna, el ***chevron*** `chevron_right` 18 `text.tertiary` (5,140:1; 4,785 con el *hover*) en una caja de 48 **centrada en el alto de la tarjeta**, como el `ListTile` del legacy, y sin toques: la tarjeta entera es la acción, y la columna de texto mide igual que en Rutinas. Nombre y descripción ajustan y se muestran tal cual (sin marcas ni escapes). *Hover* 4 %, presionado 8 %, sin escala; lo editado se ilumina (capa blanca 0,08 → 0). [EXR] Debajo del resumen, la **mini-barra de estructura**: un renglón de 4 dp con tramos de radio 2 y separación 2 en el color base de su tipo, alineados a la izquierda, de ancho `min(24; (W − 2·(n − 1)) / n)` con mínimo 2 (el largo de la franja también cuenta cuántos tramos tiene); si no entran (`n` > `⌊(W + 2) / 4⌋`), los que caben a 2 dp y los últimos 6 que se apagan; con 0 tramos, una pista `border.default` de todo el ancho. Deshabilitada sin remo: `@50 %` [CONTRATO].
 - **Sesión** (Historial): padding 16; ícono remo 18 `accent.primary`; nombre 15/600; ícono Strava 14 `brand.strava`; fecha `dd/MM/yyyy  HH:mm` 12 `text.tertiary`; fila de 6 stats: valor `num.stat` 16/700 en color de métrica + etiqueta 11/500 `text.tertiary`. Split vacío `--:--`.
 - **Dispositivo encontrado** (búsqueda; medido en la It. 2 con los pulsómetros): fila accionable `min-height` 56, relleno vertical 8, capa de estado `r.m` que se extiende 8 dp a cada lado del texto; ícono 24 (pulsómetro: `favorite` **contorno** `metric.hr`; remo: `rowing` `accent.primary`) + 16 + columna con el nombre `body` 15 `text.primary` con "…" y el identificador (`SIM:HRM`, MAC) `caption` 11 `text.tertiary`; a la derecha `chevron_right` 18 **`text.tertiary`** (5,1:1: es la señal de "tocar para conectar"; antes `@38 %`) o spinner 16.
 - Separación vertical entre tarjetas 10; lista con margen 16.
@@ -313,6 +338,8 @@ Dibujados con `Painter2D` de UI Toolkit (vector), alto 220 (tablet 280).
 | Vacío de Rutinas (It. 3, paridad; base para las listas que siguen) | `fitness_center` 56 `text.primary` `opacity 0,12` (apenas visible, a propósito: AC-RUT-10-02) → 12 → título `body` `text.secondary` → 8 → ayuda `bodyS` 13 `text.tertiary`; ancho máximo 320, centrado en los dos ejes entre las dos barras |
 | Vacío de Dispositivo (It. 2, paridad) | `bluetooth_disabled` **48** `text.primary` `opacity 0,24` (D-11) → 12 → `deviceNoResults` en `body` **`text.secondary`** (8,97:1; el legacy lo pone al 54 %: sube un escalón porque con D-ART-03 la ayuda también queda al 54 % y no deben verse iguales, DV-05) → 8 → ayuda `bodyXs` 12 `text.tertiary`, dos líneas; todo centrado en los dos ejes de su mitad |
 | Pantalla provisoria (pestañas de iteraciones futuras) | barra superior con el título y, centrado entre las dos barras, el glifo sin elegir de su pestaña, 56 `text.primary` `opacity 0,24`. Nada más |
+| Workout en reposo (It. 4a) | aviso sin remo (`state.warningBg`, `r.l`, relleno 12, ícono `warning` 18 alineado con la **primera** línea, texto 13 `state.warning`, 6,310:1; crece y colapsa con los verbos de la It. 3); `Entrenamiento libre` primario de 56 a todo el ancho (0,38 sin remo); `␣␣O elegí una rutina:` `bodyS` `text.tertiary`; cargando, error y vacío **centrados en lo que queda debajo del botón** (el mismo centro para los tres); el vacío, `workoutNoRoutines` `body` `text.tertiary`, ancho máximo 320, sin ícono (paridad) |
+| "En curso" de Workout (It. 4a, paridad) | fuera de reposo la pestaña es la `_ActiveView` del legacy: **sin la barra superior**, solo `workoutInProgress` `body` 15 `text.tertiary` (5,829:1), centrado en toda la pestaña (del borde de arriba a la barra de pestañas). Se ve solo mientras entra el inmersivo; con la barra se leían dos títulos encimados durante el fundido |
 | Error en línea | caja `state.danger @15 %`, `r.l`, padding 12, ícono `error` 18 + texto 13 `state.dangerText`, hasta 3 líneas, detalle técnico 11 `text.tertiary` (Q-42). Excepción: la tarjeta del pulsómetro muestra el error como texto suelto `bodyXs` sin caja ni ícono, como el legacy (§3.1) |
 | Error de pantalla (Bluetooth apagado, sin permiso) | ícono 64 `state.danger`, título 20/700, ayuda 14 `text.secondary`, botón primario |
 | Error de carga de Rutinas (It. 3) | `error` 48 `state.dangerText` → 12 → texto `body` `text.secondary` (ancho máximo 280) → 16 → `Reintentar` tonal con `refresh`; centrado entre las barras, con la forma del vacío |
@@ -329,7 +356,14 @@ Dibujados con `Painter2D` de UI Toolkit (vector), alto 220 (tablet 280).
 - **Padding inferior de cada pantalla**: el alto de la barra va **dentro** del contenido desplazable (no por fuera de la `ScrollView`): así el último elemento sube por encima de la barra y la translucidez se ve al desplazar.
 - **Selector de escenario** (Workout): tarjetas 152×96 (legacy 120×80; [EXR] más grandes) `r.l`, borde elegido `accent.primary` 2,5 [CONTRATO] / no elegido `border.default` 1; nombre 13 (700 blanco elegido / 400 `@70 %`); miniatura = render horneado de la escena real (§7.6).
 - **Cinta SIMULADOR:** caja de 80 × 12 rotada −45° alrededor de su centro, con el centro en (24; 24) dp de la esquina superior izquierda de la capa del simulador (la geometría del `Banner topStart` de Flutter), sin insets propios: sigue la regla única de área segura de la app (en Windows, 0). Fondo `dev.simulator`; texto `SIMULADOR` Inter **700, 10 dp, sin tracking**, `dev.simulatorText` (`#1A0A00`, 6,1:1; texto oscuro a propósito, DV-01), centrado: mide 60,2 dp y entra entero en la franja visible. No escala con la letra del sistema, no recibe eventos, siempre encima y sin animación. Antes decía 11/800 con 0,1 em: mediría 76 dp y la ventana cortaría la S y la R, y el repositorio no tiene Inter 800.
-- **Llave y panel del simulador** (solo builds con simulador): llave 40 × 40 `r.l`, fondo `surface.overlay`, borde 1 `border.default`, ícono `build` 24 `accent.primary` (5,07:1), a 16 dp de la derecha y 16 dp sobre la barra de pestañas; discreta a propósito (la misma superficie que el panel que abre). **En Rutinas** (It. 3, DV-13), mientras se ve su `+` y ninguna página la tapa, la llave sube a 16 dp sobre el `+` (88 sobre la barra), con los bordes derechos alineados; se mueve solo en y, con resorte. Con el editor abierto (la barra en `display: none`, con su alto conservado) vuelve a 16 sobre la barra. El panel se abre siempre en el mismo lugar (AC-BLE-16-03); en Rutinas tapa el `+`, como en el legacy, y mientras está abierto la llave no se ve. Panel de 280 de ancho, `surface.overlay`, `r.card`, borde 1 `border.default` (sin sombra: el borde lo separa del tablero), cabecera de 48 con línea inferior `border.subtle`, renglones ± de 48 con el valor en `num.stat` sobre 64 dp, chips e interruptor de §3.6. Detalle en [04-design-notes de la It. 2 §4.9](../iterations/02-dispositivo-simulador/04-design-notes.md).
+- **Llave y panel del simulador** (solo builds con simulador): llave 40 × 40 `r.l`, fondo `surface.overlay`, borde 1 `border.default`, ícono `build` 24 `accent.primary` (5,07:1); discreta a propósito (la misma superficie que el panel que abre). Panel de 280 de ancho, `surface.overlay`, `r.card`, borde 1 `border.default` (sin sombra: el borde lo separa del tablero), cabecera de 48 con línea inferior `border.subtle`, renglones ± de 48 con el valor en `num.stat` sobre 64 dp, chips e interruptor de §3.6. Detalle en [04-design-notes de la It. 2 §4.9](../iterations/02-dispositivo-simulador/04-design-notes.md).
+  - **Dónde va [DECIDIR D-ART-10; desde la It. 4a]** ([04a/00-deuda-diseno §1](../iterations/04a-motor-hud-funcional/00-deuda-diseno.md)). Regla única: **nunca tapa una acción en reposo** (el área táctil de un control, agrandada 8 dp; de una tarjeta que se toca entera, solo su `⋮` y su *chevron*).
+    - **Fuera del entrenamiento, carril izquierdo**: `left 16` (+ margen seguro). Ahí las filas ponen lo que las identifica (el ícono de la tarjeta, la insignia del paso), no lo que se toca.
+    - **En el entrenamiento (D-ART-10 ajustada en la 4a, DN4a-14; el PO la integró como DV-39)**: el lugar lo calcula la geometría del HUD, por ventana, así nunca tapa una pieza ni se mueve con los valores. **En vertical**, carril derecho (`right 16` + margen seguro), con su borde de abajo 8 dp sobre el lugar que tiene la columna kcal y BPM **con BPM** (no se mueve cuando el pulso aparece o se va, y deja libre el hueco entre la banda y los controles para los avisos). **En horizontal**, 8 dp a la derecha de `Pausa`, centrada en su alto, si a su derecha entra la fila de kcal y BPM con sus mínimos (TH, W1280); si no (640 × 360), 8 dp sobre `Pausa`, alineada con su borde derecho.
+    - **Altura** fuera del entrenamiento: 16 dp sobre lo que hay abajo. Barra + 16 en las pestañas; 16 + margen seguro en una pantalla apilada que tapa la barra.
+    - El `+` de Rutinas deja de ser obstáculo de la llave: cada uno en su rincón.
+    - El panel se abre donde está la llave y crece desde su esquina (en el entrenamiento, la de abajo a la derecha: hacia arriba y a la izquierda). Su alto máximo se mide desde su borde de abajo (en las pestañas, la fórmula de AC-BLE-16-03); en el entrenamiento vertical termina 8 dp debajo del lugar de Watts **con su objetivo** (316 dp en un teléfono de 411 × 914), así Split y Watts quedan a la vista mientras se los corrige; en horizontal quedan a su derecha. Si la llave cambia de lugar con el panel abierto, el panel la sigue. Mientras está abierto, la llave no se ve.
+    - Movimiento: ANIMATION_BIBLE §2.11 y §2.14.
 
 ---
 
@@ -343,13 +377,21 @@ Dibujados con `Painter2D` de UI Toolkit (vector), alto 220 (tablet 280).
 | Números e indicadores | **Barlow Semi Condensed** | 600, 700, 800 | [Google Fonts](https://fonts.google.com/specimen/Barlow+Semi+Condensed) · [GitHub](https://github.com/jpt/barlow) | Estética de tablero deportivo; al ser semicondensada entra un número más grande en el mismo ancho |
 | Monoespaciada (diagnóstico BLE) | **JetBrains Mono** | 400 | [Google Fonts](https://fonts.google.com/specimen/JetBrains+Mono) | Bytes crudos alineados |
 | Íconos (Apache 2.0, no OFL) | **Material Symbols Rounded**, recortada como "RowMate Icons" | 500, sin relleno y con relleno | [GitHub, versión fijada](https://github.com/google/material-design-icons/tree/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont) | Glifos SDF que se tiñen con el color del token, sin paquete ni módulo de SVG (QA-P-09; decisión cerrada al iniciar la It. 2). Pasos, lista e íconos provisorios en ASSET_SLOTS §4 |
+| Emojis del usuario (respaldo, It. 3) | **Noto Emoji**, monocroma | 500 (Medium, el peso de los íconos) | [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Emoji) | P-09: un emoji en un nombre se dibuja en el color del texto y del alto de la línea, sin correr lo que sigue. Último de la lista de respaldos (Inter → RowMate Icons → Noto Emoji, armada por `RuntimePanelFactory`); TextCore no dibuja emojis a color. Sin la fuente, el glifo que falta sale `□` (ASSET_SLOTS `ui.font.emoji`) |
+| Cifras tabulares (derivada, It. 4a, DD4a-07) | **RowMate Numeric SC**: Barlow Semi Condensed con `tnum` congelado (otro nombre, como pide la OFL) | 600, 700, 800 | receta en [04a/00-deuda-diseno §3.6](../iterations/04a-motor-hud-funcional/00-deuda-diseno.md) | Las cifras tabulares que dibujó la propia fuente (`zero.tf` … `nine.tf`, un solo avance: 0,507 / 0,521 / 0,535 em) en lugar de las proporcionales centradas en celdas (§4.2) |
 
 ### 4.2 Cifras tabulares (obligatorio en todo número)
 
 UI Toolkit no garantiza activar `tnum` desde USS. Se resuelve de dos formas, sin depender de la versión:
 
-1. **HUD y tablero:** componente `TabularNumber`, **un solo `VisualElement` por número** (no un `Label` por dígito, para no pasar el tope de 60 elementos del HUD; diseño en ARCHITECTURE §7.8, QA-P-08), que dibuja cada carácter en una **celda de ancho fijo** = ancho máximo de los dígitos 0–9 de esa fuente y tamaño; `:` y `.` usan celdas angostas fijas (0,32 em). Permite además el "rodillo" por dígito (ANIMATION_BIBLE §2.4).
-2. **Listas, tablas y ejes:** derivados de la fuente con `tnum` congelado (herramienta libre `opentype-feature-freezer`: `pyftfeatfreeze -f tnum -R "Inter/RowMate Numeric" Inter-SemiBold.ttf RowMateNumeric-SemiBold.ttf`). La OFL exige **renombrar** las versiones modificadas: se llaman "RowMate Numeric". Si Barlow no trae `tnum`, sus derivados no se generan y se usa solo la opción 1. Pasos exactos en ASSET_SLOTS `ui.font.numeric`.
+1. **HUD y tablero:** componente `TabularNumber`, **un solo `VisualElement` por número** (no un `Label` por dígito, para no pasar el tope de 60 elementos del HUD; diseño en ARCHITECTURE §7.8, QA-P-08), que dibuja cada carácter en una **celda de ancho fijo** = ancho máximo de los dígitos 0–9 de esa fuente y tamaño; `:` y `.` usan celdas angostas fijas (0,32 em). Permite además el "rodillo" por dígito (ANIMATION_BIBLE §2.4). Entre celdas **no hay kerning**, por construcción. Barlow **sí trae `tnum`** (verificado en la It. 4a): desde DD4a-07, `.rm-type-num-*` usa la derivada **RowMate Numeric SC** (§4.1).
+   - Con ella las diez cifras miden lo mismo y el `1` es el tabular que dibujó la fuente.
+   - Con la cifra proporcional centrada en la celda del `4`, al `1` le sobraban 0,12 em por lado: 7,7 dp a 64 dp.
+   - En `11` hay 6,6 dp menos de aire a 64 dp (2,4′ a 1,5 m), y los números quedan entre un 3,7 y un 5,5 % más angostos.
+   - Barlow no define pares de kerning para sus cifras tabulares, ni con `:`, `.`, `-` y `m`.
+   - Números y receta: [04a/00-deuda-diseno §3.3 y §3.6](../iterations/04a-motor-hud-funcional/00-deuda-diseno.md).
+   - La derivada está en el repo desde la It. 4a: `UI/Fonts/RowMateNumericSC/` (600, 700 y 800, con su `OFL.txt`), generada por `tools/fonts/freeze_tnum.py` (fontTools 4.68.0 fijado, sin red, mismos bytes en cada corrida). Sus `FontAsset` y el rol numérico de `FontAssetPaths` los integra el *bootstrapper* (02-tech-design de la 4a §6.14).
+2. **Listas, tablas y ejes** (Historial, It. 9): si hacen falta cifras tabulares en Inter, un derivado con `tnum` congelado y otra familia ("RowMate Numeric": la OFL exige **renombrar** las versiones modificadas), con la misma receta de fontTools. Pasos en ASSET_SLOTS §3, punto 7.
 
 ### 4.3 Escala
 
@@ -369,17 +411,17 @@ UI Toolkit no garantiza activar `tnum` desde USS. Se resuelve de dos formas, sin
 | `headerS` | Inter | 13 / 18 | 700 | `Serie` del encabezado del bloque (It. 3; el legacy usa 13/700) |
 | `buttonS` | Inter | 12 / 16 | 600 | `Agregar paso a serie` y nombres de los mosaicos de tipo (It. 3) |
 | `caption` | Inter | 11 / 14 | 500 | fechas, identificadores, ejes (mínimo legible) |
-| `num.hero` | Barlow SC | 64 / 64 | 800 | SPM del HUD |
-| `num.xl` | Barlow SC | 52 / 52 | 700 | tablero de Dispositivo, pulso |
-| `num.l` | Barlow SC | 44 / 44 | 700 | Split y Watts del HUD |
-| `num.m` | Barlow SC | 32 / 34 | 700 | kcal y BPM del HUD, resumen final |
-| `num.band` | Barlow SC | 34 / 34 | 700 | banda tiempo │ distancia (D-ART-02) |
-| `num.lap` | Barlow SC | 34 / 36 | 700 | vuelta en curso |
-| `num.row` | Barlow SC | 24 / 28 | 700 | filas de vueltas y reps |
-| `num.s` | Barlow SC | 20 / 22 | 700 | cuenta regresiva, reloj |
-| `num.stat` | Barlow SC | 16 / 20 | 700 | stats de historial, chips numéricos |
+| `num.hero` | RowMate Numeric SC | 64 / 64 | 800 | SPM del HUD |
+| `num.xl` | RowMate Numeric SC | 52 / 52 | 700 | tablero de Dispositivo, pulso |
+| `num.l` | RowMate Numeric SC | 44 / 44 | 700 | Split y Watts del HUD |
+| `num.m` | RowMate Numeric SC | 32 / 34 | 700 | kcal y BPM del HUD, resumen final |
+| `num.band` | RowMate Numeric SC | 34 / 34 | 700 | banda tiempo │ distancia (D-ART-02) |
+| `num.lap` | RowMate Numeric SC | 34 / 36 | 700 | vuelta en curso |
+| `num.row` | RowMate Numeric SC | 24 / 28 | 700 | filas de vueltas y reps |
+| `num.s` | RowMate Numeric SC | 20 / 22 | 700 | cuenta regresiva, reloj |
+| `num.stat` | RowMate Numeric SC | 16 / 20 | 700 | stats de historial, chips numéricos |
 
-Reglas: mayúsculas solo en etiquetas cortas y chips de fase; nunca texto de párrafo bajo 13 (las ayudas de una o dos líneas usan `bodyXs` 12); los valores numéricos van con la unidad separada (más chica, `@55 %`), como el legacy.
+Reglas: mayúsculas solo en etiquetas cortas y chips de fase; nunca texto de párrafo bajo 13 (las ayudas de una o dos líneas usan `bodyXs` 12); los valores numéricos van con la unidad separada y más chica, como el legacy; en el HUD, en la variante `.hud` de su métrica al 80 % (It. 4a, DV-31: el `@55 %` de antes no llegaba a 4,5:1). RowMate Numeric SC es Barlow Semi Condensed con las cifras tabulares congeladas (§4.2): mismas formas y métricas, salvo las cifras.
 
 **Cómo se aplica en UI Toolkit 6000.3** (medido en la It. 2, 04-design-notes §2.2):
 
@@ -388,6 +430,22 @@ Reglas: mayúsculas solo en etiquetas cortas y chips de fase; nunca texto de pá
 - USS no tiene `line-height`: el "alto de línea" de la tabla es el ritmo de diseño. Unity usa la caja de línea de la fuente (Inter 12 → 14,9 dp, Inter 14 → 17,1 dp; Barlow SC 52 → 62,9 dp) y el ritmo vertical se arma con márgenes sobre esas cajas.
 - Centrado óptico: en Inter la banda de las mayúsculas queda centrada en la caja y alcanza con `align-items: center`; en Barlow SC queda 0,05 em por debajo del centro (2,6 dp a 52), así que `TabularNumber` centra la banda de las mayúsculas, no la caja.
 - Nunca mayúsculas por USS: las etiquetas llegan del catálogo con su caja (`SPLIT 500m`, `PULSÓMETRO` con `ToUpperInvariant`), porque transformar todo rompería `500m`.
+
+### 4.4 Kerning (It. 3 R3-06; regla completa desde la It. 4a)
+
+Detalle, mediciones y receta en [04a/00-deuda-diseno §3](../iterations/04a-motor-hud-funcional/00-deuda-diseno.md).
+
+1. **K1. Solo la tabla versionada.** El kerning es el de la tabla de cada `FontAsset`, y nada más: `getFontFeatures = false` en las 7 caras de texto. TextCore no suma pares mientras dibuja, así que un texto se ve igual en cualquier orden, en una corrida parcial y en el segundo dibujo.
+2. **K2. Todos los pares del juego fijo.** La tabla de cada cara que dibuja **texto** (Inter 400, 500, 600 y 700; **RowMate Numeric SC 700**, por los valores `num.stat` del panel: desde la 4a usan la derivada y no Barlow 700, DN4a-22) tiene **todos** los pares GPOS `kern` distintos de 0 entre los caracteres del juego fijo, y solo esos.
+   - **El juego**: el catálogo es/en, el ASCII imprimible, `áéíóúüñÁÉÍÓÚÜÑ¿¡` y `×±·°`. Son 116 caracteres (115 con glifo: el `📈` no está en Inter), y dan 1 445 (Inter 400), 1 695 (Inter 500, 600 y 700) y 1 272 (la derivada 700, que no tiene pares entre cifras) pares.
+   - **Por qué**: la tabla que quedó de las It. 2 y 3 dependía de lo que se había dibujado. Inter Bold, la de `display` y `headline`, tenía 11 "primeros", y le faltaban `Te` (−0,078 em), `Tr`, `Wo`, `TA`, `VA` e `Yo`: hasta 2,5 dp a 32 dp.
+   - **Las listas** las escribe `tools/fonts/kern_pairs.py` en `UI/Fonts/Kerning/<cara>.pairs.json` (por índice de glifo, en unidades de la fuente, con el SHA-256 del `.ttf`), y el *bootstrapper* las vuelca en `m_GlyphPairAdjustmentRecords` (DD4a-06, camino a). Verificado: los 2 882 pares que ya había escrito TextCore dan el mismo valor.
+3. **K3. El juego sigue al catálogo.** Se recalcula cuando cambia el catálogo, y una prueba de dotnet compara la tabla de cada `.asset` con la lista que da la receta.
+4. **K4. Las celdas no llevan kerning.** Las caras que dibuja solo `TabularNumber` (RowMate Numeric SC 600 y 800) van sin tabla.
+5. **K5. Cifras tabulares de la fuente.** Las cifras del HUD, del tablero y de los chips son las tabulares de la fuente (§4.2). `:` y `.` van en celdas de 0,32 em.
+6. **K6. Fuera del juego, sin kerning.** Un carácter fuera del juego (uno raro que escriba el usuario) se dibuja sin kerning.
+
+El método de medición (fontTools sobre GPOS: formatos 1 y 2; dentro de cada lookup gana el primer subtable que aplica, y los lookups se suman) reproduce exactamente los 49 049 pares que escribió TextCore.
 
 ---
 
@@ -410,7 +468,13 @@ Navegación: **una sola columna** en todas las clases (paridad de navegación). 
 
 Zonas y orden idénticos al legacy (audit §5.1): SPM arriba a la izquierda con paneles debajo; Split y Watts arriba a la derecha; banda tiempo/distancia abajo a la izquierda; kcal y BPM abajo a la derecha; Terminar/Pausa abajo al centro; barra de pasos arriba; el bote libre en el centro. Medidas legacy (`top + 90`, `bottom 140`, `bottom + 16`…) se aplican multiplicadas por `hudScale`.
 
-**Zona protegida del bote:** rectángulo centrado de 44 % del ancho × 30 % del alto, con su centro en el punto donde se proyecta el remero (x = 0,5; y = horizonte + 13°). Ningún elemento del HUD la invade; QA lo verifica en capturas (contorno de depuración activable).
+**Zona protegida del bote:** rectángulo centrado en x de 44 % del ancho × 30 % del alto, con su centro en el punto donde se proyecta el remero con la cámara de persecución (§8.1: cámara a 2,2 m, remero a 9,5 m, focal = lado corto): `centro_y = horizonte + (lado corto / alto) × 2,2 / 9,5`, con el horizonte a 0,40 del alto en vertical y 0,42 en horizontal. Da **0,504** del alto en vertical y **0,652** en horizontal (It. 4a, DN4a-02; en `docs/image-03.png` del legacy, 703,7 de 1080 con el carro en ≈ 700). Con 0,5 la zona horizontal quedaba sobre el horizonte y no sobre el bote. Ningún elemento del HUD la invade; QA lo verifica en capturas (contorno de depuración de 2 dp en `dev.simulator`, activable; CAP-16).
+
+**Horizontal (It. 4a, DN4a-01; DV-33):** la columna derecha no entra en ninguna ventana horizontal (necesita 535·s dp), así que **kcal y BPM bajan a la fila de los controles**, abajo a la derecha y en fila: kcal en el rincón (no se mueve cuando BPM aparece o se va) y BPM a su izquierda, 8·s entre las dos, con el ancho mínimo de 96·s si la fila entra con los dos, decidido por ventana. La banda baja también al nivel de los controles, como en el legacy, y es **compacta** (§3.2). Queda la fila `banda │ Terminar Pausa │ (llave) │ BPM kcal`, y arriba SPM a la izquierda y Split y Vatios a la derecha. Las zonas y el orden del legacy se conservan.
+
+**Topes** (04a/04-design-notes §3.7): la fila de arriba se reparte en proporción si no entra (T1, solo con los extremos de FTMS); en horizontal, SPM no pasa del borde izquierdo de la zona del bote y la columna derecha no empieza antes de su borde derecho (T2); la banda termina 8·s antes de su vecina y de la zona del bote (T3); la fila de kcal y BPM empieza después de los controles y de la llave (T4); la columna vertical de kcal y BPM mide lo de la mayor (T5). Lo que no entra achica **solo sus cifras** (el rótulo, el relleno y el borde no), en el acto con la ventana y con resorte con un dato. En 640 × 360 la banda queda a 0,776 con valores normales.
+
+**La llave del simulador** (solo builds con simulador; D-ART-10, §3.11): en vertical, en el carril derecho y 8 dp sobre el lugar de la columna kcal y BPM con BPM; en horizontal, 8 dp a la derecha de `Pausa` o, en 640 × 360, 8 dp encima. Lo calcula la misma geometría que el HUD, así que no tapa ninguna pieza en los cinco perfiles medidos (60 combinaciones de valores).
 
 ### 5.3 Escala del HUD
 
@@ -686,6 +750,22 @@ Altura de mayúscula de Barlow SC ≈ 0,70 em; 1 dp ≈ 0,159 mm.
 | Terciario (kcal, BPM, banda) | 32 (`num.m`) – 34 (`num.band`) dp | 3,6–3,8 mm | 8,5′ | 1,7× |
 | Legacy SPM (52) | 52 dp | 5,8 mm | 13′ | 2,7× |
 
+Con `hudScale` en un teléfono de 411 dp (s = 1,054; 04a/04-design-notes §6):
+
+| Elemento (It. 4a) | dp en pantalla | Altura de mayúscula | A 1,5 m | Contra 5′ |
+|---|---|---|---|---|
+| SPM | 67,5 | 7,50 mm | 17,2′ | 3,4× |
+| Split, Watts | 46,4 | 5,16 mm | 11,8′ | 2,4× |
+| Banda | 35,8 | 3,98 mm | 9,1′ | 1,8× |
+| kcal, BPM | 33,7 | 3,75 mm | 8,6′ | 1,7× |
+| Flecha de SPM (tinta) | 20,8 de alto | 3,31 mm | 7,6′ | 1,5× |
+| Flecha de Split y Watts | 14,3 | 2,27 mm | 5,2′ | 1,0× |
+| Cuenta regresiva (por terminar) | 21,1 (23,2) | 2,34 (2,58) mm | 5,4′ (5,9′) | 1,1× (1,2×) |
+| Banda en 640 × 360 a 0,776 | 24,3 | 2,71 mm | 6,2′ | 1,2× |
+| Tipo de paso, rótulos, `obj.`, pastillas | 13,7 a 10,5 | 1,58 a 1,22 mm | 3,6′ a 2,8′ | de cerca |
+
+De lejos se leen los valores, el rojo de fuera de objetivo (también más oscuro que el blanco: un daltónico lo ve por la claridad, además de por la flecha) y el color del paso; la flecha de Split y Watts queda justo en 5′, para leerla de cerca y para el daltonismo. La cuenta grande de los últimos 3 s es de la 4b (D-ANI-05).
+
 Prueba de aceptación: teléfono de 6,1" a 1,5 m, tres personas leen SPM, Split y Watts en < 1 s cada uno, a pleno sol de pantalla (brillo máximo) y de noche.
 
 ### 10.3 Daltonismo y redundancia
@@ -796,3 +876,42 @@ Rutinas: lista, editor, diálogos, menús, campos y avisos. Fuente: [03-rutinas/
 | §3.11 | Llave en Rutinas: 16 dp sobre el `+`, solo en y (DV-13, AC-BLE-16-02); el panel se abre siempre en el mismo lugar |
 | §5.1 | Sin ancho máximo de contenido en escritorio en esta iteración (paridad con el legacy y CAP-11) |
 | §10.1 | Los pares de la It. 3 en `ContrastTests.ItThreeDesignerPairs` (75 casos) y sus valores a 3 decimales en `ItThreeControlValuesMatchTheDesignNotes` |
+
+---
+
+## Cambios al iniciar la It. 4a
+
+Fuente: [04a-motor-hud-funcional/00-deuda-diseno](../iterations/04a-motor-hud-funcional/00-deuda-diseno.md), 2026-10-28. Son la deuda de diseño de la It. 3 (QA-V3-09 y el kerning de los títulos y del HUD), la base visual del HUD y lo que de [03-rutinas/04-design-notes](../iterations/03-rutinas/04-design-notes.md) no había llegado a esta biblia. Manda `Assets/RowMate/Core/Design/Tokens.cs`, y **ningún token cambia**. Lo marcado DD4a-nn lo implementa el Architect.
+
+| Dónde | Qué cambió |
+|---|---|
+| §0.2 | **D-ART-10**: la llave del simulador abajo a la izquierda fuera del entrenamiento y abajo a la derecha en el entrenamiento. Reemplaza DV-13; la decide el PO en el gate de la 4a (QA-V3-09) |
+| §3.5 | Filas nuevas del **menú emergente** (`⋮` y menú de texto: medidas, ítem de peligro con capa oscura, posición) y de la **ayuda emergente**, con los valores de 04-design-notes de la It. 3 §4.4. Faltaban desde la It. 3. El menú esquiva la llave |
+| §3.6 | El anillo de foco se mide desde el borde de afuera: con un borde de 2 dp, como el mosaico, queda a −6 desde adentro (04-design-notes de la It. 3 §16.2) |
+| §3.11 | La llave y el panel con la regla nueva: carril, altura, obstáculos, techo y el panel que crece desde la llave. Hasta que el PO la integre, vale DV-13 |
+| §4.1 | Fila de **Noto Emoji**, el respaldo de los emojis del usuario (P-09 de la It. 3; faltaba), y de **RowMate Numeric SC**, la derivada tabular de Barlow (DD4a-07) |
+| §4.2 | Barlow trae `tnum`: `.rm-type-num-*` pasa a la derivada y `TabularNumber` dibuja las cifras tabulares de la fuente, sin kerning entre celdas. Sale la rama "si Barlow no trae `tnum`" |
+| §4.4 (nueva) | **Kerning**, de K1 a K6: tabla versionada y nada más (`getFontFeatures = false`), con **todos** los pares GPOS del juego fijo en cada cara que dibuja texto (DD4a-06). Inter Bold no tenía `Te`, `Tr`, `Wo`, `TA`, `VA` ni `Yo` (hasta 2,5 dp a 32) |
+| §5.2 | El hueco de la llave en el HUD (72 × 56 abajo a la derecha). Aviso: con D-ART-02 y `hudScale`, la columna derecha no entra en ninguna ventana horizontal y la 4a lo resuelve |
+
+---
+
+## Cambios de la It. 4a
+
+Entrenar: motor de sesión, HUD funcional y Workout en reposo (WP-D0 y WP-D). Fuente: [04a-motor-hud-funcional/04-design-notes](../iterations/04a-motor-hud-funcional/04-design-notes.md) (§13 y la sección de WP-D), con lo que el PO aceptó en el gate (DV-31, DV-33, DV-38, DV-39) y lo que se midió en las capturas y los videos del arnés `it4a`, 2026-10-28. Manda `Assets/RowMate/Core/Design/Tokens.cs`: **133 → 135** tokens.
+
+| Dónde | Qué cambió |
+|---|---|
+| §2 y §2.1 | 135 tokens: `backdrop.sky` `#0B4FA8` y `backdrop.water` `#0E4F8F`, el fondo provisorio del inmersivo (DN4a-03) |
+| §3.2 | El respaldo sin desenfoque sobre el fondo de dos tonos (un solo elemento con una textura de 1 × 100). Las unidades en `.hud @80 %` (DV-31; salen del 55 %). La anatomía de la tarjeta con objetivo: el hueco de 0,48 em toda la duración del paso, la flecha centrada en la banda de las mayúsculas y `obj.` alineado con las cifras. La banda compacta en horizontal (DV-33), con una sola escala para sus dos cifras |
+| §3.3 | La barra de la 4a: una fila, 40 de alto, igual que la barra libre. Las pastillas con el texto en blanco y `trending_up` en `metric.distance`; `Próximo:` / `Up next:` localizado (DV-24), al 70 % sobre el 20 %, con el latido solo en el fondo y el borde (DV-38) |
+| §3.5 | El diálogo de terminar es el de la app, opaco (sale "`surface.overlay @92 %` + vidrio", que pasa al de completado de la 4b). Estados de los controles del HUD: la capa oscura de `Terminar`, el anillo de foco blanco con halo oscuro, el orden de Tab, los controles al 0,38 al confirmar y el *spinner* del guardado lento |
+| §3.7 | El *chevron* de Workout, centrado en la columna de 28 dp del `⋮` de Rutinas, sin toques |
+| §3.10 | Workout en reposo (aviso, botón, etiqueta y los tres estados centrados debajo del botón) y la vista "en curso": solo el texto, centrado en toda la pestaña, sin la barra superior (paridad) |
+| §3.11 y §5.2 | La llave en el inmersivo (D-ART-10 ajustada, DV-39): en vertical sobre el lugar de kcal y BPM con BPM; en horizontal junto a `Pausa`, o encima en 640 × 360. El panel que crece desde su esquina, con el tope de Watts en vertical y que sigue a la llave. La disposición horizontal (sale "pendiente de la 4a"), los topes T1 a T5 y el centro de la zona del bote con la fórmula de la cámara (0,504 / 0,652) |
+| §4.2, §4.3 y §4.4 | RowMate Numeric SC en el repo (`tools/fonts/freeze_tnum.py`), `num.*` en la derivada; las unidades al 80 % en el HUD. K2 sobre la derivada 700 en lugar de Barlow 700, con las listas de `tools/fonts/kern_pairs.py` (1 445 a 1 695 pares por cara); K4 para la derivada 600 y 800 |
+| §10.2 | La tabla de lectura a 1,5 m de la 4a, con la cuenta regresiva y las flechas |
+
+**Verificado en el arnés (WP-D).** Las 49 tomas de `it4a` sin desbordes, con `HudOverlap` y `WrenchAudit` en verde y todas las sondas de aspecto dentro de su tolerancia (las de 04-design-notes §8.2: fondo, cielo y agua, vidrio, valores, rótulos, unidades, bordes con objetivo, pastilla, `obj.`, flechas, velo, botones), con dos correcciones de puntos de sonda que estaban mal elegidos en las notas (el cielo de W1280 caía sobre la barra; la tendencia, un glifo dentro del texto de la pastilla, no se puede medir como color dominante). Los videos, cuadro por cuadro, contra ANIMATION_BIBLE §2.4 a §2.8.
+
+**Pendiente** (no es de esta biblia): la integración de RowMate Numeric SC y de las tablas K2 en el *bootstrapper* (WP-B0). Hasta entonces las capturas dibujan las cifras de Barlow en celdas del ancho del `4` y el texto con las tablas parciales de las It. 2 y 3.

@@ -21,15 +21,26 @@ namespace RowMate.Snapshots
     {
         public const string HrmRow = "hrm-device-SIM:HRM";
 
-        // El catálogo de un conjunto (03-rutinas/02-tech-design §5.1): it2 = este (sin cambios), it3 = RoutinesCatalog.
+        // El catálogo de un conjunto (03-rutinas/02-tech-design §5.1; 04a-motor-hud-funcional/02-tech-design §7.1): it2 = este,
+        // it3 = RoutinesCatalog, it4a (por defecto desde la 4a) = WorkoutCatalog.
         public static IReadOnlyList<SnapshotScenario> For(string set)
         {
-            return string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase) ? All : RoutinesCatalog.All;
+            if (string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase))
+            {
+                return All;
+            }
+
+            return string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase) ? RoutinesCatalog.All : WorkoutCatalog.All;
         }
 
         public static string TitleFor(string set)
         {
-            return string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase) ? "It. 2" : "It. 3 (Rutinas)";
+            if (string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 2";
+            }
+
+            return string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase) ? "It. 3 (Rutinas)" : "It. 4a (Entrenar)";
         }
 
         public static IReadOnlyList<SnapshotScenario> All
@@ -93,7 +104,9 @@ namespace RowMate.Snapshots
             var cap03 = Sim("CAP-03", "CAP-03-dispositivo-l640", DeviceProfile.L640, "es-AR", "Igual que CAP-01 en 640 × 360", s => s.Advance(60));
             cap03.Checks = host => Expect(host, ("2 columnas", host.DeviceScreen!.Connected.Grid.Spec?.Columns == 2),
                 ("proporción 1,3", Math.Abs((host.DeviceScreen.Connected.Grid.Spec?.AspectRatio ?? 0) - 1.3) < 1e-6));
-            all.Add(cap03.WithProbe(PixelProbe.Point("surface.card", "metric-tile-split", new Vector2(0.04f, 0.5f), bgCard)));
+            // Desde la It. 4a la llave queda abajo a la izquierda, sobre el principio de la tarjeta de SPLIT (que no se toca, 00-deuda-
+            // diseno §1.4): la sonda del fondo de la tarjeta va a su derecha.
+            all.Add(cap03.WithProbe(PixelProbe.Point("surface.card", "metric-tile-split", new Vector2(0.96f, 0.5f), bgCard)));
 
             all.Add(Cap04("CAP-04a", "CAP-04a-dispositivo-w1280", false));
             all.Add(Cap04("CAP-04b", "CAP-04b-dispositivo-w1280-hrm", true));
@@ -210,7 +223,16 @@ namespace RowMate.Snapshots
 
             all.Add(Crop(Sim("CAP-20e", "CAP-20e-barra-en", DeviceProfile.TV, "en-US", "Barra en inglés, Dispositivo elegido", s => s.Frames(2)), "tab-bar"));
 
-            var places = new[] { ("a", "tab-workout", "screen-workout", "workout", "Entrenamiento"), ("c", "tab-history", "screen-history", "historial", "Historial") };
+            var places = new[] { ("c", "tab-history", "screen-history", "historial", "Historial") };
+
+            // CAP-21a: desde la It. 4a Workout ya no es provisoria (AC-APP-02-08, WSC.WorkoutIsNotAPlaceholder): la toma muestra la
+            // pantalla real en reposo, sin rutinas (las capturas del entrenamiento son las del conjunto it4a).
+            var cap21a = Sim("CAP-21a", "CAP-21a-workout", DeviceProfile.TV, "es-AR", "Workout (desde la It. 4a la pantalla real, sin rutinas)",
+                s => s.Tap("tab-workout"));
+            cap21a.Checks = host => Expect(host, ("título Entrenamiento", host.IsTextVisible("Entrenamiento")),
+                ("Entrenamiento libre", host.IsShown("workout-free")),
+                ("sin ícono provisorio", host.Find("screen-workout")?.Q(className: "rm-placeholder__icon") == null));
+            all.Add(cap21a);
 
             // CAP-21b: desde la It. 3 Rutinas ya no es provisoria (AC-APP-02-08): la toma muestra la pantalla real con la base
             // vacía (las capturas de Rutinas son las del conjunto it3, 03-rutinas/snapshots/).

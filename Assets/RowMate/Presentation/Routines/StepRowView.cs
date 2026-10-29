@@ -19,6 +19,8 @@ namespace RowMate.Presentation.Routines
     // Borde izquierdo de 3 dp en el color BASE del tipo y título e ícono en su variante legible (DV-12 ampliada, DN3-03): las
     // clases --<tipo> los ponen por USS; el fondo de la insignia @20 % va por código (USS no aplica transparencia a un var()).
     // La vista previa es la misma fila sin los dos botones (AC-RUT-13-16: al confirmar, la fila del editor es exactamente esa).
+    // Al cambiar de tipo (el mosaico en la vista previa, el lápiz → Confirmar en el editor), borde, insignia, ícono y título
+    // cruzan de color en 160 ease.move (ColorFade; 04-design-notes §5.6, §5.7; QA-V3-02); el subtítulo cambia en el acto.
     public sealed class StepRowView : VisualElement
     {
         public const string UssClass = "rm-step-row";
@@ -26,10 +28,12 @@ namespace RowMate.Presentation.Routines
         private readonly VisualElement _badgeBg;
         private readonly IconView _icon;
         private readonly Label _title;
+        private readonly ColorFade _typeFade;
         private StepType? _type;
 
         public StepRowView(UiContext ui, bool preview, Action? onEdit, Action? onDelete)
         {
+            _typeFade = new ColorFade(ui.Motion);
             AddToClassList(UssClass);
             EnableInClassList(UssClass + "--preview", preview);
             pickingMode = PickingMode.Ignore;
@@ -94,6 +98,9 @@ namespace RowMate.Presentation.Routines
 
         public StepType? Type => _type;
 
+        // El cruce de colores del cambio de tipo (para las pruebas y la regla de toma, que ya lo espera por MotionDriver).
+        public ColorFade TypeFade => _typeFade;
+
         public IntervalStep? Step { get; private set; }
 
         // i = índice en la plantilla (nombres de contrato: step-row-<i>, step-edit-<i>, step-delete-<i>); -1 = sin nombres.
@@ -122,6 +129,25 @@ namespace RowMate.Presentation.Routines
             var model = StepRowModel.For(step, texts);
             if (_type != model.Type)
             {
+                var badge = TokenColors.WithAlpha(model.BadgeColor, 0.2);
+                // Solo un cambio de tipo de una fila que ya se ve cruza (la primera vez, el color llega con la fila).
+                var fade = _type.HasValue && panel != null;
+                if (fade)
+                {
+                    // Los colores del tipo de antes (los de StepRowModel: borde e insignia en el color base, título e ícono en .hud).
+                    var before = _type!.Value;
+                    var hud = TokenColors.ToColor(StepRowModel.HudColor(before));
+                    var fromBorder = _typeFade.CurrentOr(this, ColorFade.Channel.BorderLeft, TokenColors.ToColor(StepTypeInfo.Color(before)));
+                    var fromTitle = _typeFade.CurrentOr(_title, ColorFade.Channel.Text, hud);
+                    var fromIcon = _typeFade.CurrentOr(_icon, ColorFade.Channel.Text, hud);
+                    var fromBadge = _typeFade.CurrentOr(_badgeBg, ColorFade.Channel.Background, TokenColors.WithAlpha(StepTypeInfo.Color(before), 0.2));
+                    _typeFade.Reset();
+                    _typeFade.Add(this, ColorFade.Channel.BorderLeft, fromBorder, TokenColors.ToColor(model.BorderColor), true);
+                    _typeFade.Add(_title, ColorFade.Channel.Text, fromTitle, TokenColors.ToColor(model.TitleColor), true);
+                    _typeFade.Add(_icon, ColorFade.Channel.Text, fromIcon, TokenColors.ToColor(model.IconColor), true);
+                    _typeFade.Add(_badgeBg, ColorFade.Channel.Background, fromBadge, badge, false);
+                }
+
                 if (_type.HasValue)
                 {
                     RemoveFromClassList(TypeClass(_type.Value));
@@ -130,7 +156,14 @@ namespace RowMate.Presentation.Routines
                 _type = model.Type;
                 AddToClassList(TypeClass(model.Type));
                 _icon.SetGlyph(model.Icon, false);
-                _badgeBg.style.backgroundColor = TokenColors.WithAlpha(model.BadgeColor, 0.2);
+                if (fade)
+                {
+                    _typeFade.Play();
+                }
+                else
+                {
+                    _badgeBg.style.backgroundColor = badge;
+                }
             }
 
             if (_title.text != model.Title)

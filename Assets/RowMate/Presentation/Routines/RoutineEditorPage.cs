@@ -1,11 +1,13 @@
 using System;
 using System.Threading.Tasks;
 using RowMate.App.Routines;
+using RowMate.Core.Common;
 using RowMate.Core.Design;
 using RowMate.Core.Localization;
 using RowMate.Core.Models;
 using RowMate.Presentation.Binding;
 using RowMate.Presentation.Controls;
+using RowMate.Presentation.Motion;
 using RowMate.Presentation.Shell;
 using UnityEngine.UIElements;
 
@@ -25,7 +27,11 @@ namespace RowMate.Presentation.Routines
     // Guardar = RoutineEditorStore.SaveAsync: Saved → Pop una sola vez (el store queda cerrado, QA-G3-01); NameEmpty,
     // NoSteps, StepOutOfRange y Failed → aviso (RoutineTexts.SaveToast); Ignored → nada. La flecha y "Atrás" de Android
     // cierran sin preguntar (AC-RUT-11-08); Escape NO (P-08: lo resuelve BackNavigation). Un guardado lento que vuelve con
-    // el editor ya cerrado no toca la página; si falló, el aviso igual sale (la lista quedó a la vista, QA-G3-09).
+    // el editor ya cerrado no toca la página; si falló, el aviso igual sale (la lista quedó a la vista, QA-G3-09). Una falla que
+    // no sea de la base no queda sin observar: se registra con el tag DB (Forget; QA-V3-10).
+    // El vacío (04-design-notes §5.6; QA-V3-02): con el último paso borrado, la lista de pasos queda a la vista hasta que lo
+    // borrado terminó de desvanecerse y colapsar (EditorStepsView.Collapsed) y recién ahí entra el vacío (240, y +8); con el
+    // primer paso, el vacío funde → 0 en 120 en su lugar (ExitMotion) mientras la fila nueva crece. Nada salta.
     public sealed class RoutineEditorPage : IPage
     {
         private readonly UiContext _ui;
@@ -36,6 +42,11 @@ namespace RowMate.Presentation.Routines
         private readonly RmButton _addStep;
         private readonly RmButton _addSeries;
         private readonly Label _empty;
+        private readonly EnterMotion _emptyIn;
+        private readonly ExitMotion _emptyOut;
+        private bool _emptyShown;
+        private bool _emptyPending;
+        private bool _rendered;
         private bool _closed;
         private bool _disposed;
 
@@ -54,7 +65,7 @@ namespace RowMate.Presentation.Routines
             Back.AddToClassList("rm-appbar__back");
             Back.SetTooltip(ui, () => _ui.Texts.Get(L10nKeys.NavBack));
             _appBar.Insert(0, Back);
-            Save = new RmButton("editor-save", "text", null, "", () => _ = SaveAsync());
+            Save = new RmButton("editor-save", "text", null, "", () => SaveAsync().Forget(_ui.Logger, RoutinesStore.Tag));
             _appBar.Actions.Add(Save);
             Root.Add(_appBar);
 
@@ -107,9 +118,13 @@ namespace RowMate.Presentation.Routines
             _empty.AddToClassList("rm-editor__empty");
             _empty.AddToClassList("rm-type-body-m");
             _empty.pickingMode = PickingMode.Ignore;
+            _empty.style.display = DisplayStyle.None;
             Content.Add(_empty);
+            _emptyIn = new EnterMotion(ui.Motion);
+            _emptyOut = new ExitMotion(ui.Motion);
 
             Steps = new EditorStepsView(ui, EditStep, DeleteStep, ChangeRepeat, DeleteSeries, AddStepToSeries);
+            Steps.Collapsed += OnStepsCollapsed;
             Content.Add(Steps);
 
             layout.RegisterClearance(Scroll, Content, () => 24 + _layout.Insets.Bottom, () => _ui.Keyboard.IsVisible ? KeyboardDp() : 0);
@@ -142,10 +157,19 @@ namespace RowMate.Presentation.Routines
 
         public Label EmptyLabel => _empty;
 
+        // El vacío vale (se ve, entra o espera a que termine el colapso de lo último borrado).
+        public bool ShowsEmpty => _emptyShown;
+
         public bool IsClosed => _closed;
 
+        // Terminó la entrada (la barra de pestañas ya está tapada): la superficie de una pantalla apilada para la llave del
+        // simulador (D-ART-10: 16 + margen inferior, en el carril izquierdo; baja con el resorte cuando termina la entrada).
         public void OnPushed()
         {
+            if (!_closed && !_disposed)
+            {
+                _layout.SetSurface(this, OverlaySurface.Stacked());
+            }
         }
 
         public void OnPopped()
@@ -156,6 +180,7 @@ namespace RowMate.Presentation.Routines
             }
 
             _disposed = true;
+            _layout.SetSurface(this, null);
             _layout.UnregisterAppBar(_appBar);
             _layout.UnregisterClearance(Scroll);
             _store.Dispose();
@@ -175,6 +200,8 @@ namespace RowMate.Presentation.Routines
             }
 
             _closed = true;
+            // La llave sube cuando EMPIEZA la salida (la barra vuelve en el cuadro 0, D-ART-10).
+            _layout.SetSurface(this, null);
             _ui.Pages.Pop(this);
         }
 
@@ -223,13 +250,95 @@ namespace RowMate.Presentation.Routines
 
             var texts = _ui.Texts;
             _count.text = RoutineTexts.StepsCount(state.StepCount, texts);
-            _empty.style.display = state.StepCount == 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            Steps.style.display = state.StepCount == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            // La primera vez (al abrir) sin animar: el estado llega con la página.
+            var animate = _rendered && _ui.Motion.Armed;
+            _rendered = true;
+            if (state.StepCount > 0)
+            {
+                HideEmpty(animate);
+            }
+
             Steps.Render(state, texts);
+            if (state.StepCount == 0)
+            {
+                ShowEmptyAfterCollapse(animate);
+            }
+
             var added = Steps.LastAdded;
             if (added != null)
             {
                 ScrollToWhenLaidOut(added);
+            }
+        }
+
+        // Hay pasos: la lista a la vista y el vacío se va fundiéndose en su lugar (con el primer paso) o en el acto.
+        private void HideEmpty(bool animate)
+        {
+            _emptyPending = false;
+            Steps.style.display = DisplayStyle.Flex;
+            if (!_emptyShown)
+            {
+                return;
+            }
+
+            _emptyShown = false;
+            // Si estaba entrando, sale desde la opacidad y la y que tiene (DD4a-05 a: sin destello a 1).
+            var opacity = 1.0;
+            var shift = 0f;
+            if (_emptyIn.IsRunning)
+            {
+                opacity = _empty.style.opacity.value;
+                shift = _empty.style.translate.value.y.value;
+            }
+
+            _emptyIn.Finish();
+            if (animate)
+            {
+                _emptyOut.Play(_empty, MotionSpecs.EmptyOutMs, opacity, shift);
+            }
+            else
+            {
+                _empty.style.display = DisplayStyle.None;
+            }
+        }
+
+        // Sin pasos: si lo último borrado todavía colapsa, la lista sigue a la vista y el vacío espera a que termine.
+        private void ShowEmptyAfterCollapse(bool animate)
+        {
+            if (_emptyShown)
+            {
+                return;
+            }
+
+            _emptyShown = true;
+            if (animate && Steps.IsCollapsing)
+            {
+                _emptyPending = true;
+                return;
+            }
+
+            ShowEmpty(animate, 0);
+        }
+
+        // overrunMs: cuánto se pasó el colapso de su final en este cuadro; el vacío arranca en ese instante (00-deuda-diseno de la
+        // It. 4a §2.1: a los 300 ms ya va por 0,231).
+        private void ShowEmpty(bool animate, double overrunMs)
+        {
+            _emptyPending = false;
+            _emptyOut.Finish();
+            Steps.style.display = DisplayStyle.None;
+            _empty.style.display = DisplayStyle.Flex;
+            if (animate)
+            {
+                _emptyIn.Play(_empty, -overrunMs, MotionSpecs.ListItemInMs, MotionSpecs.EmptyInShiftDp);
+            }
+        }
+
+        private void OnStepsCollapsed(double overrunMs)
+        {
+            if (_emptyPending && _emptyShown && !_disposed)
+            {
+                ShowEmpty(_ui.Motion.Armed, overrunMs);
             }
         }
 

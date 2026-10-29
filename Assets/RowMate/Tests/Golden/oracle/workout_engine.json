@@ -1,0 +1,2984 @@
+{
+  "header": {
+    "schema": 1,
+    "generator": "tools/oracle/engine/test/engine_vectors_test.dart",
+    "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"windows_x64\"",
+    "legacyCommit": "3ae0f3a8bed5966700e830db3d8a5f050f34a0bc",
+    "generatedAt": "2026-10-28T19:05:31.351868Z"
+  },
+  "scenarios": [
+    {
+      "name": "free_r4_finish_12_3",
+      "routine": null,
+      "routineId": null,
+      "reading": "R-4",
+      "finishAtMs": 12300,
+      "runUntilMs": 12300,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 12,
+      "finishedAtMs": 12300,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,-1]
+      ],
+      "events": [
+        [12300,"finish",12]
+      ],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 312,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 112,
+          "distance_meters": 1048,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "close": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 1048,
+        "total_time_seconds": 312,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 41,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    },
+    {
+      "name": "corta_r4",
+      "routine": "Corta",
+      "routineId": 7,
+      "reading": "R-4",
+      "finishAtMs": -1,
+      "runUntilMs": 400000,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 30,
+      "finishedAtMs": 30000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,0],
+        [10000,10,1],
+        [15000,15,2],
+        [25000,25,3]
+      ],
+      "events": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": 7,
+        "routine_name": "Corta",
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        }
+      ],
+      "close": {
+        "routine_id": 7,
+        "routine_name": "Corta",
+        "total_distance_meters": 1120,
+        "total_time_seconds": 330,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 43,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": [
+        [0,"met"],
+        [2,"met"]
+      ]
+    },
+    {
+      "name": "corta_r4_19",
+      "routine": "Corta",
+      "routineId": 7,
+      "reading": "R-4(19)",
+      "finishAtMs": -1,
+      "runUntilMs": 400000,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 30,
+      "finishedAtMs": 30000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,0],
+        [10000,10,1],
+        [15000,15,2],
+        [25000,25,3]
+      ],
+      "events": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": 7,
+        "routine_name": "Corta",
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 19.0,
+            "bits": "4033000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 19.0,
+            "bits": "4033000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 19.0,
+            "bits": "4033000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 19.0,
+            "bits": "4033000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 19.0,
+            "bits": "4033000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 19.0,
+            "bits": "4033000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 19.0,
+            "bits": "4033000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        }
+      ],
+      "close": {
+        "routine_id": 7,
+        "routine_name": "Corta",
+        "total_distance_meters": 1120,
+        "total_time_seconds": 330,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 19.0,
+          "bits": "4033000000000000"
+        },
+        "total_calories": 43,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": [
+        [0,"met"],
+        [2,"missed"]
+      ]
+    },
+    {
+      "name": "prueba4a_r4",
+      "routine": "Prueba 4a",
+      "routineId": 8,
+      "reading": "R-4",
+      "finishAtMs": -1,
+      "runUntilMs": 400000,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 240,
+      "finishedAtMs": 240000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,0],
+        [30000,30,1],
+        [90000,90,2],
+        [120000,120,3],
+        [180000,180,4],
+        [210000,210,5]
+      ],
+      "events": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": 8,
+        "routine_name": "Prueba 4a",
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "warmup"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "warmup"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "warmup"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "warmup"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "warmup"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "warmup"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 335,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 135,
+          "distance_meters": 1140,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 340,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 140,
+          "distance_meters": 1160,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 44,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 345,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 145,
+          "distance_meters": 1180,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 44,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 350,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 150,
+          "distance_meters": 1200,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 45,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 355,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 155,
+          "distance_meters": 1220,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 45,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 360,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 160,
+          "distance_meters": 1240,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 46,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 365,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 165,
+          "distance_meters": 1260,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 46,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 370,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 170,
+          "distance_meters": 1280,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 47,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 375,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 175,
+          "distance_meters": 1300,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 47,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 380,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 180,
+          "distance_meters": 1320,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 48,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 385,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 185,
+          "distance_meters": 1340,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 48,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 390,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 190,
+          "distance_meters": 1360,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 49,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 395,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 195,
+          "distance_meters": 1380,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 49,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 400,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 200,
+          "distance_meters": 1400,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 50,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 405,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 205,
+          "distance_meters": 1420,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 50,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 410,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 210,
+          "distance_meters": 1440,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 51,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 415,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 215,
+          "distance_meters": 1460,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 51,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 420,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 220,
+          "distance_meters": 1480,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 52,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 425,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 225,
+          "distance_meters": 1500,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 52,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 430,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 230,
+          "distance_meters": 1520,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 53,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 435,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 235,
+          "distance_meters": 1540,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 53,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 440,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 240,
+          "distance_meters": 1560,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 54,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 445,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 245,
+          "distance_meters": 1580,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 54,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 450,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 250,
+          "distance_meters": 1600,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 55,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 455,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 255,
+          "distance_meters": 1620,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 55,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 460,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 260,
+          "distance_meters": 1640,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 56,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 465,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 265,
+          "distance_meters": 1660,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 56,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 470,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 270,
+          "distance_meters": 1680,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 57,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 475,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 275,
+          "distance_meters": 1700,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 57,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 480,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 280,
+          "distance_meters": 1720,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 58,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 485,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 285,
+          "distance_meters": 1740,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 58,
+          "heart_rate": 0,
+          "step_index": 4,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 490,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 290,
+          "distance_meters": 1760,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 59,
+          "heart_rate": 0,
+          "step_index": 4,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 495,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 295,
+          "distance_meters": 1780,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 59,
+          "heart_rate": 0,
+          "step_index": 4,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 500,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 300,
+          "distance_meters": 1800,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 60,
+          "heart_rate": 0,
+          "step_index": 4,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 505,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 305,
+          "distance_meters": 1820,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 60,
+          "heart_rate": 0,
+          "step_index": 4,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 510,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 310,
+          "distance_meters": 1840,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 61,
+          "heart_rate": 0,
+          "step_index": 4,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 515,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 315,
+          "distance_meters": 1860,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 61,
+          "heart_rate": 0,
+          "step_index": 5,
+          "step_type": "cooldown"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 520,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 320,
+          "distance_meters": 1880,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 62,
+          "heart_rate": 0,
+          "step_index": 5,
+          "step_type": "cooldown"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 525,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 325,
+          "distance_meters": 1900,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 62,
+          "heart_rate": 0,
+          "step_index": 5,
+          "step_type": "cooldown"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 530,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 330,
+          "distance_meters": 1920,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 63,
+          "heart_rate": 0,
+          "step_index": 5,
+          "step_type": "cooldown"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 535,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 335,
+          "distance_meters": 1940,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 63,
+          "heart_rate": 0,
+          "step_index": 5,
+          "step_type": "cooldown"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 540,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 340,
+          "distance_meters": 1960,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 64,
+          "heart_rate": 0,
+          "step_index": 5,
+          "step_type": "cooldown"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 540,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 340,
+          "distance_meters": 1960,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 64,
+          "heart_rate": 0,
+          "step_index": 5,
+          "step_type": "cooldown"
+        }
+      ],
+      "close": {
+        "routine_id": 8,
+        "routine_name": "Prueba 4a",
+        "total_distance_meters": 1960,
+        "total_time_seconds": 540,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 64,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": [
+        [1,"missed"],
+        [3,"missed"]
+      ]
+    },
+    {
+      "name": "dist100_r4",
+      "routine": "Distancia 100",
+      "routineId": 9,
+      "reading": "R-4",
+      "finishAtMs": -1,
+      "runUntilMs": 60000,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 30,
+      "finishedAtMs": 30000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,0],
+        [25000,25,1]
+      ],
+      "events": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "close": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 1120,
+        "total_time_seconds": 330,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 43,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    },
+    {
+      "name": "dist100_r4r",
+      "routine": "Distancia 100",
+      "routineId": 9,
+      "reading": "R-4R",
+      "finishAtMs": -1,
+      "runUntilMs": 300000,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 290,
+      "finishedAtMs": 290000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,0],
+        [285000,285,1]
+      ],
+      "events": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 0,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 20,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 40,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 60,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 80,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 335,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 135,
+          "distance_meters": 100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 340,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 140,
+          "distance_meters": 120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 44,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 345,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 145,
+          "distance_meters": 140,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 44,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 350,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 150,
+          "distance_meters": 160,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 45,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 355,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 155,
+          "distance_meters": 180,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 45,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 360,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 160,
+          "distance_meters": 200,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 46,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 365,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 165,
+          "distance_meters": 220,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 46,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 370,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 170,
+          "distance_meters": 240,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 47,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 375,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 175,
+          "distance_meters": 260,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 47,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 380,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 180,
+          "distance_meters": 280,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 48,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 385,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 185,
+          "distance_meters": 300,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 48,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 390,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 190,
+          "distance_meters": 320,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 49,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 395,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 195,
+          "distance_meters": 340,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 49,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 400,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 200,
+          "distance_meters": 360,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 50,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 405,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 205,
+          "distance_meters": 380,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 50,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 410,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 210,
+          "distance_meters": 400,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 51,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 415,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 215,
+          "distance_meters": 420,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 51,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 420,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 220,
+          "distance_meters": 440,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 52,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 425,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 225,
+          "distance_meters": 460,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 52,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 430,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 230,
+          "distance_meters": 480,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 53,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 435,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 235,
+          "distance_meters": 500,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 53,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 440,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 240,
+          "distance_meters": 520,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 54,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 445,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 245,
+          "distance_meters": 540,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 54,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 450,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 250,
+          "distance_meters": 560,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 55,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 455,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 255,
+          "distance_meters": 580,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 55,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 460,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 260,
+          "distance_meters": 600,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 56,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 465,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 265,
+          "distance_meters": 620,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 56,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 470,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 270,
+          "distance_meters": 640,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 57,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 475,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 275,
+          "distance_meters": 660,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 57,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 480,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 280,
+          "distance_meters": 680,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 58,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 485,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 285,
+          "distance_meters": 700,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 58,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 490,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 290,
+          "distance_meters": 720,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 59,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 495,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 295,
+          "distance_meters": 740,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 59,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 500,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 300,
+          "distance_meters": 760,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 60,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 505,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 305,
+          "distance_meters": 780,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 60,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 510,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 310,
+          "distance_meters": 800,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 61,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 515,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 315,
+          "distance_meters": 820,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 61,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 520,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 320,
+          "distance_meters": 840,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 62,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 525,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 325,
+          "distance_meters": 860,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 62,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 530,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 330,
+          "distance_meters": 880,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 63,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 535,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 335,
+          "distance_meters": 900,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 63,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 540,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 340,
+          "distance_meters": 920,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 64,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 545,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 345,
+          "distance_meters": 940,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 64,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 550,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 350,
+          "distance_meters": 960,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 65,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 555,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 355,
+          "distance_meters": 980,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 65,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 560,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 360,
+          "distance_meters": 1000,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 66,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 565,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 365,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 66,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 570,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 370,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 67,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 575,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 375,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 67,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 580,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 380,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 68,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 585,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 385,
+          "distance_meters": 1100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 68,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 590,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 390,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 69,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 590,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 390,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 69,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "close": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 1120,
+        "total_time_seconds": 590,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 69,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    },
+    {
+      "name": "dist100_r4z",
+      "routine": "Distancia 100",
+      "routineId": 9,
+      "reading": "R-4Z",
+      "finishAtMs": -1,
+      "runUntilMs": 60000,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 30,
+      "finishedAtMs": 30000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,0],
+        [25000,25,1]
+      ],
+      "events": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 0,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "close": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 1120,
+        "total_time_seconds": 330,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 43,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    },
+    {
+      "name": "dist100_r4_pause",
+      "routine": "Distancia 100",
+      "routineId": 9,
+      "reading": "R-4",
+      "finishAtMs": -1,
+      "runUntilMs": 80000,
+      "pausesMs": [
+        [10000,20000]
+      ],
+      "phase": "finished",
+      "total": 16,
+      "finishedAtMs": 36000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,0],
+        [31000,11,1]
+      ],
+      "events": [
+        [10000,"pause",10],
+        [30000,"resume",10]
+      ],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 335,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 135,
+          "distance_meters": 1140,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 336,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 136,
+          "distance_meters": 1144,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "close": {
+        "routine_id": 9,
+        "routine_name": "Distancia 100",
+        "total_distance_meters": 1144,
+        "total_time_seconds": 336,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 43,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    },
+    {
+      "name": "free_r4_pause_q58",
+      "routine": null,
+      "routineId": null,
+      "reading": "R-4",
+      "finishAtMs": 43000,
+      "runUntilMs": 43000,
+      "pausesMs": [
+        [10700,30000]
+      ],
+      "phase": "finished",
+      "total": 12,
+      "finishedAtMs": 43000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,-1]
+      ],
+      "events": [
+        [10700,"pause",10],
+        [40700,"resume",10],
+        [43000,"finish",12]
+      ],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 343,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 143,
+          "distance_meters": 1172,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 44,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "close": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 1172,
+        "total_time_seconds": 343,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 44,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    },
+    {
+      "name": "free_r4_pause_sampling",
+      "routine": null,
+      "routineId": null,
+      "reading": "R-4",
+      "finishAtMs": 42500,
+      "runUntilMs": 42500,
+      "pausesMs": [
+        [7000,30000]
+      ],
+      "phase": "finished",
+      "total": 12,
+      "finishedAtMs": 42500,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,-1]
+      ],
+      "events": [
+        [7000,"pause",7],
+        [37000,"resume",7],
+        [42500,"finish",12]
+      ],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 340,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 140,
+          "distance_meters": 1160,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 44,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 343,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 143,
+          "distance_meters": 1172,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 44,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "close": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 1172,
+        "total_time_seconds": 343,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 44,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    },
+    {
+      "name": "free_r4_short",
+      "routine": null,
+      "routineId": null,
+      "reading": "R-4",
+      "finishAtMs": 3000,
+      "runUntilMs": 3000,
+      "pausesMs": [],
+      "phase": "finished",
+      "total": 3,
+      "finishedAtMs": 3000,
+      "lastFinishedSessionId": 1,
+      "steps": [
+        [100,0,-1]
+      ],
+      "events": [
+        [3000,"finish",3]
+      ],
+      "ops": ["insertSession","insertDataPoint","updateSession"],
+      "session": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 0,
+        "total_time_seconds": 0,
+        "avg_power_watts": 0,
+        "avg_stroke_rate": {
+          "v": 0.0,
+          "bits": "0000000000000000"
+        },
+        "total_calories": 0,
+        "strava_activity_id": null
+      },
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 303,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 103,
+          "distance_meters": 1012,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "close": {
+        "routine_id": null,
+        "routine_name": null,
+        "total_distance_meters": 1012,
+        "total_time_seconds": 303,
+        "avg_power_watts": 150,
+        "avg_stroke_rate": {
+          "v": 24.0,
+          "bits": "4038000000000000"
+        },
+        "total_calories": 40,
+        "strava_activity_id": null
+      },
+      "closeHasFinishedAt": true,
+      "targets": []
+    }
+  ]
+}

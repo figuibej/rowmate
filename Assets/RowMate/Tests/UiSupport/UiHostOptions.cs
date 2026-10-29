@@ -22,6 +22,9 @@ namespace RowMate.Tests.UiSupport
     public sealed class UiHostOptions
     {
         public static readonly DateTimeOffset DefaultStartUtc = new DateTimeOffset(2026, 10, 27, 16, 45, 0, TimeSpan.Zero);
+
+        // El reloj de prueba de la It. 4a (spec §0.4): la sesión se crea en 2026-10-28T13:00:00.000Z (conjunto it4a).
+        public static readonly DateTimeOffset WorkoutStartUtc = new DateTimeOffset(2026, 10, 28, 13, 0, 0, TimeSpan.Zero);
         public static readonly TimeSpan DefaultLocalOffset = TimeSpan.FromHours(-3);
 
         public DeviceProfile Profile = DeviceProfile.TV;
@@ -29,6 +32,12 @@ namespace RowMate.Tests.UiSupport
 
         // Las rutinas (03-rutinas/02-tech-design §5.2): en memoria vacías, SQLite real sembrada (Seeded), F-ROTA, de guion…
         public HostRoutineFactory Routines = HostRoutines.Empty;
+
+        // Las sesiones del motor (It. 4a, §7.1): por defecto el mismo archivo que las rutinas si son SQLite, en memoria si no.
+        public HostSessionFactory Sessions = HostSessions.SameFileAsRoutines;
+
+        // El contorno de depuración de la zona del bote en el inmersivo (#hud-boat-zone; solo PlayMode y el arnés, CAP-16).
+        public bool BoatZoneOutline;
 
         // Reloj de la fecha de creación (lo lee SOLO RoutinesStore; QA-G3-19); null = un SequenceClock nuevo por host.
         public IClock? CreationClock;

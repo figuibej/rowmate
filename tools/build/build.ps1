@@ -2,7 +2,13 @@
 # RowMate.EditorTools.BuildCli.Build. Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 #
 #   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-Out <carpeta>]
-#                         [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
+#                         [-AllowNewFolder] [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
+#
+# - Builds de DESARROLLO (-Simulator, -SmokeTest o -DbSmoke) en Windows: SIEMPRE en la misma carpeta (QA-V3-08 de la It. 3).
+#   Un player de desarrollo abre el puerto de PlayerConnection de Unity y Windows pregunta por el Firewall una vez por cada
+#   ruta de RowMate.exe; con la carpeta fija la pregunta sale una sola vez en la PC. Simulador: Builds/Windows/simulator;
+#   normal de desarrollo: Builds/Windows/dev-smoke. Con otro -Out sale con 5 sin abrir Unity, salvo con -AllowNewFolder (y
+#   entonces habra un aviso nuevo del Firewall al abrirlo). El build normal (release) no abre el puerto: su -Out es libre.
 #
 # - -DbSmoke (It. 3, R3-01; 03-rutinas/02-tech-design Sec. 6.1): build de DESARROLLO (como -SmokeTest) y despues corre el
 #   player una vez con -rowmate-db-smoke sobre una carpeta temporal propia (<temp>/RowMate.Tests/db-smoke-<id>, borrada en
@@ -14,9 +20,9 @@
 #   build y el build falla (codigo 2) si encuentra alguno (AC-BLE-13-02).
 # - -Backend Mono es el temporal de la It. 2 (D-16: no esta el modulo IL2CPP de Windows); BuildCli lo restaura al terminar.
 # - Si falta el modulo de la plataforma o el de IL2CPP (-Backend IL2CPP): NO VERIFICABLE, codigo 3, sin compilar nada.
-# Salida por defecto: Builds/<Target>/<normal|simulator>/RowMate.exe (Builds/ esta en .gitignore).
-# Codigos: 0 bien; 1 el build fallo; 2 rastros del simulador en un build normal; 3 falta un modulo; 10 proyecto abierto en
-# otro Editor; 12 no encuentra Unity.exe.
+# Salida por defecto: Builds/<Target>/<normal|simulator|dev-smoke>/RowMate.exe (Builds/ esta en .gitignore).
+# Codigos: 0 bien; 1 el build fallo; 2 rastros del simulador en un build normal; 3 falta un modulo; 4 el humo de -DbSmoke
+# fallo; 5 build de desarrollo con otra carpeta (QA-V3-08); 10 proyecto abierto en otro Editor; 12 no encuentra Unity.exe.
 param(
     [ValidateSet('Windows', 'Android')]
     [string]$Target = 'Windows',
@@ -26,6 +32,7 @@ param(
     [switch]$SmokeTest,
     [switch]$DbSmoke,
     [string]$Out = '',
+    [switch]$AllowNewFolder,
     [string]$Unity = '',
     [string]$ArtifactsPath = 'tools/unity/.artifacts'
 )
@@ -67,6 +74,24 @@ function Quote-Arg([string]$Value) {
     return $Value
 }
 
+$variant = 'normal'
+if ($Simulator) { $variant = 'simulator' }
+# QA-V3-08: la carpeta fija de cada build de desarrollo (antes de abrir Unity: una negativa no toca nada).
+$development = $Simulator -or $SmokeTest -or $DbSmoke
+$fixedOut = 'Builds/' + $Target + '/' + $variant
+if ($development -and -not $Simulator) { $fixedOut = 'Builds/' + $Target + '/dev-smoke' }
+if ($Out -eq '') {
+    $Out = $fixedOut
+}
+elseif ($development -and $Target -eq 'Windows' -and -not $AllowNewFolder) {
+    $wanted = (Get-FullPath $Out).TrimEnd('\')
+    $fixed = (Get-FullPath $fixedOut).TrimEnd('\')
+    if ($wanted -ne $fixed) {
+        Write-Host ('[build] los builds de desarrollo van siempre a ' + $fixedOut + ': cada carpeta nueva de un RowMate.exe de desarrollo dispara el aviso del Firewall de Windows (QA-V3-08, tools/unity/README.md). Sin -Out usa esa carpeta; -AllowNewFolder fuerza otra.')
+        exit 5
+    }
+}
+
 $unityExe = Resolve-Unity
 if (-not (Test-Path $unityExe)) {
     Write-Host ('[build] no existe ' + $unityExe + ' (usar -Unity o ROWMATE_UNITY)')
@@ -77,10 +102,6 @@ if (Test-ProjectLocked) {
     Write-Host '[build] el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado): cerralo y volve a correr.'
     exit 10
 }
-
-$variant = 'normal'
-if ($Simulator) { $variant = 'simulator' }
-if ($Out -eq '') { $Out = 'Builds/' + $Target + '/' + $variant }
 $artifacts = Get-FullPath $ArtifactsPath
 New-Item -ItemType Directory -Force -Path $artifacts | Out-Null
 # Un log por destino, variante y backend (QA-V2-03): el de Mono y el de IL2CPP no se pisan.

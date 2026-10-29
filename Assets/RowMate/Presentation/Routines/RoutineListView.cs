@@ -25,6 +25,7 @@ namespace RowMate.Presentation.Routines
         private readonly List<Item> _order = new List<Item>();
         private readonly List<Item> _pendingGrow = new List<Item>();
         private readonly List<Item> _pendingHighlight = new List<Item>();
+        private int _collapsing;
         private bool _rendered;
 
         public RoutineListView(UiContext ui, Action<Routine> open, Action<Routine, VisualElement> menu)
@@ -53,6 +54,13 @@ namespace RowMate.Presentation.Routines
         public FocusScroller Scroller { get; }
 
         public int Count => _order.Count;
+
+        // Alguna tarjeta borrada se está desvaneciendo y colapsando todavía.
+        public bool IsCollapsing => _collapsing > 0;
+
+        // Terminó el último colapso en curso (Rutinas espera esto para mostrar el vacío después de la última: QA-V3-02), con
+        // cuánto se pasó de su final ese cuadro (TimedMotion.OverrunMs).
+        public event Action<double>? Collapsed;
 
         public RoutineCardView? CardAt(int index)
         {
@@ -103,7 +111,16 @@ namespace RowMate.Presentation.Routines
                 item.Card.SetIndex(-1);
                 var removed = item;
                 item.Grow.Finish();
-                item.Collapse.Play(item.Slot, item.Card, () => removed.Slot.RemoveFromHierarchy());
+                _collapsing++;
+                item.Collapse.Play(item.Slot, item.Card, () =>
+                {
+                    removed.Slot.RemoveFromHierarchy();
+                    _collapsing = Math.Max(0, _collapsing - 1);
+                    if (_collapsing == 0)
+                    {
+                        Collapsed?.Invoke(removed.Collapse.OverrunMs);
+                    }
+                });
             }
 
             var covered = _ui.Pages.CoversShell || _ui.Pages.HasPages;

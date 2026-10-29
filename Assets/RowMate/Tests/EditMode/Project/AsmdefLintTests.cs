@@ -94,10 +94,11 @@ namespace RowMate.Tests.EditMode.Project
             "RowMate.Tests.Support", "RowMate.Tests.EditMode", "RowMate.Tests.Simulator",
         };
 
+        // It. 4a (02-tech-design §3.6): más la herramienta de la demo, RowMate.SessionList.
         private static readonly string[] SolutionProjects =
         {
             "RowMate.Core", "RowMate.App", "RowMate.Infrastructure", "RowMate.Simulator", "RowMate.Tests.Support",
-            "RowMate.Tests.EditMode", "RowMate.Tests.Simulator", "RowMate.Tests.UnityApiCheck", "RowMate.Tokens",
+            "RowMate.Tests.EditMode", "RowMate.Tests.Simulator", "RowMate.Tests.UnityApiCheck", "RowMate.Tokens", "RowMate.SessionList",
         };
 
         [Test, Category("AC-BASE-10")]
@@ -423,7 +424,7 @@ namespace RowMate.Tests.EditMode.Project
         }
 
         [Test, Category("AC-BASE-10")]
-        public void SolutionContainsTheNineProjects()
+        public void SolutionContainsTheTenProjects()
         {
             var solution = File.ReadAllText(RepoPaths.Combine("tools/dotnet/RowMate.sln")).Replace('\\', '/');
             foreach (var name in SolutionProjects)

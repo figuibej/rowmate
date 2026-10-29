@@ -34,3 +34,13 @@ La arquitectura anterior suponía que Unity pausado en segundo plano equivalía 
 | ID | Qué cambió |
 |---|---|
 | QA-P-06 | ADR nuevo: corrige la premisa y define keepalive nativo, eventos con hora, alcance y reloj monótono |
+
+## Cambios de la It. 4a
+
+Detalle en [04a-motor-hud-funcional/02-tech-design](../../iterations/04a-motor-hud-funcional/02-tech-design.md) §2.2, §4 y "Cambios por gate QA".
+
+- **El programador pasa a Core** (decisión 3): `FrameScheduler` (Core/Common, puro) tiene la cola, los periódicos sin reanclar durante el alcance, la hora virtual de cada disparo, `IsCatchingUp` y la hora del cuadro; el mismo código corre en dotnet. `UnityScheduler` (Platform/Time) queda como adaptador: le pasa el `Stopwatch`, la hora UTC y el offset local en cada cuadro, y expone `EnterBackground` y `ResumeFromBackground`. Volver sin haberse ido no hace nada (Unity llama `OnApplicationPause(false)` al arrancar). Los timers de tiempo real de la base (`RealtimeTimerQueue.CatchUp`) y el tope que no cuenta el segundo plano (`ForegroundTimeout`) corren en el mismo alcance (QA-G4aT-03).
+- **Ciclo de vida**: `IAppLifecycle` queda en `InBackground`, `HasFocus` e `IsUserFacing` (en lugar de `Paused`, `Resumed` y `FocusChanged`). `AppRoot` lo mueve con `Platform/Lifecycle/AppLifecycle` en este orden: al irse, `SetBackground(true)` y `EnterBackground()`; al volver, el alcance completo con `IsCatchingUp = true` y recién después `SetBackground(false)` (QA-G4aT-07). Sin el usuario delante (segundo plano, ventana minimizada o sin foco) los avisos del motor se retienen y al volver se muestra una vez solo el último (AC-WKT-02-06, -08, -09).
+- **Una sola foto al volver** (decisión 4): durante el alcance el motor procesa cada segundo con sus datos pero no publica fotos intermedias; al terminar publica una con `Instant`, que la vista aplica sin animar (sin rodillos ni empujón; los pulsos con origen en el primer cuadro real). Pruebas: `WBG.*`, `FSC.*`, `WEL.OneSnapshotPerReturn` (dotnet), `USC.*` (Unity EditMode), `WBU.*` (PlayMode).
+- **Pantalla encendida** (decisión 6 y ARCHITECTURE §13): `ScreenKeepAwake` (Core/Common) la pide al arrancar y otra vez al volver o al recuperar el foco; `WindowsWakeLock` pide y libera en el mismo hilo (un `Disable` desde otro hilo no llama al sistema y queda como Warning: `WLK.ReleaseRunsOnTheRequestingThread`).
+- **Sin cambio en el alcance de la 4a**: el keepalive nativo y el *buffer* de eventos con hora siguen siendo de la It. 10a (Android) y 10b (iOS, macOS); en Windows el loop sigue con `runInBackground`.

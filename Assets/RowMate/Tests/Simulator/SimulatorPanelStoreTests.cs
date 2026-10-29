@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RowMate.App.Scene;
 using RowMate.Core.Ble;
 using RowMate.Core.Common;
+using RowMate.Core.Design;
 using RowMate.Core.Ports;
 using RowMate.Simulator;
 using RowMate.Simulator.Panel;
@@ -65,12 +66,13 @@ namespace RowMate.Tests.Simulator
         }
 
         [Test]
-        public void FabSitsSixteenAboveTheTabBar()
+        public void WrenchSitsSixteenAboveTheTabBar()
         {
-            // AC-BLE-16-02 (llave a 16 de la derecha y 16 sobre la barra de 64 + margen inferior) se mira en PlayMode.
-            Assert.That(SimulatorPanelLayout.FabBottom(64), Is.EqualTo(80.0));
-            Assert.That(SimulatorPanelLayout.FabBottom(64 + 48), Is.EqualTo(128.0));
-            Assert.That(SimulatorPanelLayout.FabRight, Is.EqualTo(16.0));
+            // AC-BLE-16-02 con D-ART-10 (DV-39): la llave a 16 de la IZQUIERDA y 16 sobre la barra de 64 + margen inferior
+            // (WrenchPlacementTests tiene la regla entera; la pantalla se mira en PlayMode).
+            Assert.That(WrenchPlacement.For(411, 914, SafeInsets.None, OverlaySurface.Tab(64)).Bottom, Is.EqualTo(80.0));
+            Assert.That(WrenchPlacement.For(411, 914, SafeInsets.None, OverlaySurface.Tab(64 + 48)).Bottom, Is.EqualTo(128.0));
+            Assert.That(WrenchPlacement.For(411, 914, SafeInsets.None, OverlaySurface.Tab(64)).Left, Is.EqualTo(16.0));
         }
 
         [Test, Category("AC-BLE-16-06"), Category("AC-BLE-16-07"), Category("AC-BLE-16-08")]

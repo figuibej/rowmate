@@ -18,6 +18,8 @@ namespace RowMate.Presentation.Routines
     // funde sus piezas en escalera: encabezado 0-200, fila 1 40-240, fila 2 80-280, pie y hojas 120-320); lo borrado se
     // desvanece y colapsa (0-120 / 80-280); si una serie se queda sin pasos, colapsa el bloque entero (AC-RUT-14-10). Lo
     // editado se ilumina (MarkEdited). Los name de contrato se renumeran después de cada cambio. La primera vez, sin animar.
+    // Collapsed avisa cuando terminó el último colapso: con el último paso borrado, RoutineEditorPage deja esta lista a la vista
+    // hasta entonces y recién ahí muestra su vacío (QA-V3-02: antes el bloque desaparecía de golpe).
     public sealed class EditorStepsView : VisualElement
     {
         private readonly UiContext _ui;
@@ -29,6 +31,7 @@ namespace RowMate.Presentation.Routines
         private readonly Dictionary<int, Row> _rows = new Dictionary<int, Row>();
         private readonly Dictionary<string, Block> _blocks = new Dictionary<string, Block>(StringComparer.Ordinal);
         private readonly List<int> _highlight = new List<int>();
+        private int _collapsing;
         private bool _rendered;
 
         public EditorStepsView(UiContext ui, Action<int> onEdit, Action<int> onDelete, Action<string> onRepeat, Action<string> onDeleteSeries,
@@ -48,6 +51,13 @@ namespace RowMate.Presentation.Routines
         // La última fila o bloque agregados (para llevarlos a la vista, DN3-18).
         public VisualElement? LastAdded { get; private set; }
 
+        // Alguna fila o bloque borrado se está desvaneciendo y colapsando todavía.
+        public bool IsCollapsing => _collapsing > 0;
+
+        // Terminó el último colapso en curso (el editor espera esto para mostrar su vacío: QA-V3-02), con cuánto se pasó de su
+        // final ese cuadro (TimedMotion.OverrunMs): el vacío arranca en el instante exacto del final.
+        public event Action<double>? Collapsed;
+
         public bool IsAnimating
         {
             get
@@ -62,13 +72,13 @@ namespace RowMate.Presentation.Routines
 
                 foreach (var block in _blocks.Values)
                 {
-                    if (block.Grow.IsRunning || block.Collapse.IsRunning)
+                    if (block.Grow.IsRunning || block.Collapse.IsRunning || block.View.LayersAnimating)
                     {
                         return true;
                     }
                 }
 
-                return false;
+                return _collapsing > 0;
             }
         }
 
@@ -222,7 +232,12 @@ namespace RowMate.Presentation.Routines
                 block.Grow.Finish();
                 if (animate)
                 {
-                    block.Collapse.Play(block.Slot, block.View, () => removed.Slot.RemoveFromHierarchy());
+                    _collapsing++;
+                    block.Collapse.Play(block.Slot, block.View, () =>
+                    {
+                        removed.Slot.RemoveFromHierarchy();
+                        OnCollapseDone(removed.Collapse.OverrunMs);
+                    });
                 }
                 else
                 {
@@ -254,7 +269,12 @@ namespace RowMate.Presentation.Routines
                 var removed = row;
                 if (animate)
                 {
-                    row.Collapse.Play(row.Slot, row.View, () => removed.Slot.RemoveFromHierarchy());
+                    _collapsing++;
+                    row.Collapse.Play(row.Slot, row.View, () =>
+                    {
+                        removed.Slot.RemoveFromHierarchy();
+                        OnCollapseDone(removed.Collapse.OverrunMs);
+                    });
                 }
                 else
                 {
@@ -287,6 +307,15 @@ namespace RowMate.Presentation.Routines
             foreach (var block in _blocks.Values)
             {
                 block.View.RenderTexts(texts);
+            }
+        }
+
+        private void OnCollapseDone(double overrunMs)
+        {
+            _collapsing = Math.Max(0, _collapsing - 1);
+            if (_collapsing == 0)
+            {
+                Collapsed?.Invoke(overrunMs);
             }
         }
 

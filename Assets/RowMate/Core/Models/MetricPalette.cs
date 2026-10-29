@@ -37,5 +37,31 @@ namespace RowMate.Core.Models
         {
             return kind == MetricKind.HeartRate ? Tokens.MetricHrHud : For(kind);
         }
+
+        // Color del valor en el HUD sin objetivo (AC-APP-06-01; D-ART-01, R-10): la variante .hud de su métrica, el mismo
+        // matiz más claro (Split #FFAA47, SPM #3ACCF1, Watts #FFD60A, distancia #4ECBF2, tiempo #E0E0E0, kcal #06D6A0,
+        // pulso #FF5D7F). Con objetivo, el HUD usa text.hudPrimary o state.offTarget.hud (AC-WKT-10-05).
+        public static ColorToken HudFor(MetricKind kind)
+        {
+            switch (kind)
+            {
+                case MetricKind.Split:
+                    return Tokens.MetricSplitHud;
+                case MetricKind.Spm:
+                    return Tokens.MetricSpmHud;
+                case MetricKind.Watts:
+                    return Tokens.MetricWattsHud;
+                case MetricKind.Distance:
+                    return Tokens.MetricDistanceHud;
+                case MetricKind.HeartRate:
+                    return Tokens.MetricHrHud;
+                case MetricKind.Time:
+                    return Tokens.MetricTimeHud;
+                case MetricKind.Calories:
+                    return Tokens.MetricKcalHud;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "MetricPalette: métrica desconocida.");
+            }
+        }
     }
 }

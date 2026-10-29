@@ -1,0 +1,22 @@
+# Oráculo del motor legacy (02-tech-design §3.7 de la It. 4a, sonda S4-a): corre el WorkoutProvider del legacy con dobles
+# del remo, del pulsómetro y de la base, sin tocar el legacy. Lo corre tools/oracle/run-oracle.ps1 -Engine (pub get
+# --offline y flutter test, dentro de la guardia del legacy). El legacy se toma por ruta RELATIVA (al lado del repo); con
+# -LegacyPath el script escribe un pubspec_overrides.yaml, que git ignora.
+name: rowmate_engine_oracle
+description: Vectores del motor legacy para WorkoutGoldenTests (no se publica).
+publish_to: none
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  rowmate:
+    path: ../../../../rowmate-legacy
+  flutter_blue_plus: any
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  fake_async: any
+# Como el legacy (si no, flutter test avisa que el paquete rowmate la pide).
+flutter:
+  uses-material-design: true

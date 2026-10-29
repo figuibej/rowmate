@@ -1,5 +1,6 @@
 using RowMate.App.Device;
 using RowMate.Core.Ble;
+using RowMate.Core.Common;
 using RowMate.Core.Design;
 using RowMate.Core.Localization;
 using RowMate.Presentation.Binding;
@@ -34,7 +35,7 @@ namespace RowMate.Presentation.Device
             AddToClassList("rm-screen");
             _appBar = new AppBarView("device-appbar", layout);
             _disconnect = new RmButton("device-disconnect", "text danger", Icons.BluetoothDisabled, "",
-                () => { _ = _ui.App.Device.DisconnectAsync(); });
+                () => _ui.App.Device.DisconnectAsync().Forget(_ui.Logger, RowMate.App.Composition.AppContext.BleTag));
             _disconnect.style.display = DisplayStyle.None;
             _appBar.Actions.Add(_disconnect);
             Add(_appBar);
@@ -43,7 +44,7 @@ namespace RowMate.Presentation.Device
             _views.AddToClassList("rm-device-views");
             _views.pickingMode = PickingMode.Ignore;
             Connected = new ConnectedView(ui, layout);
-            Scan = new ScanView(ui, layout, () => { _ = _ui.App.Device.StartScanAsync(); });
+            Scan = new ScanView(ui, layout, () => _ui.App.Device.StartScanAsync().Forget(_ui.Logger, RowMate.App.Composition.AppContext.BleTag));
             Connected.style.display = DisplayStyle.None;
             Scan.style.display = DisplayStyle.None;
             _views.Add(Connected);

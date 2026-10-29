@@ -40,5 +40,8 @@ namespace RowMate.Bootstrap
 
         // Tubería de color del panel (D-01): con GammaRt, lo que se dibuja a mano compensa la conversión a lineal (MeshColor).
         public UiColorPipeline Pipeline { get; set; } = UiColorPipeline.GammaRt;
+
+        // El contorno de depuración de la zona del bote en el inmersivo (It. 4a, AC-WKT-17-09): solo PlayMode y el arnés.
+        public bool BoatZoneOutline { get; set; }
     }
 }

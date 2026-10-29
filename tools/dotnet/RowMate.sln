@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RowMate.Tests.UnityApiCheck
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RowMate.Tokens", "RowMate.Tokens\RowMate.Tokens.csproj", "{B0693464-F221-4A1A-8C13-15EF37AFC255}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RowMate.SessionList", "RowMate.SessionList\RowMate.SessionList.csproj", "{C6D8519F-4996-44D2-8312-53C4CED6C56E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,5 +68,9 @@ Global
 		{B0693464-F221-4A1A-8C13-15EF37AFC255}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B0693464-F221-4A1A-8C13-15EF37AFC255}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B0693464-F221-4A1A-8C13-15EF37AFC255}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6D8519F-4996-44D2-8312-53C4CED6C56E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6D8519F-4996-44D2-8312-53C4CED6C56E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6D8519F-4996-44D2-8312-53C4CED6C56E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6D8519F-4996-44D2-8312-53C4CED6C56E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

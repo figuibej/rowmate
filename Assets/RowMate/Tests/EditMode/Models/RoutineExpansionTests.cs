@@ -169,6 +169,45 @@ namespace RowMate.Tests.EditMode.Models
             Assert.That(flat[3].TargetSpm, Is.Null, "el descanso no tiene SPM objetivo aunque tenga progresión");
         }
 
+        // QA-G4aT-11 (DT4a-16, It. 4a): la expansión del motor satura la progresión en los límites de int
+        // (Flatten(…, Saturate)); la de la plantilla, para mostrarla o validarla, sigue lanzando OverflowException (It. 1). El
+        // legacy, con enteros de 64 bits, sigue la cuenta: lo que se ve es lo mismo (un split ≤ 0 siempre está fuera).
+        [Test, Category("AC-WKT-12-08")]
+        public void SaturateClampsAtTheIntLimits()
+        {
+            var up = new IntervalStep(0, 0, StepType.Work)
+            {
+                DurationSeconds = 60, TargetSpm = int.MaxValue - 1, ProgressionSpm = 2, TargetWattsMin = 100, ProgressionWatts = 10, GroupId = "g",
+                GroupRepeatCount = 3,
+            };
+            var down = new IntervalStep(0, 1, StepType.Work)
+            {
+                DurationSeconds = 60, TargetSplitSeconds = -2147483000, ProgressionSplitSeconds = -5999, GroupId = "g", GroupRepeatCount = 3,
+            };
+            var template = new[] { up, down };
+            Assert.Throws<OverflowException>(() => RoutineExpansion.Flatten(template), "la de la plantilla sigue con checked");
+            Assert.Throws<OverflowException>(() => RoutineExpansion.Flatten(template, ProgressionOverflow.Throw));
+            var flat = RoutineExpansion.Flatten(template, ProgressionOverflow.Saturate);
+            Assert.That(flat.Count, Is.EqualTo(6));
+            Assert.That(Spm(flat), Is.EqualTo(new int?[] { int.MaxValue - 1, null, int.MaxValue, null, int.MaxValue, null }), "satura arriba");
+            Assert.That(flat[1].TargetSplitSeconds, Is.EqualTo(-2147483000));
+            Assert.That(flat[3].TargetSplitSeconds, Is.EqualTo(int.MinValue), "satura abajo");
+            Assert.That(flat[5].TargetSplitSeconds, Is.EqualTo(int.MinValue));
+            Assert.That(flat[4].TargetWattsMin, Is.EqualTo(120), "lo que entra sigue la cuenta");
+        }
+
+        // Sin desborde, Saturate da exactamente la misma expansión que la de la plantilla.
+        [Test, Category("AC-WKT-12-08")]
+        public void SaturateWithoutOverflowIsTheSame()
+        {
+            foreach (var entry in RoutineFixtures.Named)
+            {
+                var thrown = RoutineExpansion.Flatten(entry.Value);
+                var saturated = RoutineExpansion.Flatten(entry.Value, ProgressionOverflow.Saturate);
+                Assert.That(saturated, Is.EqualTo(thrown), entry.Key);
+            }
+        }
+
         // Las plantillas de RoutineFixtures son las mismas que usó el oráculo.
         [Test, Category("AC-BASE-03")]
         public void FixturesMatchOracle()

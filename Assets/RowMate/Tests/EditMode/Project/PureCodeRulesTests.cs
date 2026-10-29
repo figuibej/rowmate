@@ -162,6 +162,64 @@ namespace RowMate.Tests.EditMode.Project
             AssertNoMatches(PureProduction, patterns, true, "reloj del sistema en código puro (usar IClock)");
         }
 
+        // It. 4a (02-tech-design §2.2, §4.1): el motor y sus stores cuentan el tiempo SOLO con el programador (la hora del cuadro
+        // y el reloj monótono de IScheduler, ADR 017): ni la hora del sistema, ni un cronómetro, ni timers o esperas propias.
+        // Así el alcance del segundo plano y las pruebas con FakeScheduler y LifecycleHarness son deterministas.
+        [Test, Category("AC-WKT-02-04"), Category("AC-APP-19-03")]
+        public void NoSystemClockInTheWorkoutEngine()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\bDateTime(Offset)?\s*\.\s*(Now|UtcNow|Today)\b"),
+                new Regex(@"\bStopwatch\b"),
+                new Regex(@"\bEnvironment\s*\.\s*TickCount(64)?\b"),
+                new Regex(@"\bTimeProvider\b"),
+                new Regex(@"\bSystem\s*\.\s*Threading\s*\.\s*Timer\b"),
+                new Regex(@"\bnew\s+Timer\s*\("),
+                new Regex(@"\bTask\s*\.\s*Delay\s*\("),
+                new Regex(@"\bThread\s*\.\s*Sleep\s*\("),
+            };
+            AssertNoMatches(new[] { "Core/Workout", "App/Workout" }, patterns, true, "reloj o timer del sistema en el motor (usar IScheduler)");
+            Assert.That(SourceScan.CsFiles("Core/Workout").Count, Is.GreaterThan(10), "el escaneo encontró el motor");
+        }
+
+        // AC-WKT-06-14 (QA-G4aT-09): los parciales, las repeticiones y el resultado de objetivos de cada paso no se guardan
+        // (paridad, workout_provider.dart:57-61). Infrastructure no conoce el motor (Core/Workout) y el SQL de las sesiones no
+        // nombra objetivos, parciales, vueltas, series ni resultados: solo las columnas de workout_sessions y data_points (v8).
+        [Test, Category("AC-WKT-06-14")]
+        public void InfrastructureDoesNotKnowTargetsOrSplits()
+        {
+            var types = new[]
+            {
+                new Regex(@"\busing\s+(static\s+)?RowMate\.Core\.Workout\b"),
+                new Regex(@"\bRowMate\s*\.\s*Core\s*\.\s*Workout\s*\."),
+                new Regex(@"\b(StepTargetTracker|StepResult|TargetLight|TargetLights|SeriesTracker|SessionRecorder|WorkoutEngine|StepProgress)\b"),
+            };
+            AssertNoMatches(new[] { "Infrastructure" }, types, true, "Infrastructure conoce el motor");
+            var offenders = new List<string>();
+            var sqlLiterals = 0;
+            // Como palabra (en snake_case el guion bajo separa): "elapsed_seconds" no es una vuelta.
+            var forbidden = new Regex(@"(?i)(^|[^a-z])(targets?|splits?|laps?|repetitions?|reps?|series|results?)([^a-z]|$)");
+            Assert.That(forbidden.IsMatch("\"step_target_met\""), Is.True);
+            Assert.That(forbidden.IsMatch("\"SELECT elapsed_seconds FROM data_points\""), Is.False);
+            foreach (var file in SourceScan.CsFiles("Infrastructure/Sessions"))
+            {
+                var code = SourceScan.StripComments(File.ReadAllText(file));
+                foreach (Match literal in StringLiteral.Matches(code))
+                {
+                    if (forbidden.IsMatch(literal.Value))
+                    {
+                        offenders.Add(RepoPaths.Relative(file) + ":" + SourceScan.LineOf(code, literal.Index) + ": " + literal.Value);
+                    }
+
+                    sqlLiterals += SqlKeyword.IsMatch(literal.Value) ? 1 : 0;
+                }
+            }
+
+            Assert.That(sqlLiterals, Is.GreaterThan(4), "el escaneo encontró el SQL de las sesiones");
+            Assert.That(offenders, Is.Empty, "el SQL de las sesiones nombra objetivos o parciales:\n" + string.Join("\n", offenders));
+        }
+
         [Test, Category("AC-BASE-04"), Category("AC-APP-19-03")]
         public void NoColorLiteralsOutsideTokens()
         {

@@ -42,6 +42,13 @@ crashlytics-build.properties
 /tools/oracle/.dart_tool/
 /tools/oracle/pubspec.lock
 
+# Oráculo del motor legacy (tools/oracle/engine, It. 4a): lo que dejan pub get y flutter test
+/tools/oracle/engine/.dart_tool/
+/tools/oracle/engine/build/
+/tools/oracle/engine/.flutter-plugins*
+/tools/oracle/engine/pubspec_overrides.yaml
+/tools/oracle/engine/pubspec.lock
+
 # Secretos (R-02, AC-APP-19-03, QA-V-02 de la It. 1). Ningún archivo propio puede llamarse StravaSecrets*,
 # con CUALQUIER extensión (.cs, .json, .asset, .txt…) y su .meta (que empieza igual). Las clases de corchetes cubren
 # las mayúsculas en Linux, donde git distingue; en Windows (core.ignorecase) ya no distingue.

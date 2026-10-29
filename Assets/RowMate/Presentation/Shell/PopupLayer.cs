@@ -260,27 +260,28 @@ namespace RowMate.Presentation.Shell
             var height = size.y > 0 ? size.y : 112;
             float left;
             float top;
+            float alternateTop;
+            var originLeft = true;
+            var originTop = true;
             if (_anchor != null)
             {
                 var a = _anchor.worldBound;
                 left = a.xMax - width;
                 top = a.yMax + AnchorGapDp;
-                var originTop = true;
+                originLeft = false;
                 if (top + height > window.yMax - EdgeMarginDp && a.yMin - AnchorGapDp - height >= window.yMin + EdgeMarginDp)
                 {
                     top = a.yMin - AnchorGapDp - height;
                     originTop = false;
                 }
 
-                menu.style.transformOrigin = new TransformOrigin(new Length(100, LengthUnit.Percent), new Length(originTop ? 0 : 100, LengthUnit.Percent));
+                alternateTop = originTop ? a.yMin - AnchorGapDp - height : a.yMax + AnchorGapDp;
             }
             else
             {
                 var p = _point ?? Vector2.zero;
                 left = p.x + PointOffsetDp;
                 top = p.y + PointOffsetDp;
-                var originLeft = true;
-                var originTop = true;
                 if (left + width > window.xMax - EdgeMarginDp)
                 {
                     left = p.x - PointOffsetDp - width;
@@ -293,12 +294,24 @@ namespace RowMate.Presentation.Shell
                     originTop = false;
                 }
 
-                menu.style.transformOrigin = new TransformOrigin(new Length(originLeft ? 0 : 100, LengthUnit.Percent),
-                    new Length(originTop ? 0 : 100, LengthUnit.Percent));
+                alternateTop = originTop ? p.y - PointOffsetDp - height : p.y + PointOffsetDp;
             }
 
             left = Mathf.Clamp(left, window.xMin + EdgeMarginDp, Mathf.Max(window.xMin + EdgeMarginDp, window.xMax - EdgeMarginDp - width));
             top = Mathf.Clamp(top, window.yMin + EdgeMarginDp, Mathf.Max(window.yMin + EdgeMarginDp, window.yMax - EdgeMarginDp - height));
+
+            // La llave del simulador, agrandada 8 dp, es un borde (D-ART-10, R6; DD4a-02).
+            var placed = PopupMenu.AvoidWrench(new Rect(left, top, width, height), _ui.Layout.VisibleWrenchBounds(), alternateTop, window, EdgeMarginDp,
+                out var flipped);
+            if (flipped)
+            {
+                originTop = !originTop;
+            }
+
+            left = placed.x;
+            top = placed.y;
+            menu.style.transformOrigin = new TransformOrigin(new Length(originLeft ? 0 : 100, LengthUnit.Percent),
+                new Length(originTop ? 0 : 100, LengthUnit.Percent));
             menu.style.left = left - window.xMin;
             menu.style.top = top - window.yMin;
         }

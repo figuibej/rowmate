@@ -157,6 +157,151 @@ namespace RowMate.Tests.EditMode.Project
             }
         }
 
+        // QA-G4aT-05 (02-tech-design §3.7 de la It. 4a): el repo es público. Ningún archivo de texto de tools/ tiene una ruta
+        // de la PC: la carpeta del usuario o la temporal (la expresión de QA-G3-20), file:/// seguido de una unidad o de /Users
+        // o /home, y la caché de pub (lo que dejan pub get y flutter test en tools/oracle/engine). Se recorre TODO tools/
+        // (no solo .ps1 y .sh, como ItThreeToolingTests.NoMachinePathsInScriptsOrManifests) salvo lo que el .gitignore
+        // excluye; sin llamar a git: la lista de exclusiones es la del .gitignore y se comprueba que cada una esté ahí. Las
+        // carpetas de instalación por defecto (<Program Files>/dotnet, la de Unity) no son datos del usuario (QA-G3-20).
+        [Test, Category("AC-APP-19-03")]
+        public void ToolsHaveNoMachinePaths()
+        {
+            var gitignore = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var line in File.ReadAllLines(RepoPaths.Combine(".gitignore")))
+            {
+                gitignore.Add(line.Trim());
+            }
+
+            foreach (var ignore in ToolIgnores)
+            {
+                Assert.That(gitignore.Contains(ignore.Line), Is.True, "la exclusión " + ignore.Line + " no está en el .gitignore");
+            }
+
+            Assert.That(gitignore.Contains("!/tools/oracle/bin/"), Is.True, "los scripts del oráculo se versionan");
+            var offenders = new List<string>();
+            var scanned = 0;
+            foreach (var file in Directory.GetFiles(RepoPaths.Combine("tools"), "*", SearchOption.AllDirectories))
+            {
+                var relative = RepoPaths.Relative(file).Replace('\\', '/');
+                if (IsIgnoredTool(relative) || IsBinary(file))
+                {
+                    continue;
+                }
+
+                scanned++;
+                var match = MachinePath.Match(File.ReadAllText(file));
+                if (match.Success)
+                {
+                    offenders.Add(relative + ": " + match.Value);
+                }
+            }
+
+            Assert.That(scanned, Is.GreaterThan(20), "el recorrido encontró tools/");
+            Assert.That(offenders, Is.Empty, "rutas de la PC en tools/ (el repo es público):\n" + string.Join("\n", offenders));
+        }
+
+        // Los casos con forma de ruta de la PC van partidos en dos o tres literales (una constante igual): así la búsqueda
+        // mecánica del repo público no los confunde con una ruta real (QA-V4a-07). Son de una persona inventada ("alguien").
+        [TestCase(@"C:\" + @"Users\alguien\AppData", true, Category = "AC-APP-19-03")]
+        [TestCase("c:/" + "users/alguien/x", true, Category = "AC-APP-19-03")]
+        [TestCase("/home/alguien/flutter", true, Category = "AC-APP-19-03")]
+        [TestCase(@"D:\Temp\AppData\" + @"Local\Temp\" + @"claude\x", true, Category = "AC-APP-19-03")]
+        [TestCase("\"rootUri\": \"file:///C:/x/lib/\"", true, Category = "AC-APP-19-03")]
+        [TestCase("file:///" + "Users/alguien/x", true, Category = "AC-APP-19-03")]
+        [TestCase("file:///home/alguien/x", true, Category = "AC-APP-19-03")]
+        [TestCase(@"%LOCALAPPDATA%\Pub\Cache\hosted", true, Category = "AC-APP-19-03")]
+        [TestCase("~/.pub-cache/hosted", true, Category = "AC-APP-19-03")]
+        [TestCase("C:/Program Files/dotnet/dotnet.exe", false, Category = "AC-APP-19-03")]
+        [TestCase(@"C:\Program Files\Unity\Hub\Editor", false, Category = "AC-APP-19-03")]
+        [TestCase("$rootUri = 'file:///' + $legacy", false, Category = "AC-APP-19-03")]
+        [TestCase("path: ../../../../rowmate-legacy", false, Category = "AC-APP-19-03")]
+        [TestCase("<flutter-sdk>/bin/flutter", false, Category = "AC-APP-19-03")]
+        public void MachinePathsAreRecognized(string text, bool machine)
+        {
+            Assert.That(MachinePath.IsMatch(text), Is.EqualTo(machine), text);
+        }
+
+        [TestCase("tools/oracle/engine/.dart_tool/package_config.json", true, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/engine/.flutter-plugins-dependencies", true, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/engine/build/test_cache/x.dill", true, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/engine/pubspec_overrides.yaml", true, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/engine/pubspec.lock", true, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/.dart_tool/oracle_package_config.json", true, Category = "AC-APP-19-03")]
+        [TestCase("tools/dotnet/RowMate.Core/bin/Release/x.dll", true, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/engine/pubspec.yaml", false, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/engine/test/engine_vectors_test.dart", false, Category = "AC-APP-19-03")]
+        [TestCase("tools/oracle/bin/fmt_vectors.dart", false, Category = "AC-APP-19-03")]
+        [TestCase("tools/build/build.ps1", false, Category = "AC-APP-19-03")]
+        public void ToolIgnoresMatchTheGitignore(string path, bool ignored)
+        {
+            Assert.That(IsIgnoredTool(path), Is.EqualTo(ignored), path);
+            var exit = RunGit(RepoPaths.Root, out var output, "check-ignore", "-q", "--no-index", path);
+            if (exit != 0 && exit != 1)
+            {
+                Unavailable("git check-ignore salió con " + exit + ": " + output);
+            }
+
+            Assert.That(exit == 0, Is.EqualTo(ignored), path + ": el .gitignore dice otra cosa");
+        }
+
+        // La expresión de QA-G3-20 más file:/// con una unidad, /Users o /home, y la caché de pub.
+        private static readonly System.Text.RegularExpressions.Regex MachinePath = new System.Text.RegularExpressions.Regex(
+            @"[A-Za-z]:[\\/]+Users[\\/]|[\\/]home[\\/][a-z]|AppData[\\/]+Local[\\/]+Temp[\\/]+claude|file:///+(?:[A-Za-z]:|Users/|home/)|Pub[\\/]+Cache|\.pub-cache",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Lo que el .gitignore excluye dentro de tools/ (cada línea tiene que estar en el .gitignore, al carácter).
+        private static readonly (string Line, Func<string, bool> Matches)[] ToolIgnores =
+        {
+            ("/tools/**/bin/", p => p.Contains("/bin/") && !p.StartsWith("tools/oracle/bin/", StringComparison.Ordinal)),
+            ("/tools/**/obj/", p => p.Contains("/obj/")),
+            ("/tools/**/TestResults/", p => p.Contains("/TestResults/")),
+            ("/tools/dotnet/.artifacts/", p => p.StartsWith("tools/dotnet/.artifacts/", StringComparison.Ordinal)),
+            ("/tools/unity/.artifacts/", p => p.StartsWith("tools/unity/.artifacts/", StringComparison.Ordinal)),
+            ("/tools/oracle/.dart_tool/", p => p.StartsWith("tools/oracle/.dart_tool/", StringComparison.Ordinal)),
+            ("/tools/oracle/pubspec.lock", p => p == "tools/oracle/pubspec.lock"),
+            ("/tools/oracle/engine/.dart_tool/", p => p.StartsWith("tools/oracle/engine/.dart_tool/", StringComparison.Ordinal)),
+            ("/tools/oracle/engine/build/", p => p.StartsWith("tools/oracle/engine/build/", StringComparison.Ordinal)),
+            ("/tools/oracle/engine/.flutter-plugins*", p => p.StartsWith("tools/oracle/engine/.flutter-plugins", StringComparison.Ordinal)),
+            ("/tools/oracle/engine/pubspec_overrides.yaml", p => p == "tools/oracle/engine/pubspec_overrides.yaml"),
+            ("/tools/oracle/engine/pubspec.lock", p => p == "tools/oracle/engine/pubspec.lock"),
+            ("*.log", p => p.EndsWith(".log", StringComparison.OrdinalIgnoreCase)),
+            ("*.tmp", p => p.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)),
+        };
+
+        private static bool IsIgnoredTool(string relative)
+        {
+            foreach (var ignore in ToolIgnores)
+            {
+                if (ignore.Matches(relative))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Un NUL en los primeros 8 KiB: binario (una fuente, una imagen); no se lee como texto.
+        private static bool IsBinary(string file)
+        {
+            var buffer = new byte[8192];
+            int read;
+            using (var stream = File.OpenRead(file))
+            {
+                read = stream.Read(buffer, 0, buffer.Length);
+            }
+
+            for (var i = 0; i < read; i++)
+            {
+                if (buffer[i] == 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         [TestCase("Assets/RowMate/Config/StravaSecrets.json", true, Category = "QA-V-02")]
         [TestCase("Assets/RowMate/STRAVASECRETS.asset", true, Category = "QA-V-02")]
         [TestCase("lib/core/strava/strava_secrets.dart", true, Category = "QA-V-02")]

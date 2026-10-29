@@ -53,6 +53,7 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(MotionSpecs.GrowFadeStartMs, Is.EqualTo(60));
             Assert.That(MotionSpecs.GrowFadeEndMs, Is.EqualTo(260));
             Assert.That(MotionSpecs.CollapseFadeMs, Is.EqualTo(120));
+            Assert.That(MotionSpecs.EmptyOutMs, Is.EqualTo(120), "el vacío del editor sale en 120 (§5.6, QA-V3-02)");
             Assert.That(MotionSpecs.CollapseStartMs, Is.EqualTo(80));
             Assert.That(MotionSpecs.CollapseEndMs, Is.EqualTo(280));
             Assert.That(MotionSpecs.SeriesStaggerMs, Is.EqualTo(40));
@@ -67,6 +68,66 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(MotionSpecs.ScrollToFocusOmega, Is.EqualTo(22));
             Assert.That(MotionSpecs.ScrollMarginDp, Is.EqualTo(16));
             Assert.That(MotionSpecs.SaveSpinnerDelayMs, Is.EqualTo(300));
+        }
+
+        // It. 4a (04-design-notes §5.13; DN4a-06, DN4a-17): las constantes del HUD funcional.
+        [Test, Category("DN4a-17")]
+        public void HudOfIterationFourA()
+        {
+            Assert.That(MotionSpecs.HudColorMs, Is.EqualTo(150));
+            Assert.That(MotionSpecs.OffTargetArrowMs, Is.EqualTo(120));
+            Assert.That(MotionSpecs.OffTargetArrowShiftDp, Is.EqualTo(4));
+            Assert.That(MotionSpecs.OffTargetBumpScale, Is.EqualTo(1.04));
+            Assert.That(MotionSpecs.OffTargetBumpPeakMs, Is.EqualTo(90));
+            Assert.That(MotionSpecs.OffTargetBumpEndMs, Is.EqualTo(240));
+            Assert.That(MotionSpecs.OffTargetBumpCooldownMs, Is.EqualTo(4000));
+            Assert.That(MotionSpecs.StepPulseHalfMs, Is.EqualTo(600), "600 + 600, como el legacy (immersive_workout_screen.dart:319-322)");
+            Assert.That(MotionSpecs.UpNextMinOpacity, Is.EqualTo(0.6));
+            Assert.That(MotionSpecs.UpNextFadeInMs, Is.EqualTo(200));
+            Assert.That(MotionSpecs.UpNextWidthOmega, Is.EqualTo(CriticalSpring.SmoothOmega));
+            Assert.That(MotionSpecs.EndingSoonScale, Is.EqualTo(1.1));
+            Assert.That(MotionSpecs.EndingSoonOmega, Is.EqualTo(CriticalSpring.SnappyOmega));
+            Assert.That(MotionSpecs.StepSwapOutMs, Is.EqualTo(120));
+            Assert.That(MotionSpecs.StepSwapInStartMs, Is.EqualTo(60));
+            Assert.That(MotionSpecs.StepSwapInEndMs, Is.EqualTo(260));
+            Assert.That(MotionSpecs.TargetDecorMs, Is.EqualTo(240));
+            Assert.That(MotionSpecs.TargetTextInStartMs, Is.EqualTo(60));
+            Assert.That(MotionSpecs.TargetTextInEndMs, Is.EqualTo(240));
+            Assert.That(MotionSpecs.BpmMoveMs, Is.EqualTo(240));
+            Assert.That(MotionSpecs.BpmFadeInStartMs, Is.EqualTo(120));
+            Assert.That(MotionSpecs.BpmFadeInEndMs, Is.EqualTo(360));
+            Assert.That(MotionSpecs.BpmFadeOutMs, Is.EqualTo(120));
+            Assert.That(MotionSpecs.BpmMoveOutStartMs, Is.EqualTo(120));
+            Assert.That(MotionSpecs.BpmMoveOutEndMs, Is.EqualTo(360));
+            Assert.That(MotionSpecs.ImmersiveInMs, Is.EqualTo(240));
+            Assert.That(MotionSpecs.ImmersiveOutMs, Is.EqualTo(200));
+            Assert.That(MotionSpecs.ReducedImmersiveFadeMs, Is.EqualTo(120));
+            Assert.That(MotionSpecs.FinishSpinnerDelayMs, Is.EqualTo(MotionSpecs.SaveSpinnerDelayMs));
+            Assert.That(MotionSpecs.FinishSpinnerDelayMs, Is.EqualTo(300));
+            // Se reusan sin cambios (§5.13): el rodillo de 180 (también el reloj y la cuenta), el fundido de 80 y los resortes.
+            Assert.That(DigitRoll.DurationMs, Is.EqualTo(180));
+            Assert.That(MotionSpecs.ReducedFadeMs, Is.EqualTo(80));
+            Assert.That(MotionSpecs.FitScaleOmega, Is.EqualTo(CriticalSpring.SmoothOmega));
+            // Las de geometría, en HudGeometry (§5.13).
+            Assert.That(HudGeometry.TopBarHeight, Is.EqualTo(40));
+            Assert.That(HudGeometry.TopBarRowHeight, Is.EqualTo(22));
+            Assert.That(HudGeometry.TopBarPadV, Is.EqualTo(8));
+            Assert.That(HudGeometry.StepRowPadH, Is.EqualTo(12));
+            Assert.That(HudGeometry.FreeRowPadH, Is.EqualTo(14));
+            Assert.That(HudGeometry.BandPadHPortrait, Is.EqualTo(20));
+            Assert.That(HudGeometry.BandPadHLandscape, Is.EqualTo(14));
+            Assert.That(HudGeometry.BandDividerGapPortrait, Is.EqualTo(16));
+            Assert.That(HudGeometry.BandDividerGapLandscape, Is.EqualTo(10));
+            Assert.That(HudGeometry.ArrowEm, Is.EqualTo(0.4));
+            Assert.That(HudGeometry.ArrowGutterEm, Is.EqualTo(0.48));
+            Assert.That(HudGeometry.ArrowUpBaselineEm, Is.EqualTo(0.196));
+            Assert.That(HudGeometry.ArrowDownBaselineEm, Is.EqualTo(0.214));
+            Assert.That(HudGeometry.UnitAlpha, Is.EqualTo(0.8));
+            Assert.That(HudGeometry.HorizonPortrait, Is.EqualTo(0.40));
+            Assert.That(HudGeometry.HorizonLandscape, Is.EqualTo(0.42));
+            Assert.That(HudGeometry.CameraHeightM, Is.EqualTo(2.2));
+            Assert.That(HudGeometry.RowerDistanceM, Is.EqualTo(9.5));
+            Assert.That(HudGeometry.WrenchGap, Is.EqualTo(8));
         }
 
         // snack_bar.dart:29 (4 s), tooltip.dart:392-394 (1,5 s, 0,1 s, 0) y kLongPressTimeout (0,5 s).

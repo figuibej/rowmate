@@ -149,6 +149,10 @@ namespace RowMate.Core.Design
         public const double HighlightMs = 600;
         public const double StackLayerMs = 160;
 
+        // El vacío del editor (§5.6; QA-V3-02 de la It. 3): con el primer paso funde → 0 en 120 (ease.exit) en su lugar; con
+        // el último que se va, entra (ListItemInMs, shift.s) recién cuando terminó el colapso de lo borrado.
+        public const double EmptyOutMs = 120;
+
         // ── Campos y diálogo de paso (§5.7): la etiqueta flota con escala 0,8; el campo del modo que llega funde en 120. ──
         public const double FieldLabelScale = 0.8;
         public const double ModeSwapInMs = 120;
@@ -163,5 +167,60 @@ namespace RowMate.Core.Design
 
         // P2 (DN3-19): Guardar muestra un spinner de 16 si el guardado tarda más de 300 ms.
         public const double SaveSpinnerDelayMs = 300;
+
+        // ════ It. 4a — HUD funcional (04a-motor-hud-funcional/04-design-notes §5, §5.13; DN4a-05, DN4a-06, DN4a-17). Los dueños
+        // de las animaciones son de WP-B (Presentation/Motion: ImmersiveTransition, StepPulse, OffTargetMotion…). Se reusan sin
+        // cambios DigitRoll.DurationMs (180, también el reloj y la cuenta), ReducedFadeMs, GrowOmega y los de CollapseMotion,
+        // ToastTextOutMs / ToastTextInEndMs, FitScaleOmega, FabInScaleFrom y PanelInScaleFrom. Las de geometría van en
+        // HudGeometry. ════
+
+        // ── Fuera de objetivo (§5.3; VID-02): el color cruza en 150 (ease.move, también la rampa de "por terminar"); la flecha
+        // entra en 120 (ease.enter) desde 4 dp en el sentido contrario al que indica y sale siguiendo 4 dp en su sentido; el
+        // empujón 1 → 1,04 en 0-90 (ease.enter) → 1 en 90-240 (ease.move), como mucho uno cada 4 s por tarjeta y nunca al
+        // empezar un paso. ──
+        public const double HudColorMs = 150;
+        public const double OffTargetArrowMs = 120;
+        public const double OffTargetArrowShiftDp = 4;
+        public const double OffTargetBumpScale = 1.04;
+        public const double OffTargetBumpPeakMs = 90;
+        public const double OffTargetBumpEndMs = 240;
+        public const double OffTargetBumpCooldownMs = 4000;
+
+        // ── Próximo y por terminar (§5.4): un solo reloj de 600 + 600 (ease.pulse), como el AnimationController(600)
+        // ..repeat(reverse: true) del legacy (immersive_workout_screen.dart:319-322). Próximo entra con ancho 0 → N (ω 12) y
+        // opacidad 0 → 1 en 200 por el latido 0,6 + 0,4·p; por terminar, escala 1 → 1,1 con ω 22. ──
+        public const double StepPulseHalfMs = 600;
+        public const double UpNextMinOpacity = 0.6;
+        public const double UpNextFadeInMs = 200;
+        public const double UpNextWidthOmega = CriticalSpring.SmoothOmega;
+        public const double EndingSoonScale = 1.1;
+        public const double EndingSoonOmega = CriticalSpring.SnappyOmega;
+
+        // ── Cambio de paso (§5.5; VID-01): tipo y pastilla viejos 0-120 (ease.exit); nuevos 60-260 (ease.enter) subiendo
+        // shift.s; borde, halo, hueco de la flecha y alto de obj. 0-240 (ease.move); el texto de obj. 60-240. ──
+        public const double StepSwapOutMs = 120;
+        public const double StepSwapInStartMs = 60;
+        public const double StepSwapInEndMs = 260;
+        public const double TargetDecorMs = 240;
+        public const double TargetTextInStartMs = 60;
+        public const double TargetTextInEndMs = 240;
+
+        // ── Tarjeta BPM y kcal (§5.6): BPM aparece: kcal a su lugar en 0-240 (FLIP) y BPM funde en 120-360; se va: BPM funde
+        // en 0-120 y kcal se mueve en 120-360. ──
+        public const double BpmMoveMs = 240;
+        public const double BpmFadeInStartMs = 120;
+        public const double BpmFadeInEndMs = 360;
+        public const double BpmFadeOutMs = 120;
+        public const double BpmMoveOutStartMs = 120;
+        public const double BpmMoveOutEndMs = 360;
+
+        // ── El inmersivo (§5.1, DN4a-05): entra en 240 (ease.enter) y sale en 200 (ease.exit), por fundido; con reducir
+        // movimiento, 120 lineal. La entrada "sumergirse" es de la 4b. ──
+        public const double ImmersiveInMs = 240;
+        public const double ImmersiveOutMs = 200;
+        public const double ReducedImmersiveFadeMs = 120;
+
+        // P2 (DN4a-20): Terminar muestra su spinner de 16 si el cierre tarda más de 300 ms (= SaveSpinnerDelayMs).
+        public const double FinishSpinnerDelayMs = SaveSpinnerDelayMs;
     }
 }

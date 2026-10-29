@@ -17,7 +17,7 @@ El script imprime y ejecuta, en este orden, los dos comandos de 02-tech-design �
 "C:/Program Files/dotnet/dotnet.exe" test tools/dotnet/RowMate.sln --configuration Release --no-build --artifacts-path tools/dotnet/.artifacts --results-directory tools/dotnet/.artifacts/TestResults --logger "console;verbosity=normal" --logger "trx;LogFilePrefix=rowmate-core"
 ```
 
-- **Por qué dos comandos.** `dotnet test` solo compila los proyectos de test y sus dependencias: `RowMate.Tests.UnityApiCheck` (las fuentes de test contra NUnit 3.5.0 y `netstandard2.1`, el perfil de Unity) y `RowMate.Tokens` quedarían sin compilar. El `build` compila los 9 proyectos; si falla, el script sale con ese código y **no** corre tests (QA-01).
+- **Por qué dos comandos.** `dotnet test` solo compila los proyectos de test y sus dependencias: `RowMate.Tests.UnityApiCheck` (las fuentes de test contra NUnit 3.5.0 y `netstandard2.1`, el perfil de Unity) y las herramientas `RowMate.Tokens` y `RowMate.SessionList` quedarían sin compilar. El `build` compila los 10 proyectos; si falla, el script sale con ese código y **no** corre tests (QA-01).
 - Sale con el primer código distinto de 0. Un test rojo deja rojo el job del CI (`.github/workflows/ci-core.yml`).
 - Todo lo que se genera (binarios, `obj`, resultados) queda en `tools/dotnet/.artifacts/`, ignorado por git.
 
@@ -53,6 +53,7 @@ Las mismas fuentes de test se corren **dentro de Unity** con `tools/unity/run-un
 | `RowMate.Tests.EditMode` · `.Tests.Simulator` | net8.0 | `Tests/EditMode/**`, `Tests/Simulator/**` | sus asmdefs |
 | `RowMate.Tests.UnityApiCheck` | netstandard2.1 + NUnit 3.5.0 | Support + EditMode + Simulator | herramienta (solo compila) |
 | `RowMate.Tokens` | net8.0 (Exe) | `tools/tokens/**/*.cs` | herramienta |
+| `RowMate.SessionList` | net8.0 (Exe) | `tools/sessions/**/*.cs` | herramienta de la demo (It. 4a) |
 
 Agregar un archivo nunca toca un `.csproj` (globs). `AsmdefLintTests` verifica que cada `.csproj` espejo tenga las mismas referencias que su asmdef.
 
@@ -75,3 +76,15 @@ Agregar un archivo nunca toca un `.csproj` (globs). `AsmdefLintTests` verifica q
 ```
 
 Con `--check` no escribe y sale con 1 si el archivo difiere. (`dotnet run --project … --artifacts-path …` no sirve con el SDK 8.0.427: busca el ejecutable en la carpeta del proyecto.) `TokensUssSyncTests.UssMatchesTokens` falla si el archivo quedó desactualizado.
+
+## Sesiones guardadas (herramienta de la demo, It. 4a)
+
+`tools/sessions/Program.cs` (02-tech-design §3.6 de la It. 4a) lista las sesiones de la base local, la más nueva arriba: `id · inicio (hora local) · fin (o —) · rutina (o libre) · puntos`. Nunca abre la base del usuario con SQLite: copia el archivo (y su `-wal`) a una carpeta temporal propia, sin bloquear a la app, lee la copia y la borra. No imprime rutas: solo el nombre del archivo, también en los tres errores de texto fijo (código 2).
+
+```
+"C:/Program Files/dotnet/dotnet.exe" run --project tools/dotnet/RowMate.SessionList -- --variant simulator
+"C:/Program Files/dotnet/dotnet.exe" run --project tools/dotnet/RowMate.SessionList -- --variant normal
+"C:/Program Files/dotnet/dotnet.exe" run --project tools/dotnet/RowMate.SessionList -- --db <archivo>
+```
+
+Sin `--variant` ni `--db`, la base del simulador (`rower_app_dev.db`) en la carpeta de datos de la app (en Windows, `LocalLow/iguisoft/RowMate`, calculada en el momento). `--verbose` agrega el tipo de la excepción de un error (nunca su mensaje, que trae la ruta). `SessionListToolTests` la corre como proceso sobre bases de prueba.

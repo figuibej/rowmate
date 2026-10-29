@@ -5,16 +5,17 @@ using System.Threading.Tasks;
 
 namespace RowMate.Core.Common
 {
-    // Timers de tiempo real para UnityScheduler (Platform, WP-B; 02-tech-design §2.1, QA-G2-15). Pura y determinista: el
-    // tiempo lo pasa quien la avanza (UnityScheduler con un Stopwatch monótono; los tests con números). Un solo hilo (el
-    // principal), sin locks.
+    // Timers de tiempo real del programador de la app (FrameScheduler, Core, desde la It. 4a; antes UnityScheduler;
+    // 02-tech-design §2.1 de la It. 2, QA-G2-15). Pura y determinista: el tiempo lo pasa quien la avanza (FrameScheduler con
+    // la hora del cuadro; los tests con números). Un solo hilo (el principal), sin locks.
     //
     // RunDue(ahora) corre los vencidos hasta "ahora", en orden (vencimiento, después orden de alta). Cada periódico dispara a
     // lo sumo una vez por llamada; su próximo vencimiento es vencimiento + período, salvo que eso ya haya pasado (atraso de un
     // período o más: el loop se cortó al arrastrar o redimensionar la ventana en Windows, o la app estuvo en pausa): entonces
     // se reancla en ahora + período. Las lecturas perdidas se pierden, no llegan comprimidas una por cuadro (es la conducta
-    // de la It. 2 hasta el alcance de ADR 017, It. 4a). Lo que un callback agenda durante un RunDue corre en el siguiente,
-    // aunque ya esté vencido: así un timer de 0 que se reagenda no cuelga el cuadro.
+    // de la It. 2 en primer plano; al volver del segundo plano, CatchUp hace el alcance de ADR 017, It. 4a). Lo que un
+    // callback agenda durante un RunDue corre en el siguiente, aunque ya esté vencido: así un timer de 0 que se reagenda no
+    // cuelga el cuadro.
     // La excepción de un callback no corta a los demás: se registra (tag TIMER), como un error de Timer en la zona de Dart.
     public sealed class RealtimeTimerQueue
     {
@@ -143,6 +144,118 @@ namespace RowMate.Core.Common
 
             _entries.RemoveAll(e => e.Cancelled);
             return executed;
+        }
+
+        // Alcance al volver del segundo plano (ADR 017, decisión 3; 02-tech-design §4.1 de la It. 4a): repite "el timer vivo
+        // de vencimiento más chico ≤ toSeconds" (empate: orden de alta), pone el reloj virtual en su vencimiento (setNow) y lo
+        // dispara. Un periódico vuelve a vencer en vencimiento + período, SIN reanclar (dispara una vez por período perdido);
+        // uno de una vez se va. A diferencia de RunDue, lo que se agenda DURANTE el alcance también corre si vence antes de
+        // toSeconds: el timer del motor que se rearma cada segundo y las lecturas del remo simulado se intercalan en orden.
+        // El reloj virtual nunca retrocede: un vencimiento anterior a fromSeconds (agendado entre cuadros) corre en
+        // fromSeconds. Con más de maxCallbacks corta, lo registra como Error (TIMER) y reancla lo que queda en toSeconds +
+        // período (los de una vez, en toSeconds: corren en el cuadro siguiente). Al terminar, el reloj queda en toSeconds.
+        // Devuelve cuántos callbacks corrieron.
+        public int CatchUp(double fromSeconds, double toSeconds, Action<double> setNow, int maxCallbacks)
+        {
+            if (setNow == null)
+            {
+                throw new ArgumentNullException(nameof(setNow));
+            }
+
+            if (maxCallbacks < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxCallbacks), maxCallbacks, "RealtimeTimerQueue: el tope tiene que ser positivo.");
+            }
+
+            var to = toSeconds < fromSeconds ? fromSeconds : toSeconds;
+            var now = fromSeconds;
+            setNow(now);
+            ++_runGeneration;
+            var executed = 0;
+            while (true)
+            {
+                var index = NextCatchUp(to);
+                if (index < 0)
+                {
+                    break;
+                }
+
+                if (executed >= maxCallbacks)
+                {
+                    _logger.Log(LogLevel.Error, Tag, "el alcance cortó después de " + maxCallbacks + " disparos; lo que quedaba vence después de la vuelta");
+                    Reanchor(to);
+                    break;
+                }
+
+                var next = _entries[index];
+                if (next.DueSeconds > now)
+                {
+                    now = next.DueSeconds;
+                    setNow(now);
+                }
+
+                if (next.PeriodSeconds > 0)
+                {
+                    next.DueSeconds += next.PeriodSeconds;
+                }
+                else
+                {
+                    // Se va de la lista en el acto (el último ocupa su lugar: el orden de la lista no importa, decide la
+                    // secuencia): el timer de una vez que se rearma cada segundo no la hace crecer durante 8 h de alcance.
+                    next.Cancelled = true;
+                    var last = _entries.Count - 1;
+                    _entries[index] = _entries[last];
+                    _entries.RemoveAt(last);
+                }
+
+                executed++;
+                try
+                {
+                    next.Callback();
+                }
+                catch (Exception error)
+                {
+                    _logger.Log(LogLevel.Error, Tag, "un timer lanzó " + error.GetType().Name + ": " + error.Message, error);
+                }
+            }
+
+            setNow(to);
+            _entries.RemoveAll(e => e.Cancelled);
+            return executed;
+        }
+
+        // El índice del vivo de vencimiento más chico ≤ to (empate: orden de alta), sin mirar en qué llamada se creó; -1 si no hay.
+        private int NextCatchUp(double to)
+        {
+            var best = -1;
+            for (var i = 0; i < _entries.Count; i++)
+            {
+                var entry = _entries[i];
+                if (entry.Cancelled || entry.DueSeconds > to)
+                {
+                    continue;
+                }
+
+                if (best < 0 || entry.DueSeconds < _entries[best].DueSeconds
+                    || (entry.DueSeconds == _entries[best].DueSeconds && entry.Sequence < _entries[best].Sequence))
+                {
+                    best = i;
+                }
+            }
+
+            return best;
+        }
+
+        private void Reanchor(double to)
+        {
+            for (var i = 0; i < _entries.Count; i++)
+            {
+                var entry = _entries[i];
+                if (!entry.Cancelled && entry.DueSeconds <= to)
+                {
+                    entry.DueSeconds = to + entry.PeriodSeconds;
+                }
+            }
         }
 
         private Entry? NextDue(double nowSeconds, long generation)

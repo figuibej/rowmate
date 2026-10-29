@@ -383,5 +383,24 @@
   "editorSaveError": "Couldn't save the routine",
   "routineDeleteError": "Couldn't delete the routine",
   "routinesLoadError": "Couldn't load routines",
-  "retry": "Retry"
+  "retry": "Retry",
+  "hudSpm": "SPM",
+  "hudSplit": "Split /500m",
+  "hudWatts": "Watts",
+  "hudUnitWatts": "W",
+  "hudKcal": "kcal",
+  "hudBpm": "BPM",
+  "hudUnitMeters": "m",
+  "hudFreeTitle": "Free Workout",
+  "hudUpNext": "Up next:",
+  "hudTarget": "target {value}",
+  "@hudTarget": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "workoutSaveError": "Couldn't save the session",
+  "workoutRoutineCannotStart": "This routine can't be started: check its steps in Routines"
 }

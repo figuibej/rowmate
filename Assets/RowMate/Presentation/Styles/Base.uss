@@ -915,6 +915,11 @@
     color: var(--rm-text-secondary);
 }
 
+/* It. 4a: el texto de los diálogos de inicio y de terminar ajusta en varias líneas y conserva sus saltos (AC-APP-05-05). */
+.rm-workout-dialog__message {
+    white-space: pre-wrap;
+}
+
 .rm-button--danger-fill,
 .rm-button--danger-fill:hover,
 .rm-button--danger-fill:active,
@@ -1600,6 +1605,11 @@
     white-space: normal;
 }
 
+/* La línea de error va en un slot que se abre y se cierra por código (ErrorLine, RevealMotion; QA-V3-02): sin estilo propio. */
+.rm-field__error-slot {
+    flex-shrink: 0;
+}
+
 .rm-field-pair {
     flex-direction: row;
     align-items: flex-start;
@@ -1731,4 +1741,366 @@
 
 .rm-field-pair__error {
     margin-top: 4px;
+}
+
+/* ── Workout en reposo (It. 4a; F-WKT-12, F-BLE-10; 02-tech-design §6.1, §9.5; 04-design-notes §4.1) ──
+   Un solo desplazamiento con todo (DV-22): relleno 16; abajo, RegisterClearance (por código); el contenido mide como mínimo
+   el visor (por código) y los tres estados crecen y se centran en lo que queda debajo de Entrenamiento libre. */
+.rm-workout__rest {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.rm-workout__scroll {
+    flex-grow: 1;
+}
+
+.rm-workout__content {
+    flex-direction: column;
+    padding-top: 16px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.rm-workout__banner {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+    margin-bottom: 16px;
+    padding: 12px;
+    border-radius: 12px;
+    background-color: var(--rm-state-warning-bg);
+}
+
+/* El ícono alineado con la PRIMERA línea del texto de 13 (caja de línea 16,1): su centro a 8,05 (DN4a-19). */
+.rm-workout__banner-icon {
+    margin-top: -1px;
+    margin-right: 8px;
+    color: var(--rm-state-warning);
+}
+
+.rm-workout__banner-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    white-space: normal;
+    color: var(--rm-state-warning);
+}
+
+.rm-button--tall,
+.rm-button--tall:hover,
+.rm-button--tall:focus,
+.rm-button--tall:active {
+    min-height: 56px;
+}
+
+.rm-workout__free {
+    align-self: stretch;
+}
+
+.rm-workout__gap {
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.rm-workout__label {
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+    color: var(--rm-text-tertiary);
+}
+
+.rm-workout__state {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.rm-workout__error-icon {
+    color: var(--rm-state-danger-text);
+}
+
+.rm-workout__error-text {
+    margin-top: 12px;
+    max-width: 280px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    color: var(--rm-text-secondary);
+}
+
+#workout-retry {
+    margin-top: 16px;
+}
+
+.rm-workout__empty {
+    flex-grow: 1;
+    align-self: center;
+    max-width: 320px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    color: var(--rm-text-tertiary);
+}
+
+.rm-workout__list {
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+/* Fuera de reposo (AC-WKT-01-09, DV-36): solo el texto, centrado en toda la pestaña; abajo, el alto de la barra (por código). */
+.rm-workout__in-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    padding-left: 16px;
+    padding-right: 16px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    color: var(--rm-text-tertiary);
+}
+
+/* La tarjeta de Rutinas en Workout (DV-21, DN4a-19): el chevron en la columna de 28 dp del ⋮, centrado en su alto, sin toques. */
+.rm-routine-card__chevron {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    margin-left: 4px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+}
+
+.rm-routine-card__chevron .rm-icon {
+    color: var(--rm-text-tertiary);
+}
+
+/* ── El inmersivo y el HUD funcional (It. 4a; F-WKT-13 a -20; 02-tech-design §6.3 a §6.8, §9.5) ──
+   Cada zona es un elemento absoluto: el ancla, la escala hudScale con su origen y los topes van por código (HudZones); los
+   tamaños base, los colores con transparencia y las líneas de base, también por código (QA-G4aT-14). */
+.rm-immersive {
+    background-color: var(--rm-bg-app);
+}
+
+.rm-hud,
+.rm-hud-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-hud-boat-zone {
+    position: absolute;
+    border-width: 2px;
+}
+
+.rm-hud-glass {
+    background-color: var(--rm-glass-fallback);
+}
+
+.rm-hud-card {
+    flex-direction: column;
+    align-items: flex-start;
+    flex-shrink: 0;
+    border-radius: 14px;
+}
+
+.rm-hud-card__label,
+.rm-hud-card__unit,
+.rm-hud-card__target,
+.rm-hud-card__arrow {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rm-hud-card__arrow {
+    position: absolute;
+}
+
+.rm-hud-card__number {
+    flex-shrink: 0;
+}
+
+.rm-hud-card__value {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+.rm-hud-zone-right {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.rm-hud-zone-vitals {
+    flex-direction: column;
+}
+
+.rm-hud-topbar {
+    flex-direction: row;
+    align-items: center;
+    border-radius: 14px;
+}
+
+.rm-hud-step-row {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.rm-hud-step-type {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* La pastilla de objetivo (DV-35, DV-38): se recorta con "…" y nunca empuja la cuenta. */
+.rm-hud-pill {
+    flex-shrink: 1;
+    min-width: 0;
+    padding: 2px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-flex-spacer {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* Próximo: un slot que recorta (su ancho lo mueve el código, de 0 a N); el fondo y el borde, lo que late, en un hijo absoluto. */
+.rm-hud-up-next {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.rm-hud-up-next__bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-width: 1px;
+    border-radius: 8px;
+}
+
+.rm-hud-up-next__label,
+.rm-hud-up-next__type {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rm-hud-countdown {
+    flex-shrink: 0;
+}
+
+.rm-hud-free-title {
+    flex-direction: row;
+    align-items: center;
+}
+
+.rm-hud-free-title__icon {
+    margin-right: 8px;
+}
+
+.rm-hud-free-title__text {
+    white-space: nowrap;
+}
+
+.rm-hud-band {
+    flex-direction: row;
+    align-items: center;
+    border-radius: 999px;
+}
+
+.rm-hud-band__column {
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.rm-hud-band__row {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+.rm-hud-band__unit {
+    white-space: nowrap;
+}
+
+.rm-hud-controls {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-end;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+/* Los controles del HUD (AC-WKT-20-01, ART_BIBLE §3.5, DV-31): mínimos 128 × 56 y 148 × 56, radio 12. */
+.rm-button--hud-danger,
+.rm-button--hud-danger:hover,
+.rm-button--hud-danger:active,
+.rm-button--hud-danger:focus,
+.rm-button--hud-danger:hover:active,
+.rm-button--hud-danger:disabled,
+.rm-button--hud-danger:disabled:hover {
+    min-width: 128px;
+    min-height: 56px;
+    padding: 0 16px;
+    border-width: 1.5px;
+    border-color: var(--rm-state-danger-text);
+    border-radius: 12px;
+    background-color: var(--rm-glass-fallback);
+}
+
+.rm-button--hud-danger .rm-button__label,
+.rm-button--hud-danger .rm-spinner {
+    color: var(--rm-state-danger-text);
+}
+
+.rm-button--hud-outline,
+.rm-button--hud-outline:hover,
+.rm-button--hud-outline:active,
+.rm-button--hud-outline:focus,
+.rm-button--hud-outline:hover:active,
+.rm-button--hud-outline:disabled,
+.rm-button--hud-outline:disabled:hover {
+    min-width: 148px;
+    min-height: 56px;
+    padding: 0 16px;
+    border-width: 1.5px;
+    border-color: var(--rm-border-strong);
+    border-radius: 12px;
+    background-color: var(--rm-glass-fallback);
+}
+
+.rm-button--hud-outline .rm-button__label,
+.rm-button--hud-outline .rm-icon {
+    color: var(--rm-text-primary);
+}
+
+.rm-button--hud-success,
+.rm-button--hud-success:hover,
+.rm-button--hud-success:active,
+.rm-button--hud-success:focus,
+.rm-button--hud-success:hover:active,
+.rm-button--hud-success:disabled,
+.rm-button--hud-success:disabled:hover {
+    min-width: 148px;
+    min-height: 56px;
+    padding: 0 16px;
+    border-radius: 12px;
+    background-color: var(--rm-state-success);
+}
+
+.rm-button--hud-success .rm-button__label,
+.rm-button--hud-success .rm-icon {
+    color: var(--rm-text-on-accent);
 }

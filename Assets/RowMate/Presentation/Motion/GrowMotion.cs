@@ -278,7 +278,8 @@ namespace RowMate.Presentation.Motion
 
     // Entrada con fundido y desplazamiento después de una espera (la primera carga de la lista con la pestaña a la vista:
     // tarjeta i en 35·i → +240, opacidad 0 → 1 e y +12 → 0; el vacío y el error en 240 con y +8 → 0; 04-design-notes §5.5).
-    // Reducir movimiento: todo funde en 160 junto, sin desplazamiento ni escalonado.
+    // Reducir movimiento: todo funde en 160 junto, sin desplazamiento ni escalonado. Una espera negativa arranca como si hubiera
+    // empezado hace ese tiempo (el vacío que entra en el instante exacto en que terminó un colapso: TimedMotion.OverrunMs).
     public sealed class EnterMotion : TimedMotion
     {
         private VisualElement? _target;

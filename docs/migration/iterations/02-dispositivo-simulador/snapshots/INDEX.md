@@ -35,7 +35,7 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1 -Set it2`, 02-tech-d
 | CAP-20c | [CAP-20c-barra-rutinas.png](CAP-20c-barra-rutinas.png) | TV | Sim | Destino elegido: rutinas | 0/0 | sin desbordes | ok |
 | CAP-20d | [CAP-20d-barra-historial.png](CAP-20d-barra-historial.png) | TV | Sim | Destino elegido: historial | 0/0 | sin desbordes | ok |
 | CAP-20e | [CAP-20e-barra-en.png](CAP-20e-barra-en.png) | TV | Sim | Barra en inglés, Dispositivo elegido | 0/0 | sin desbordes | ok |
-| CAP-21a | [CAP-21a-workout.png](CAP-21a-workout.png) | TV | Sim | Pestaña provisoria: Entrenamiento | 1/1 | sin desbordes | ok |
+| CAP-21a | [CAP-21a-workout.png](CAP-21a-workout.png) | TV | Sim | Workout (desde la It. 4a la pantalla real, sin rutinas) | 0/0 | sin desbordes | ok |
 | CAP-21b | [CAP-21b-rutinas.png](CAP-21b-rutinas.png) | TV | Sim | Rutinas (desde la It. 3 la pantalla real, base vacía) | 0/0 | sin desbordes | ok |
 | CAP-21c | [CAP-21c-historial.png](CAP-21c-historial.png) | TV | Sim | Pestaña provisoria: Historial | 1/1 | sin desbordes | ok |
 | CAP-22 | [CAP-22-build-normal-w1280.png](CAP-22-build-normal-w1280.png) | W1280 | Unavailable | Build normal (sin simulador): equipo sin Bluetooth LE, vista de búsqueda vacía | 1/1 | sin desbordes | ok |

@@ -211,12 +211,18 @@ namespace RowMate.Tests.PlayMode
             yield return Tap("editor-add-series");
             Editor.Save.Focus();
             yield return Frames();
+            var exiting = Editor;
             H.Tap("editor-save");
             H.Advance(0.05);
             H.PressEnter();
             yield return Settle();
             Assert.That(Listed.Count, Is.EqualTo(5), "Enter durante la salida no guarda otra vez");
-            Assert.That(H.Editor, Is.Null);
+            // La página que sale no recibe el Enter. Desde QA-V3-04 (It. 4a), Tap mueve el foco como un clic de verdad: el + que
+            // abrió el editor tenía el foco, ExitLock se lo devuelve al salir y el Enter le llega a él, que abre un editor nuevo y
+            // vacío. En el legacy el clic no le da el foco al botón (00-deuda-it3 §11, para el diseño de la 4a).
+            var top = H.Editor;
+            Assert.That(top == null || (!ReferenceEquals(top, exiting) && top.Store.IsNew && top.NameField.Value.Length == 0), Is.True,
+                "el Enter no llegó a la página que sale");
         }
 
         [UnityTest, Category("AC-RUT-09-05")]

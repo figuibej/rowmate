@@ -13,5 +13,9 @@ namespace RowMate.Infrastructure.Threading
         Task<T> Run<T>(Func<T> work);
 
         Task Run(Action work);
+
+        // Espera acotada a que se termine todo lo encolado hasta ahora (It. 4a: al pasar a segundo plano, AC-WKT-06-15).
+        // Bloquea al que llama, que no es el hilo de la base. true = quedó todo hecho antes del tope.
+        bool WaitIdle(TimeSpan timeout);
     }
 }

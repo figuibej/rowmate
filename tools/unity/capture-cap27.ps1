@@ -6,6 +6,12 @@
 #   tools/unity/capture-cap27.ps1 -ReplaceUserDatabase [-Exe Builds/Windows/normal/RowMate.exe] [-Out <png>] [-Unity <Unity.exe>]
 #   tools/unity/capture-cap27.ps1 -Rehearsal [-Unity <Unity.exe>]
 #
+# La foto NUNCA se escribe directo en el repo (QA-V3-12): el repo es publico y una foto de la pantalla puede llevarse algo
+# del escritorio del usuario. Sin -Out va a una carpeta temporal ([IO.Path]::GetTempPath() + RowMate.Cap27-foto); un -Out
+# dentro del repo sale con 5 sin tocar nada. Al final el script dice como pasarla a 03-rutinas/snapshots/ despues de mirarla.
+# capture-window.ps1 recorta al marco visible de la ventana (sin los bordes invisibles de Windows, que traian franjas del
+# escritorio de atras).
+#
 # Es la UNICA excepcion de AC-HIS-20-04: el build normal solo lee la carpeta real (LocalLow/iguisoft/RowMate), asi que la toma
 # reemplaza un rato su rower_app.db por una base sintetica y la deja como estaba. Por eso:
 #   0. SOLO A PEDIDO: sin -ReplaceUserDatabase (ni -Rehearsal) no toca nada, dice lo que haria y sale con 4. No lo llaman
@@ -50,14 +56,15 @@
 # el ensayo (5), porque la semilla necesita Unity. Sirve para probar la herramienta de punta a punta sin la base del usuario.
 #
 # Codigos: 0 bien; 3 NO VERIFICABLE (Windows no esta en Oscuro); 4 falta -ReplaceUserDatabase (o -Rehearsal); 5 se nego
-# (proceso abierto, proyecto abierto en un Editor, archivo en uso o resguardo que no coincide); 6 la restauracion no coincide
+# (-Out dentro del repo, proceso abierto, proyecto abierto en un Editor, archivo en uso o resguardo que no coincide); 6 la
+# restauracion no coincide
 # (resguardo conservado); 7 no se pudo armar la base sintetica; 8 fallo la captura o, en el ensayo, la comprobacion del
 # reemplazo o el arranque de capture-window.ps1 (la base igual se restauro); 12 no encuentra Unity.exe o el build.
 param(
     [switch]$ReplaceUserDatabase,
     [switch]$Rehearsal,
     [string]$Exe = 'Builds/Windows/normal/RowMate.exe',
-    [string]$Out = 'docs/migration/iterations/03-rutinas/snapshots/CAP-27-ventana-build-normal.png',
+    [string]$Out = '',
     [string]$Unity = '',
     [int]$WaitSeconds = 8
 )
@@ -218,6 +225,7 @@ function Remove-Quietly([string]$Path) {
 # el codigo (solo la salida estandar: un error de PowerShell sale directo a la consola y no corta este script).
 function Invoke-WindowCapture([string]$Target, [string]$Destination) {
     $capture = Join-Path $PSScriptRoot 'capture-window.ps1'
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Destination) | Out-Null
     $lines = @(& powershell -NoProfile -File $capture -Exe $Target -Out $Destination -WaitSeconds $WaitSeconds -ClickRelative '0.625,0.98')
     $code = $LASTEXITCODE
     foreach ($line in $lines) { Write-Host $line }
@@ -230,8 +238,20 @@ if (-not $ReplaceUserDatabase -and -not $Rehearsal) {
     Write-Host '  - comprueba que Windows ya este en modo Oscuro (si no: NO VERIFICABLE, sale con 3) y que no haya RowMate ni un Editor de Unity abiertos;'
     Write-Host '  - resguarda y verifica rower_app.db, -wal y -shm de la carpeta de datos del build normal;'
     Write-Host '  - los reemplaza por una base sintetica (solo Escalera SPM), captura la ventana y restaura todo en finally, verificando.'
+    Write-Host '  - deja la foto en una carpeta temporal, para mirarla antes de pasarla al repo (es publico).'
     Write-Host '  Con -Rehearsal hace lo mismo sobre una carpeta temporal de prueba, sin abrir el build: no toca nada del usuario.'
     exit 4
+}
+
+# 0 (c). La foto: por defecto en una carpeta temporal; nunca directo en el repo (QA-V3-12).
+if ($Out -eq '') {
+    $Out = Join-Path ([System.IO.Path]::GetTempPath()) 'RowMate.Cap27-foto\CAP-27-ventana-build-normal.png'
+}
+$outFull = Get-FullPath $Out
+$repoPrefix = $repo.TrimEnd('\') + '\'
+if ($outFull.StartsWith($repoPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Write-Host '[cap27] la foto no se escribe directo en el repo (es publico): sin -Out va a una carpeta temporal, para mirarla antes de pasarla a docs/ (QA-V3-12). No se toca nada.'
+    exit 5
 }
 
 $exePath = ''
@@ -366,7 +386,9 @@ try {
             $exitCode = 8
         }
         else {
-            Write-Host '[cap27] captura lista (CAP-27).'
+            Write-Host ('[cap27] captura lista (CAP-27): ' + $outPath)
+            Write-Host '[cap27] Mirala antes de pasarla al repo (es publico: que no salga nada del escritorio). Para pasarla:'
+            Write-Host ('  Copy-Item "' + $outPath + '" docs/migration/iterations/03-rutinas/snapshots/')
         }
     }
 }

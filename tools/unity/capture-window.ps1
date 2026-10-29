@@ -17,6 +17,12 @@
 # $null). Lo corren de verdad ItThreeToolingTests.WindowCaptureStartsTheExeForReal y el ensayo de capture-cap27.ps1, con un
 # ejecutable de prueba sin ventana (new-windowless-exe.ps1).
 #
+# Marco (QA-V3-12): la captura es el marco VISIBLE de la ventana (DwmGetWindowAttribute con DWMWA_EXTENDED_FRAME_BOUNDS),
+# no el de GetWindowRect: en Windows 10 y 11 ese incluye bordes invisibles de unos 7-8 px a los costados y abajo (1296 x 759
+# para una ventana de 1280 x 720) y la foto se llevaba franjas de lo que hubiera detras, de la pantalla del usuario. Si DWM
+# no responde (sin composicion), GetWindowRect. Get-VisibleFrame lo corre de verdad
+# ItThreeDebtTests.WindowCaptureUsesTheVisibleFrame sobre una ventana que ya existe (sin capturar ni tocar nada).
+#
 # Codigos: 0 bien; 1 no aparecio la ventana (o el build se cerro antes de la captura); 2 no existe el ejecutable; 3 otra
 # ventana tapa la del build (sin clic ni captura); 4 error inesperado (por ejemplo, Start-Process no pudo abrir el
 # ejecutable): el mensaje sale en la consola y el build que se haya abierto se cierra igual.
@@ -60,9 +66,27 @@ public static class RowMateWindow {
     [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT point);
     [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr hWnd, uint flags);
     [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT point);
+    [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hWnd, int attribute, out RECT value, int size);
 }
 '@
 [RowMateWindow]::SetProcessDPIAware() | Out-Null
+
+# El marco visible de la ventana, en pixeles de pantalla (QA-V3-12): DWMWA_EXTENDED_FRAME_BOUNDS (9), sin los bordes
+# invisibles que suma GetWindowRect. Si DWM no responde o da un marco vacio, GetWindowRect. Deja en $script:frameSource de
+# donde salio ('dwm' o 'rect').
+function Get-VisibleFrame([IntPtr]$Window) {
+    $frame = New-Object RowMateWindow+RECT
+    $size = [System.Runtime.InteropServices.Marshal]::SizeOf([type][RowMateWindow+RECT])
+    $result = [RowMateWindow]::DwmGetWindowAttribute($Window, 9, [ref]$frame, $size)
+    if ($result -eq 0 -and $frame.Right -gt $frame.Left -and $frame.Bottom -gt $frame.Top) {
+        $script:frameSource = 'dwm'
+        return $frame
+    }
+    $rect = New-Object RowMateWindow+RECT
+    [RowMateWindow]::GetWindowRect($Window, [ref]$rect) | Out-Null
+    $script:frameSource = 'rect'
+    return $rect
+}
 
 # La ventana de arriba de todo en ese punto de la pantalla es la del build (GA_ROOT = 2: la ventana principal de lo que haya)?
 function Test-OwnWindowAt([int]$X, [int]$Y) {
@@ -131,8 +155,7 @@ try {
         Start-Sleep -Milliseconds 1500
         if ($hadCursor) { [RowMateWindow]::SetCursorPos($before.X, $before.Y) | Out-Null }
     }
-    $rect = New-Object RowMateWindow+RECT
-    [RowMateWindow]::GetWindowRect($handle, [ref]$rect) | Out-Null
+    $rect = Get-VisibleFrame $handle
     $width = $rect.Right - $rect.Left
     $height = $rect.Bottom - $rect.Top
     foreach ($fx in @(0.1, 0.5, 0.9)) {
@@ -151,7 +174,7 @@ try {
     $bitmap.Save($outPath, [System.Drawing.Imaging.ImageFormat]::Png)
     $graphics.Dispose()
     $bitmap.Dispose()
-    Write-Host ('[ventana] ' + $process.MainWindowTitle + ' (' + $width + 'x' + $height + ') -> ' + $outPath)
+    Write-Host ('[ventana] ' + $process.MainWindowTitle + ' (' + $width + 'x' + $height + ', marco ' + $script:frameSource + ') -> ' + $outPath)
 }
 finally {
     if (-not $process.HasExited) {

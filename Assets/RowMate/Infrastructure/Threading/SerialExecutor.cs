@@ -82,6 +82,25 @@ namespace RowMate.Infrastructure.Threading
             });
         }
 
+        // It. 4a (AC-WKT-06-15): un trabajo marcador al final de la cola; como la cola es FIFO, cuando corre ya terminó todo lo
+        // anterior. Sin trabajos pendientes (o cerrada, o desde el propio hilo de la base) vuelve en el acto.
+        public bool WaitIdle(TimeSpan timeout)
+        {
+            if (Environment.CurrentManagedThreadId == ThreadId)
+            {
+                return true;
+            }
+
+            // Sin Dispose: si vence el tope, el marcador igual corre después (y no debe encontrar el evento dispuesto).
+            var done = new ManualResetEventSlim(false);
+            if (!TryEnqueue(done.Set))
+            {
+                return !_thread.IsAlive || _thread.Join(timeout < TimeSpan.Zero ? TimeSpan.Zero : timeout);
+            }
+
+            return done.Wait(timeout < TimeSpan.Zero ? TimeSpan.Zero : timeout);
+        }
+
         public void Dispose()
         {
             lock (_gate)

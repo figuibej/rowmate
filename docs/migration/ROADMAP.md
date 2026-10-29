@@ -201,7 +201,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 - BLE: F-BLE-10.
 - APP: F-APP-14 (criterios [Apple] en la 10b).
 
-**También toca.** F-WKT-13, F-WKT-16, F-WKT-17 (versión funcional del inmersivo, la barra superior y las tarjetas, que cierra la 4b), F-HIS-17 / F-HIS-19 (alta y cierre de sesiones y puntos), F-SCN-01 (capa de fondo provisoria).
+**También toca.** F-WKT-13, F-WKT-14 (solo la fila de información de la barra de pasos), F-WKT-16, F-WKT-17 (versión funcional del inmersivo, la barra superior y las tarjetas, que cierra la 4b), F-HIS-17 / F-HIS-19 (alta y cierre de sesiones y puntos), F-SCN-01 (capa de fondo provisoria).
 
 **Tests legacy a portar (11 casos).** `workout_provider_hr_test` (4), `step_target_tracker_test` (6), `series_panels_test` caso "formatos" (1).
 **Criterios nuevos.**
@@ -216,7 +216,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Demo.** Con el simulador:
 - (a) "Entrenamiento libre": HUD funcional con SPM grande, Split, Watts, kcal, BPM, tiempo y distancia sobre tarjetas con el respaldo del vidrio `glass.fallback` (`#070D16 @86 %`, ART_BIBLE §3.2) y el borde legacy; pausa y reanudación; "Terminar" con confirmación.
-- (b) Una rutina de la It. 3: paso en curso con su nombre y cuenta regresiva `M:SS`, "Up next" en los últimos 15 s, y fin automático que guarda la sesión. Fuera de objetivo, el valor de la tarjeta se pone en rojo: `#FF5F59` con flecha ▲/▼ si se aprueba D-ART-01, o `#FF4444` si no. Subir los vatios desde el panel lo corrige.
+- (b) Una rutina de la It. 3: paso en curso con su nombre y cuenta regresiva `M:SS`, "Up next" en los últimos 15 s, y fin automático que guarda la sesión. Fuera de objetivo, el valor de la tarjeta se pone en rojo: `#FF625B` (`state.offTarget.hud`) con flecha ▲/▼ si se aprueba D-ART-01, o `#FF4444` si no. Subir los vatios desde el panel lo corrige.
 - (c) Cerrar la app a mitad de una sesión: la sesión queda guardada con sus puntos (se verá en el Historial de la It. 9).
 - Sin remo conectado (Simular desconexión), el aviso naranja deshabilita el inicio. La pantalla no se apaga.
 
@@ -247,6 +247,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 - Al terminar a mano nunca aparece el diálogo de completado (Q-53).
 - Píldoras del mismo ancho (Q-59).
 - Las animaciones nunca adelantan ni frenan el reloj ni las métricas (ANIMATION_BIBLE §0.1).
+- Con el equipo suspendido y una sesión en marcha, el tiempo suspendido no cuenta como tiempo de sesión: al despertar sigue desde donde quedó, sin puntos de ese lapso (P-17 de la 4a, según lo que conteste el usuario en su gate; QA-V4a-ROB-05). Lo verifica el usuario en la demo, porque QA no suspende su equipo.
 
 **Demo.** Con el simulador y una rutina: barra de pasos con píldoras que se llenan, pulso de la píldora en los últimos 5 s y cuenta grande en los últimos 3 s. Al cerrar cada paso, sello "Objetivo cumplido / No alcanzado" (si se aprueba D-ANI-05). Al terminar, el diálogo de rutina completada. En entrenamiento libre, barra superior con chip de fase y reloj de pared. Entrar al inmersivo oculta las barras del sistema con una transición y salir las devuelve.
 
@@ -423,7 +424,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **También toca.** F-BLE-02/03 (paquetes y filtro con el remo real), F-BLE-07 y F-BLE-11 (desconexión y tablero con datos reales), F-BLE-10, F-APP-14 (pantalla encendida en Android), Q-91 (segundo plano en Android y Windows).
 
-**Tests legacy a portar.** Ninguno nuevo (la conexión real no tiene tests en el legacy). Se vuelven a correr `heart_rate_card_test` :121, :142 y :161 contra el remo real con adaptador falso (QA-P-27). **Criterios nuevos:** máquina de estados del remo con un adaptador falso (10 s de búsqueda, 15 s de conexión, Request Control → 300 ms → Start, keepalive cada 2 s, reconexión a los 3 s), watchdog de ≥ 5 s, exclusión de búsquedas, vistas "Bluetooth apagado" y "sin permiso", y el keepalive que sigue con la app en segundo plano (Q-91).
+**Tests legacy a portar.** Ninguno nuevo (la conexión real no tiene tests en el legacy). Se vuelven a correr `heart_rate_card_test` :121, :142 y :161 contra el remo real con adaptador falso (QA-P-27). **Criterios nuevos:** máquina de estados del remo con un adaptador falso (10 s de búsqueda, 15 s de conexión, Request Control → 300 ms → Start, keepalive cada 2 s, reconexión a los 3 s), watchdog de ≥ 5 s, exclusión de búsquedas, vistas "Bluetooth apagado" y "sin permiso", y el keepalive que sigue con la app en segundo plano (Q-91). Además, un paso por distancia nunca queda trabado si el monitor informa avance, aunque no mande la distancia una vez por segundo: se mide la cadencia del AMS-670B y, si no es estable, cambia la comparación del saneamiento de Q-55 en el paso y en los parciales a la vez (P-04 de la 4a; QA-V4a-L01).
 
 **Demo.** Con el AMS-670B, en el teléfono Android y en la PC con Windows: Bluetooth apagado muestra su vista y "Activar Bluetooth"; al encenderlo, "Buscar dispositivos" lista el remo; tocarlo conecta y el tablero muestra los datos reales. Apagar el monitor desconecta a los 5-6 s con el mensaje "El monitor dejó de enviar datos". Un corte breve reconecta solo, también en pleno entrenamiento, con el aviso "Reconectando con {remo}…" sobre el HUD. El diagnóstico muestra RECEIVING, contador y bytes crudos. Con la app en segundo plano durante un entrenamiento, el monitor sigue en modo Bluetooth y la sesión sigue.
 
@@ -641,7 +642,7 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-WKT-11 | C | 4a | 5 |
 | F-WKT-12 | C | 4a | 8 |
 | F-WKT-13 | C | 4b | 4a, 6a, 6b |
-| F-WKT-14 | C | 4b | — |
+| F-WKT-14 | C | 4b | 4a |
 | F-WKT-15 | C | 4b | — |
 | F-WKT-16 | C | 4b | 4a |
 | F-WKT-17 | C | 4b | 4a, 6b |
@@ -800,9 +801,11 @@ Las propuestas del Designer ([ART_BIBLE §0.2](design/ART_BIBLE.md), [ANIMATION_
 | It. 1 · P-04 (Windows) | Windows mínimo del motor: Windows 10 21H1 (build 19043) o más nuevo. Se pierden los Windows 10 anteriores, que el legacy soporta | PO | 2 | Se adopta: lo impone Unity 6.3 (ADR 001) | Sí |
 | It. 1 · P-06 | Teclado y menú de copiar y pegar en el idioma del sistema; el legacy los muestra en el de la app (AC-APP-09-07) | PO | 2 | Se acepta como diferencia conocida. Alternativa: barra de edición propia en la It. 3 | Sí |
 | Q-92 | Tope de los números del paso y sus progresiones (QA-V-11 de la It. 1): el legacy suma en 64 bits y la app nueva calcula hasta 2 147 483 647 | PO | 3 | Tope por campo muy por encima de cualquier uso real; el editor no deja guardar lo que no entra (mensaje es/en); debajo del tope, idéntico al legacy (FEATURE_INVENTORY Q-92) | Sí |
-| D-ART-01 | Contraste del HUD: ≥ 7:1 en blanco y métricas no rojas; familia roja ≥ 4,5:1 con sus variantes del mismo matiz (`#FF5A7E` pulso, `#FF5F59` fuera de objetivo) y flecha ▲/▼ + borde fuera de objetivo | PO + QA | 4a | Se adopta. R-10 ya está redactada así. El contrato `#FF4444` sigue siendo el color base | Sí |
+| D-ART-01 | Contraste del HUD: ≥ 7:1 en blanco y métricas no rojas; familia roja ≥ 4,5:1 con sus variantes del mismo matiz (pulso `#FF5D7F` y fuera de objetivo `#FF625B`, los tokens `.hud` desde la It. 3, QA-V2-12; el plan decía `#FF5A7E` y `#FF5F59`) y flecha ▲/▼ + borde fuera de objetivo | PO + QA | 4a | Se adopta. R-10 ya está redactada así. El contrato `#FF4444` sigue siendo el color base | Sí |
 | D-ART-02 | HUD +15-25 % (SPM 64, Split/Watts 44, kcal/BPM 32, banda 34) en las mismas zonas y orden | PO | 4a | Se adopta. QA verifica en 640×360 que no tape el bote | Sí |
 | D-ART-09 | Objetivo en chico debajo del valor ("obj. 26") | PO | 4a | Se adopta (es la mejora EXR de F-WKT-10) | No |
+| D-ART-10 | La llave del simulador abajo a la izquierda fuera del entrenamiento y, en el entrenamiento, sobre kcal y BPM en vertical o junto a `Pausa` en horizontal; el panel se abre desde la llave, la sigue y deja a la vista Split y Watts (DV-39, que reemplaza a DV-13 de la It. 3; QA-V3-09) | PO + Designer | 4a | Se adopta ([spec de la 4a](iterations/04a-motor-hud-funcional/01-po-spec.md) AC-BLE-16-02, -03) | Sí |
+| It. 4a · P-17 | Con el equipo suspendido y una sesión en marcha, el tiempo suspendido no cuenta como tiempo de sesión (QA-V4a-ROB-05) | PO | 4a | Como el legacy: no cuenta; el criterio va en la 4b | Sí |
 | QA-P-17 | Respaldo del vidrio sin desenfoque | PO + Designer | 4a | Token `glass.fallback` del Designer (`#070D16 @86 %`, ART_BIBLE §3.2), con el borde y el radio del legacy: garantiza el contraste en el peor caso. Reemplaza al `#000000 @55 %` del legacy | No |
 | Q-91 | Sesión en segundo plano | PO | 4a | Paridad: la sesión sigue (FEATURE_INVENTORY Q-91) | No |
 | D-ANI-05 | Cuenta grande centrada en los últimos 3 s del paso y sello "Objetivo cumplido / No alcanzado" de 2 s | PO | 4b | Se adopta (agregado). Si el usuario lo rechaza, queda la cuenta regresiva normal | Sí |
@@ -870,3 +873,4 @@ Correcciones por el gate de armonía del plan ([QA_PLAN_REVIEW.md](QA_PLAN_REVIE
 | It. 1 (cierre, PO) | Q-92 nueva (QA-V-11): tope de los números del paso y sus progresiones, en la It. 3 (criterio nuevo y "Decisiones aplicadas") y en la tabla de §6, gate 3 |
 | It. 2 (gate, PO) | Demo de la It. 2: la cantidad de columnas depende del ancho de la ventana (hasta 640 dp, 2; más, 3), no de la orientación ([spec de la It. 2](iterations/02-dispositivo-simulador/01-po-spec.md) AC-BLE-11-05 y §15; QA-G2-18) |
 | It. 3 (cierre, PO) | Pendientes de la [spec de la It. 3 §15](iterations/03-rutinas/01-po-spec.md): en la It. 3, repeticiones `-2` con guion (sin cambio) y `−2` con el signo menos tipográfico (×1), como AC-RUT-14-05; en la It. 14, criterio nuevo de lectores de pantalla (DT-05). Además, en la It. 4a, criterio nuevo para una rutina fuera de los topes de Q-92 cargada a mano (R3-08) |
+| It. 4a (cierre, PO) | Pendientes de la [spec de la It. 4a §15](iterations/04a-motor-hud-funcional/01-po-spec.md): F-WKT-14 (la fila de información) en "También toca" de la 4a y en la matriz §4; el rojo fuera de objetivo es `#FF625B` en la demo de la 4a y en D-ART-01 (§6); D-ART-10 en §6, con su gate. Por la verificación: P-17 (la suspensión del equipo no cuenta como tiempo de sesión) en §6 y como criterio de la 4b (QA-V4a-ROB-05), y en la 10a el paso por distancia que nunca queda trabado (QA-V4a-L01) |

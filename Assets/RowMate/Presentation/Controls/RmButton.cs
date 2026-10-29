@@ -101,15 +101,30 @@ namespace RowMate.Presentation.Controls
             }
 
             _iconSlot.style.display = DisplayStyle.Flex;
+            // Los glifos que solo están en la fuente rellena (play_arrow, pause: Icons) van con ella; si no, la de contorno.
+            var filled = FilledOnly(codepoint!);
             if (_icon == null)
             {
-                _icon = new IconView(codepoint!, false, _iconDp);
+                _icon = new IconView(codepoint!, filled, _iconDp);
                 _iconSlot.Add(_icon);
             }
             else
             {
-                _icon.SetGlyph(codepoint!, false);
+                _icon.SetGlyph(codepoint!, filled);
             }
+        }
+
+        private static bool FilledOnly(string codepoint)
+        {
+            foreach (var icon in Core.Design.Icons.All)
+            {
+                if (icon.Glyph == codepoint)
+                {
+                    return !icon.InOutline && icon.InFilled;
+                }
+            }
+
+            return false;
         }
 
         // Ocupado: el spinner reemplaza al ícono (#device-search buscando, AC-BLE-05-01).

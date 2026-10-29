@@ -1,12 +1,15 @@
-# Arnes de capturas (It. 2: 02-tech-design Sec. 4.6; It. 3: 03-rutinas/02-tech-design Sec. 5.1): corre
+# Arnes de capturas (It. 2: 02-tech-design Sec. 4.6; It. 3: 03-rutinas/02-tech-design Sec. 5.1; It. 4a:
+# 04a-motor-hud-funcional/02-tech-design Sec. 7.1): corre
 # RowMate.Snapshots.SnapshotCli.Run en el Editor, en modo edicion (sin Play), con ROWMATE_SIMULATOR puesto solo para la corrida.
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it3 por defecto: Rutinas, 42 IDs = 47 archivos en docs/migration/iterations/03-rutinas/snapshots;
+# -Set: el catalogo (it4a por defecto desde la It. 4a: el entrenamiento, 30 CAP (CAP-27 con a, b y c), DEMO-01..14 y VID-01..03
+# = 49 archivos en docs/migration/iterations/04a-motor-hud-funcional/snapshots; it3: Rutinas, 42 IDs = 47 archivos en
+# docs/migration/iterations/03-rutinas/snapshots;
 # it2: Dispositivo y simulador, en docs/migration/iterations/02-dispositivo-simulador/snapshots). Sin -Out, la carpeta del
 # conjunto. CAP-27 (ventana del build normal) NUNCA sale de aca: es tools/unity/capture-cap27.ps1, a pedido.
 # Carpeta de datos (AC-HIS-20-04): la corrida pone ROWMATE_DATA_DIR en una carpeta temporal propia
@@ -25,8 +28,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it3', 'it2')]
-    [string]$Set = 'it3',
+    [ValidateSet('it4a', 'it3', 'it2')]
+    [string]$Set = 'it4a',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -117,7 +120,8 @@ function Restore-Simulator([bool]$Check, [bool]$WasInSettings) {
 function Get-SetFolder {
     if ($Out -ne '') { return $Out }
     if ($Set -eq 'it2') { return 'docs/migration/iterations/02-dispositivo-simulador/snapshots' }
-    return 'docs/migration/iterations/03-rutinas/snapshots'
+    if ($Set -eq 'it3') { return 'docs/migration/iterations/03-rutinas/snapshots' }
+    return 'docs/migration/iterations/04a-motor-hud-funcional/snapshots'
 }
 
 function Invoke-Harness {

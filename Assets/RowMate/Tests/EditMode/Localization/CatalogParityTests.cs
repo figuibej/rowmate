@@ -56,6 +56,24 @@ namespace RowMate.Tests.EditMode.Localization
             new[] { "retry", "Reintentar", "Retry" },
         };
 
+        // 04a-motor-hud-funcional/01-po-spec §11.2 (Q-01): las 12 claves de la It. 4a, en el orden del catálogo, al final.
+        private static readonly string[][] ItFourAKeys =
+        {
+            new[] { "hudSpm", "SPM", "SPM" },
+            new[] { "hudSplit", "Split /500m", "Split /500m" },
+            new[] { "hudWatts", "Watts", "Watts" },
+            new[] { "hudUnitWatts", "W", "W" },
+            new[] { "hudKcal", "kcal", "kcal" },
+            new[] { "hudBpm", "BPM", "BPM" },
+            new[] { "hudUnitMeters", "m", "m" },
+            new[] { "hudFreeTitle", "Entrenamiento Libre", "Free Workout" },
+            new[] { "hudUpNext", "Próximo:", "Up next:" },
+            new[] { "hudTarget", "obj. {value}", "target {value}" },
+            new[] { "workoutSaveError", "No se pudo guardar la sesión", "Couldn't save the session" },
+            new[] { "workoutRoutineCannotStart", "Esta rutina no se puede iniciar: revisá sus pasos en Rutinas",
+                "This routine can't be started: check its steps in Routines" },
+        };
+
         // 02-tech-design §3.3 (QA-07) + 03-rutinas §11.2: las 26 claves con parámetros, nombre y tipo. Ninguna otra tiene metadatos.
         private static readonly Dictionary<string, string> ExpectedPlaceholders = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -88,23 +106,26 @@ namespace RowMate.Tests.EditMode.Localization
             { "editorErrorRangeRep", "rep:int, max:String" },
             { "editorRepetitionsMax", "max:int" },
             { "editorRepetitionsOutOfRange", "count:int" },
+            // La de la It. 4a con parámetro (04a §11.2).
+            { "hudTarget", "value:String" },
         };
 
         private static LocalizationCatalog Es => LocalizationFixture.Catalog("es");
 
         private static LocalizationCatalog En => LocalizationFixture.Catalog("en");
 
-        // AC-APP-10-01: 190 claves en es y las mismas 190 en en (159 del legacy + 15 de la It. 1 + 16 de la It. 3).
-        [Test, Category("AC-APP-10-01")]
+        // AC-APP-10-01, AC-APP-10-10: 202 claves en es y las mismas 202 en en (159 del legacy + 15 de la It. 1 + 16 de la It. 3
+        // + 12 de la It. 4a).
+        [Test, Category("AC-APP-10-01"), Category("AC-APP-10-10")]
         public void SameKeysInBothLanguages()
         {
             var es = Es;
             var en = En;
             Assert.That(es.Locale, Is.EqualTo("es"));
             Assert.That(en.Locale, Is.EqualTo("en"));
-            Assert.That(es.Keys.Count, Is.EqualTo(190));
-            Assert.That(en.Keys.Count, Is.EqualTo(190));
-            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(190), "claves repetidas en es");
+            Assert.That(es.Keys.Count, Is.EqualTo(202));
+            Assert.That(en.Keys.Count, Is.EqualTo(202));
+            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(202), "claves repetidas en es");
             Assert.That(en.Keys, Is.EquivalentTo(es.Keys), "una clave existe en un solo idioma");
             Assert.That(en.Keys, Is.EqualTo(es.Keys), "mismo orden en los dos archivos");
             Assert.That(LocalizationFixture.LegacyTexts("es").Count, Is.EqualTo(159));
@@ -311,8 +332,8 @@ namespace RowMate.Tests.EditMode.Localization
             }
 
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
-            Assert.That(withParameters, Is.EqualTo(2 * 26));
-            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(26));
+            Assert.That(withParameters, Is.EqualTo(2 * 27));
+            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(27));
         }
 
         // AC-APP-10-07: las 15 claves nuevas con los textos de la spec y los tipos de §3.3, al final del catálogo.
@@ -362,6 +383,34 @@ namespace RowMate.Tests.EditMode.Localization
             Assert.That(l10n.Format(L10nKeys.EditorErrorRangeRep, MessageArg.Number("rep", 6), MessageArg.Text("max", "999")),
                 Is.EqualTo("Fuera de rango en la repetición 6: hasta ±999"));
             Assert.That(LocalizationFixture.En.Get(L10nKeys.Retry), Is.EqualTo("Retry"));
+        }
+
+        // AC-APP-10-10 (04a §11.2): las 12 claves de la It. 4a con sus textos es/en y sus tipos, al final del catálogo. Los
+        // textos del HUD que el legacy tiene fijos salen del catálogo con el español idéntico (Q-01); Up next: se traduce
+        // (DV-24).
+        [Test, Category("AC-APP-10-10")]
+        public void TwelveItFourAKeys()
+        {
+            var es = Es;
+            var en = En;
+            var legacy = ToDictionary(LocalizationFixture.LegacyTexts("es"));
+            Assert.That(ItFourAKeys.Length, Is.EqualTo(12));
+            for (var i = 0; i < ItFourAKeys.Length; i++)
+            {
+                var key = ItFourAKeys[i][0];
+                Assert.That(legacy.ContainsKey(key), Is.False, key + " no existía en el legacy");
+                Assert.That(es.Message(key), Is.EqualTo(ItFourAKeys[i][1]), "es/" + key);
+                Assert.That(en.Message(key), Is.EqualTo(ItFourAKeys[i][2]), "en/" + key);
+                Assert.That(es.Keys[190 + i], Is.EqualTo(key), "las de la It. 4a van al final, en el orden de la spec");
+                Assert.That(en.Keys[190 + i], Is.EqualTo(key));
+                ExpectedPlaceholders.TryGetValue(key, out var expected);
+                Assert.That(LocalizationFixture.Describe(es.Placeholders(key)), Is.EqualTo(expected ?? ""), "es/" + key);
+                Assert.That(LocalizationFixture.Describe(en.Placeholders(key)), Is.EqualTo(expected ?? ""), "en/" + key);
+            }
+
+            Assert.That(LocalizationFixture.Es.Format(L10nKeys.HudTarget, MessageArg.Text("value", "02:05")), Is.EqualTo("obj. 02:05"));
+            Assert.That(LocalizationFixture.En.Format(L10nKeys.HudTarget, MessageArg.Text("value", "160")), Is.EqualTo("target 160"));
+            Assert.That(LocalizationFixture.Es.Get(L10nKeys.WorkoutCompleted), Is.EqualTo("\u00a1Entrenamiento completado!"), "se reusa (spec §11.2)");
         }
 
         // AC-APP-10-08: no se pierde ninguna de las 159 claves del legacy (incluidas las sin uso y las de código muerto).

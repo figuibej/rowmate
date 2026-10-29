@@ -383,5 +383,24 @@
   "editorSaveError": "No se pudo guardar la rutina",
   "routineDeleteError": "No se pudo eliminar la rutina",
   "routinesLoadError": "No se pudieron cargar las rutinas",
-  "retry": "Reintentar"
+  "retry": "Reintentar",
+  "hudSpm": "SPM",
+  "hudSplit": "Split /500m",
+  "hudWatts": "Watts",
+  "hudUnitWatts": "W",
+  "hudKcal": "kcal",
+  "hudBpm": "BPM",
+  "hudUnitMeters": "m",
+  "hudFreeTitle": "Entrenamiento Libre",
+  "hudUpNext": "Próximo:",
+  "hudTarget": "obj. {value}",
+  "@hudTarget": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "workoutSaveError": "No se pudo guardar la sesión",
+  "workoutRoutineCannotStart": "Esta rutina no se puede iniciar: revisá sus pasos en Rutinas"
 }

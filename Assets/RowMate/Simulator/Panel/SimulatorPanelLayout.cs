@@ -1,14 +1,11 @@
-using System.Collections.Generic;
-using RowMate.Core.Design;
 using RowMate.Core.Ports;
 
 namespace RowMate.Simulator.Panel
 {
-    // Medidas del panel del simulador y de su botón de la llave (AC-BLE-16-02, -03), en dp.
-    // legacy: lib/core/dev/simulator_overlay.dart:40-49, :83-95
-    // It. 3 (DV-13, DN3-14; AC-BLE-16-02 con el texto nuevo): la llave se aparta de los obstáculos inferiores que se cruzan
-    // con ella (el + de Rutinas, mientras Rutinas es la pestaña visible y ninguna página la tapa) y queda 16 dp por encima,
-    // con el borde derecho alineado (x fija). El panel se abre SIEMPRE en el mismo lugar: barra + 16 (AC-BLE-16-03).
+    // Medidas del panel del simulador (AC-BLE-16-03), en dp. legacy: lib/core/dev/simulator_overlay.dart:40-49, :83-95.
+    // It. 4a (D-ART-10, DV-39 en lugar de DV-13; DD4a-03): el lugar de la llave y del panel lo decide WrenchPlacement; acá
+    // quedan el ancho y el alto máximo, que se mide desde el BORDE DE ABAJO DEL PANEL (el de la llave, donde se ancla).
+    // Sale FabBottom con obstáculos (la llave ya no se aparta del + de Rutinas: está del otro lado).
     public static class SimulatorPanelLayout
     {
         // :91-92: ancho fijo.
@@ -17,66 +14,43 @@ namespace RowMate.Simulator.Panel
         // :93: alto máximo mínimo.
         public const double MinMaxHeight = 120;
 
-        // :41: a 16 dp del borde derecho.
-        public const double FabRight = 16;
-
-        // FloatingActionButton.small (:44-48): 40 × 40.
-        public const double FabSize = 40;
-
-        // AC-BLE-16-02: 16 dp de aire sobre la barra de pestañas (legacy: 96 desde abajo sobre una barra de 80; DV-07, D-12).
-        public const double GapAboveTabBar = 16;
-
-        // DV-13: 16 dp de aire sobre el obstáculo que se cruza con la llave (en Rutinas, barra + 16 + 56 + 16 = barra + 88).
-        public const double ObstacleGapDp = 16;
-
-        // :84: lo que la fórmula del legacy resta por la llave y la barra.
-        public const double LegacyBottomReserve = 96;
-
-        // :86: aire arriba.
+        // :86: aire arriba (también el del entrenamiento: "deja libres el margen seguro superior y al menos 16 dp").
         public const double TopGap = 16;
 
-        private static readonly IReadOnlyList<BottomObstacle> NoObstacles = new BottomObstacle[0];
+        // Fuera del entrenamiento, el aire de arriba de la It. 2: la fórmula del legacy resta 96 por la llave y la barra
+        // (:84) y la llave está a 80 (barra de 64 + 16, DV-07): quedan 16 de más arriba, 32 en total (spec §15: 360 → 248,
+        // 914 → 802, 200 → 120; con una pantalla apilada, 64 más: 312, 866, 152).
+        public const double AppTopReserve = 32;
 
-        // AC-BLE-16-03 (:83-86) con D-26: (alto − margen seguro inferior) − 96 − margen seguro superior − 16, mínimo 120.
-        // Sin márgenes da la fórmula de la spec: 360 → 248; 914 → 802; 200 → 120. Con márgenes 24 / 48 (Android con barra
-        // de gestos): 914 → 730, y el borde superior del panel queda en 24 + 32 = 56, debajo de la barra de estado.
-        // El margen inferior se resta UNA vez (QA-G2-06): la barra de pestañas crece con él y el panel se ancla sobre ella.
+        // En el entrenamiento: del borde de abajo de la llave hasta 16 dp debajo del margen seguro superior (04-design-notes
+        // §3.9: TH 368,6; L640 269,5; W1280 653,6), salvo el techo de Watts en vertical.
+        public const double WorkoutTopReserve = TopGap;
+
+        // La barra de pestañas sin margen (DV-07) y el aire de la llave sobre ella (AC-BLE-16-02).
+        public const double DefaultTabBarHeight = 64;
+        public const double GapAboveTabBar = 16;
+
+        // El alto máximo en una pestaña con la barra de siempre (64 + margen inferior), la fórmula de la It. 2 (D-26):
+        // (alto − margen inferior) − 96 − margen superior − 16, mínimo 120. Sin márgenes: 360 → 248; 914 → 802; 200 → 120.
+        // Con márgenes 24 / 48 (Android con barra de gestos): 914 → 730 y el borde de arriba del panel queda en 24 + 32 = 56.
         public static double MaxHeight(double windowHeightDp, SafeInsets insets)
         {
-            var height = (windowHeightDp - insets.Bottom) - LegacyBottomReserve - insets.Top - TopGap;
+            return MaxHeight(windowHeightDp, insets, DefaultTabBarHeight + insets.Bottom + GapAboveTabBar, AppTopReserve, null);
+        }
+
+        // El alto máximo medido desde el borde de abajo del panel (DD4a-03): del borde de abajo (panelBottomDp, desde ABAJO
+        // de la ventana) hasta el mayor entre margen superior + topReserveDp y el techo (ceilingFromTopDp, y desde ARRIBA,
+        // el de Watts en el entrenamiento vertical), con mínimo 120. Si el contenido no entra, se desplaza adentro del panel.
+        public static double MaxHeight(double windowHeightDp, SafeInsets insets, double panelBottomDp, double topReserveDp, double? ceilingFromTopDp)
+        {
+            var top = insets.Top + topReserveDp;
+            if (ceilingFromTopDp.HasValue && ceilingFromTopDp.Value > top)
+            {
+                top = ceilingFromTopDp.Value;
+            }
+
+            var height = windowHeightDp - panelBottomDp - top;
             return height < MinMaxHeight ? MinMaxHeight : height;
-        }
-
-        // Distancia desde el borde inferior de la ventana hasta la llave, sin obstáculos: tabBarHeightDp = alto real de la
-        // barra, con su margen inferior (64 + margen, 02-tech-design §3.2 de la It. 2; con la barra oculta por el editor, el
-        // último alto visible).
-        public static double FabBottom(double tabBarHeightDp)
-        {
-            return tabBarHeightDp + GapAboveTabBar;
-        }
-
-        // Con obstáculos (DV-13): la llave (x = [ancho − 16 − 40; ancho − 16], 40 de alto) arranca a barra + 16 y sube 16 dp
-        // por encima de cada obstáculo que se cruza con ella agrandado 16 (BottomObstacles.Lift). En Rutinas, sobre el +
-        // (56 a barra + 16): barra + 88; sin obstáculos, barra + 16. Los obstáculos van en dp desde el borde izquierdo y desde
-        // abajo de la ventana.
-        public static double FabBottom(double windowWidthDp, double tabBarHeightDp, IReadOnlyList<BottomObstacle>? obstacles)
-        {
-            var right = windowWidthDp - FabRight;
-            return BottomObstacles.Lift(right - FabSize, right, FabBottom(tabBarHeightDp), FabSize, obstacles ?? NoObstacles, ObstacleGapDp);
-        }
-
-        // El rectángulo de la llave como obstáculo para el aviso y para el relleno inferior del contenido (DN3-13, DN3-14).
-        public static BottomObstacle FabObstacle(double windowWidthDp, double fabBottomDp)
-        {
-            var right = windowWidthDp - FabRight;
-            return new BottomObstacle(right - FabSize, right, fabBottomDp, FabSize);
-        }
-
-        // Borde inferior del panel abierto: barra + 16 SIEMPRE, en todas las pestañas (el panel no sigue a la llave; en
-        // Rutinas tapa el +, como en el legacy, y mientras está abierto la llave no se ve).
-        public static double PanelBottom(double tabBarHeightDp)
-        {
-            return tabBarHeightDp + GapAboveTabBar;
         }
     }
 }

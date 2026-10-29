@@ -40,7 +40,7 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 03-rutinas/02-tech
 | DEMO-02 | [DEMO-02-nueva-rutina.png](DEMO-02-nueva-rutina.png) | W1280 | Sim | +, nombre Escalera SPM | 0/0 | sin desbordes | ok |
 | DEMO-03 | [DEMO-03-paso-calentamiento.png](DEMO-03-paso-calentamiento.png) | W1280 | Sim | + Paso: Calentamiento, Por tiempo, Min 5 | 0/0 | sin desbordes | ok |
 | DEMO-04 | [DEMO-04-serie.png](DEMO-04-serie.png) | W1280 | Sim | Confirmar y Serie | 0/0 | sin desbordes | ok |
-| DEMO-05 | [DEMO-05-editar-trabajo.png](DEMO-05-editar-trabajo.png) | W1280 | Sim | Lápiz de Trabajo: Min 5, SPM 18, Incremento SPM 2 | 0/0 | sin desbordes | ok |
+| DEMO-05 | [DEMO-05-editar-trabajo.png](DEMO-05-editar-trabajo.png) | W1280 | Sim | Lápiz de Trabajo: Min 5, SPM 18 y, desplazado al final, Incremento SPM 2 | 0/0 | sin desbordes | ok |
 | DEMO-06 | [DEMO-06-enfriamiento.png](DEMO-06-enfriamiento.png) | W1280 | Sim | Confirmar; Descanso Min 2; + Paso Enfriamiento Min 5 | 0/0 | sin desbordes | ok |
 | DEMO-07 | [DEMO-07-guardada.png](DEMO-07-guardada.png) | W1280 | Sim | Guardar | 0/0 | sin desbordes | ok |
 | DEMO-08 | [DEMO-08-descripcion-x4.png](DEMO-08-descripcion-x4.png) | W1280 | Sim | Tarjeta; descripción; ×3 → 4 → OK | 0/0 | sin desbordes | ok |

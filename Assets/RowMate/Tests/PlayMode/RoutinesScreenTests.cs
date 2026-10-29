@@ -8,6 +8,7 @@ using RowMate.Core.Models;
 using RowMate.Presentation.Controls;
 using RowMate.Presentation.Placeholder;
 using RowMate.Presentation.Routines;
+using RowMate.Presentation.Workout;
 using RowMate.Tests.Support;
 using RowMate.Tests.UiSupport;
 using UnityEngine;
@@ -475,7 +476,8 @@ namespace RowMate.Tests.PlayMode
             var screen = H.Find("screen-routines")!;
             Assert.That(screen, Is.InstanceOf<RoutinesScreenView>());
             Assert.That(screen.Q(className: "rm-placeholder__icon"), Is.Null, "Rutinas deja de ser provisoria");
-            Assert.That(H.Find("screen-workout"), Is.InstanceOf<PlaceholderScreenView>(), "Workout sigue provisoria");
+            // Desde la It. 4a Workout tampoco es provisoria (WSC.WorkoutIsNotAPlaceholder).
+            Assert.That(H.Find("screen-workout"), Is.InstanceOf<WorkoutScreenView>(), "Workout deja de ser provisoria (It. 4a)");
             Assert.That(H.Find("screen-history"), Is.InstanceOf<PlaceholderScreenView>(), "Historial sigue provisoria");
         }
 

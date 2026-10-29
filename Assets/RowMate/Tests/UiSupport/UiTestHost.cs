@@ -14,6 +14,7 @@ using RowMate.Presentation.Diagnostics;
 using RowMate.Presentation.Routines;
 using RowMate.Presentation.Shell;
 using RowMate.Presentation.Surface;
+using RowMate.Presentation.Workout;
 using RowMate.Tests.Support;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -35,6 +36,10 @@ namespace RowMate.Tests.UiSupport
     // un FakeClipboard y un FakeSoftKeyboard. Nunca usa la carpeta de datos del usuario (AC-HIS-20-04).
     // El documento se crea con el patrón "GameObject inactivo → UIDocument → copia del panel → activo" (sonda §8.3): la raíz
     // existe al volver, en modo edición y en Play. Nunca modifica el asset del panel (R2-05).
+    // It. 4a (02-tech-design §7.1): las sesiones del motor (por defecto en el mismo archivo que las rutinas), un ciclo de vida
+    // de prueba por host (FakeAppLifecycle: sin pedido, adelante y con foco, también sin ventana: spec §0.4), el segundo plano
+    // con alcance (SendToBackground / BringToForeground, en el orden de AppRoot: IsCatchingUp mientras dura y InBackground =
+    // false recién al final, QA-G4aT-07), el foco (Unfocus / Focus) y los accesos a Workout y al inmersivo.
     public sealed class UiTestHost : IDisposable
     {
         public const double FrameSeconds = 1.0 / 60.0;
@@ -66,10 +71,12 @@ namespace RowMate.Tests.UiSupport
             CreationClock = creationClock;
             Clipboard = clipboard;
             Keyboard = keyboard;
+            Lifecycle = new FakeAppLifecycle(logger);
             Profile = options.Profile;
             Backend = null!;
             App = null!;
             Handle = null!;
+            Sessions = null!;
         }
 
         public UiHostOptions Options { get; }
@@ -135,6 +142,29 @@ namespace RowMate.Tests.UiSupport
         public ScriptedHeartRateService? TestHeartRate => Backend.HeartRate as ScriptedHeartRateService;
 
         public ScriptedRoutineRepository? ScriptedRoutines => Routines.Scripted;
+
+        // ── It. 4a ──
+
+        // Las sesiones del motor (el LocalStore de las rutinas, en memoria o de guion).
+        public ISessionRepository Sessions { get; private set; }
+
+        public InMemorySessionRepository? MemorySessions => Sessions as InMemorySessionRepository;
+
+        public ScriptedSessionRepository? ScriptedSessions => Sessions as ScriptedSessionRepository;
+
+        // El ciclo de vida de prueba del host (spec §0.4).
+        public FakeAppLifecycle Lifecycle { get; }
+
+        // El remo de prueba de la It. 4a (HostBackends.TestRower), si es el del host.
+        public ScriptedRower? ScriptedRower => Backend.Rower as ScriptedRower;
+
+        public WorkoutScreenView? WorkoutScreen => Handle.Shell.WorkoutScreen;
+
+        // El inmersivo de arriba (la página que no está saliendo), si hay.
+        public ImmersiveWorkoutPage? Immersive => Handle.Shell.Pages.Top as ImmersiveWorkoutPage;
+
+        // El estado del HUD del inmersivo de arriba (null sin inmersivo).
+        public RowMate.App.Workout.WorkoutHudState? HudState => Immersive?.Hud.State.Value;
 
 #if ROWMATE_SIMULATOR
         public SimulatorDeviceBackend? Simulator => Backend as SimulatorDeviceBackend;
@@ -207,11 +237,12 @@ namespace RowMate.Tests.UiSupport
         {
             var options = Options;
             Backend = options.Backend(Scheduler, _logger);
+            Sessions = options.Sessions(Scheduler, _logger, Routines);
             var texts = LocalizationSet.Load(UiAssetsLocator.StringsEs(), UiAssetsLocator.StringsEn());
-            App = AppComposer.Compose(new AppServices(Backend, repository, Scheduler, _logger, texts, Locale, Accessibility,
-                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock });
+            App = AppComposer.Compose(new AppServices(Backend, repository, Sessions, Scheduler, _logger, texts, Locale, Accessibility,
+                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock, Lifecycle = Lifecycle });
             Handle = ShellHost.Build(App, Root, new ShellHostOptions(Scheduler, options.IsDesktop, _backButton, Display,
-                TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard) { Pipeline = options.Pipeline });
+                TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard) { Pipeline = options.Pipeline, BoatZoneOutline = options.BoatZoneOutline });
             Handle.Shell.Ui.TextMenuTouchMode = options.TextMenuTouchMode;
             if (options.StartApp)
             {
@@ -286,6 +317,63 @@ namespace RowMate.Tests.UiSupport
         }
 
         public bool HasFiniteMotions => Handle.Motion.HasFiniteMotions;
+
+        // ── Ciclo de vida (It. 4a, §7.1) ─────────────────────────────────────
+
+        // La app pasa a segundo plano (Android e iOS): el motor manda lo pendiente; ningún cuadro hasta BringToForeground.
+        public void SendToBackground()
+        {
+            Lifecycle.SetBackground(true);
+        }
+
+        // Vuelve después de `seconds` en segundo plano, en el orden de AppRoot (§4.2): el alcance (con FakeScheduler, Advance ya
+        // dispara todo en orden) con IsCatchingUp mientras dura, y recién al final InBackground = false: el motor publica UNA
+        // foto con Instant y Workout muestra el aviso retenido. Después, un cuadro.
+        public void BringToForeground(double seconds)
+        {
+            Scheduler.IsCatchingUp = true;
+            try
+            {
+                Scheduler.Advance(TimeSpan.FromTicks((long)Math.Round(seconds * TimeSpan.TicksPerSecond)));
+            }
+            finally
+            {
+                Scheduler.IsCatchingUp = false;
+            }
+
+            Lifecycle.SetBackground(false);
+            Handle.Tick();
+        }
+
+        // La ventana sin foco o minimizada (Windows: el loop sigue y el reloj también).
+        public void Unfocus()
+        {
+            Lifecycle.SetFocus(false);
+            Handle.Tick();
+        }
+
+        public void Focus()
+        {
+            Lifecycle.SetFocus(true);
+            Handle.Tick();
+        }
+
+        // Toca la tarjeta de Workout de la rutina con ese nombre (con hit-test).
+        public void TapRoutineNamed(string routineName)
+        {
+            var list = WorkoutScreen?.List ?? throw new InvalidOperationException("TapRoutineNamed: no hay pantalla Workout.");
+            for (var i = 0; i < list.Count; i++)
+            {
+                var card = list.CardAt(i);
+                if (card != null && card.Routine.Name == routineName)
+                {
+                    TapElement(card, "la tarjeta de \"" + routineName + "\"");
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("TapRoutineNamed: no hay una tarjeta de \"" + routineName + "\" en Workout.");
+        }
 
         public bool IsHeartAtRest()
         {
@@ -434,7 +522,8 @@ namespace RowMate.Tests.UiSupport
             }
         }
 
-        // Escribe en un campo como el usuario: le da el foco y cambia el valor (el campo filtra y avisa al store).
+        // Escribe en un campo como el usuario: le da el foco y cambia el valor (el campo filtra y avisa al store). El cursor queda
+        // al final, como después de teclear (QA-V3-04: antes quedaba en 0, "|500" en CAP-16).
         public void Type(string fieldName, string text)
         {
             var field = Find<RmTextField>(fieldName) ?? throw new InvalidOperationException("Type: no existe el campo #" + fieldName);
@@ -444,6 +533,8 @@ namespace RowMate.Tests.UiSupport
             }
 
             field.Input.value = text;
+            var end = field.Value.Length;
+            field.Select(end, end);
         }
 
         // "Atrás" (BackSource.SystemBack = la tecla de Android; Escape = la de la PC, que no cierra páginas: P-08).
@@ -765,7 +856,19 @@ namespace RowMate.Tests.UiSupport
                 throw new InvalidOperationException("Tap " + what + ": " + problem);
             }
 
+            FocusLikeAClick(element);
             Submit(element);
+        }
+
+        // Un clic de verdad le da el foco a lo que toca si es enfocable (el foco de UI Toolkit al presionar). Sin esto, un Tap
+        // dejaba el foco donde estaba: al cerrar el diálogo de + Paso, ExitLock se lo devolvía al nombre y selectAllOnFocus lo
+        // seleccionaba entero (DEMO-04 y DEMO-06; QA-V3-04). Sin teclado de por medio no prende el anillo (.rm-keyboard-nav).
+        private static void FocusLikeAClick(VisualElement element)
+        {
+            if (element.focusable && element.canGrabFocus && element.panel?.focusController?.focusedElement != element)
+            {
+                element.Focus();
+            }
         }
 
         private string? HitTestProblem(VisualElement element)

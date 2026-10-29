@@ -68,5 +68,52 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(SourceScan.StripCommentsAndLiterals("var s = \"MetricCard\"; // IntervalTile").Contains("MetricCard"), Is.False);
             Assert.That(String.IsNullOrEmpty(SourceScan.StripComments("x")), Is.False);
         }
+
+        // AC-WKT-23-01 (It. 4a, Q-57): la pantalla clásica del legacy (_FullscreenWorkoutPage, workout_screen.dart:205-988) no
+        // se migra. La parte de la app nueva: ningún tipo, archivo ni clase de USS la porta (el inmersivo es la única
+        // pantalla de entrenamiento). Que el legacy no la abre lo confirma QA: el único "_FullscreenWorkoutPage(" es su
+        // declaración (workout_screen.dart:206).
+        private static readonly Regex ClassicIdentifier = new Regex(@"\b(FullscreenWorkout\w*|ClassicWorkout\w*)\b");
+        private static readonly Regex ClassicFileName = new Regex(@"(?i)(fullscreen_?workout|classic_?workout)");
+        private static readonly Regex ClassicUssClass = new Regex(@"(?i)\.rm-(fullscreen-workout|classic-workout)\b");
+
+        [Test, Category("AC-WKT-23-01")]
+        public void NoClassicWorkoutScreenPort()
+        {
+            var offenders = new List<string>();
+            foreach (var file in SourceScan.CsFiles(""))
+            {
+                var relative = RepoPaths.Relative(file);
+                if (ClassicFileName.IsMatch(Path.GetFileName(file)))
+                {
+                    offenders.Add(relative + ": nombre de archivo");
+                }
+
+                offenders.AddRange(SourceScan.Matches(file, new[] { ClassicIdentifier }, true));
+            }
+
+            foreach (var pattern in new[] { "*.uss", "*.tss", "*.uxml" })
+            {
+                foreach (var file in RepoPaths.Files("Assets", pattern))
+                {
+                    if (ClassicFileName.IsMatch(Path.GetFileName(file)))
+                    {
+                        offenders.Add(RepoPaths.Relative(file) + ": nombre de archivo");
+                    }
+
+                    var text = SourceScan.StripComments(File.ReadAllText(file));
+                    foreach (Match match in ClassicUssClass.Matches(text))
+                    {
+                        offenders.Add(RepoPaths.Relative(file) + ":" + SourceScan.LineOf(text, match.Index) + ": " + match.Value);
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, "port de la pantalla clásica (descartada, Q-57):\n" + string.Join("\n", offenders));
+            Assert.That(ClassicIdentifier.IsMatch("public sealed class FullscreenWorkoutPage"), Is.True, "el control reconoce un port");
+            Assert.That(ClassicIdentifier.IsMatch("public sealed class ImmersiveWorkoutPage"), Is.False);
+            Assert.That(ClassicFileName.IsMatch("fullscreen_workout_page.dart"), Is.True);
+            Assert.That(ClassicUssClass.IsMatch(".rm-classic-workout { }"), Is.True);
+        }
     }
 }

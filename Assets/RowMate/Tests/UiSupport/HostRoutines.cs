@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using RowMate.Core.Common;
 using RowMate.Core.Models;
 using RowMate.Core.Ports;
+using RowMate.Infrastructure.Database;
 using RowMate.Infrastructure.Routines;
 using RowMate.Infrastructure.Threading;
 using RowMate.Tests.Support;
@@ -11,9 +12,13 @@ namespace RowMate.Tests.UiSupport
 {
     // Las rutinas de un UiTestHost (03-rutinas/02-tech-design §5.2): el repositorio y lo que haya que liberar al final (la base
     // temporal, que se borra). Reopen() lo vuelve a abrir sobre el MISMO archivo (reabrir la app: DEMO-10, AC-RUT-08-09).
+    // It. 4a (02-tech-design §3.5, §7.1): con SQLite el repositorio es el de un LocalStore (TempDatabase.Store), así las
+    // sesiones del motor van al MISMO archivo, con la misma conexión y el mismo ejecutor que las rutinas, como en la app
+    // (HostSessions.SameFileAsRoutines).
     public sealed class HostRoutineSet : IDisposable
     {
         private readonly Func<IAppLogger, IRoutineRepository>? _reopen;
+        private readonly Func<IAppLogger, LocalStore>? _reopenStore;
         private readonly TempDatabase? _ownedDatabase;
         private bool _disposed;
 
@@ -27,7 +32,19 @@ namespace RowMate.Tests.UiSupport
             _ownedDatabase = ownsDatabase ? database : null;
         }
 
+        // Rutinas y sesiones sobre la misma base (LocalStore), como la app.
+        public HostRoutineSet(LocalStore store, TempDatabase? database, string? filePath, Func<IAppLogger, LocalStore>? reopen,
+                              bool ownsDatabase = true)
+            : this((store ?? throw new ArgumentNullException(nameof(store))).Routines, database, filePath, null, ownsDatabase)
+        {
+            Store = store;
+            _reopenStore = reopen;
+        }
+
         public IRoutineRepository Repository { get; private set; }
+
+        // La base de la app armada sobre el archivo (null con un repositorio en memoria o de guion).
+        public LocalStore? Store { get; private set; }
 
         // La carpeta temporal (null con un repositorio en memoria o de guion).
         public TempDatabase? Database { get; }
@@ -41,11 +58,19 @@ namespace RowMate.Tests.UiSupport
 
         public SqliteRoutineRepository? Sqlite => Repository as SqliteRoutineRepository;
 
-        public bool CanReopen => _reopen != null;
+        public bool CanReopen => _reopen != null || _reopenStore != null;
 
         // Cierra el repositorio (y su base) y abre otro sobre el mismo archivo.
         public IRoutineRepository Reopen(IAppLogger logger)
         {
+            if (_reopenStore != null)
+            {
+                Store?.Dispose();
+                Store = _reopenStore(logger);
+                Repository = Store.Routines;
+                return Repository;
+            }
+
             if (_reopen == null)
             {
                 throw new InvalidOperationException("HostRoutineSet: este repositorio no se puede reabrir (no es SQLite).");
@@ -64,7 +89,15 @@ namespace RowMate.Tests.UiSupport
             }
 
             _disposed = true;
-            (Repository as IDisposable)?.Dispose();
+            if (Store != null)
+            {
+                Store.Dispose();
+            }
+            else
+            {
+                (Repository as IDisposable)?.Dispose();
+            }
+
             _ownedDatabase?.Dispose();
         }
     }
@@ -84,7 +117,8 @@ namespace RowMate.Tests.UiSupport
             return (scheduler, logger) => new HostRoutineSet(new InMemoryRoutineRepository(initial));
         }
 
-        // TempDatabase + semilla + SqliteRoutineRepository con InlineDbExecutor (SQLite real, determinista cuadro a cuadro).
+        // TempDatabase + semilla + LocalStore con InlineDbExecutor (SQLite real, determinista cuadro a cuadro). Las sesiones
+        // del motor van al mismo archivo (It. 4a).
         public static HostRoutineFactory Seeded(RoutineSeed seed, string fileName = TempDatabase.DefaultFileName)
         {
             if (seed == null)
@@ -97,10 +131,10 @@ namespace RowMate.Tests.UiSupport
                 var database = new TempDatabase(fileName);
                 try
                 {
-                    var repository = database.Repository(logger);
-                    RoutineSeeds.Apply(repository, seed);
+                    var store = database.Store(logger, null, fileName);
+                    RoutineSeeds.Apply(store.Routines, seed);
                     var path = database.PathOf(fileName);
-                    return new HostRoutineSet(repository, database, path, l => database.Repository(l, null, fileName));
+                    return new HostRoutineSet(store, database, path, l => database.Store(l, null, fileName));
                 }
                 catch
                 {
@@ -118,7 +152,7 @@ namespace RowMate.Tests.UiSupport
                 var database = new TempDatabase(fileName);
                 var path = database.PathOf(fileName);
                 RoutineSeeds.WriteRota(path);
-                return new HostRoutineSet(database.Repository(logger, null, fileName), database, path, l => database.Repository(l, null, fileName));
+                return new HostRoutineSet(database.Store(logger, null, fileName), database, path, l => database.Store(l, null, fileName));
             };
         }
 
@@ -142,11 +176,12 @@ namespace RowMate.Tests.UiSupport
                 throw new ArgumentNullException(nameof(database));
             }
 
-            return (scheduler, logger) => new HostRoutineSet(database.Repository(logger, null, fileName), database, database.PathOf(fileName),
-                l => database.Repository(l, null, fileName), false);
+            return (scheduler, logger) => new HostRoutineSet(database.Store(logger, null, fileName), database, database.PathOf(fileName),
+                l => database.Store(l, null, fileName), false);
         }
 
-        // El ejecutor real de la app (un hilo propio), solo para rendimiento (PRF).
+        // El ejecutor real de la app (un hilo propio), para rendimiento (PRF) y durabilidad: rutinas y sesiones en el mismo
+        // LocalStore con un SerialExecutor.
         public static HostRoutineFactory Serial(RoutineSeed seed)
         {
             if (seed == null)
@@ -164,9 +199,9 @@ namespace RowMate.Tests.UiSupport
                         RoutineSeeds.Apply(seeding, seed);
                     }
 
-                    var repository = database.Repository(logger, new SerialExecutor("RowMate.Db.Test", logger));
-                    return new HostRoutineSet(repository, database, database.FilePath,
-                        l => database.Repository(l, new SerialExecutor("RowMate.Db.Test", l)));
+                    var store = database.Store(logger, new SerialExecutor("RowMate.Db.Test", logger));
+                    return new HostRoutineSet(store, database, database.FilePath,
+                        l => database.Store(l, new SerialExecutor("RowMate.Db.Test", l)));
                 }
                 catch
                 {

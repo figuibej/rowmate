@@ -14,6 +14,7 @@ namespace RowMate.Tests.EditMode.Design
     {
         private const string White = "white";
         private const string WorstGlass = "worstGlass";
+        private const string WhiteGlass = "white|glass.fallback";
 
         [Test, Category("AC-BASE-05")]
         public void WorstGlassIs2A2F37()
@@ -201,6 +202,90 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(Ratio("state.dangerText", "surface.overlay|text.primary@4"), Is.EqualTo(4.174).Within(0.0006), "con la capa blanca no llegaba");
             Assert.That(Ratio("text.primary", "bg.sunken|text.selection"), Is.EqualTo(9.586).Within(0.0006), "R20 selección");
             Assert.That(Ratio("text.primary", "brand.seed"), Is.EqualTo(4.868).Within(0.0006), "R24 y R28 segmento elegido y su anillo interior");
+        }
+
+        // It. 4a (04a-motor-hud-funcional/04-design-notes §9.1, H1-H17 y W1-W4): los controles, la fila del paso, las tarjetas,
+        // la banda y el anillo del HUD, y Workout en reposo. Mismo formato de pila que las It. 2 y 3; acá también el FRENTE puede
+        // llevar "@NN" (las unidades al 80 %, los bordes y los íconos al 70 %, el halo del foco al 50 %), con el mismo parseo que
+        // las capas. "white|glass.fallback" es el peor fondo del vidrio (una nube blanca detrás); "|text.primary@4" y "@8", las
+        // capas blancas de hover y presionado; "|overlay.scrim@12" y "@24", la capa oscura de Terminar (DN4a-10). Datos del
+        // test, nunca hex. Las excepciones de 04-design-notes §9.2 (el contorno de Pausa, lo decorativo, lo deshabilitado y lo
+        // presionado) no se prueban como umbral.
+        [TestCaseSource(nameof(ItFourAPairCases))]
+        public void ItFourADesignerPairs(string front, string layers, double threshold)
+        {
+            var ratio = Contrast.RatioOver(Layer(front), Stack(layers));
+            TestContext.Out.WriteLine(front + " / " + layers + ": " + Fmt.Fixed(ratio, 3) + " (umbral " + Fmt.DartToString(threshold) + ")");
+            Assert.That(ratio, Is.GreaterThanOrEqualTo(threshold));
+        }
+
+        // Los valores de 04-design-notes de la It. 4a §9.1 a 3 decimales, y los del margen de render (contra #2B3038, el peor
+        // vidrio renderizado + 1: el criterio de la It. 3). Si cambia un token, cambia acá y en las notas.
+        [Test, Category("AC-BASE-05")]
+        public void ItFourAControlValuesMatchTheDesignNotes()
+        {
+            const string Glass = WhiteGlass;
+            Assert.That(Ratio("state.dangerText", Glass), Is.EqualTo(5.077).Within(0.0006), "H1 Terminar");
+            Assert.That(Ratio("state.dangerText", Glass + "|overlay.scrim@12"), Is.EqualTo(5.483).Within(0.0006), "H2 Terminar con hover (capa oscura)");
+            Assert.That(Ratio("state.dangerText", Glass + "|overlay.scrim@24"), Is.EqualTo(5.892).Within(0.0006), "H2 Terminar presionado");
+            Assert.That(Ratio("state.dangerText", Glass + "|text.primary@4"), Is.EqualTo(4.494).Within(0.0006), "con la capa blanca no llegaba (§9.2)");
+            Assert.That(Ratio("text.primary", Glass), Is.EqualTo(13.493).Within(0.0006), "H3 Pausa, título libre, cuenta");
+            Assert.That(Ratio("text.primary", Glass + "|text.primary@4"), Is.EqualTo(11.944).Within(0.0006), "H4 Pausa con hover");
+            Assert.That(Ratio("text.onAccent", "state.success"), Is.EqualTo(9.985).Within(0.0006), "H5 Reanudar");
+            Assert.That(Ratio("text.onAccent", "state.success|text.primary@4"), Is.EqualTo(10.172).Within(0.0006), "H5 Reanudar con hover");
+            Assert.That(Ratio("text.onAccent", "state.success|text.primary@8"), Is.EqualTo(10.367).Within(0.0006), "H5 Reanudar presionado");
+            var types = new[] { "work", "rest", "warmup", "cooldown" };
+            var typeName = new[] { 4.577, 7.154, 9.358, 4.622 };
+            var pillText = new[] { 10.962, 9.013, 8.134, 10.769 };
+            var trend = new[] { 5.700, 4.687, 4.230, 5.600 };
+            var upNextLabel = new[] { 6.301, 5.369, 4.977, 6.212 };
+            for (var i = 0; i < types.Length; i++)
+            {
+                var pill = Glass + "|step." + types[i] + "@20";
+                Assert.That(Ratio("step." + types[i] + ".hud", Glass), Is.EqualTo(typeName[i]).Within(0.0006), "H6 tipo " + types[i]);
+                Assert.That(Ratio("text.primary", pill), Is.EqualTo(pillText[i]).Within(0.0006), "H7 pastilla " + types[i]);
+                Assert.That(Ratio("metric.distance", pill), Is.EqualTo(trend[i]).Within(0.0006), "H8 tendencia " + types[i]);
+                Assert.That(Ratio("text.secondary", pill), Is.EqualTo(upNextLabel[i]).Within(0.0006), "H9 Próximo: " + types[i]);
+            }
+
+            Assert.That(Ratio("step.work.hud", Glass + "|step.work@20"), Is.EqualTo(3.719).Within(0.0006), "la pastilla en su color no llegaba (DV-38)");
+            Assert.That(Ratio("step.cooldown.hud", Glass + "|step.cooldown@20"), Is.EqualTo(3.688).Within(0.0006), "ídem enfriamiento (DV-38)");
+            Assert.That(Ratio("text.secondary", Glass), Is.EqualTo(7.448).Within(0.0006), "H10 obj.");
+            Assert.That(Ratio("metric.watts.hud@80", Glass), Is.EqualTo(6.678).Within(0.0006), "H11 W");
+            Assert.That(Ratio("metric.distance.hud@80", Glass), Is.EqualTo(5.157).Within(0.0006), "H11 m");
+            Assert.That(Ratio("metric.watts@55", Glass), Is.EqualTo(3.967).Within(0.0006), "W al 55 % del legacy (DV-31)");
+            Assert.That(Ratio("metric.distance@55", Glass), Is.EqualTo(3.188).Within(0.0006), "m al 55 % del legacy (DV-31)");
+            Assert.That(Ratio("metric.split", Glass), Is.EqualTo(6.572).Within(0.0006), "H12 rótulo Split");
+            Assert.That(Ratio("metric.watts", Glass), Is.EqualTo(9.557).Within(0.0006), "H12 rótulo Watts");
+            Assert.That(Ratio("metric.kcal", Glass), Is.EqualTo(7.154).Within(0.0006), "H12 rótulo kcal");
+            Assert.That(Ratio("metric.hr.hud", Glass), Is.EqualTo(4.577).Within(0.0006), "H12 rótulo BPM");
+            Assert.That(Ratio("state.offTarget.hud", Glass), Is.EqualTo(4.594).Within(0.0006), "H13 flecha");
+            Assert.That(Ratio("metric.spm@70", Glass), Is.EqualTo(3.427).Within(0.0006), "H14 borde SPM");
+            Assert.That(Ratio("metric.split@70", Glass), Is.EqualTo(3.979).Within(0.0006), "H14 borde Split");
+            Assert.That(Ratio("metric.watts@70", Glass), Is.EqualTo(5.480).Within(0.0006), "H14 borde Watts");
+            Assert.That(Ratio("metric.time@70", Glass), Is.EqualTo(5.856).Within(0.0006), "H15 cronómetro");
+            Assert.That(Ratio("metric.distance@70", Glass), Is.EqualTo(4.239).Within(0.0006), "H15 regla");
+            Assert.That(Ratio("accent.primary", Glass), Is.EqualTo(5.474).Within(0.0006), "H16 rowing");
+            Assert.That(Ratio("text.primary", "white|overlay.scrim@50"), Is.EqualTo(3.977).Within(0.0006), "H17 anillo del HUD sobre su halo");
+            Assert.That(Ratio("overlay.scrim@50", "white"), Is.EqualTo(3.977).Within(0.0006), "H17 halo sobre una nube");
+            Assert.That(Ratio("focus.ring", "white"), Is.EqualTo(2.465).Within(0.0006), "el anillo cian de la app sobre una nube (§9.2)");
+            Assert.That(Ratio("state.warning", "bg.app|state.warningBg"), Is.EqualTo(6.310).Within(0.0006), "W1 aviso sin remo");
+            Assert.That(Ratio("text.tertiary", "bg.app"), Is.EqualTo(5.829).Within(0.0006), "W2 etiqueta, vacío, en curso");
+            Assert.That(Ratio("text.tertiary", "surface.card"), Is.EqualTo(5.140).Within(0.0006), "W3 chevron");
+            Assert.That(Ratio("text.tertiary", "surface.card|text.primary@4"), Is.EqualTo(4.785).Within(0.0006), "W3 chevron con hover");
+            Assert.That(Ratio("text.onAccent", "accent.primary"), Is.EqualTo(7.641).Within(0.0006), "W4 Entrenamiento libre");
+
+            // Margen de render: contra el peor vidrio renderizado + 1 (#2B3038).
+            Assert.That(RenderedRatio("state.dangerText", ""), Is.EqualTo(4.993).Within(0.0006), "Terminar renderizado");
+            Assert.That(RenderedRatio("text.secondary", ""), Is.EqualTo(7.352).Within(0.0006), "obj. renderizado");
+            Assert.That(RenderedRatio("metric.watts.hud@80", ""), Is.EqualTo(6.584).Within(0.0006), "W renderizada");
+            Assert.That(RenderedRatio("metric.distance.hud@80", ""), Is.EqualTo(5.086).Within(0.0006), "m renderizada");
+            Assert.That(RenderedRatio("text.primary", "|step.work@20"), Is.EqualTo(10.805).Within(0.0006), "pastilla de trabajo renderizada");
+            Assert.That(RenderedRatio("text.secondary", "|step.warmup@20"), Is.EqualTo(4.919).Within(0.0006), "Próximo: sobre calentamiento renderizado");
+            Assert.That(RenderedRatio("metric.distance", "|step.warmup@20"), Is.EqualTo(4.168).Within(0.0006), "tendencia sobre calentamiento renderizada");
+            Assert.That(RenderedRatio("text.primary", "|step.work@20"), Is.GreaterThanOrEqualTo(4.5));
+            Assert.That(RenderedRatio("text.secondary", "|step.warmup@20"), Is.GreaterThanOrEqualTo(4.5));
+            Assert.That(RenderedRatio("metric.distance", "|step.warmup@20"), Is.GreaterThanOrEqualTo(3.0));
         }
 
         // Valores de control (02-tech-design §4.4 y 04-design-notes §4): mismos números que el Designer y QA, a 3 decimales.
@@ -410,9 +495,76 @@ namespace RowMate.Tests.EditMode.Design
             yield return ItTwoCase("R28", "text.primary", "brand.seed", 3.0);
         }
 
+        // H1-H17 y W1-W4 de 04-design-notes de la It. 4a §9.1, uno por caso (los valores, en ItFourAControlValuesMatchTheDesignNotes).
+        private static IEnumerable<TestCaseData> ItFourAPairCases()
+        {
+            const string Glass = WhiteGlass;
+            const string Hover = "|text.primary@4";
+            const string Pressed = "|text.primary@8";
+            yield return ItTwoCase("H1", "state.dangerText", Glass, 4.5);
+            yield return ItTwoCase("H2", "state.dangerText", Glass + "|overlay.scrim@12", 4.5);
+            yield return ItTwoCase("H2", "state.dangerText", Glass + "|overlay.scrim@24", 4.5);
+            yield return ItTwoCase("H3", "text.primary", Glass, 7.0);
+            yield return ItTwoCase("H4", "text.primary", Glass + Hover, 7.0);
+            yield return ItTwoCase("H5", "text.onAccent", "state.success", 4.5);
+            yield return ItTwoCase("H5", "text.onAccent", "state.success" + Hover, 4.5);
+            yield return ItTwoCase("H5", "text.onAccent", "state.success" + Pressed, 4.5);
+            foreach (var type in new[] { "work", "rest", "warmup", "cooldown" })
+            {
+                var pill = Glass + "|step." + type + "@20";
+                yield return ItTwoCase("H6", "step." + type + ".hud", Glass, 4.5);
+                yield return ItTwoCase("H7", "text.primary", pill, 4.5);
+                yield return ItTwoCase("H8", "metric.distance", pill, 3.0);
+                yield return ItTwoCase("H9", "text.secondary", pill, 4.5);
+            }
+
+            yield return ItTwoCase("H10", "text.secondary", Glass, 4.5);
+            yield return ItTwoCase("H11", "metric.watts.hud@80", Glass, 4.5);
+            yield return ItTwoCase("H11", "metric.distance.hud@80", Glass, 4.5);
+            foreach (var label in new[] { "metric.spm", "metric.split", "metric.watts", "metric.kcal", "metric.hr.hud" })
+            {
+                yield return ItTwoCase("H12", label, Glass, 4.5);
+            }
+
+            yield return ItTwoCase("H13", "state.offTarget.hud", Glass, 3.0);
+            foreach (var border in new[] { "metric.spm@70", "metric.split@70", "metric.watts@70" })
+            {
+                yield return ItTwoCase("H14", border, Glass, 3.0);
+            }
+
+            yield return ItTwoCase("H15", "metric.time@70", Glass, 3.0);
+            yield return ItTwoCase("H15", "metric.distance@70", Glass, 3.0);
+            yield return ItTwoCase("H16", "accent.primary", Glass, 3.0);
+            yield return ItTwoCase("H17", "text.primary", "white|overlay.scrim@50", 3.0);
+            yield return ItTwoCase("H17", "overlay.scrim@50", "white", 3.0);
+            yield return ItTwoCase("W1", "state.warning", "bg.app|state.warningBg", 4.5);
+            yield return ItTwoCase("W2", "text.tertiary", "bg.app", 4.5);
+            yield return ItTwoCase("W3", "text.tertiary", "surface.card", 3.0);
+            yield return ItTwoCase("W3", "text.tertiary", "surface.card" + Hover, 3.0);
+            yield return ItTwoCase("W4", "text.onAccent", "accent.primary", 4.5);
+        }
+
+        // El frente también puede llevar "@NN" (Layer): sin alfa propia es el token tal cual.
         private static double Ratio(string front, string layers)
         {
-            return Contrast.RatioOver(TokenCatalog.Color(front), Stack(layers));
+            return Contrast.RatioOver(Layer(front), Stack(layers));
+        }
+
+        // Contra el peor vidrio renderizado + 1 por canal (#2B3038, HudKeepsItsThresholdOnTheRenderedWorstGlass), con capas encima
+        // ("|step.work@20"); "" = el vidrio solo.
+        private static double RenderedRatio(string front, string layersAbove)
+        {
+            var glass = Contrast.WorstGlassBackground();
+            (double R, double G, double B) under = (DartMath.Round(glass.R) + 1, DartMath.Round(glass.G) + 1, DartMath.Round(glass.B) + 1);
+            foreach (var part in layersAbove.Split('|'))
+            {
+                if (part.Length > 0)
+                {
+                    under = Contrast.CompositeSrgb(Layer(part), under);
+                }
+            }
+
+            return Contrast.RatioOver(Layer(front), under);
         }
 
         private static TestCaseData ItTwoCase(string group, string front, string layers, double threshold)

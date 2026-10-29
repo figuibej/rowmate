@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Herramienta de la demo y de QA (02-tech-design Sec. 3.6 de la It. 4a): lista las sesiones de una COPIA de la base local. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>RowMate.SessionList</AssemblyName>
+    <RootNamespace>RowMate.SessionList</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(RepoRoot)tools/sessions/**/*.cs" LinkBase="sessions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+    <ProjectReference Include="../RowMate.Infrastructure/RowMate.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

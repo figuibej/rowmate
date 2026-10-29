@@ -42,8 +42,15 @@ namespace RowMate.EditorTools
 
         public string Variant => Simulator ? "simulator" : "normal";
 
-        // Builds/<Windows|Android>/<normal|simulator>/RowMate.exe (o .apk).
+        // Builds/<Windows|Android>/<normal|simulator|dev-smoke>/RowMate.exe (o .apk).
         public string LocationPath => Path.Combine(OutputFolder, IsWindows ? "RowMate.exe" : "RowMate.apk");
+
+        // La carpeta fija de cada variante (QA-V3-08 de la It. 3: un build de desarrollo abre el puerto de PlayerConnection y
+        // Windows pregunta por el Firewall una vez por ruta de RowMate.exe). La misma que usa tools/build/build.ps1.
+        public static string DefaultOutput(string target, bool simulator, bool smokeTest)
+        {
+            return Path.Combine("Builds", target, simulator ? "simulator" : smokeTest ? "dev-smoke" : "normal");
+        }
 
         public static BuildRequest FromCommandLine(string[] args)
         {
@@ -51,7 +58,7 @@ namespace RowMate.EditorTools
             var simulator = Has(args, "-rowmateSimulator");
             var backend = Value(args, "-rowmateBackend") ?? "Mono";
             var smoke = Has(args, "-rowmateSmokeTest");
-            var output = Value(args, "-rowmateOutput") ?? Path.Combine("Builds", target, simulator ? "simulator" : "normal");
+            var output = Value(args, "-rowmateOutput") ?? DefaultOutput(target, simulator, smoke);
             return new BuildRequest(target, simulator, backend, output, smoke);
         }
 

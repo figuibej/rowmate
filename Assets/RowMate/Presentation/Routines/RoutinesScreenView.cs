@@ -1,5 +1,6 @@
 using System;
 using RowMate.App.Routines;
+using RowMate.Core.Common;
 using RowMate.Core.Design;
 using RowMate.Core.Localization;
 using RowMate.Core.Models;
@@ -22,11 +23,14 @@ namespace RowMate.Presentation.Routines
     //   │   └── RoutineListView (#routines-list)      Ready con rutinas
     //   └── #routines-add .rm-fab                     add; right 16, bottom = alto real de la barra + 16 (AC-RUT-10-04)
     // Los tres estados se alternan con display (nunca un indicador eterno: Q-13); el + se ve en los tres. Mientras Rutinas es
-    // la pestaña elegida y ninguna página la tapa, el + es un obstáculo inferior (la llave del simulador sube sobre él y el
-    // aviso lo esquiva: DV-13, DN3-13, DN3-14).
+    // la pestaña elegida y ninguna página la tapa, el + es un obstáculo inferior del aviso y del relleno (DN3-13, DN3-14).
+    // Desde la It. 4a (D-ART-10, DV-39 en lugar de DV-13) NO lo es de la llave: Rutinas declara su superficie de pestaña sin
+    // obstáculos (ShellLayout.SetSurface) y la llave va del otro lado, abajo a la izquierda (AC-RUT-10-04).
     // Tocar una tarjeta (o ⋮ → Editar) abre el editor de esa rutina; + abre uno nuevo (AC-RUT-10-04, -05, -06). Eliminar abre
     // DeleteRoutineDialog; el borrado no espera dentro del diálogo (routines_screen.dart:115) y si falla, aviso
-    // routineDeleteError (AC-RUT-09-06).
+    // routineDeleteError (AC-RUT-09-06). Borrar y Reintentar registran una falla que no sea de la base (Forget con el tag DB,
+    // QA-V3-10). Con la última tarjeta borrada, la lista queda a la vista hasta que la tarjeta terminó de desvanecerse y
+    // colapsar, y recién ahí entra el vacío (04-design-notes §5.5: "si era la última, el vacío entra al terminar"; QA-V3-02).
     public sealed class RoutinesScreenView : VisualElement
     {
         private readonly UiContext _ui;
@@ -47,6 +51,7 @@ namespace RowMate.Presentation.Routines
         private IDisposable? _grace;
         private RoutinesPhase? _phase;
         private bool _shownLoading;
+        private bool _emptyPending;
 
         public RoutinesScreenView(UiContext ui, ShellLayout layout, int tabIndex)
         {
@@ -67,6 +72,9 @@ namespace RowMate.Presentation.Routines
 
             _loading = State("routines-loading", "rm-routines__center");
             _spinner = new Spinner(ui.Motion, 32, 3);
+            // Gira solo a la vista (StartGrace / StopLoading): oculto no pide 60 fps (It. 4a, hallazgo de la corrección de
+            // QA-V4a-02; antes giraba en el MotionDriver desde que se armaba la pantalla).
+            _spinner.SetShown(false);
             _loading.Add(_spinner);
             _loadingFade = new EnterMotion(ui.Motion);
 
@@ -79,7 +87,7 @@ namespace RowMate.Presentation.Routines
             _errorText.AddToClassList("rm-type-body");
             _errorText.pickingMode = PickingMode.Ignore;
             _error.Add(_errorText);
-            _retry = new RmButton("routines-retry", "tonal", Icons.Refresh, "", () => _ = _ui.App.Routines.LoadAsync());
+            _retry = new RmButton("routines-retry", "tonal", Icons.Refresh, "", () => _ui.App.Routines.LoadAsync().Forget(_ui.Logger, RoutinesStore.Tag));
             _error.Add(_retry);
 
             _empty = State("routines-empty", "rm-routines__center");
@@ -103,12 +111,15 @@ namespace RowMate.Presentation.Routines
 
             List = new RoutineListView(ui, OpenEditor, OpenMenu);
             List.style.display = DisplayStyle.None;
+            List.Collapsed += OnListCollapsed;
             _body.Add(List);
             layout.RegisterClearance(List.Scroll, List.Content, ListClearanceMinimum);
 
             AddButton = new Fab("routines-add", Icons.Add, () => OpenEditor(null));
             Add(AddButton);
 
+            // La superficie de una pestaña para la llave (D-ART-10): barra + 16 en el carril izquierdo; el + no cuenta.
+            layout.SetSurface(this, OverlaySurface.Tab(layout.CurrentTabBarHeight));
             layout.Changed += PlaceFab;
             _ui.Pages.CoversShellChanged += _ => UpdateObstacle();
             RegisterCallback<GeometryChangedEvent>(_ => PlaceFab());
@@ -151,6 +162,7 @@ namespace RowMate.Presentation.Routines
             switch (state.Phase)
             {
                 case RoutinesPhase.Loading:
+                    _emptyPending = false;
                     _error.style.display = DisplayStyle.None;
                     _empty.style.display = DisplayStyle.None;
                     List.style.display = DisplayStyle.None;
@@ -161,6 +173,7 @@ namespace RowMate.Presentation.Routines
 
                     return;
                 case RoutinesPhase.LoadFailed:
+                    _emptyPending = false;
                     StopLoading();
                     List.style.display = DisplayStyle.None;
                     _empty.style.display = DisplayStyle.None;
@@ -177,13 +190,42 @@ namespace RowMate.Presentation.Routines
             _error.style.display = DisplayStyle.None;
             var hasRoutines = state.Routines.Count > 0;
             List.Render(state.Routines, visible && previous == RoutinesPhase.Loading);
-            List.style.display = hasRoutines ? DisplayStyle.Flex : DisplayStyle.None;
-            var showEmpty = !hasRoutines;
-            var wasEmpty = _empty.resolvedStyle.display != DisplayStyle.None && _empty.style.display != DisplayStyle.None;
-            _empty.style.display = showEmpty ? DisplayStyle.Flex : DisplayStyle.None;
-            if (showEmpty && !wasEmpty && visible)
+            if (hasRoutines)
             {
-                _stateEnter.Play(_empty, 0, MotionSpecs.ListItemInMs, MotionSpecs.EmptyInShiftDp);
+                _emptyPending = false;
+                List.style.display = DisplayStyle.Flex;
+                _empty.style.display = DisplayStyle.None;
+                return;
+            }
+
+            if (visible && List.IsCollapsing)
+            {
+                // La última tarjeta se desvanece y colapsa a la vista; el vacío entra cuando termina (OnListCollapsed).
+                _emptyPending = true;
+                return;
+            }
+
+            ShowEmpty(visible, 0);
+        }
+
+        // overrunMs: cuánto se pasó el colapso de la última tarjeta de su final en este cuadro (el vacío arranca en ese instante).
+        private void ShowEmpty(bool animate, double overrunMs)
+        {
+            _emptyPending = false;
+            List.style.display = DisplayStyle.None;
+            var wasEmpty = _empty.resolvedStyle.display != DisplayStyle.None && _empty.style.display != DisplayStyle.None;
+            _empty.style.display = DisplayStyle.Flex;
+            if (!wasEmpty && animate)
+            {
+                _stateEnter.Play(_empty, -overrunMs, MotionSpecs.ListItemInMs, MotionSpecs.EmptyInShiftDp);
+            }
+        }
+
+        private void OnListCollapsed(double overrunMs)
+        {
+            if (_emptyPending && _phase == RoutinesPhase.Ready && List.Count == 0)
+            {
+                ShowEmpty(IsOnScreen && _ui.Motion.Armed, overrunMs);
             }
         }
 
@@ -193,6 +235,7 @@ namespace RowMate.Presentation.Routines
             _grace?.Dispose();
             _shownLoading = false;
             _loading.style.display = DisplayStyle.None;
+            _spinner.SetShown(false);
             _grace = _ui.App.Scheduler.Schedule(TimeSpan.FromMilliseconds(MotionSpecs.LoadingGraceMs), () =>
             {
                 _grace = null;
@@ -203,6 +246,7 @@ namespace RowMate.Presentation.Routines
 
                 _shownLoading = true;
                 _loading.style.display = DisplayStyle.Flex;
+                _spinner.SetShown(true);
                 _loadingFade.Play(_loading, 0, Tokens.DurFast.Milliseconds, 0);
             });
         }
@@ -218,6 +262,7 @@ namespace RowMate.Presentation.Routines
             }
 
             _loading.style.display = DisplayStyle.None;
+            _spinner.SetShown(false);
         }
 
         private void OnTexts(Localizer texts)
@@ -264,7 +309,7 @@ namespace RowMate.Presentation.Routines
                     return;
                 }
 
-                _ = Delete(routine.Id.Value);
+                Delete(routine.Id.Value).Forget(_ui.Logger, RoutinesStore.Tag);
             };
             _ui.Dialogs.Open(dialog);
         }

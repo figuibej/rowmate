@@ -97,6 +97,10 @@ namespace RowMate.Core.Design
         // ── 3.2 Vidrio del HUD: respaldo sin desenfoque (QA-P-17, P-08) ───────────
         public static readonly ColorToken GlassFallback = ColorToken.HexAlpha("glass.fallback", "#070D16", 86, ColorRole.Surface);
 
+        // ── Fondo provisorio del inmersivo (It. 4a; DN4a-03, DN4a-18; 04-design-notes §2.1): hasta la escena de la 6a ──
+        public static readonly ColorToken BackdropSky = ColorToken.Hex("backdrop.sky", "#0B4FA8", ColorRole.Surface);       // skyTop de las 12 h del legacy (LEGACY_VISUAL_AUDIT §7.3), hasta el horizonte
+        public static readonly ColorToken BackdropWater = ColorToken.Hex("backdrop.water", "#0E4F8F", ColorRole.Surface);   // waterNear de las 12 h del legacy, del horizonte abajo
+
         // ── 2.4 Espaciado (escala única, en dp) ────────────────────────────────────
         public static readonly LengthToken SpaceDp2 = LengthToken.Dp("space.dp2", 2);
         public static readonly LengthToken SpaceDp4 = LengthToken.Dp("space.dp4", 4);

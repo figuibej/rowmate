@@ -57,6 +57,14 @@ namespace RowMate.Presentation
         // El panel dibuja con forceGammaRendering (GammaRt): ver MeshColor.
         public bool GammaPanel { get; set; }
 
+        // El contorno de depuración de la zona del bote en el inmersivo (#hud-boat-zone; It. 4a, AC-WKT-17-09): solo lo pide el
+        // anfitrión de pruebas y del arnés.
+        public bool BoatZoneOutline { get; set; }
+
+        // Hay capa del simulador (con la llave): el HUD le reserva su lugar (HudGeometry, DN4a-14). Presentation no sabe del
+        // simulador: solo que arriba hay una capa con la llave.
+        public bool ReserveWrench { get; set; }
+
         public IAppLogger Logger => App.Logger;
 
         public Localizer Texts => App.Texts.Value;

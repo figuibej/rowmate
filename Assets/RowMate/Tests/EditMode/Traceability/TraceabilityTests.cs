@@ -105,6 +105,16 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(ac.Id);
             }
 
+            foreach (var ac in It04aIds.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
+            foreach (var lt in It04aIds.LegacyCases)
+            {
+                known.Add(lt.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -533,6 +543,210 @@ namespace RowMate.Tests.EditMode.Traceability
             }
 
             Assert.That(missing, Is.Empty, "IDs de la It. 3 solo de Unity sin su prueba en la carpeta esperada: " + string.Join(", ", missing));
+        }
+
+        // ------------------------------------------------------------------ It. 4a (02-tech-design §8.3, §8.4)
+
+        [Test, Category("AC-BASE-09")]
+        public void It04aIdsAreComplete()
+        {
+            // 162 AC = 147 nuevos (WKT 130, BLE 5, APP 8, HIS 3, SCN 1) + 15 de iteraciones anteriores (§5); 11 LT = LT-35 a
+            // LT-45 (01-po-spec §4.0, §5, §6).
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var earlier = new HashSet<string>(It04aIds.FromEarlier, StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var ac in It02Ids.Acceptance)
+            {
+                before.Add(ac.Id);
+            }
+
+            foreach (var ac in It03Ids.Acceptance)
+            {
+                before.Add(ac.Id);
+            }
+
+            int wkt = 0, ble = 0, app = 0, his = 0, scn = 0;
+            foreach (var ac in It04aIds.Acceptance)
+            {
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It04aIds: " + ac.Id);
+                Assert.That(AcPattern.IsMatch(ac.Id), Is.True, ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                if (earlier.Contains(ac.Id))
+                {
+                    Assert.That(before.Contains(ac.Id), Is.True, ac.Id + " figura como de una iteración anterior pero no está en It01Ids, It02Ids ni It03Ids");
+                    continue;
+                }
+
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior: va en FromEarlier");
+                wkt += ac.Id.StartsWith("AC-WKT-", StringComparison.Ordinal) ? 1 : 0;
+                ble += ac.Id.StartsWith("AC-BLE-", StringComparison.Ordinal) ? 1 : 0;
+                app += ac.Id.StartsWith("AC-APP-", StringComparison.Ordinal) ? 1 : 0;
+                his += ac.Id.StartsWith("AC-HIS-", StringComparison.Ordinal) ? 1 : 0;
+                scn += ac.Id.StartsWith("AC-SCN-", StringComparison.Ordinal) ? 1 : 0;
+            }
+
+            Assert.That(It04aIds.Acceptance.Length, Is.EqualTo(162));
+            Assert.That(It04aIds.FromEarlier.Length, Is.EqualTo(15));
+            Assert.That(wkt, Is.EqualTo(130));
+            Assert.That(ble, Is.EqualTo(5));
+            Assert.That(app, Is.EqualTo(8));
+            Assert.That(his, Is.EqualTo(3));
+            Assert.That(scn, Is.EqualTo(1));
+            foreach (var id in It04aIds.FromEarlier)
+            {
+                Assert.That(ids.Contains(id), Is.True, id);
+            }
+
+            Assert.That(It04aIds.LegacyCases.Length, Is.EqualTo(11));
+            var byFile = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < It04aIds.LegacyCases.Length; i++)
+            {
+                var lt = It04aIds.LegacyCases[i];
+                Assert.That(lt.Id, Is.EqualTo("LT-" + (i + 35).ToString("00", System.Globalization.CultureInfo.InvariantCulture)));
+                Assert.That(LtPattern.IsMatch(lt.Id), Is.True);
+                Assert.That(lt.Checks, Is.EqualTo("d"), lt.Id + ": [d]");
+                byFile.TryGetValue(lt.File, out var count);
+                byFile[lt.File] = count + 1;
+            }
+
+            Assert.That(byFile["test/workout_provider_hr_test.dart"], Is.EqualTo(4));
+            Assert.That(byFile["test/step_target_tracker_test.dart"], Is.EqualTo(6));
+            Assert.That(byFile["test/series_panels_test.dart"], Is.EqualTo(1));
+
+            // UnityOnlyIds y WorkPackageBIds (los lee run-tests.ps1) son exactamente los que salen de la columna de verificación.
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            foreach (var ac in It04aIds.Acceptance)
+            {
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It04aIds.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It04aIds.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(unityOnly.Count, Is.EqualTo(54), "44 nuevos y 10 de §5");
+            Assert.That(workPackageB, Is.Empty);
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It04aDotnetIdsHaveTests()
+        {
+            // Lo que el plan verifica con dotnet ([d] o [s] en 02-tech-design §8.4) tiene al menos un test con su categoría en
+            // Tests/EditMode o Tests/Simulator (WP-A); también los 11 LT.
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It04aIds.Acceptance)
+            {
+                if ((HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s")) && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            foreach (var lt in It04aIds.LegacyCases)
+            {
+                if (!categories.ContainsKey(lt.Id))
+                {
+                    missing.Add(lt.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d]/[s] de la It. 4a sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It04aLegacyCasesKeepTheirNames()
+        {
+            // Convención de ARCHITECTURE §15.3: el nombre del legacy al carácter (TestName), la categoría del LT y el comentario
+            // "// legacy: test/…:línea 'nombre'".
+            var scan = Scan();
+            var problems = new List<string>();
+            foreach (var lt in It04aIds.LegacyCases)
+            {
+                CheckLegacyCase(scan, lt.Id, lt.File, lt.Line, lt.Name, problems);
+            }
+
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It04aUnityOnlyIdsHaveAUnityLocation()
+        {
+            // Como It03UnityOnlyIdsHaveAUnityLocation. Mientras ninguno de los NUEVOS de la It. 4a tenga su prueba de Unity
+            // (WP-B), se ignora con el motivo; desde que aparece uno, se exigen todos.
+            var folders = new Dictionary<string, SourceIndex?>(StringComparer.Ordinal)
+            {
+                ["p"] = ScanFolders("Tests/PlayMode"),
+                ["ps"] = ScanFolders("Tests/PlayModeSimulator"),
+                ["u"] = ScanFolders("Tests/UnityEditMode"),
+                ["cap"] = ScanFolders("Snapshots"),
+            };
+            var checks = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var ac in It04aIds.Acceptance)
+            {
+                checks[ac.Id] = ac.Checks;
+            }
+
+            var earlier = new HashSet<string>(It04aIds.FromEarlier, StringComparer.Ordinal);
+            var missing = new List<string>();
+            var newFound = 0;
+            foreach (var id in It04aIds.UnityOnlyIds)
+            {
+                var found = false;
+                foreach (var kind in folders.Keys)
+                {
+                    var index = folders[kind];
+                    if (!HasKind(checks[id], kind) || index == null)
+                    {
+                        continue;
+                    }
+
+                    found |= kind == "cap" ? index.MentionsText(id) : index.Categories.ContainsKey(id);
+                }
+
+                if (found && !earlier.Contains(id))
+                {
+                    newFound++;
+                }
+
+                if (!found)
+                {
+                    missing.Add(id + " (" + checks[id] + ")");
+                }
+            }
+
+            if (newFound == 0)
+            {
+                Assert.Ignore("pendiente WP-B: todavía no hay pruebas de Unity de la It. 4a (" + missing.Count + " IDs sin su prueba)");
+            }
+
+            Assert.That(missing, Is.Empty, "IDs de la It. 4a solo de Unity sin su prueba en la carpeta esperada: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It04aUnityOnlyIdsHaveNoDotnetResult()
+        {
+            // Un ID solo de Unity con un test de dotnet saldría PASA en la matriz sin su prueba de pantalla: los de la It. 4a no
+            // llevan su categoría en Tests/EditMode ni en Tests/Simulator (sí en un [Ignore] de equipo, que deja PENDIENTE UNITY).
+            var scan = Scan();
+            var earlier = new HashSet<string>(It04aIds.FromEarlier, StringComparer.Ordinal);
+            var offenders = new List<string>();
+            foreach (var id in It04aIds.UnityOnlyIds)
+            {
+                if (earlier.Contains(id) || !scan.Categories.TryGetValue(id, out var files))
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    if (!file.EndsWith("WorkoutDeviceChecksTests.cs", StringComparison.Ordinal))
+                    {
+                        offenders.Add(id + " en " + file);
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
         }
 
         [Test, Category("AC-BASE-09")]

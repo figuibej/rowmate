@@ -3,6 +3,7 @@ using RowMate.App.Routines;
 using RowMate.Core.Design;
 using RowMate.Core.Localization;
 using RowMate.Presentation.Controls;
+using RowMate.Presentation.Motion;
 using UnityEngine.UIElements;
 
 namespace RowMate.Presentation.Routines
@@ -18,7 +19,8 @@ namespace RowMate.Presentation.Routines
     //   ├── .rm-series__steps                           riel continuo, fondo seed @6 %: las filas con --in-series
     //   ├── #series-footer-<k> .rm-series__footer > #series-add-step-<k> (add 16 + editorAddStepToSeries, .rm-type-button-s)
     //   └── .rm-series__stack > 2 .rm-series__stack-layer   hojas bajo el pie: ×2 una, ×3 o más dos (sin eventos)
-    // k = ordinal de la serie (EditorItem.SeriesOrdinal). El número del chip rueda al cambiar (TabularNumber + DigitRoll).
+    // k = ordinal de la serie (EditorItem.SeriesOrdinal). El número del chip rueda al cambiar (TabularNumber + DigitRoll) y las
+    // hojas aparecen o se van con alto 0 ↔ 3 y opacidad en 160 ease.move (LayerMotion; 04-design-notes §5.6, QA-V3-02).
     public sealed class SeriesBlockView : VisualElement
     {
         public const string UssClass = "rm-series";
@@ -27,6 +29,8 @@ namespace RowMate.Presentation.Routines
         private readonly Label _title;
         private readonly VisualElement _layerOne;
         private readonly VisualElement _layerTwo;
+        private readonly LayerMotion _layerOneMotion;
+        private readonly LayerMotion _layerTwoMotion;
         private int _repeat = int.MinValue;
 
         public SeriesBlockView(UiContext ui, Action<SeriesBlockView> onRepeat, Action<SeriesBlockView> onDelete, Action<SeriesBlockView> onAddStep)
@@ -97,6 +101,8 @@ namespace RowMate.Presentation.Routines
             Stack.pickingMode = PickingMode.Ignore;
             _layerOne = Layer(0.20, 8, 0);
             _layerTwo = Layer(0.12, 16, 3);
+            _layerOneMotion = new LayerMotion(ui.Motion, _layerOne);
+            _layerTwoMotion = new LayerMotion(ui.Motion, _layerTwo);
             Stack.Add(_layerOne);
             Stack.Add(_layerTwo);
             Add(Stack);
@@ -127,8 +133,15 @@ namespace RowMate.Presentation.Routines
 
         public int RepeatCount => _repeat;
 
-        // Hojas visibles (0, 1 o 2: AC-RUT-14-02).
-        public int VisibleLayers => (_layerOne.style.display == DisplayStyle.None ? 0 : 1) + (_layerTwo.style.display == DisplayStyle.None ? 0 : 1);
+        // Hojas visibles (0, 1 o 2: AC-RUT-14-02), las que quedan al terminar de aparecer o de irse.
+        public int VisibleLayers => (_layerOneMotion.Visible ? 1 : 0) + (_layerTwoMotion.Visible ? 1 : 0);
+
+        // Alguna hoja está apareciendo o yéndose.
+        public bool LayersAnimating => _layerOneMotion.IsRunning || _layerTwoMotion.IsRunning;
+
+        public VisualElement LayerOne => _layerOne;
+
+        public VisualElement LayerTwo => _layerTwo;
 
         public void SetOrdinal(int ordinal)
         {
@@ -150,10 +163,12 @@ namespace RowMate.Presentation.Routines
                 return;
             }
 
+            // La primera vez (el bloque nace) las hojas llegan con el bloque; después, cada cambio de ×N las mueve.
+            var animate = _repeat != int.MinValue;
             _repeat = repeat;
             Count.SetValue(RoutineTexts.RepeatChip(repeat, texts), repeat);
-            _layerOne.style.display = repeat >= 2 ? DisplayStyle.Flex : DisplayStyle.None;
-            _layerTwo.style.display = repeat >= 3 ? DisplayStyle.Flex : DisplayStyle.None;
+            _layerOneMotion.Show(repeat >= 2, animate);
+            _layerTwoMotion.Show(repeat >= 3, animate);
         }
 
         public void RenderTexts(Localizer texts)
@@ -178,6 +193,94 @@ namespace RowMate.Presentation.Routines
             layer.style.backgroundColor = TokenColors.WithAlpha(Tokens.BrandSeed, alpha);
             layer.style.display = DisplayStyle.None;
             return layer;
+        }
+
+        // Una hoja que aparece o se va (04-design-notes §5.6): alto 0 ↔ 3 (desde su borde de arriba: cuelga del pie) y opacidad
+        // 0 ↔ 1 en StackLayerMs (160) con ease.move. Reducir movimiento: solo el fundido, sin cambio de alto (§5.0, §5.10). Sin
+        // armar o fuera del panel, en el acto. Las hojas son absolutas (.rm-series__stack): no mueven nada del layout. En reposo
+        // no deja nada en línea salvo display (el alto es el del USS); al irse queda en display none.
+        private sealed class LayerMotion : TimedMotion
+        {
+            private const float HeightDp = 3;
+
+            private readonly VisualElement _layer;
+            private double _from;
+            private double _to;
+            private double _current;
+            private bool _reduced;
+
+            public LayerMotion(MotionDriver driver, VisualElement layer)
+                : base(driver)
+            {
+                _layer = layer;
+            }
+
+            public bool Visible => _to > 0.5;
+
+            protected override double TotalMs => MotionSpecs.StackLayerMs;
+
+            public void Show(bool visible, bool animate)
+            {
+                var target = visible ? 1.0 : 0.0;
+                if (Math.Abs(target - _to) < 1e-9 && (IsRunning || Math.Abs(_current - target) < 1e-9))
+                {
+                    return;
+                }
+
+                _to = target;
+                if (!animate || !Driver.Armed || _layer.panel == null)
+                {
+                    if (IsRunning)
+                    {
+                        Finish();
+                        return;
+                    }
+
+                    _current = target;
+                    Apply(target, true);
+                    return;
+                }
+
+                _reduced = Driver.Settings.ReduceMotion;
+                _from = _current;
+                Begin();
+            }
+
+            protected override void OnUpdate(double elapsedMs)
+            {
+                var u = Easing.Evaluate(Tokens.EaseMove, Progress(elapsedMs, 0, TotalMs));
+                _current = _from + (_to - _from) * u;
+                Apply(_current, false);
+            }
+
+            protected override void OnFinished()
+            {
+                _current = _to;
+                Apply(_to, true);
+            }
+
+            private void Apply(double t, bool rest)
+            {
+                var style = _layer.style;
+                if (t <= 0)
+                {
+                    style.display = DisplayStyle.None;
+                    style.height = StyleKeyword.Null;
+                    style.opacity = StyleKeyword.Null;
+                    return;
+                }
+
+                style.display = DisplayStyle.Flex;
+                if (rest && t >= 1)
+                {
+                    style.height = StyleKeyword.Null;
+                    style.opacity = StyleKeyword.Null;
+                    return;
+                }
+
+                style.opacity = (float)t;
+                style.height = _reduced ? HeightDp : (float)(HeightDp * t);
+            }
         }
     }
 }

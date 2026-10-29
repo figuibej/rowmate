@@ -111,6 +111,12 @@ namespace RowMate.Presentation.Shell
 
         public void Push(IPage page)
         {
+            Push(page, PageTransitionKind.Slide);
+        }
+
+        // It. 4a (02-tech-design §6.3): el inmersivo entra y sale con un fundido (PageTransitionKind.Fade).
+        public void Push(IPage page, PageTransitionKind kind)
+        {
             if (page == null)
             {
                 throw new ArgumentNullException(nameof(page));
@@ -130,7 +136,7 @@ namespace RowMate.Presentation.Shell
             }
 
             var focused = panel?.focusController?.focusedElement;
-            var entry = new Entry(page, new PageTransition(_ui.Motion), focused);
+            var entry = new Entry(page, new PageTransition(_ui.Motion, kind), focused);
             _pages.Add(entry);
             var root = page.Root;
             root.AddToClassList("rm-page");
@@ -152,6 +158,31 @@ namespace RowMate.Presentation.Shell
             ExitLock.Apply(page.Root, entry.FocusBefore);
             SetCovers(false);
             entry.Transition.PlayOut(page.Root, _tabContent, _tabBar, _dim, () => OnExited(entry));
+        }
+
+        // Pop SIN transición (02-tech-design §6.11; 04-design-notes §5.10, DN4a-17): al volver del segundo plano con la sesión ya
+        // cerrada, el inmersivo sale en el acto, así no se ve fundirse el HUD de una sesión que terminó antes. Lo demás, como
+        // Pop: inerte, pestañas y barra de vuelta, fuera del árbol y dispuesta (OnPopped) en el mismo cuadro.
+        public void PopImmediately(IPage page)
+        {
+            var entry = Find(page);
+            if (_disposed || entry == null || !ReferenceEquals(Top, page) && !entry.Exiting)
+            {
+                return;
+            }
+
+            if (!entry.Exiting)
+            {
+                entry.Exiting = true;
+                ExitLock.Apply(page.Root, entry.FocusBefore);
+                SetCovers(false);
+            }
+
+            entry.Transition.Finish();
+            if (_pages.Contains(entry))
+            {
+                OnExited(entry);
+            }
         }
 
         public void Dispose()

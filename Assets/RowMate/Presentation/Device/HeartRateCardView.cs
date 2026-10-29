@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using RowMate.App.Device;
 using RowMate.Core.Ble;
+using RowMate.Core.Common;
 using RowMate.Core.Design;
 using RowMate.Core.Localization;
 using RowMate.Presentation.Binding;
@@ -241,7 +242,7 @@ namespace RowMate.Presentation.Device
                     texts.Add(_bpmBox);
                     row.Add(texts);
                     _disconnect = new RmButton("hrm-disconnect", "text danger", Icons.BluetoothDisabled, model.DisconnectLabel,
-                        () => { _ = hrm.DisconnectAsync(); });
+                        () => hrm.DisconnectAsync().Forget(_ui.Logger, RowMate.App.Composition.AppContext.HrmTag));
                     row.Add(_disconnect);
                     _content.Add(row);
                     break;
@@ -281,11 +282,11 @@ namespace RowMate.Presentation.Device
                     _rememberedText = Text("hrm-remembered-text", "rm-type-body-m");
                     _content.Add(_rememberedText);
                     var actions = Container("rm-hrm-actions");
-                    _retry = new RmButton("hrm-retry", "tonal", Icons.Refresh, model.ConnectLabel, () => { _ = hrm.RetryAsync(); });
+                    _retry = new RmButton("hrm-retry", "tonal", Icons.Refresh, model.ConnectLabel, () => hrm.RetryAsync().Forget(_ui.Logger, RowMate.App.Composition.AppContext.HrmTag));
                     actions.Add(_retry);
-                    _search = new RmButton("hrm-search", "outline", null, model.SearchOtherLabel, () => { _ = hrm.StartScanAsync(); });
+                    _search = new RmButton("hrm-search", "outline", null, model.SearchOtherLabel, () => hrm.StartScanAsync().Forget(_ui.Logger, RowMate.App.Composition.AppContext.HrmTag));
                     actions.Add(_search);
-                    _forget = new RmButton("hrm-forget", "text", null, model.ForgetLabel, () => { _ = hrm.ForgetAsync(); });
+                    _forget = new RmButton("hrm-forget", "text", null, model.ForgetLabel, () => hrm.ForgetAsync().Forget(_ui.Logger, RowMate.App.Composition.AppContext.HrmTag));
                     actions.Add(_forget);
                     _content.Add(actions);
                     break;
@@ -298,7 +299,7 @@ namespace RowMate.Presentation.Device
                     _watchHint = Text("hrm-watch-hint", "rm-type-body-xs");
                     _watchHint.AddToClassList("rm-text--tertiary");
                     _content.Add(_watchHint);
-                    _search = new RmButton("hrm-search", "tonal", Icons.BluetoothSearching, model.SearchLabel, () => { _ = hrm.StartScanAsync(); });
+                    _search = new RmButton("hrm-search", "tonal", Icons.BluetoothSearching, model.SearchLabel, () => hrm.StartScanAsync().Forget(_ui.Logger, RowMate.App.Composition.AppContext.HrmTag));
                     _content.Add(_search);
                     break;
                 }
@@ -374,7 +375,7 @@ namespace RowMate.Presentation.Device
             var hrm = _ui.App.HeartRate;
             var id = row.DeviceId;
             var title = row.Title;
-            var button = new Button(() => { _ = hrm.ConnectAsync(id, title); }) { name = row.ElementName, text = "" };
+            var button = new Button(() => hrm.ConnectAsync(id, title).Forget(_ui.Logger, RowMate.App.Composition.AppContext.HrmTag)) { name = row.ElementName, text = "" };
             RmButton.StripUnityChrome(button);
             button.AddToClassList("rm-hrm-device-row");
             button.focusable = true;

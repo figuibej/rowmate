@@ -7,6 +7,8 @@ namespace RowMate.Presentation.Motion
     // Entrada de la llave y del panel del simulador (04-design-notes §5.7, DN-14): opacidad 0 → 1 en opacityMs y escala
     // scaleFrom → 1 en scaleMs, con ease.enter y origen abajo a la derecha (crece desde la llave). La salida es en el acto
     // (la hace quien la usa con display: none). Reducir movimiento: solo opacidad (reducedOpacityMs).
+    // It. 4a (D-ART-10, DD4a-03): el origen se elige (OriginLeft): el panel crece desde la esquina de la llave, abajo a la
+    // izquierda fuera del entrenamiento y abajo a la derecha en el entrenamiento.
     public sealed class PopTransition : TimedMotion
     {
         private readonly VisualElement _target;
@@ -15,6 +17,9 @@ namespace RowMate.Presentation.Motion
         private readonly double _scaleMs;
         private readonly double _reducedOpacityMs;
         private bool _reduced;
+
+        // true: el origen de la escala es la esquina de abajo a la IZQUIERDA (si no, la de la derecha, como en la It. 2).
+        public bool OriginLeft { get; set; }
 
         public PopTransition(MotionDriver driver, VisualElement target, double scaleFrom, double opacityMs, double scaleMs, double reducedOpacityMs)
             : base(driver)
@@ -37,7 +42,7 @@ namespace RowMate.Presentation.Motion
             }
 
             _reduced = Driver.Settings.ReduceMotion;
-            _target.style.transformOrigin = new TransformOrigin(new Length(100, LengthUnit.Percent), new Length(100, LengthUnit.Percent));
+            _target.style.transformOrigin = new TransformOrigin(new Length(OriginLeft ? 0 : 100, LengthUnit.Percent), new Length(100, LengthUnit.Percent));
             Begin();
         }
 

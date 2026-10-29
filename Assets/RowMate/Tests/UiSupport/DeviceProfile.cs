@@ -13,6 +13,9 @@ namespace RowMate.Tests.UiSupport
         public static readonly DeviceProfile P800 = new DeviceProfile("P800", 800, 360, 1);
         public static readonly DeviceProfile W1280 = new DeviceProfile("W1280", 1280, 720, 1);
 
+        // Solo para la geometría del HUD (02-tech-design §6.4 de la It. 4a): un teléfono chico vertical, 360 × 800 dp.
+        public static readonly DeviceProfile P360 = new DeviceProfile("P360", 945, 2100, 2.625, true);
+
         public DeviceProfile(string code, int widthPx, int heightPx, double density, bool phone = false)
         {
             if (widthPx <= 0 || heightPx <= 0 || !(density > 0))

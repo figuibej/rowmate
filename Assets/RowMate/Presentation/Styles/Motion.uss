@@ -169,3 +169,11 @@
 .rm-reduce-motion .rm-segmented--tiles .rm-segmented__option:hover:active {
     scale: 1 1;
 }
+
+/* ════ It. 4a (04a-motor-hud-funcional/04-design-notes §5.12): ninguna regla nueva. Los controles del HUD (Terminar, Pausa y
+   Reanudar: .rm-button--hud-*) y Entrenamiento libre son .rm-button y toman las de arriba: la capa hacia el estado en
+   dur.micro ease.enter y de vuelta en dur.fast ease.exit (también la capa oscura de Terminar, que pone Skin.uss), y la escala
+   0,97 al presionar (hacia 90, vuelta 240), sin escala con .rm-reduce-motion. La tarjeta de rutina de Workout es la de Rutinas
+   (capa, sin escala). Todo lo demás del inmersivo lo mueve el código con el reloj de prueba (§5.0): la entrada y la salida,
+   el rodillo, el semáforo, los pulsos, el cambio de paso, BPM y la llave; la escala por zona (hudScale) también va por código
+   y sus zonas no tienen ninguna transición. ════ */

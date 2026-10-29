@@ -13,6 +13,7 @@ using RowMate.Core.Common;
 using RowMate.Core.Localization;
 using RowMate.Core.Models;
 using RowMate.Core.Ports;
+using RowMate.Core.Workout;
 using RowMate.Tests.EditMode.Localization;
 using RowMate.Tests.Support;
 using AppContext = RowMate.App.Composition.AppContext;
@@ -31,6 +32,7 @@ namespace RowMate.Tests.EditMode.Composition
         private FakeSystemLocale _locale = null!;
         private FakeAccessibilitySettings _accessibility = null!;
         private InMemoryRoutineRepository _routines = null!;
+        private InMemorySessionRepository _sessions = null!;
 
         [SetUp]
         public void SetUp()
@@ -43,12 +45,14 @@ namespace RowMate.Tests.EditMode.Composition
             _locale = new FakeSystemLocale("es-AR");
             _accessibility = new FakeAccessibilitySettings(1.15, reduceMotion: true);
             _routines = new InMemoryRoutineRepository(RoutineSeeds.Lista.Routines);
+            _sessions = new InMemorySessionRepository();
         }
 
-        private AppContext Compose(bool profileTab = false, IRoutineRepository? routines = null, IClock? creationClock = null)
+        private AppContext Compose(bool profileTab = false, IRoutineRepository? routines = null, IClock? creationClock = null,
+                                   IAppLifecycle? lifecycle = null)
         {
-            return AppComposer.Compose(new AppServices(_backend, routines ?? _routines, _scheduler, _logger, LocalizationFixture.Set, _locale,
-                _accessibility, new ShellOptions(profileTab)) { CreationClock = creationClock });
+            return AppComposer.Compose(new AppServices(_backend, routines ?? _routines, _sessions, _scheduler, _logger, LocalizationFixture.Set,
+                _locale, _accessibility, new ShellOptions(profileTab)) { CreationClock = creationClock, Lifecycle = lifecycle });
         }
 
         [Test]
@@ -181,10 +185,12 @@ namespace RowMate.Tests.EditMode.Composition
         public void ComposerRejectsIncompleteServices()
         {
             Assert.Throws<ArgumentNullException>(() => AppComposer.Compose(null!));
-            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, _routines, _scheduler, _logger, LocalizationFixture.Set,
-                null!, _accessibility, new ShellOptions(false))));
-            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, null!, _scheduler, _logger, LocalizationFixture.Set,
-                _locale, _accessibility, new ShellOptions(false))), "sin repositorio de rutinas");
+            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, _routines, _sessions, _scheduler, _logger,
+                LocalizationFixture.Set, null!, _accessibility, new ShellOptions(false))));
+            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, null!, _sessions, _scheduler, _logger,
+                LocalizationFixture.Set, _locale, _accessibility, new ShellOptions(false))), "sin repositorio de rutinas");
+            Assert.Throws<ArgumentException>(() => AppComposer.Compose(new AppServices(_backend, _routines, null!, _scheduler, _logger,
+                LocalizationFixture.Set, _locale, _accessibility, new ShellOptions(false))), "sin repositorio de sesiones (It. 4a)");
         }
 
         // AC-RUT-09-01, AC-APP-01-09 (main.dart:83, routines_provider.dart:12-14): Start() carga las rutinas sin esperar, aunque
@@ -245,6 +251,39 @@ namespace RowMate.Tests.EditMode.Composition
             var created = withScheduler.Routines.CreateAsync("X", "", new IntervalStep[0]).Result;
             Assert.That(created!.CreatedAt, Is.EqualTo(_scheduler.UtcNow), "sin CreationClock, el Scheduler");
             withScheduler.Dispose();
+        }
+
+        // It. 4a (02-tech-design §2.13): el motor vive con la app (main.dart:82), Workout en reposo usa la colección compartida y
+        // cada inmersivo pide su HUD. Sin ciclo de vida, ForegroundLifecycle. Dispose deja cortada una sesión en curso, con lo que
+        // tenía, antes que las rutinas.
+        [Test, Category("AC-WKT-01-01"), Category("AC-WKT-12-05")]
+        public void ComposesTheWorkoutEngineAndItsStores()
+        {
+            var app = Compose();
+            Assert.That(app.Workout.State.Value.Phase, Is.EqualTo(WorkoutPhase.Idle));
+            Assert.That(app.Lifecycle, Is.SameAs(ForegroundLifecycle.Instance), "sin ciclo de vida: siempre adelante y con foco");
+            app.Start();
+            Assert.That(app.WorkoutRest.State.Value.Routines, Is.SameAs(app.Routines.State.Value.Routines), "la colección compartida");
+            Assert.That(app.WorkoutRest.State.Value.RowerConnected, Is.False);
+            _rower.Emit(BleStatus.Connected);
+            Assert.That(app.WorkoutRest.State.Value.RowerConnected, Is.True);
+            using (var hud = app.CreateHud())
+            {
+                Assert.That(hud.State.Value.Phase, Is.EqualTo(WorkoutPhase.Idle));
+                Assert.That(app.WorkoutRest.StartFree(), Is.True);
+                Assert.That(hud.State.Value.Phase, Is.EqualTo(WorkoutPhase.Active));
+                Assert.That(hud.State.Value.ControlsEnabled, Is.True);
+            }
+
+            Assert.That(_sessions.Sessions.Count, Is.EqualTo(1));
+            _scheduler.Advance(TimeSpan.FromSeconds(5));
+            app.Dispose();
+            Assert.That(_sessions.Session(1)!.FinishedAt, Is.Null, "la sesión en curso queda cortada");
+            Assert.Throws<ObjectDisposedException>(() => app.CreateHud());
+            var lifecycle = new FakeAppLifecycle();
+            var withLifecycle = Compose(lifecycle: lifecycle);
+            Assert.That(withLifecycle.Lifecycle, Is.SameAs(lifecycle));
+            withLifecycle.Dispose();
         }
 
         // Pulsómetro cuya reconexión tarda (como la real, hasta 15 s) y falla cuando el test quiere.

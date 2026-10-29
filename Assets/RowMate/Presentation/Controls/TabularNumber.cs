@@ -91,6 +91,13 @@ namespace RowMate.Presentation.Controls
 
         public void SetValue(string text, double value)
         {
+            SetValue(text, value, true);
+        }
+
+        // It. 4a (AC-WKT-02-08; 02-tech-design §6.5): animate = false aplica el valor sin rodillo (el primer estado después de un
+        // alcance: ningún número pasa por valores intermedios); un rodillo en curso salta a su final.
+        public void SetValue(string text, double value, bool animate)
+        {
             text = text ?? "";
             if (text.Length > MaxCells)
             {
@@ -103,7 +110,7 @@ namespace RowMate.Presentation.Controls
                 return;
             }
 
-            var animate = _motion != null && _motion.Armed && _font != null && _text.Length > 0;
+            animate = animate && _motion != null && _motion.Armed && _font != null && _text.Length > 0;
             if (_rolling)
             {
                 FinishRoll();
@@ -141,6 +148,20 @@ namespace RowMate.Presentation.Controls
 
             ApplySize(_rolling ? _fromWidth : _toWidth);
             MarkDirtyRepaint();
+        }
+
+        // It. 4a (02-tech-design §6.4): el tamaño en línea (el HUD no sigue la letra del sistema y achica sus cifras con los
+        // topes de HudGeometry). Las métricas se recalculan en el acto, sin esperar a que se resuelvan los estilos.
+        public void SetFontSize(float sizeDp)
+        {
+            if (!(sizeDp > 0))
+            {
+                return;
+            }
+
+            style.fontSize = sizeDp;
+            _sizeOverride = sizeDp;
+            UpdateMetrics(false);
         }
 
         // Rectángulo de la celda i del texto actual, en coordenadas locales (AC-APP-05-04).
@@ -188,10 +209,12 @@ namespace RowMate.Presentation.Controls
             MarkDirtyRepaint();
         }
 
+        private float _sizeOverride;
+
         private void UpdateMetrics(bool allowFallback)
         {
             var font = resolvedStyle.unityFontDefinition.fontAsset;
-            var size = resolvedStyle.fontSize;
+            var size = _sizeOverride > 0 ? _sizeOverride : resolvedStyle.fontSize;
             if (font == null)
             {
                 if (!allowFallback || resolvedStyle.unityFontDefinition.font != null || panel == null)
@@ -261,6 +284,7 @@ namespace RowMate.Presentation.Controls
 
         private void ComputeCells()
         {
+            EnsureGlyphs();
             var total = 0f;
             for (var i = 0; i < _text.Length; i++)
             {
@@ -269,6 +293,32 @@ namespace RowMate.Presentation.Controls
             }
 
             _toWidth = total;
+        }
+
+        // Los caracteres del texto que no son cifras (el × del chip de la serie, la m de los metros, el -) tienen que estar en el
+        // atlas antes de medir su celda: si no, Advance cae a 0,5 em y el ancho dependía de si otro texto ya los había dibujado
+        // (en la It. 3 el × de CAP-10 medía 0,5 em y el de CAP-11, su avance real: QA-V3-06, 04a/00-deuda-it3 §6). Solo la
+        // primera vez de cada carácter en la sesión: después ya está y no se asigna nada.
+        private void EnsureGlyphs()
+        {
+            if (_font == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < _text.Length; i++)
+            {
+                var c = _text[i];
+                if ((c >= '0' && c <= '9') || c == ':' || c == '.')
+                {
+                    continue;
+                }
+
+                if (!_font.characterLookupTable.ContainsKey(c))
+                {
+                    _font.TryAddCharacters(CharString(c));
+                }
+            }
         }
 
         private float CellWidth(char c)
@@ -399,9 +449,10 @@ namespace RowMate.Presentation.Controls
             return c < CharStrings.Length ? CharStrings[c] : c.ToString();
         }
 
+        // ASCII y Latin-1 (el × del chip de la serie también, sin asignar en cada dibujo).
         private static string[] BuildCharStrings()
         {
-            var strings = new string[128];
+            var strings = new string[256];
             for (var i = 0; i < strings.Length; i++)
             {
                 strings[i] = ((char)i).ToString();

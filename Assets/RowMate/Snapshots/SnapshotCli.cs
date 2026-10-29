@@ -11,10 +11,11 @@ namespace RowMate.Snapshots
 {
     // Entrada del arnés de capturas (02-tech-design §4.1, §4.6):
     //   Unity.exe -batchmode -projectPath <repo> -executeMethod RowMate.Snapshots.SnapshotCli.Run -logFile <log>
-    //             [-snapshotSet it3|it2] [-snapshotFilter "CAP-01,CAP-1*,VID-*"] [-snapshotOut <carpeta>]
+    //             [-snapshotSet it4a|it3|it2] [-snapshotFilter "CAP-01,CAP-1*,VID-*"] [-snapshotOut <carpeta>]
     //             [-snapshotPipeline GammaRt|Overlay]
     // It. 3 (03-rutinas/02-tech-design §5.1): -snapshotSet elige el catálogo (it3 por defecto: Rutinas; it2: Dispositivo) y su
-    // carpeta de salida. SeedDatabase (otro -executeMethod, con -quit) escribe la base sintética de CAP-27
+    // carpeta de salida. It. 4a (04a-motor-hud-funcional/02-tech-design §7.1): it4a (el entrenamiento, WorkoutCatalog) pasa a ser el
+    // conjunto por defecto; it3 e it2 siguen igual. SeedDatabase (otro -executeMethod, con -quit) escribe la base sintética de CAP-27
     // (-snapshotSeedDb <carpeta>/cap27.db -seed Cap27) para tools/unity/capture-cap27.ps1.
     // SIN -quit: Run() registra la máquina de estados en EditorApplication.update y vuelve; al terminar sale con
     // EditorApplication.Exit (0 bien, 1 alguna toma falló, 3 venció el tope de 15 min). En batchmode sin -quit el Editor sigue
@@ -24,12 +25,18 @@ namespace RowMate.Snapshots
     {
         public const string It2Output = "docs/migration/iterations/02-dispositivo-simulador/snapshots";
         public const string It3Output = "docs/migration/iterations/03-rutinas/snapshots";
-        public const string DefaultSet = "it3";
+        public const string It4aOutput = "docs/migration/iterations/04a-motor-hud-funcional/snapshots";
+        public const string DefaultSet = "it4a";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
         {
-            return string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase) ? It2Output : It3Output;
+            if (string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase))
+            {
+                return It2Output;
+            }
+
+            return string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase) ? It3Output : It4aOutput;
         }
 
         public static void Run()

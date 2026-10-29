@@ -71,8 +71,12 @@ namespace RowMate.Snapshots
                 ("Presioná + para crear una", () => h.IsTextVisible("Presioná + para crear una")),
                 ("#routines-add entero en la ventana", () => Inside(h, "routines-add")),
                 ("#routines-add sin intersección con #sim-open", () => !Overlap(h.BoundsOf("routines-add"), h.BoundsOf("sim-open"))),
-                ("#sim-open.yMax + 16 = #routines-add.yMin ± 1", () => Near(h.BoundsOf("sim-open").yMax + 16, h.BoundsOf("routines-add").yMin, 1)),
-                ("mismo xMax ± 1", () => Near(h.BoundsOf("sim-open").xMax, h.BoundsOf("routines-add").xMax, 1)),
+                // D-ART-10 (It. 4a, DV-39; 04a-motor-hud-funcional/01-po-spec §5): el + solo en su rincón y la llave abajo a la
+                // izquierda, a 16 del borde y 16 sobre la barra.
+                ("#routines-add en su rincón (16 del borde derecho y 16 sobre la barra ± 1)", () => Near(h.Root.worldBound.xMax - h.BoundsOf("routines-add").xMax, 16, 1)
+                                                                                                   && Near(h.BoundsOf("tab-bar").yMin - h.BoundsOf("routines-add").yMax, 16, 1)),
+                ("#sim-open.xMin = 16 ± 1", () => Near(h.BoundsOf("sim-open").xMin - h.Root.worldBound.xMin, 16, 1)),
+                ("#sim-open 16 sobre la barra ± 1", () => Near(h.BoundsOf("tab-bar").yMin - h.BoundsOf("sim-open").yMax, 16, 1)),
                 ("#sim-ribbon", () => h.IsShown("sim-ribbon")),
                 ("pestaña 2 elegida", () => h.App.Shell.SelectedIndex.Value == 2),
                 ("barra sin acciones", () => h.RoutinesScreen!.AppBar.Actions.childCount == 0));
@@ -112,12 +116,14 @@ namespace RowMate.Snapshots
             all.Add(ListShot("CAP-04", "CAP-04-lista", "es-AR", new[] { "1 serie · 1 descanso", "2 series · 1 descanso", "1 paso", "4 series · 3 descansos" }));
             all.Add(ListShot("CAP-05", "CAP-05-lista-en", "en-US", new[] { "1 interval · 1 rest", "2 intervals · 1 rest", "1 step", "4 intervals · 3 rests" }));
 
-            // CAP-06: L640, 30 rutinas, al final: la última entera sobre la llave, que está sobre el + (AC-RUT-10-09, AC-BLE-16-02).
+            // CAP-06: L640, 30 rutinas, al final: la última entera sobre el + y sobre la llave, que está abajo a la izquierda desde la
+            // It. 4a (D-ART-10; AC-RUT-10-09, AC-BLE-16-02).
             var cap06 = Rut("CAP-06", "CAP-06-lista-l640-final", DeviceProfile.L640, HostRoutines.Seeded(RoutineSeeds.ListaPlus(26)),
                 "F-LISTA + 26 rutinas, desplazada al final", s => Steps(s.Tap("tab-routines"), s.ScrollToEnd("routines-list"), s.Settle()));
             cap06.Checks = h => Expect(
                 ("última tarjeta entera", () => Inside(h, "routine-card-29")),
                 ("yMax ≤ #sim-open.yMin − 16 ± 1", () => h.BoundsOf("routine-card-29").yMax <= h.BoundsOf("sim-open").yMin - 16 + 1),
+                ("yMax ≤ #routines-add.yMin − 16 ± 1", () => h.BoundsOf("routine-card-29").yMax <= h.BoundsOf("routines-add").yMin - 16 + 1),
                 ("llave sin intersección con +", () => !Overlap(h.BoundsOf("sim-open"), h.BoundsOf("routines-add"))));
             all.Add(cap06);
 
@@ -163,7 +169,9 @@ namespace RowMate.Snapshots
                 ("editorEmptySteps con \\n", () => h.TextOf("editor-empty") == "Todavía no hay pasos.\nPresioná \"Paso\" o \"Serie\"."),
                 ("#tab-bar oculta", () => !h.IsShown("tab-bar")),
                 ("la flecha se toca", () => h.WhyNotTappable("editor-back") == null),
-                ("#sim-open a 80 ± 1 del borde inferior", () => Near(h.Root.worldBound.yMax - h.BoundsOf("sim-open").yMax, 80, 1)));
+                // D-ART-10 (It. 4a): con el editor (la barra no se ve), la llave abajo a la izquierda a 16 del borde de abajo.
+                ("#sim-open a 16 ± 1 del borde inferior", () => Near(h.Root.worldBound.yMax - h.BoundsOf("sim-open").yMax, 16, 1)),
+                ("#sim-open.xMin = 16 ± 1", () => Near(h.BoundsOf("sim-open").xMin - h.Root.worldBound.xMin, 16, 1)));
             cap09.WithProbe(PixelProbe.Point("caja del campo bg.sunken", "editor-name .rm-field__box", new Vector2(0.5f, 0.5f), Tokens.BgSunken.Rgb.ToHex(), 3), true)
                 // El borde de 1 dp en reposo (border.input sobre bg.sunken): medio dp adentro del borde izquierdo de la caja de 379.
                 .WithProbe(PixelProbe.Point("borde del campo border.input", "editor-name .rm-field__box", new Vector2(0.0013f, 0.5f),
@@ -496,7 +504,7 @@ namespace RowMate.Snapshots
                 .Shot("DEMO-02", "DEMO-02-nueva-rutina", "+, nombre Escalera SPM")
                 .Shot("DEMO-03", "DEMO-03-paso-calentamiento", "+ Paso: Calentamiento, Por tiempo, Min 5")
                 .Shot("DEMO-04", "DEMO-04-serie", "Confirmar y Serie")
-                .Shot("DEMO-05", "DEMO-05-editar-trabajo", "Lápiz de Trabajo: Min 5, SPM 18, Incremento SPM 2")
+                .Shot("DEMO-05", "DEMO-05-editar-trabajo", "Lápiz de Trabajo: Min 5, SPM 18 y, desplazado al final, Incremento SPM 2")
                 .Shot("DEMO-06", "DEMO-06-enfriamiento", "Confirmar; Descanso Min 2; + Paso Enfriamiento Min 5")
                 .Shot("DEMO-07", "DEMO-07-guardada", "Guardar")
                 .Shot("DEMO-08", "DEMO-08-descripcion-x4", "Tarjeta; descripción; ×3 → 4 → OK")
@@ -531,9 +539,14 @@ namespace RowMate.Snapshots
             yield return s.TapInView("step-edit-1");
             yield return s.Type("step-min", "5");
             yield return s.Type("step-spm", "18");
+            // Como el usuario: baja hasta las progresiones antes de escribir la de SPM; la vista previa queda fija arriba
+            // (04-design-notes §7.3; QA-V3-03: antes la toma salía con el contenido arriba y sin las progresiones).
+            yield return s.Do(h => h.ScrollDialogToEnd());
             yield return s.Type("step-prog-spm", "2");
             yield return s.Shot("DEMO-05", h => Expect(("Editar paso", () => h.TextOf("dialog-title") == "Editar paso"),
-                ("vista previa con SPM +2/rep", () => Step(h).Preview.Subtitle.Text == "5m  ·  18 spm · " + StepSubtitle.TrendEmoji + " SPM +2/rep")));
+                ("vista previa con SPM +2/rep", () => Step(h).Preview.Subtitle.Text == "5m  ·  18 spm · " + StepSubtitle.TrendEmoji + " SPM +2/rep"),
+                ("vista previa fija", () => Step(h).PreviewIsPinned),
+                ("las tres progresiones a la vista", () => InDialogView(h, "step-prog-spm") && InDialogView(h, "step-prog-watts") && InDialogView(h, "step-prog-split"))));
 
             yield return s.TapInView("dialog-confirm");
             yield return s.TapInView("step-edit-2");
@@ -694,15 +707,16 @@ namespace RowMate.Snapshots
             return list;
         }
 
-        // Aviso entero, de 16 a 16, abajo, sin intersección con la llave (el aviso queda debajo: DN3-13) y el editor abierto.
+        // Aviso entero, de 16 a 16, abajo, sin intersección con la llave y el editor abierto. Desde la It. 4a (D-ART-10; spec de la
+        // 4a §5: CAP-18, -19 y -28) el aviso queda 8 dp por encima de la llave, que en el editor está a 16 del borde de abajo.
         private static IEnumerable<string> ToastChecks(UiTestHost h, string text, bool inEditor)
         {
             return Expect(
                 (text, () => h.Shell.Toasts.CurrentText == text),
                 ("aviso entero en la ventana", () => Inside(h, "toast")),
                 ("de 16 a 16", () => Near(h.BoundsOf("toast").xMin - h.Root.worldBound.xMin, 16, 1) && Near(h.Root.worldBound.xMax - h.BoundsOf("toast").xMax, 16, 1)),
-                ("a 16 ± 1 del borde inferior", () => !inEditor || Near(h.Root.worldBound.yMax - h.BoundsOf("toast").yMax, 16, 1)),
-                ("#toast.yMin ≥ #sim-open.yMax + 8", () => h.BoundsOf("toast").yMin >= h.BoundsOf("sim-open").yMax + 8 - 0.5f),
+                ("#toast.yMax + 8 = #sim-open.yMin ± 1", () => !inEditor || Near(h.BoundsOf("toast").yMax + 8, h.BoundsOf("sim-open").yMin, 1)),
+                ("#toast.yMax + 8 ≤ #sim-open.yMin", () => h.BoundsOf("toast").yMax + 8 <= h.BoundsOf("sim-open").yMin + 0.5f),
                 ("el editor sigue abierto", () => !inEditor || h.Editor != null));
         }
 
@@ -753,6 +767,14 @@ namespace RowMate.Snapshots
         private static StepDialog Step(UiTestHost h)
         {
             return h.TopDialog as StepDialog ?? throw new InvalidOperationException("no hay un diálogo de paso");
+        }
+
+        // El campo se ve entero dentro de la zona desplazable del diálogo de arriba (± 0,5).
+        private static bool InDialogView(UiTestHost h, string name)
+        {
+            var viewport = Step(h).ContentScroll.contentViewport.worldBound;
+            var box = h.BoundsOf(name);
+            return box.height > 0 && box.yMin >= viewport.yMin - 0.5f && box.yMax <= viewport.yMax + 0.5f;
         }
 
         private static string FieldValue(UiTestHost h, string name)

@@ -46,7 +46,9 @@ namespace RowMate.Bootstrap
             var fade = VerticalFadeTexture.Create();
             var ui = new UiContext(app, motion, fade, options.Display, options.IsDesktop, options.Clipboard, options.Keyboard)
             {
-                GammaPanel = options.Pipeline == UiColorPipeline.GammaRt
+                GammaPanel = options.Pipeline == UiColorPipeline.GammaRt,
+                BoatZoneOutline = options.BoatZoneOutline,
+                ReserveWrench = options.TopLayer != null
             };
             var shell = new AppShellView(ui, options.TopLayer);
             root.Add(shell);

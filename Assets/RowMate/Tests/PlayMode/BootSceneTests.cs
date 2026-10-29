@@ -64,6 +64,48 @@ namespace RowMate.Tests.PlayMode
             var file = Path.Combine(_dataDir, DatabaseFiles.NameFor(BuildFlags.IsSimulator));
             Assert.That(File.Exists(file), Is.True, "AppRoot abrió la base en ROWMATE_DATA_DIR (" + DatabaseFiles.NameFor(BuildFlags.IsSimulator) + ")");
         }
+
+        // It. 4a (04a-motor-hud-funcional/02-tech-design §2.13, §3.5, §4.2, §4.4): AppRoot compone una sola base local para las
+        // rutinas y las sesiones, el ciclo de vida (adelante y con foco al arrancar) y la pantalla encendida (pedida en Awake; en
+        // el Editor de Windows, SetThreadExecutionState de verdad). Al descargar la escena la suelta.
+        [UnityTest, Category("AC-APP-14-01"), Category("AC-HIS-20-04")]
+        public IEnumerator ComposesTheStoreLifecycleAndKeepAwake()
+        {
+            var load = SceneManager.LoadSceneAsync(SceneName, LoadSceneMode.Additive);
+            while (!load.isDone)
+            {
+                yield return null;
+            }
+
+            for (var i = 0; i < 5; i++)
+            {
+                yield return null;
+            }
+
+            var appRoot = UnityEngine.Object.FindAnyObjectByType<AppRoot>();
+            Assert.That(appRoot, Is.Not.Null);
+            Assert.That(appRoot!.Store, Is.Not.Null, "una base local");
+            Assert.That(appRoot.Store!.Routines, Is.Not.Null);
+            Assert.That(appRoot.Store.Sessions, Is.Not.Null, "las sesiones en el mismo archivo");
+            Assert.That(appRoot.Lifecycle, Is.Not.Null);
+            Assert.That(appRoot.Lifecycle!.InBackground.Value, Is.False, "arranca adelante");
+            Assert.That(appRoot.Lifecycle.IsUserFacing, Is.True);
+            Assert.That(appRoot.KeepAwake, Is.Not.Null, "la pantalla encendida");
+            var keepAwake = appRoot.KeepAwake!;
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                Assert.That(keepAwake.IsHeld, Is.True, "en el Editor de Windows el sistema acepta el pedido");
+            }
+
+            Assert.That(File.Exists(Path.Combine(_dataDir, DatabaseFiles.NameFor(BuildFlags.IsSimulator))), Is.True);
+            var unload = SceneManager.UnloadSceneAsync(SceneName);
+            while (unload != null && !unload.isDone)
+            {
+                yield return null;
+            }
+
+            Assert.That(keepAwake.IsHeld, Is.False, "al cerrar la suelta");
+        }
     }
 
     public static class BootSceneProbe

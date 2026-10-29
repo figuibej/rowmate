@@ -5,10 +5,11 @@ using RowMate.App.Composition;
 using RowMate.App.Shell;
 using RowMate.Core.Common;
 using RowMate.Core.Localization;
+using RowMate.Core.Ports;
 using RowMate.Infrastructure.Database;
-using RowMate.Infrastructure.Routines;
 using RowMate.Infrastructure.Threading;
 using RowMate.Platform;
+using RowMate.Platform.Lifecycle;
 using RowMate.Platform.Logging;
 using RowMate.Platform.Time;
 using RowMate.Presentation.Motion;
@@ -30,7 +31,10 @@ namespace RowMate.Bootstrap
     // (−10000), así que en su Awake y su OnEnable rootVisualElement todavía es null. Awake configura (y le da al documento la
     // copia del panel, armada por RuntimePanelFactory con sus respaldos de fuente, antes del OnEnable del documento); Start
     // arma la UI, cuando la raíz ya existe.
-    // Sin wakelock todavía (D-08): el punto de enganche es el paso 8 (F-APP-14, It. 4a). Ningún estático salvo BuildFlags.
+    // It. 4a (02-tech-design §3.5, §4.2, §4.4): la base local es un LocalStore (rutinas y sesiones sobre la misma conexión y
+    // el mismo ejecutor); el ciclo de vida (AppLifecycle) lo mueven OnApplicationPause y OnApplicationFocus; la pantalla
+    // siempre encendida (ScreenKeepAwake) se pide en Awake, antes de la primera pantalla (AC-APP-14-01), y se libera al cerrar
+    // (AC-APP-14-03; termina DV-08 de la It. 2). Ningún estático salvo BuildFlags.
     [DefaultExecutionOrder(-10000)]
     [RequireComponent(typeof(UIDocument))]
     public sealed class AppRoot : MonoBehaviour
@@ -52,8 +56,10 @@ namespace RowMate.Bootstrap
         private IAppLogger? _logger;
         private UnityScheduler? _scheduler;
         private PlatformServices? _platform;
+        private AppLifecycle? _lifecycle;
+        private ScreenKeepAwake? _keepAwake;
         private DeviceBackend? _backend;
-        private SqliteRoutineRepository? _routines;
+        private LocalStore? _store;
         private AppContext? _app;
         private ShellHandle? _shell;
         private UiSurface? _surface;
@@ -68,6 +74,14 @@ namespace RowMate.Bootstrap
         public ShellHandle? Shell => _shell;
 
         public AppContext? App => _app;
+
+        // El ciclo de vida como lo ve el resto de la app (Core.Ports): lo lee BootSceneTests sin depender de Platform.
+        public IAppLifecycle? Lifecycle => _lifecycle;
+
+        public ScreenKeepAwake? KeepAwake => _keepAwake;
+
+        // La base local de la app (rutinas y sesiones en un archivo, It. 4a; BootSceneTests).
+        public LocalStore? Store => _store;
 
         // Pasos 1 a 6 (sin tocar rootVisualElement).
         private void Awake()
@@ -98,21 +112,29 @@ namespace RowMate.Bootstrap
             // al recuperar el foco la vuelve a aplicar PlatformServices.Refresh.
             _platform.TitleBar.Apply();
 
+            // 3b. Ciclo de vida y pantalla siempre encendida (It. 4a §4.2, §4.4): el primer pedido, antes de armar la UI
+            //     (AC-APP-14-01: desde el arranque, en toda la app; lib/main.dart:42). ScreenKeepAwake vuelve a pedir al volver
+            //     del segundo plano y al recuperar el foco (AC-APP-14-02); un rechazo solo va al registro (AC-APP-14-04).
+            _lifecycle = new AppLifecycle(logger);
+            _keepAwake = new ScreenKeepAwake(_platform.WakeLock, _lifecycle, logger);
+            _keepAwake.Start();
+
             // 4. Remo y pulsómetro: el único #if ROWMATE_SIMULATOR (DeviceBackendFactory).
             _backend = DeviceBackendFactory.Create(_scheduler, logger);
 
             // 4b. Base local (F-HIS-17, F-HIS-20): una por variante (rower_app.db o rower_app_dev.db), en la carpeta privada de
             //     la app (03-rutinas/02-tech-design §2.2, §2.4). El ÚNICO lugar del código que elige el archivo. Se abre en el
-            //     primer uso (la carga del arranque), en el hilo de la base (SerialExecutor); ninguna ruta va al registro.
+            //     primer uso (la carga del arranque), en el hilo de la base (SerialExecutor); ninguna ruta va al registro. Desde
+            //     la It. 4a es un LocalStore: rutinas y sesiones sobre la misma conexión y el mismo ejecutor (§3.5).
             var file = DatabaseFiles.NameFor(BuildFlags.IsSimulator);
             var dbPath = Path.Combine(DataLocation.DatabaseDirectory(_platform), file);
-            _routines = new SqliteRoutineRepository(new RowMateDatabase(dbPath, new SerialExecutor("RowMate.Db", logger), logger), logger);
+            _store = new LocalStore(new RowMateDatabase(dbPath, new SerialExecutor("RowMate.Db", logger), logger), logger);
             logger.Log(LogLevel.Info, Tag, "base " + file + (DataLocation.IsOverridden ? " (carpeta de desarrollo)" : ""));
 
             // 5. La app pura. Perfil apagado (su regla real es de la It. 12, D-20).
             var texts = LocalizationSet.Load(_assets.StringsEs!.text, _assets.StringsEn!.text);
-            _app = AppComposer.Compose(new AppServices(_backend, _routines, _scheduler, logger, texts, _platform.Locale, _platform.Accessibility,
-                new ShellOptions(false)));
+            _app = AppComposer.Compose(new AppServices(_backend, _store.Routines, _store.Sessions, _scheduler, logger, texts, _platform.Locale,
+                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle });
 
             // 6. Superficie: copia del panel con sus respaldos de fuente (RuntimePanelFactory: el asset no se toca, R2-05;
             //    QA-G3-12), RT limpia a bg.app y presentador (S-B1). El documento de la escena no tiene panel: se engancha a la
@@ -204,21 +226,60 @@ namespace RowMate.Bootstrap
             }
         }
 
-        // Al recuperar el foco: idioma, letra y movimiento del sistema (AC-APP-09-05).
-        private void OnApplicationFocus(bool focus)
+        // Segundo plano (Android e iOS: la actividad se pausa y el loop se detiene; en escritorio Unity no lo llama con
+        // runInBackground: minimizada NO es segundo plano). 02-tech-design §4.2:
+        // - Al irse: primero el ciclo de vida (el motor manda lo pendiente y espera la base a lo sumo 1 s, AC-WKT-06-15: queda
+        //   escrito ANTES de que el sistema congele la app), después el programador anota el segundo plano.
+        // - Al volver: primero el alcance (FrameScheduler.ResumeFromBackground: el remo y el motor disparan en orden todo lo
+        //   vencido, con la hora de su instante; sin un EnterBackground antes, como la llamada del arranque, no hace nada) y
+        //   recién después el ciclo de vida vuelve a primer plano: el motor publica UNA foto con Instant, los topes de espera
+        //   vuelven a correr, ScreenKeepAwake vuelve a pedir la pantalla y, con foco, Workout muestra el aviso retenido.
+        private void OnApplicationPause(bool paused)
         {
-            if (!focus || _platform == null || _app == null)
+            if (_scheduler == null || _lifecycle == null)
             {
                 return;
             }
 
-            _platform.Refresh();
-            _app.RefreshSystemSettings(_platform.Locale.PreferredLanguageTags);
+            if (paused)
+            {
+                _lifecycle.SetBackground(true);
+                _scheduler.EnterBackground();
+                return;
+            }
+
+            if (_scheduler.InBackground)
+            {
+                var fired = _scheduler.ResumeFromBackground();
+                _logger?.Log(LogLevel.Debug, Tag, "vuelta del segundo plano: " + fired.ToString(CultureInfo.InvariantCulture) + " disparos en el alcance");
+            }
+
+            _lifecycle.SetBackground(false);
+        }
+
+        // El foco de la ventana (en Windows, minimizar también lo saca): el ciclo de vida (los avisos esperan a que el usuario
+        // esté delante, AC-WKT-02-09; ScreenKeepAwake vuelve a pedir, AC-APP-14-02) y, al recuperarlo, idioma, letra y
+        // movimiento del sistema (AC-APP-09-05).
+        private void OnApplicationFocus(bool focus)
+        {
+            if (_platform == null || _app == null)
+            {
+                return;
+            }
+
+            if (focus)
+            {
+                _platform.Refresh();
+                _app.RefreshSystemSettings(_platform.Locale.PreferredLanguageTags);
+            }
+
+            _lifecycle?.SetFocus(focus);
         }
 
         // Orden inverso de lo que se haya creado (Start puede no haber corrido), sin avisarle nada al usuario (AC-APP-01-08):
-        // shell → app (stores) → backend → repositorio y ejecutor de la base → superficie. El ejecutor termina lo encolado: un
-        // guardado que ya cerró el editor ya hizo commit (el editor espera el commit, AC-RUT-08-07).
+        // shell → app (stores; el motor deja cortada una sesión en curso con todo lo que mandó, P-03) → backend → LocalStore
+        // (el ejecutor termina lo encolado y cierra la conexión en su hilo) → superficie → pantalla encendida liberada
+        // (AC-APP-14-03). Un guardado que ya cerró el editor ya hizo commit (el editor espera el commit, AC-RUT-08-07).
         private void OnDestroy()
         {
             _shell?.Dispose();
@@ -227,10 +288,12 @@ namespace RowMate.Bootstrap
             _app = null;
             _backend?.Dispose();
             _backend = null;
-            _routines?.Dispose();
-            _routines = null;
+            _store?.Dispose();
+            _store = null;
             _surface?.Dispose();
             _surface = null;
+            _keepAwake?.Dispose();
+            _keepAwake = null;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

@@ -120,7 +120,7 @@ namespace RowMate.Tests.EditMode.Localization
 
         // AC-APP-09-07 (diferencia aceptada, P-06): textos del sistema (teclado y menú de copiar y pegar).
         [Test, Category("AC-APP-09-07")]
-        [Ignore("NO VERIFICABLE → It. 3: [Device] P-06 aceptada; primer campo de texto: editor de rutinas (teclado y menú de copiar y pegar en el idioma del sistema)")]
+        [Ignore("Se verifica en PlayMode: TextEditingTests.ContextMenuInTheAppLanguage (It. 3, el menú de copiar y pegar en el idioma de la app, P-06) y en CAP-26. [Device-And] el teclado del sistema en su idioma: QA en equipo cuando estén el módulo y el teléfono (AC-RUT-11-10)")]
         public void SystemTextsFollowSystemLanguage()
         {
         }

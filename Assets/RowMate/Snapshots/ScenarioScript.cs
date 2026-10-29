@@ -143,6 +143,111 @@ namespace RowMate.Snapshots
             yield return Settle();
         }
 
+        // ── It. 4a (04a-motor-hud-funcional/02-tech-design §7.1) ──
+
+        // El instante del reloj de prueba (monotónico) del toque que empezó la sesión: lo anotan StartFree y StartRoutine, y
+        // AdvanceTo cuenta desde ahí (el motor arranca en el toque, AC-WKT-13-01).
+        public double SessionStart { get; private set; } = double.NaN;
+
+        // Workout y "Entrenamiento libre" (el inmersivo entra con su fundido, que Settle deja terminado).
+        public IEnumerator StartFree()
+        {
+            yield return GoToWorkout();
+            Host.Tap("workout-free");
+            SessionStart = Host.Scheduler.MonotonicSeconds;
+            yield return Settle();
+        }
+
+        // Toca la tarjeta de la rutina en Workout (por su nombre): abre el diálogo de inicio, o el aviso si no se puede iniciar.
+        public IEnumerator TapRoutine(string name)
+        {
+            yield return GoToWorkout();
+            Host.TapRoutineNamed(name);
+            yield return Settle();
+        }
+
+        // La tarjeta y "Iniciar" del diálogo de inicio.
+        public IEnumerator StartRoutine(string name)
+        {
+            yield return TapRoutine(name);
+            yield return ConfirmStart();
+        }
+
+        // "Iniciar" en el diálogo de inicio abierto: la sesión empieza en el toque.
+        public IEnumerator ConfirmStart()
+        {
+            yield return Frames(2);
+            Host.Tap("dialog-confirm");
+            SessionStart = Host.Scheduler.MonotonicSeconds;
+            yield return Settle();
+        }
+
+        // Avanza el reloj de prueba hasta N segundos desde el toque que empezó la sesión (nunca para atrás).
+        public IEnumerator AdvanceTo(double secondsSinceStart)
+        {
+            if (double.IsNaN(SessionStart))
+            {
+                throw new InvalidOperationException("AdvanceTo sin una sesión empezada (StartFree o StartRoutine)");
+            }
+
+            var target = SessionStart + secondsSinceStart;
+            var now = Host.Scheduler.MonotonicSeconds;
+            if (target > now + 1e-9)
+            {
+                Host.Advance(target - now);
+            }
+
+            yield return Frames(2);
+        }
+
+        // "A los N s" para una foto fija: un instante del segundo N de la sesión, con los rodillos del cambio de segundo ya
+        // quietos (N + 0,45 o más) y dentro de la ventana de la lectura [k + 0,56; k + 0,84] del reloj de prueba, así la regla
+        // de toma (SnapshotRunner.TakeRule) no se corre al segundo siguiente. Si ningún instante de [N + 0,45; N + 0,95) cae en la
+        // ventana, el más tardío de [N; N + 0,45) que caiga: la regla espera ahí que se aquieten.
+        public IEnumerator AtSecond(double n)
+        {
+            if (double.IsNaN(SessionStart))
+            {
+                throw new InvalidOperationException("AtSecond sin una sesión empezada (StartFree o StartRoutine)");
+            }
+
+            var second = SessionStart + n;
+            var chosen = double.NaN;
+            for (var d = 0.45; d < 0.95 && double.IsNaN(chosen); d += 0.01)
+            {
+                if (InReadingWindow(second + d))
+                {
+                    chosen = d;
+                }
+            }
+
+            for (var d = 0.44; d >= 0 && double.IsNaN(chosen); d -= 0.01)
+            {
+                if (InReadingWindow(second + d))
+                {
+                    chosen = d;
+                }
+            }
+
+            yield return AdvanceTo(n + (double.IsNaN(chosen) ? 0 : chosen));
+        }
+
+        private static bool InReadingWindow(double monotonic)
+        {
+            var fraction = monotonic - Math.Floor(monotonic);
+            return fraction >= 0.56 && fraction <= 0.84;
+        }
+
+        private IEnumerator GoToWorkout()
+        {
+            yield return Frames(2);
+            if (Host.App.Shell.SelectedIndex.Value != 1 || Host.Shell.Pages.CoversShell)
+            {
+                Host.Tap("tab-workout");
+                yield return Settle();
+            }
+        }
+
         // Una toma de una secuencia (Kind = Sequence): la regla de toma de una foto fija y el registro (la pone el arnés).
         public Func<string, Func<UiTestHost, IEnumerable<string>>?, IEnumerator>? OnShot { get; set; }
 

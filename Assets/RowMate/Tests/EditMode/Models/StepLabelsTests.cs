@@ -246,7 +246,7 @@ namespace RowMate.Tests.EditMode.Models
         }
 
         [Test, Category("AC-RUT-04-06")]
-        [Ignore("NO VERIFICABLE → It. 3: [Editor] el subtítulo en la lista de pasos del editor de rutinas")]
+        [Ignore("Se verifica en PlayMode: RoutineEditorTests.BorderSubtitlesOnScreen (It. 3, los subtítulos de las 11 filas de AC-RUT-12-06) y en CAP-12a / CAP-12b")]
         public void EditorSubtitleOnScreen()
         {
         }

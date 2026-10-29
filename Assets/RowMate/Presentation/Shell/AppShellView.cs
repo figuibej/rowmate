@@ -7,6 +7,7 @@ using RowMate.Presentation.Controls;
 using RowMate.Presentation.Device;
 using RowMate.Presentation.Placeholder;
 using RowMate.Presentation.Routines;
+using RowMate.Presentation.Workout;
 using UnityEngine.UIElements;
 
 namespace RowMate.Presentation.Shell
@@ -17,7 +18,8 @@ namespace RowMate.Presentation.Shell
     // Shell de la app (F-APP-01, F-APP-02, F-APP-03; 02-tech-design §3.2 de la It. 2; 03-rutinas/02-tech-design §4.1; legacy
     // MainShell, main.dart:116-181). Los nombres son contrato:
     //   #app-root .rm-app .rm-text-scale-<n> [.rm-reduce-motion] [.rm-desktop] [.rm-keyboard-nav]   sin padding
-    //   ├── #tab-content .rm-tab-content       capa 0 (TabHost: las 4/5 pantallas, construidas una vez; Rutinas = RoutinesScreenView)
+    //   ├── #tab-content .rm-tab-content       capa 0 (TabHost: las 4/5 pantallas, construidas una vez; Rutinas =
+    //   │                                      RoutinesScreenView; desde la It. 4a, Workout = WorkoutScreenView)
     //   ├── #tab-bar .rm-tab-bar               capa 1 (absoluta abajo, sobre el contenido)
     //   ├── #page-stack .rm-layer              capa 2 (PageStack: el editor)
     //   ├── #dialog-layer .rm-layer            capa 3 (DialogLayer)
@@ -67,6 +69,12 @@ namespace RowMate.Presentation.Shell
                 {
                     RoutinesScreen = new RoutinesScreenView(ui, Layout, i);
                     Tabs.AddScreen(RoutinesScreen);
+                }
+                else if (destination.Id == TabDestinationId.Workout)
+                {
+                    // Desde la It. 4a Workout deja de ser provisoria (AC-APP-02-08).
+                    WorkoutScreen = new WorkoutScreenView(ui, Layout, i);
+                    Tabs.AddScreen(WorkoutScreen);
                 }
                 else
                 {
@@ -118,6 +126,8 @@ namespace RowMate.Presentation.Shell
         public DeviceScreenView? DeviceScreen { get; }
 
         public RoutinesScreenView? RoutinesScreen { get; }
+
+        public WorkoutScreenView? WorkoutScreen { get; }
 
         public VisualElement? TopLayer { get; }
 

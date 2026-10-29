@@ -40,3 +40,12 @@ Detalle en [03-rutinas/02-tech-design](../../iterations/03-rutinas/02-tech-desig
 - **Nunca tocar lo que no se entiende** (AC-HIS-17-04, -05): sonda de solo lectura antes de abrir para escribir (encabezado y `user_version`, también desde el WAL); un archivo que no es una base, más corto que 100 bytes, de otra versión o sin reconocer queda con sus bytes intactos y la pantalla muestra el error de carga.
 - **Hilos**: `SerialExecutor` (un hilo propio, cola, `Dispose` que termina lo encolado) en la app; `InlineDbExecutor` en las pruebas y el arnés (determinista cuadro a cuadro).
 - **Humo en un *player*** (R3-01): `-rowmate-db-smoke <carpeta>` y `-rowmate-db-roundtrip` (solo en desarrollo; `tools/build/build.ps1 -DbSmoke`).
+
+## Cambios de la It. 4a
+
+Detalle en [04a-motor-hud-funcional/02-tech-design](../../iterations/04a-motor-hud-funcional/02-tech-design.md) §3.
+
+- **Una base, dos repositorios**: `LocalStore` (Infrastructure/Database) es el dueño de la `RowMateDatabase` y de su `SerialExecutor`; `SqliteRoutineRepository` y `SqliteSessionRepository` la comparten (`ownsDatabase = false`). `AppRoot` la abre en `Awake` y la cierra al final de `OnDestroy`, después de la app y del backend, así termina lo encolado (`Dispose` espera la cola).
+- **Sesiones y puntos, con el esquema v8 sin cambios** (AC-HIS-17-02, -07): `workout_sessions` y `data_points` dejan de estar vacías. El guardado es incremental (`SessionRecorder`): el alta en el toque; un punto cada 5 s encolado detrás del alta (`AddPointsAfterCreateAsync`, también si el alta falla); y el cierre en una transacción con los puntos que faltaban o que fallaron (un lote que falla una vez se reintenta en el cierre; uno que falla siempre deja la sesión cortada). Si el proceso se corta a mitad de la sesión quedan la fila sin `finished_at` y los puntos escritos hasta ahí (verificado en el build de simulador matando el proceso, con `tools/dotnet/RowMate.SessionList` de solo lectura).
+- **Errores sin cortar el entrenamiento** (Q-13): un alta, un punto o un cierre que falla muestra `workoutSaveError` a lo sumo una vez mientras se rema, y el entrenamiento sigue en pantalla.
+- **Pruebas**: SQLite real en dotnet (`SSR.*`, `LST.*`, también con `SerialExecutor` y una segunda conexión); en Unity, `WPS.*` sobre el archivo temporal compartido con las rutinas (`HostSessions.SameFileAsRoutines`, `InlineDbExecutor`) o sobre `ScriptedSessionRepository` (demoras y fallas). Ninguna prueba ni captura abre `rower_app.db` ni `rower_app_dev.db` (AC-HIS-20-04).

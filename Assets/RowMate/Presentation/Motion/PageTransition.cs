@@ -4,6 +4,13 @@ using UnityEngine.UIElements;
 
 namespace RowMate.Presentation.Motion
 {
+    // Cómo entra y sale una página apilada: Slide (el editor, It. 3) o Fade (el inmersivo, It. 4a).
+    public enum PageTransitionKind
+    {
+        Slide,
+        Fade,
+    }
+
     // Abrir y cerrar una página apilada (03-rutinas/04-design-notes §5.1; MotionSpecs.Page*):
     // - Push: la página entra con x +24 → 0 en 0-240 (ease.enter) y opacidad 0 → 1 en 0-160 (ease.enter); lo de atrás
     //   (pestañas y barra) va de x 0 a −24 y el oscurecido de 0 a 0,08 en 0-240 (ease.enter).
@@ -13,6 +20,10 @@ namespace RowMate.Presentation.Motion
     // - Reducir movimiento: la página funde en 120 (ease.linear) y el oscurecido llega a su valor en el mismo tiempo, sin
     //   desplazamientos.
     // Al terminar llama a onDone (PageStack decide qué ocultar o sacar del árbol).
+    // It. 4a (DN4a-05; 02-tech-design §6.3, §6.11; 04-design-notes §5.1): PageTransitionKind.Fade, la del inmersivo. Entra con
+    // opacidad 0 → 1 en 240 (ease.enter) y sale 1 → 0 en 200 (ease.exit), entera, sin desplazamientos ni oscurecido; con
+    // reducir movimiento, 120 lineal. La salida arranca desde la opacidad que tiene (la sesión volvió a reposo a mitad de la
+    // entrada). La entrada "sumergirse" es de la 4b.
     public sealed class PageTransition : TimedMotion
     {
         private VisualElement? _page;
@@ -22,19 +33,26 @@ namespace RowMate.Presentation.Motion
         private Action? _onDone;
         private bool _entering;
         private bool _reduced;
+        private bool _fade;
         private double _fromPageX;
         private double _fromPageOpacity;
         private double _fromBehindX;
         private double _fromDim;
 
-        public PageTransition(MotionDriver driver)
+        public PageTransition(MotionDriver driver, PageTransitionKind kind = PageTransitionKind.Slide)
             : base(driver)
         {
+            Kind = kind;
+            _fade = kind == PageTransitionKind.Fade;
         }
+
+        public PageTransitionKind Kind { get; }
 
         public bool IsEntering => IsRunning && _entering;
 
-        protected override double TotalMs => _reduced ? MotionSpecs.ReducedPageFadeMs : _entering ? MotionSpecs.PageInMs : MotionSpecs.PageOutMs;
+        protected override double TotalMs => _fade
+            ? _reduced ? MotionSpecs.ReducedImmersiveFadeMs : _entering ? MotionSpecs.ImmersiveInMs : MotionSpecs.ImmersiveOutMs
+            : _reduced ? MotionSpecs.ReducedPageFadeMs : _entering ? MotionSpecs.PageInMs : MotionSpecs.PageOutMs;
 
         public void PlayIn(VisualElement page, VisualElement? behindA, VisualElement? behindB, VisualElement dim, Action onDone)
         {
@@ -126,6 +144,12 @@ namespace RowMate.Presentation.Motion
                 return;
             }
 
+            if (_fade)
+            {
+                ApplyFade(elapsedMs);
+                return;
+            }
+
             var shift = MotionSpecs.PageShiftDp;
             if (_entering)
             {
@@ -169,6 +193,30 @@ namespace RowMate.Presentation.Motion
             SetX(_behindA, _fromBehindX * (1 - back));
             SetX(_behindB, _fromBehindX * (1 - back));
             _dim.style.opacity = (float)(_fromDim * (1 - back));
+        }
+
+        // El fundido del inmersivo: solo la opacidad de la página (lo de atrás ni se corre ni se oscurece).
+        private void ApplyFade(double elapsedMs)
+        {
+            SetX(_page, 0);
+            SetX(_behindA, 0);
+            SetX(_behindB, 0);
+            _dim!.style.opacity = 0;
+            if (_reduced)
+            {
+                var u = Easing.Evaluate(Tokens.EaseLinear, Progress(elapsedMs, 0, MotionSpecs.ReducedImmersiveFadeMs));
+                _page!.style.opacity = (float)(_entering ? u : _fromPageOpacity * (1 - u));
+                return;
+            }
+
+            if (_entering)
+            {
+                _page!.style.opacity = (float)Easing.Evaluate(Tokens.EaseEnter, Progress(elapsedMs, 0, MotionSpecs.ImmersiveInMs));
+                return;
+            }
+
+            var exit = Easing.Evaluate(Tokens.EaseExit, Progress(elapsedMs, 0, MotionSpecs.ImmersiveOutMs));
+            _page!.style.opacity = (float)(_fromPageOpacity * (1 - exit));
         }
 
         private static double CurrentX(VisualElement element)

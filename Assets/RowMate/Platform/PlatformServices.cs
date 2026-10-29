@@ -11,14 +11,16 @@ namespace RowMate.Platform
 {
     // Lo que la app necesita del sistema, ya elegido por plataforma (PlatformFactory): idioma, accesibilidad, densidad y
     // área segura, "Atrás", la barra de título de Windows y, desde la It. 3, la carpeta privada de la base, el portapapeles y
-    // el teclado del teléfono (03-rutinas/02-tech-design §1.1). Refresh() vuelve a leer idioma, accesibilidad y pantalla y
-    // vuelve a aplicar el tema de la barra de título (al recuperar el foco, AC-APP-09-05, QA-V2-08).
+    // el teclado del teléfono (03-rutinas/02-tech-design §1.1); desde la It. 4a, la pantalla siempre encendida (WakeLock,
+    // 02-tech-design §4.4). Refresh() vuelve a leer idioma, accesibilidad y pantalla y vuelve a aplicar el tema de la barra de
+    // título (al recuperar el foco, AC-APP-09-05, QA-V2-08).
     public sealed class PlatformServices
     {
         public PlatformServices(SystemLocaleProvider locale, AccessibilitySettingsProvider accessibility, DisplayMetricsProvider display,
                                 BackButtonPolicy backButton, PlatformKind kind, bool isDesktop, WindowsTitleBar titleBar,
-                                AppDataLocation storage, IClipboard clipboard, ISoftKeyboard keyboard)
+                                AppDataLocation storage, IClipboard clipboard, ISoftKeyboard keyboard, IWakeLock wakeLock)
         {
+            WakeLock = wakeLock ?? throw new ArgumentNullException(nameof(wakeLock));
             Storage = storage ?? throw new ArgumentNullException(nameof(storage));
             Clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
             Keyboard = keyboard ?? throw new ArgumentNullException(nameof(keyboard));
@@ -55,6 +57,9 @@ namespace RowMate.Platform
 
         // Windows y macOS (y el Editor): foco de teclado y hover (FocusHighlight, .rm-desktop).
         public bool IsDesktop { get; }
+
+        // Pantalla siempre encendida de la plataforma (WakeLockFactory); cuándo pedirla lo decide ScreenKeepAwake (Core).
+        public IWakeLock WakeLock { get; }
 
         public void Refresh()
         {

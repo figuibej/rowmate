@@ -3,6 +3,18 @@ using System.Collections.Generic;
 
 namespace RowMate.Core.Models
 {
+    // Qué hacer si una progresión se pasa de los límites de int (DT4a-16; QA-G4aT-11).
+    public enum ProgressionOverflow
+    {
+        // OverflowException (It. 1): la expansión de la plantilla para mostrarla o validarla.
+        Throw,
+
+        // Satura en int.MinValue / int.MaxValue: el camino del motor (WorkoutEngine.StartWithRoutine). Solo pueden saturar
+        // los valores que R3-08 no controla (un split guardado ≤ 0, "sin split", con una progresión negativa): el legacy, con
+        // enteros de 64 bits, sigue la cuenta y lo que se ve es lo mismo (Split siempre fuera).
+        Saturate,
+    }
+
     // Expansión de las series de una plantilla (F-RUT-06) y posición de cada paso expandido (F-RUT-07).
     // legacy: lib/core/models/routine.dart:29-70 (flattenedSteps) y :74-97 (flattenedStepPositions).
     // - Un bloque = pasos CONSECUTIVOS con el mismo GroupId (el mismo id más adelante es otro bloque, AC-RUT-06-11).
@@ -15,6 +27,13 @@ namespace RowMate.Core.Models
     public static class RoutineExpansion
     {
         public static IReadOnlyList<IntervalStep> Flatten(IReadOnlyList<IntervalStep> template)
+        {
+            return Flatten(template, ProgressionOverflow.Throw);
+        }
+
+        // La expansión del motor (02-tech-design §2.4 de la It. 4a): con Saturate, una cuenta que no entra en un int queda en
+        // el límite en lugar de lanzar.
+        public static IReadOnlyList<IntervalStep> Flatten(IReadOnlyList<IntervalStep> template, ProgressionOverflow overflow)
         {
             if (template == null)
             {
@@ -45,7 +64,7 @@ namespace RowMate.Core.Models
                 {
                     for (var k = start; k < i; k++)
                     {
-                        result.Add(Progress(template[k], r));
+                        result.Add(Progress(template[k], r, overflow));
                     }
                 }
             }
@@ -94,25 +113,32 @@ namespace RowMate.Core.Models
 
         // routine.dart:50-63. Los enteros de Dart son de 64 bits: si la cuenta no entra en un int de C#, se avisa
         // (OverflowException) en lugar de dar la vuelta en silencio.
-        private static IntervalStep Progress(IntervalStep step, int r)
+        private static IntervalStep Progress(IntervalStep step, int r, ProgressionOverflow overflow)
         {
             return step with
             {
-                TargetSpm = Apply(step.TargetSpm, step.ProgressionSpm, r),
-                TargetWattsMin = Apply(step.TargetWattsMin, step.ProgressionWatts, r),
-                TargetWattsMax = Apply(step.TargetWattsMax, step.ProgressionWatts, r),
-                TargetSplitSeconds = Apply(step.TargetSplitSeconds, step.ProgressionSplitSeconds, r),
+                TargetSpm = Apply(step.TargetSpm, step.ProgressionSpm, r, overflow),
+                TargetWattsMin = Apply(step.TargetWattsMin, step.ProgressionWatts, r, overflow),
+                TargetWattsMax = Apply(step.TargetWattsMax, step.ProgressionWatts, r, overflow),
+                TargetSplitSeconds = Apply(step.TargetSplitSeconds, step.ProgressionSplitSeconds, r, overflow),
             };
         }
 
-        private static int? Apply(int? target, int? progression, int r)
+        private static int? Apply(int? target, int? progression, int r, ProgressionOverflow overflow)
         {
             if (!target.HasValue || !progression.HasValue)
             {
                 return target;
             }
 
-            return checked(target.Value + progression.Value * r);
+            if (overflow == ProgressionOverflow.Throw)
+            {
+                return checked(target.Value + progression.Value * r);
+            }
+
+            // En 64 bits no desborda: |progresión × r| < 2³¹ × 2³¹ y el objetivo suma < 2³¹.
+            var value = target.Value + (long)progression.Value * r;
+            return value > int.MaxValue ? int.MaxValue : value < int.MinValue ? int.MinValue : (int)value;
         }
     }
 }

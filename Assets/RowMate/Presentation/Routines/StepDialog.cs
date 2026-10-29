@@ -32,11 +32,11 @@ namespace RowMate.Presentation.Routines
 
         private readonly StepDialogForm _form;
         private readonly Dictionary<StepField, RmTextField[]> _fields = new Dictionary<StepField, RmTextField[]>();
-        private readonly Dictionary<StepField, Label?> _pairErrors = new Dictionary<StepField, Label?>();
+        private readonly Dictionary<StepField, ErrorLine> _pairErrors = new Dictionary<StepField, ErrorLine>();
         private readonly VisualElement _timeRow;
         private readonly EnterMotion _modeIn;
-        private readonly Label _timeError;
-        private readonly Label _splitError;
+        private readonly ErrorLine _timeError;
+        private readonly ErrorLine _splitError;
         // null = todavía sin ubicar (la vista previa nace en .rm-dialog__pinned; OnLayout la deja donde corresponde).
         private bool? _pinned;
 
@@ -53,7 +53,7 @@ namespace RowMate.Presentation.Routines
 
             TypeLabel = Caption("step-type-label", texts.Get(L10nKeys.EditorStepType));
             Content.Add(TypeLabel);
-            Types = new SegmentedControl(true) { name = "step-type" };
+            Types = new SegmentedControl(true, ui.Motion) { name = "step-type" };
             Types.AddToClassList("rm-step-dialog__types");
             var order = StepTypeInfo.SelectorOrder;
             for (var i = 0; i < order.Count; i++)
@@ -71,7 +71,7 @@ namespace RowMate.Presentation.Routines
             };
             Content.Add(Types);
 
-            Mode = new SegmentedControl(false) { name = "step-mode" };
+            Mode = new SegmentedControl(false, ui.Motion) { name = "step-mode" };
             Mode.AddToClassList("rm-step-dialog__mode");
             Mode.AddOption("step-mode-time", null, texts.Get(L10nKeys.EditorByTime));
             Mode.AddOption("step-mode-distance", null, texts.Get(L10nKeys.EditorByDistance));
@@ -87,8 +87,8 @@ namespace RowMate.Presentation.Routines
             _timeRow = Pair(out var minutes, "step-min", L10nKeys.EditorMinutes, out var seconds, "step-sec", L10nKeys.EditorSeconds);
             _timeRow.AddToClassList("rm-step-dialog__first-row");
             Content.Add(_timeRow);
-            _timeError = PairError("step-time-error");
-            Content.Add(_timeError);
+            _timeError = new ErrorLine(ui.Motion, PairError("step-time-error"));
+            Content.Add(_timeError.Slot);
             Bind(StepField.Duration, minutes, () => _form.Minutes, v => _form.Minutes = v);
             Bind(StepField.Duration, seconds, () => _form.Seconds, v => _form.Seconds = v);
             _pairErrors[StepField.Duration] = _timeError;
@@ -111,8 +111,8 @@ namespace RowMate.Presentation.Routines
             var split = Pair(out var splitMin, "step-split-min", L10nKeys.EditorSplitMin, out var splitSec, "step-split-sec", L10nKeys.EditorSplitSec);
             split.AddToClassList("rm-step-dialog__row");
             Content.Add(split);
-            _splitError = PairError("step-split-error");
-            Content.Add(_splitError);
+            _splitError = new ErrorLine(ui.Motion, PairError("step-split-error"));
+            Content.Add(_splitError.Slot);
             Bind(StepField.Split, splitMin, () => _form.SplitMin, v => _form.SplitMin = v);
             Bind(StepField.Split, splitSec, () => _form.SplitSec, v => _form.SplitSec = v);
             _pairErrors[StepField.Split] = _splitError;
@@ -151,6 +151,11 @@ namespace RowMate.Presentation.Routines
         public SegmentedControl Mode { get; }
 
         public RmTextField Meters { get; }
+
+        // Las líneas de error de los pares (#step-time-error, #step-split-error), con su ErrorLine (QA-V3-02).
+        public ErrorLine TimeError => _timeError;
+
+        public ErrorLine SplitError => _splitError;
 
         public RmButton CancelButton { get; }
 
@@ -209,17 +214,16 @@ namespace RowMate.Presentation.Routines
                     continue;
                 }
 
-                if (_pairErrors.TryGetValue(error.Field, out var pairLabel) && pairLabel != null)
+                if (_pairErrors.TryGetValue(error.Field, out var pairLine))
                 {
                     for (var f = 0; f < fields.Length; f++)
                     {
                         fields[f].SetBoxError(true);
                     }
 
-                    pairLabel.text = text;
-                    pairLabel.style.display = DisplayStyle.Flex;
+                    pairLine.Set(text);
                     first ??= fields[0];
-                    firstText ??= pairLabel;
+                    firstText ??= pairLine.Label;
                 }
                 else
                 {
@@ -250,7 +254,8 @@ namespace RowMate.Presentation.Routines
         {
             var distance = _form.ByDistance;
             _timeRow.style.display = distance ? DisplayStyle.None : DisplayStyle.Flex;
-            _timeError.style.display = !distance && _timeError.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            // La línea del par Min/Seg se va y vuelve con su fila, en el acto (el campo que se va desaparece en el acto, §5.7).
+            _timeError.SetVisible(!distance);
             Meters.style.display = distance ? DisplayStyle.Flex : DisplayStyle.None;
             if (animate)
             {
@@ -295,10 +300,9 @@ namespace RowMate.Presentation.Routines
                 }
             }
 
-            if (_pairErrors.TryGetValue(field, out var label) && label != null)
+            if (_pairErrors.TryGetValue(field, out var line))
             {
-                label.text = "";
-                label.style.display = DisplayStyle.None;
+                line.Set(null);
             }
         }
 
