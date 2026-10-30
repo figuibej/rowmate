@@ -17,11 +17,12 @@ namespace RowMate.Presentation.Motion
     // - Reducir movimiento: sin empujón ni desplazamiento; color 150 y la flecha funde en 120. Instant (al volver del segundo
     //   plano) y sin armar: todo en su estado final en el acto (AC-WKT-02-08).
     // Sin asignaciones por cuadro.
+    // It. 4b (M1, 04b-hud-exr/02-tech-design §3.11): la flecha es el prefijo del TabularNumber del valor (lo dibuja el mismo
+    // elemento): el alfa y el desplazamiento van por TabularNumber.SetPrefixVisual, no por un Label.
     public sealed class OffTargetMotion : IMotion
     {
         private readonly MotionDriver _driver;
-        private readonly VisualElement _value;
-        private readonly VisualElement _arrow;
+        private readonly TabularNumber _value;
         private Color _colorFrom;
         private Color _colorTo;
         private double _colorStart = double.NaN;
@@ -35,11 +36,10 @@ namespace RowMate.Presentation.Motion
         private bool _running;
         private bool _initialized;
 
-        public OffTargetMotion(MotionDriver driver, VisualElement value, VisualElement arrow)
+        public OffTargetMotion(MotionDriver driver, TabularNumber value)
         {
             _driver = driver ?? throw new ArgumentNullException(nameof(driver));
             _value = value ?? throw new ArgumentNullException(nameof(value));
-            _arrow = arrow ?? throw new ArgumentNullException(nameof(arrow));
             _value.style.transformOrigin = new TransformOrigin(new Length(50, LengthUnit.Percent), new Length(50, LengthUnit.Percent));
         }
 
@@ -89,14 +89,10 @@ namespace RowMate.Presentation.Motion
 
             if (arrowShown != _arrowShown)
             {
-                _arrowFromOpacity = _arrow.resolvedStyle.opacity;
+                _arrowFromOpacity = _value.PrefixAlpha;
                 _arrowShown = arrowShown;
                 _arrowDirection = arrowDirection;
                 _arrowStart = now;
-                if (arrowShown)
-                {
-                    _arrow.style.display = DisplayStyle.Flex;
-                }
             }
 
             if (bump && !_reduced && (now - _lastBump) * 1000.0 >= MotionSpecs.OffTargetBumpCooldownMs)
@@ -240,9 +236,7 @@ namespace RowMate.Presentation.Motion
 
         private void ApplyArrow(float opacity, float translateY)
         {
-            _arrow.style.opacity = opacity;
-            _arrow.style.display = opacity > 0.001f || _arrowShown ? DisplayStyle.Flex : DisplayStyle.None;
-            _arrow.style.translate = Mathf.Abs(translateY) < 1e-4f ? new Translate(0, 0) : new Translate(0, translateY);
+            _value.SetPrefixVisual(opacity, Mathf.Abs(translateY) < 1e-4f ? 0f : translateY);
         }
 
         private static double Progress(double now, double start, double durationMs)

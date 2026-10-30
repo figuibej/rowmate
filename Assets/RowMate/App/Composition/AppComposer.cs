@@ -46,8 +46,20 @@ namespace RowMate.App.Composition
             var workout = new WorkoutEngine(services.Devices.Rower, services.Devices.HeartRate, services.Sessions, services.Scheduler,
                 lifecycle, logger);
             var workoutRest = new WorkoutStore(workout, device, routines, lifecycle, logger);
+            // It. 4b (F-APP-15): una regla de barras del sistema por app; sin puerto, sin efecto.
+            var systemBars = new ImmersiveSystemBars(services.SystemUi ?? NoSystemUi.Instance, lifecycle, logger);
             return new AppContext(services.Devices, device, heartRate, shell, scene, routines, workout, workoutRest, language, texts,
-                services.Accessibility.Current, services.Scheduler, lifecycle, logger);
+                services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars);
+        }
+
+        // Las barras del sistema sin efecto (AppServices.SystemUi = null).
+        private sealed class NoSystemUi : RowMate.Core.Ports.ISystemUi
+        {
+            public static readonly NoSystemUi Instance = new NoSystemUi();
+
+            public void SetImmersive(bool immersive)
+            {
+            }
         }
     }
 }

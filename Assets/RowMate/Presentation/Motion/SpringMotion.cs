@@ -7,7 +7,9 @@ namespace RowMate.Presentation.Motion
     // del + (ω 22), el aviso que sigue a un obstáculo (ω 22), el desplazamiento hasta lo nuevo (ω 12) o hasta el foco y el
     // error (ω 22) (03-rutinas/04-design-notes §5.8). Parte de la posición y la velocidad actuales si el objetivo cambia en
     // medio. Finita: cuenta para Settle y para la regla de toma hasta que llega. Reducir movimiento o sin armar: en el acto.
-    public sealed class SpringMotion : IMotion
+    // It. 4b (02-tech-design §5.2, §7.4): ISettlingMotion dice cuánto le falta (los valores que mueve son dp: anchos y
+    // desplazamientos), así la regla de toma no lo cuenta a menos de 0,15 dp de su destino. La conducta no cambia.
+    public sealed class SpringMotion : IMotion, ISettlingMotion
     {
         private readonly MotionDriver _driver;
         private readonly Action<double> _apply;
@@ -33,6 +35,9 @@ namespace RowMate.Presentation.Motion
         public double Target => _target;
 
         public bool HasValue => _hasValue;
+
+        // Lo que le falta para llegar, en dp (0 quieto).
+        public double RemainingDp => _running ? Math.Abs(_target - _spring.Position) : 0;
 
         // Salta al valor (estado inicial, reducir movimiento).
         public void Snap(double value)

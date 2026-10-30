@@ -21,5 +21,8 @@ namespace RowMate.App.Composition
 
         // El ciclo de vida (segundo plano y foco: It. 4a, §4.2). null = ForegroundLifecycle (siempre adelante y con foco).
         public IAppLifecycle? Lifecycle { get; init; }
+
+        // Las barras del sistema (It. 4b, F-APP-15; 02-tech-design §2.14). null = sin efecto (dotnet, pruebas que no lo miran).
+        public ISystemUi? SystemUi { get; init; }
     }
 }

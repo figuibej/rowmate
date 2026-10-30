@@ -24,10 +24,18 @@ namespace RowMate.Core.Design
     //   ARRIBA; WrenchPlacement lo usa tal cual.
     // - PanelCeiling: en el entrenamiento vertical, el borde de arriba (y desde arriba) que el panel no pasa: 8 dp debajo del
     //   lugar de Watts con su objetivo (AC-BLE-16-03). null = sin techo propio (el panel llega a 16 dp del margen superior).
+    // - It. 4b (R10; DN4b-22; 02-tech-design §5.7): LeftLane, las piezas del HUD que se cruzan con el carril izquierdo (dp de
+    //   ventana, y desde ARRIBA), y Dialog, el rectángulo del diálogo de completado abierto. Sin diálogo, los dos null (lo de
+    //   la 4a). PanelCeiling vale también en horizontal (DN4b-23).
     public sealed record OverlaySurface(OverlayContextKind Kind, double TabBarHeight, IReadOnlyList<BottomObstacle> Obstacles,
                                         DpRect? WrenchSlot, double? PanelCeiling)
     {
         private static readonly IReadOnlyList<BottomObstacle> None = Array.Empty<BottomObstacle>();
+
+        // Con el diálogo de completado abierto: las piezas del carril izquierdo y el diálogo.
+        public IReadOnlyList<DpRect>? LeftLane { get; init; }
+
+        public DpRect? Dialog { get; init; }
 
         // Una pestaña con su barra (tabBarHeight con el margen inferior incluido).
         public static OverlaySurface Tab(double tabBarHeight, IReadOnlyList<BottomObstacle>? obstacles = null)
@@ -42,10 +50,11 @@ namespace RowMate.Core.Design
         }
 
         // El inmersivo, con el lugar de la llave y el techo del panel que calcula HudGeometry (HudLayout.Wrench y
-        // HudLayout.PanelCeiling).
-        public static OverlaySurface Workout(DpRect wrenchSlot, double? panelCeiling)
+        // HudLayout.PanelCeiling). It. 4b: con el diálogo de completado abierto, las piezas del carril izquierdo
+        // (HudLayout.LeftLaneObstacles) y el rectángulo del diálogo (R10).
+        public static OverlaySurface Workout(DpRect wrenchSlot, double? panelCeiling, IReadOnlyList<DpRect>? leftLane = null, DpRect? dialog = null)
         {
-            return new OverlaySurface(OverlayContextKind.Workout, 0, None, wrenchSlot, panelCeiling);
+            return new OverlaySurface(OverlayContextKind.Workout, 0, None, wrenchSlot, panelCeiling) { LeftLane = leftLane, Dialog = dialog };
         }
     }
 }

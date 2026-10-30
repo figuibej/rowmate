@@ -183,22 +183,27 @@ namespace RowMate.Tests.EditMode.Workout
         }
 
         [Test, Category("AC-WKT-03-05")]
-        public void CompletedToast()
+        public void NoCompletedToast()
         {
-            // :210-216: la rutina que termina sola avisa workoutCompleted cuando el guardado volvió; terminar a mano no avisa
-            // nada (Q-53).
+            // It. 4b (AC-WKT-03-05; 02-tech-design §2.11): el aviso workoutCompleted sale (es el título del diálogo de completado).
+            // La rutina que termina sola no avisa nada: ni al terminar, ni cuando vuelve el cierre, ni con el Terminar del
+            // diálogo; terminar a mano tampoco (Q-53).
             using (var f = new Fixture())
             {
                 Assert.That(f.Store.StartRoutine(RoutineSeeds.Corta()), Is.True);
-                f.H.At(29.9);
-                Assert.That(f.Toasts.Count, Is.EqualTo(0));
                 f.H.At(30);
-                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.Completed }));
+                Assert.That(f.Toasts.Count, Is.EqualTo(0));
+                Assert.That(f.Store.State.Value.SessionPhase, Is.EqualTo(WorkoutPhase.Finished), "espera al diálogo");
+                Assert.That(f.Store.CompletionDialogOpen, Is.True);
+                Assert.That(f.H.Engine.AcknowledgeCompletion().IsCompleted, Is.True);
                 Assert.That(f.Store.State.Value.SessionPhase, Is.EqualTo(WorkoutPhase.Idle));
+                Assert.That(f.Toasts.Count, Is.EqualTo(0), "Terminar: nada");
                 Assert.That(f.Store.StartFree(), Is.True);
                 f.H.At(40);
                 f.H.Engine.FinishAsync();
-                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.Completed }), "a mano: nada");
+                Assert.That(f.Toasts.Count, Is.EqualTo(0), "a mano: nada");
+                Assert.That(WorkoutToast.For(WorkoutNotice.Ended(WorkoutEndKind.Completed, true)), Is.Null);
+                Assert.That(WorkoutToast.For(WorkoutNotice.Ended(WorkoutEndKind.Completed, false)), Is.EqualTo(WorkoutToast.SaveError));
             }
         }
 
@@ -217,37 +222,85 @@ namespace RowMate.Tests.EditMode.Workout
             }
         }
 
-        [Test, Category("AC-WKT-06-12")]
-        public void TransientFailureRecoveredAtTheClose()
+        [Test, Category("AC-WKT-06-12"), Category("AC-WKT-21-06")]
+        public void SaveErrorAfterAcknowledge()
         {
-            // DT4a-17: el lote 2 falla una vez y el cierre lo recupera: el aviso de la falla y, al final, el de un guardado bueno
-            // (workoutCompleted para la rutina que terminó sola).
-            using (var f = new Fixture(sessions: s => new ScriptedSessionRepository(s) { FailBatch = 2 }))
+            // It. 4b (AC-WKT-06-12, AC-WKT-21-06): con la rutina terminada sola y el cierre que falla, el workoutSaveError sale
+            // DESPUÉS del Terminar del diálogo, al volver a reposo, una vez.
+            using (var f = new Fixture(sessions: s => new ScriptedSessionRepository(s) { FailOnFinish = true }))
             {
                 Assert.That(f.Store.StartRoutine(RoutineSeeds.Corta()), Is.True);
-                f.H.At(31);
-                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError, WorkoutToast.Completed }));
-                Assert.That(f.H.Engine.LastFinishedSessionId, Is.EqualTo(1));
+                f.H.At(32);
+                Assert.That(f.H.Engine.Phase, Is.EqualTo(WorkoutPhase.Finished));
+                Assert.That(f.H.State.Close, Is.EqualTo(CloseStatus.Failed));
+                Assert.That(f.Toasts.Count, Is.EqualTo(0), "con el diálogo abierto, nada");
+                f.H.Engine.AcknowledgeCompletion();
+                Assert.That(f.H.Engine.Phase, Is.EqualTo(WorkoutPhase.Idle));
+                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError }));
             }
         }
 
-        [Test, Category("AC-WKT-02-06"), Category("AC-WKT-02-08")]
-        public void HeldToastShowsOnceWhenFacingTheUserAgain()
+        [Test, Category("AC-APP-03-11"), Category("AC-WKT-02-08")]
+        public void ToastsHeldWhileTheCompletionDialogIsOpen()
         {
-            // QA-G4a-P08: en segundo plano no se emite nada; se guarda solo el ÚLTIMO aviso (la falla del lote queda tapada por el
-            // fin) y sale UNA vez cuando la app vuelve adelante. Después, nada más.
+            // It. 4b (AC-APP-03-11; 02-tech-design §2.11): con el diálogo de completado abierto (Finished + Completed) un aviso se
+            // retiene como sin el usuario delante, y sale al volver a reposo, una vez. Un lote que falló mientras se remaba en
+            // segundo plano y la rutina que terminó en el alcance: al volver, el diálogo está abierto y el aviso espera al
+            // Terminar.
             using (var f = new Fixture(sessions: s => new ScriptedSessionRepository(s) { FailBatch = 3 }))
             {
                 Assert.That(f.Store.StartRoutine(RoutineSeeds.Corta()), Is.True);
                 f.H.At(8);
                 f.H.Lifecycle.SetBackground(true);
                 f.H.At(40);
-                Assert.That(f.Toasts.Count, Is.EqualTo(0), "en segundo plano no se emite");
-                Assert.That(f.Store.HeldToast, Is.EqualTo(WorkoutToast.Completed), "el último: el fin");
                 f.H.Lifecycle.SetBackground(false);
-                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.Completed }));
+                Assert.That(f.Store.CompletionDialogOpen, Is.True);
+                Assert.That(f.Toasts.Count, Is.EqualTo(0), "con el diálogo abierto, retenido");
+                Assert.That(f.Store.HeldToast, Is.EqualTo(WorkoutToast.SaveError));
+                f.H.Lifecycle.SetFocus(false);
+                f.H.Lifecycle.SetFocus(true);
+                Assert.That(f.Toasts.Count, Is.EqualTo(0), "el foco no lo suelta");
+                f.H.Engine.AcknowledgeCompletion();
+                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError }), "al volver a reposo");
                 Assert.That(f.Store.HeldToast, Is.Null);
-                Assert.That(f.Store.State.Value.SessionPhase, Is.EqualTo(WorkoutPhase.Idle), "en reposo al volver");
+                Assert.That(f.Store.CompletionDialogOpen, Is.False);
+            }
+        }
+
+        [Test, Category("AC-WKT-06-12")]
+        public void TransientFailureRecoveredAtTheClose()
+        {
+            // DT4a-17: el lote 2 falla una vez y el cierre lo recupera: el aviso de la falla y, al final, el de un guardado bueno
+            // (con la rutina que terminó sola, nada: el diálogo de completado; It. 4b).
+            using (var f = new Fixture(sessions: s => new ScriptedSessionRepository(s) { FailBatch = 2 }))
+            {
+                Assert.That(f.Store.StartRoutine(RoutineSeeds.Corta()), Is.True);
+                f.H.At(31);
+                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError }));
+                Assert.That(f.H.Engine.LastFinishedSessionId, Is.EqualTo(1));
+                Assert.That(f.H.State.Close, Is.EqualTo(CloseStatus.Saved));
+                f.H.Engine.AcknowledgeCompletion();
+                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError }), "Terminar: un guardado bueno, nada más");
+            }
+        }
+
+        [Test, Category("AC-WKT-02-06"), Category("AC-WKT-02-08")]
+        public void HeldToastShowsOnceWhenFacingTheUserAgain()
+        {
+            // QA-G4a-P08: en segundo plano no se emite nada; se guarda solo el ÚLTIMO aviso y sale UNA vez cuando la app vuelve
+            // adelante. Después, nada más. It. 4b: con una sesión libre (la rutina terminada sola ya no avisa nada) y el lote
+            // que falla en segundo plano.
+            using (var f = new Fixture(sessions: s => new ScriptedSessionRepository(s) { FailBatch = 3 }))
+            {
+                Assert.That(f.Store.StartFree(), Is.True);
+                f.H.At(8);
+                f.H.Lifecycle.SetBackground(true);
+                f.H.At(40);
+                Assert.That(f.Toasts.Count, Is.EqualTo(0), "en segundo plano no se emite");
+                Assert.That(f.Store.HeldToast, Is.EqualTo(WorkoutToast.SaveError), "el último");
+                f.H.Lifecycle.SetBackground(false);
+                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError }));
+                Assert.That(f.Store.HeldToast, Is.Null);
                 f.H.Lifecycle.SetFocus(false);
                 f.H.Lifecycle.SetFocus(true);
                 f.H.Lifecycle.SetBackground(true);
@@ -259,17 +312,17 @@ namespace RowMate.Tests.EditMode.Workout
         [Test, Category("AC-WKT-02-09")]
         public void HeldToastShowsOnFocus()
         {
-            // Windows: la ventana sin foco (o minimizada) sigue andando; el aviso del fin sale una vez al volver el foco.
-            using (var f = new Fixture())
+            // Windows: la ventana sin foco (o minimizada) sigue andando; el aviso sale una vez al volver el foco.
+            using (var f = new Fixture(sessions: s => new ScriptedSessionRepository(s) { FailBatch = 3 }))
             {
-                Assert.That(f.Store.StartRoutine(RoutineSeeds.Corta()), Is.True);
+                Assert.That(f.Store.StartFree(), Is.True);
                 f.H.At(10);
                 f.H.Lifecycle.SetFocus(false);
                 f.H.At(35);
                 Assert.That(f.Toasts.Count, Is.EqualTo(0));
-                Assert.That(f.Store.HeldToast, Is.EqualTo(WorkoutToast.Completed));
+                Assert.That(f.Store.HeldToast, Is.EqualTo(WorkoutToast.SaveError));
                 f.H.Lifecycle.SetFocus(true);
-                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.Completed }));
+                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError }));
                 f.H.Lifecycle.SetFocus(false);
                 f.H.Lifecycle.SetFocus(true);
                 Assert.That(f.Toasts.Count, Is.EqualTo(1));
@@ -280,16 +333,16 @@ namespace RowMate.Tests.EditMode.Workout
         public void HeldToastWaitsForFocusAndForeground()
         {
             // Sin el usuario delante = en segundo plano O sin foco: volver adelante sin foco todavía no lo emite.
-            using (var f = new Fixture())
+            using (var f = new Fixture(sessions: s => new ScriptedSessionRepository(s) { FailBatch = 1 }))
             {
-                Assert.That(f.Store.StartRoutine(RoutineSeeds.Corta()), Is.True);
+                Assert.That(f.Store.StartFree(), Is.True);
                 f.H.Lifecycle.SetFocus(false);
                 f.H.Lifecycle.SetBackground(true);
                 f.H.At(31);
                 f.H.Lifecycle.SetBackground(false);
                 Assert.That(f.Toasts.Count, Is.EqualTo(0), "adelante pero sin foco");
                 f.H.Lifecycle.SetFocus(true);
-                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.Completed }));
+                Assert.That(f.Toasts.Values, Is.EqualTo(new[] { WorkoutToast.SaveError }));
             }
         }
 

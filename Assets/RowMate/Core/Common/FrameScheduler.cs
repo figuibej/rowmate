@@ -19,6 +19,10 @@ namespace RowMate.Core.Common
     // - Hora virtual durante el alcance: MonotonicSeconds = el vencimiento en curso; UtcNow = hora de la vuelta − (ahora −
     //   virtual), nunca antes de la del último cuadro (RA-19: en Android el monótono puede saltar menos que la hora de pared;
     //   así la hora virtual no retrocede); LocalNow = UtcNow con el offset de la vuelta.
+    // - It. 4b (P-17 de la 4a; 02-tech-design §2.9; ADR 020): el monótono del programador es el DESPIERTO. Tick(in FrameClock)
+    //   y ResumeFromBackground(in FrameClock) le pasan el crudo, la medida del sueño y los avisos del sistema a SuspendAccounting,
+    //   que resta lo dormido que el crudo contó; el alcance va hasta el despierto. Si hubo despertar, Woke avisa DESPUÉS de
+    //   correr lo vencido. Tick(double, …) y ResumeFromBackground(double, …) siguen: son FrameClock sin medida ni avisos.
     public sealed class FrameScheduler : IScheduler
     {
         public const string Tag = RealtimeTimerQueue.Tag;
@@ -27,6 +31,7 @@ namespace RowMate.Core.Common
         public const int MaxCatchUpCallbacks = 1000000;
 
         private readonly RealtimeTimerQueue _queue;
+        private readonly SuspendAccounting _accounting;
         private double _frameMonotonic;
         private DateTimeOffset _frameUtc;
         private TimeSpan _localOffset;
@@ -45,7 +50,18 @@ namespace RowMate.Core.Common
             _frameMonotonic = monotonicNow;
             _frameUtc = utcNow.ToUniversalTime();
             _localOffset = localOffset;
+            _accounting = new SuspendAccounting(FrameClock.Plain(monotonicNow, _frameUtc, localOffset), logger);
         }
+
+        // El despertar del equipo (P-17 de la 4a), en el cuadro (o la vuelta del segundo plano) que lo trae, después de correr lo
+        // vencido. UnityScheduler lo pasa a AppLifecycle.SignalWake (IAppLifecycle.Woke).
+        public event Action<SystemWake>? Woke;
+
+        // Lo dormido que se le restó al monótono crudo, en total.
+        public double SleepBias => _accounting.Bias;
+
+        // Llegó un "se suspende" sin su "reanuda" (para el registro y las pruebas).
+        public bool SuspendPending => _accounting.SuspendPending;
 
         public DateTimeOffset UtcNow
         {
@@ -75,8 +91,21 @@ namespace RowMate.Core.Common
         // Un cuadro: fija la hora del cuadro (el monótono nunca retrocede) y corre lo vencido. Devuelve cuántos disparos hubo.
         public int Tick(double monotonicNow, DateTimeOffset utcNow, TimeSpan localOffset)
         {
-            SetFrame(monotonicNow, utcNow, localOffset);
-            return _queue.RunDue(_frameMonotonic);
+            return Tick(FrameClock.Plain(monotonicNow, utcNow, localOffset));
+        }
+
+        // It. 4b: un cuadro con el reloj despierto (la conducta de la 4a con el monótono despierto) y, si hubo despertar, Woke.
+        public int Tick(in FrameClock clock)
+        {
+            var awake = _accounting.Awake(clock, out var woke);
+            SetFrame(awake, clock.Utc, clock.LocalOffset);
+            var fired = _queue.RunDue(_frameMonotonic);
+            if (woke.HasValue)
+            {
+                Woke?.Invoke(woke.Value);
+            }
+
+            return fired;
         }
 
         public void EnterBackground()
@@ -87,25 +116,41 @@ namespace RowMate.Core.Common
         // Vuelve del segundo plano: alcance desde el último cuadro hasta monotonicNow. Devuelve cuántos disparos hubo.
         public int ResumeFromBackground(double monotonicNow, DateTimeOffset utcNow, TimeSpan localOffset)
         {
+            return ResumeFromBackground(FrameClock.Plain(monotonicNow, utcNow, localOffset));
+        }
+
+        // It. 4b (QA-G4bT-05 (a)): el alcance HASTA EL MONÓTONO DESPIERTO, con el mismo Awake del cuadro: si una suspensión volviera
+        // por este camino, el lapso dormido tampoco se procesa. Woke sale después del alcance.
+        public int ResumeFromBackground(in FrameClock clock)
+        {
             if (!InBackground)
             {
                 return 0;
             }
 
             InBackground = false;
+            var awake = _accounting.Awake(clock, out var woke, true);
             var from = _frameMonotonic;
             _utcFloor = _frameUtc;
-            SetFrame(monotonicNow, utcNow, localOffset);
+            SetFrame(awake, clock.Utc, clock.LocalOffset);
             _virtualMonotonic = from;
             _catchingUp = true;
+            int fired;
             try
             {
-                return _queue.CatchUp(from, _frameMonotonic, SetVirtual, MaxCatchUpCallbacks);
+                fired = _queue.CatchUp(from, _frameMonotonic, SetVirtual, MaxCatchUpCallbacks);
             }
             finally
             {
                 _catchingUp = false;
             }
+
+            if (woke.HasValue)
+            {
+                Woke?.Invoke(woke.Value);
+            }
+
+            return fired;
         }
 
         public IDisposable Schedule(TimeSpan delay, Action callback)

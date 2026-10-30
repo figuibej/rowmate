@@ -106,6 +106,13 @@ namespace RowMate.Simulator.Panel
             {
                 // DN4a-14: el lugar del HUD, tal cual (HudGeometry ya lo dejó libre de toda pieza del HUD).
                 var slot = surface.WrenchSlot.Value;
+                if (surface.Dialog.HasValue && slot.Intersects(surface.Dialog.Value, ObstacleGap))
+                {
+                    // It. 4b (R10; DN4b-22): con el diálogo de completado encima de su lugar, el hueco libre más bajo del carril
+                    // izquierdo.
+                    return LeftLaneAvoiding(windowHeight, insets, surface);
+                }
+
                 var bottom = windowHeight - slot.Bottom;
                 return new WrenchSpot(true, slot.Left, bottom, slot.IsInside(windowWidth, windowHeight));
             }
@@ -138,14 +145,26 @@ namespace RowMate.Simulator.Panel
 
             if (surface.Kind == OverlayContextKind.Workout)
             {
+                var maxHeight = SimulatorPanelLayout.MaxHeight(windowHeight, insets, wrench.Bottom, SimulatorPanelLayout.WorkoutTopReserve,
+                    surface.PanelCeiling);
+                if (!wrench.RightLane)
+                {
+                    // R10: la llave en el carril izquierdo (con el diálogo de completado): el panel crece hacia la derecha.
+                    var leftLane = wrench.Left;
+                    if (leftLane + SimulatorPanelLayout.Width > windowWidth - insets.Right && windowWidth - insets.Right - SimulatorPanelLayout.Width >= insets.Left)
+                    {
+                        leftLane = windowWidth - insets.Right - SimulatorPanelLayout.Width;
+                    }
+
+                    return new PanelAnchor(PanelCorner.BottomLeft, leftLane, wrench.Bottom, maxHeight);
+                }
+
                 var left = wrench.Right - SimulatorPanelLayout.Width;
                 if (left < insets.Left)
                 {
                     left = insets.Left;
                 }
 
-                var maxHeight = SimulatorPanelLayout.MaxHeight(windowHeight, insets, wrench.Bottom, SimulatorPanelLayout.WorkoutTopReserve,
-                    surface.PanelCeiling);
                 return new PanelAnchor(PanelCorner.BottomRight, left, wrench.Bottom, maxHeight);
             }
 
@@ -157,6 +176,57 @@ namespace RowMate.Simulator.Panel
 
             var appMax = SimulatorPanelLayout.MaxHeight(windowHeight, insets, wrench.Bottom, SimulatorPanelLayout.AppTopReserve, null);
             return new PanelAnchor(PanelCorner.BottomLeft, appLeft, wrench.Bottom, appMax);
+        }
+
+        // R10 (DN4b-22; 02-tech-design §5.7 de la It. 4b): el y más bajo del carril izquierdo (x 16-56 desde el margen izquierdo)
+        // donde la caja de 40, agrandada 8, no toca ninguna pieza del HUD que se cruza con el carril (siguen a la vista debajo
+        // del velo) ni el diálogo, dentro del área segura. Desde 16 + margen inferior, sube hasta 8 dp sobre cada pieza que
+        // toca. Si no hay hueco (no pasa en los cinco perfiles), "16 + margen inferior" con Clear = false (la vista lo anota).
+        private static WrenchSpot LeftLaneAvoiding(double windowHeight, SafeInsets insets, OverlaySurface surface)
+        {
+            var left = EdgeMargin + insets.Left;
+            var lowest = EdgeMargin + insets.Bottom;
+            var bottomFromTop = windowHeight - lowest;
+            var obstacles = surface.LeftLane;
+            var dialog = surface.Dialog;
+            var limit = (obstacles?.Count ?? 0) + 2;
+            for (var guard = 0; guard <= limit; guard++)
+            {
+                var box = DpRect.FromEdges(left, bottomFromTop - Size, left + Size, bottomFromTop);
+                if (box.Top < insets.Top - 1e-6)
+                {
+                    break;
+                }
+
+                var moved = false;
+                var next = bottomFromTop;
+                if (obstacles != null)
+                {
+                    foreach (var piece in obstacles)
+                    {
+                        if (box.Intersects(piece, ObstacleGap) && piece.Top - ObstacleGap < next)
+                        {
+                            next = piece.Top - ObstacleGap;
+                            moved = true;
+                        }
+                    }
+                }
+
+                if (dialog.HasValue && box.Intersects(dialog.Value, ObstacleGap) && dialog.Value.Top - ObstacleGap < next)
+                {
+                    next = dialog.Value.Top - ObstacleGap;
+                    moved = true;
+                }
+
+                if (!moved)
+                {
+                    return new WrenchSpot(false, left, windowHeight - bottomFromTop, true);
+                }
+
+                bottomFromTop = next;
+            }
+
+            return new WrenchSpot(false, left, lowest, false);
         }
 
         private static WrenchSpot Lifted(bool rightLane, double left, double bottom, double windowHeight, SafeInsets insets, OverlaySurface surface)

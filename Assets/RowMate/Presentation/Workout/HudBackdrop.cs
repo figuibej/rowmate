@@ -28,6 +28,30 @@ namespace RowMate.Presentation.Workout
 
         public Texture2D? Texture => _texture;
 
+        // It. 4b (AC-WKT-13-12; 04b-hud-exr/02-tech-design §3.7; DD4b-14): el velo de pausa es el TINTE de la textura (de 1 a
+        // 0,85: el cielo #0B4FA8 → #09438F, el agua #0E4F8F → #0C437A), sin elementos nuevos ni relayout. alpha = lo que se
+        // oscurece (0 a 0,15, PauseVeilMotion).
+        public double Veil { get; private set; }
+
+        public void SetVeil(double alpha)
+        {
+            var a = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+            if (Math.Abs(a - Veil) < 1e-6)
+            {
+                return;
+            }
+
+            Veil = a;
+            if (a <= 1e-6)
+            {
+                style.unityBackgroundImageTintColor = StyleKeyword.Null;
+                return;
+            }
+
+            var k = (float)(1 - a);
+            style.unityBackgroundImageTintColor = new Color(k, k, k, 1f);
+        }
+
         // El horizonte de la ventana (HudLayout.Horizon): rehace la textura solo si cambió (rotar).
         public void SetHorizon(double horizon)
         {

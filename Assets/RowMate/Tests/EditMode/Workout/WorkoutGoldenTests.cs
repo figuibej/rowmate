@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using NUnit.Framework;
+using RowMate.Core.Ble;
 using RowMate.Core.Common.Json;
 using RowMate.Core.Models;
 using RowMate.Core.Text;
@@ -17,6 +19,10 @@ namespace RowMate.Tests.EditMode.Workout
     // milisegundo, y el corte cuando la sesión deja de estar en marcha. Se comparan, uno por uno, los puntos, la fila de
     // cierre, los resultados de objetivos, los cambios de paso y el reloj. La única diferencia permitida es Q-55 (DV-26): en
     // Distancia 100 con R-4R, R-4Z y la pausa el paso por distancia termina donde dice la columna nueva de la spec.
+    // Los guiones (sección "scripts", QA-V4a-L02, al empezar la 4b) cubren los caminos que la lente de paridad comprobó a mano:
+    // se corren acción por acción igual que en el oráculo. Diferencias esperadas: DV-37 (con un paso de duración negativa el
+    // stepProgress del legacy lanza y el motor nuevo da 0 restante, con el mismo fin) y QA-V4a-L01 (el monitor que informa la
+    // distancia cada 2 s: se comparan los puntos hasta el primer cambio de paso del legacy; lo demás lo decide la 10a).
     [TestFixture]
     public sealed class WorkoutGoldenTests
     {
@@ -27,6 +33,27 @@ namespace RowMate.Tests.EditMode.Workout
         {
             "dist100_r4r", "dist100_r4z", "dist100_r4_pause",
         };
+
+        // Los guiones del oráculo (QA-V4a-L02), en el orden del archivo.
+        private static readonly string[] ScriptNames =
+        {
+            "zero_steps", "neg_step", "nogoal_finish", "finish_in_pause", "dist_last", "time_and_distance", "hr_points", "pause_early",
+            "corta_pause_across_change", "two_sessions", "pause_resume_jitter", "finish_at_step_change", "last_step_zero", "free_finish_at_5",
+            "dist100_every_2s", "completed_hold_reset",
+        };
+
+        // It. 4b (AC-WKT-21-13; 02-tech-design §2.13): Corta con R-4 termina sola a los 30 s, un bpm a los 32 y el reset (el Terminar
+        // del diálogo) a los 34.
+        private const string CompletedHoldResetScript = "completed_hold_reset";
+
+        // DV-37: el paso de duración negativa (el legacy lanza en stepProgress; el motor nuevo muestra 0:00).
+        private const string NegativeStepScript = "neg_step";
+
+        // QA-V4a-L01: el monitor que informa la distancia cada 2 s (Q-55 lo frena; decide la 10a).
+        private const string EveryTwoSecondsScript = "dist100_every_2s";
+
+        // stepProgress lanzó en el legacy (el oráculo anota -99).
+        private const long LegacyStepThrew = -99;
 
         [Test, Category("AC-WKT-06-07")]
         public void VectorsComeFromTheLegacyEngine()
@@ -159,6 +186,476 @@ namespace RowMate.Tests.EditMode.Workout
                 Assert.That(StepOneAt(run.Steps), Is.EqualTo(expectedNew[entry.Key]), entry.Key + ": motor nuevo");
                 Assert.That(run.FinishedAtMs, Is.GreaterThan(0), entry.Key + ": la rutina termina sola");
             }
+        }
+
+        // ── Guiones (QA-V4a-L02) ──
+
+        [Test, Category("AC-WKT-06-07")]
+        public void ScriptsComeFromTheLegacyEngine()
+        {
+            var names = new List<string>();
+            foreach (var script in Scripts())
+            {
+                names.Add(script["name"].AsString());
+                Assert.That(script["closes"].Items.Count, Is.GreaterThan(0), script["name"].AsString() + ": el legacy cerró la sesión");
+                foreach (var finished in script["closesHaveFinishedAt"].Items)
+                {
+                    Assert.That(finished.AsBool(), Is.True, script["name"].AsString() + ": el cierre del legacy tiene fin");
+                }
+            }
+
+            Assert.That(names, Is.EqualTo(ScriptNames));
+        }
+
+        [Test, Category("AC-WKT-06-07"), Category("AC-WKT-03-01"), Category("AC-WKT-03-06"), Category("AC-WKT-05-02"), Category("AC-WKT-21-13")]
+        public void ScriptsAreIdenticalToTheLegacy()
+        {
+            // It. 4b (AC-WKT-21-13): el reset de los guiones es AcknowledgeCompletion() con la rutina terminada sola, así se comparan
+            // también el reloj y la fase después del reset y lo que pasa entre el fin y el reset (los cambios de paso de la grilla
+            // de 100 ms y los puntos: ninguno). Queda afuera solo la fase después de un finish a mano (vuelve solo a reposo,
+            // AC-WKT-01-06; su reset va en el mismo instante), más DV-37 (neg_step).
+            // Pasos de 0 s y último de 0 s, sin meta con Terminar, terminar en pausa, último por distancia, tiempo y distancia,
+            // pulso del sensor en los puntos, pausa antes del primer segundo, pausa que cruza un cambio de paso, dos sesiones,
+            // varias pausas en un segundo, terminar en el segundo del cambio y en un múltiplo de 5: todo igual al legacy (los
+            // puntos, las altas, los cierres, los objetivos, los cambios de paso, el fin solo y el reloj de cada acción).
+            var problems = new List<string>();
+            var compared = 0;
+            foreach (var script in Scripts())
+            {
+                var name = script["name"].AsString();
+                if (name == NegativeStepScript || name == EveryTwoSecondsScript)
+                {
+                    continue;
+                }
+
+                compared++;
+                CompareScript(name, script, RunScript(script), problems, false);
+            }
+
+            Assert.That(compared, Is.EqualTo(14));
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        [Test, Category("AC-WKT-21-13"), Category("AC-WKT-21-08")]
+        public void CompletedHoldReset()
+        {
+            // AC-WKT-21-13: entre los 30 y los 34 s la fase es finished en los dos motores, el reloj queda en 30, no hay puntos y
+            // los resultados de los objetivos siguen; el reset (AcknowledgeCompletion) vuelve a reposo a los 34 y el paso a −1 en
+            // la grilla siguiente (34,1).
+            var script = Script(CompletedHoldResetScript);
+            Assert.That(DescribeSteps(StepChanges(script["steps"])), Is.EqualTo("100/0/0 10000/10/1 15000/15/2 25000/25/3 34100/0/-1"));
+            var problems = new List<string>();
+            var run = RunScript(script);
+            CompareScript(CompletedHoldResetScript, script, run, problems, false);
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+            Assert.That(string.Join(" ", run.Events), Is.EqualTo("0/routine/0/active 32000/bpm/30/finished 34000/reset/0/idle"));
+            Assert.That(run.Points.Count, Is.EqualTo(7), "ningún punto entre el fin y el reset");
+            Assert.That(string.Join(",", run.Targets), Is.EqualTo("1:0:met,1:2:met"));
+        }
+
+        [Test, Category("AC-WKT-03-07"), Category("AC-WKT-06-07")]
+        public void NegativeStepIsTheExpectedDifference()
+        {
+            // DV-37: mientras dura el paso de −5 s, el stepProgress del legacy lanza (`Invalid argument(s): 0`, clamp(0, d) con
+            // d < 0, workout_provider.dart:103) y su pantalla falla; el motor nuevo da ese paso con 0 restante. Todo lo demás,
+            // igual: termina el paso en el segundo 1 y la rutina en el 4, con el mismo punto y el mismo cierre.
+            var script = Script(NegativeStepScript);
+            var threw = 0;
+            foreach (var step in script["steps"].Items)
+            {
+                threw += step.Items[2].AsLong() == LegacyStepThrew ? 1 : 0;
+            }
+
+            Assert.That(threw, Is.EqualTo(1), "el legacy lanza en el paso negativo (evidencia de DV-37)");
+            var problems = new List<string>();
+            CompareScript(NegativeStepScript, script, RunScript(script), problems, true);
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        [Test, Category("AC-WKT-03-03"), Category("AC-WKT-06-07")]
+        public void MonitorEveryTwoSecondsMatchesUntilTheFirstStepChange()
+        {
+            // QA-V4a-L01: con un monitor que suma 11 m cada 2 s, el legacy (distancia cruda) cambia de paso a los 20 s y termina a
+            // los 25; el saneamiento de Q-55 frena el paso por distancia (lo decide la 10a, con el AMS-670B). Hasta el primer
+            // cambio de paso del legacy, los dos motores dan los mismos puntos, campo por campo.
+            var script = Script(EveryTwoSecondsScript);
+            var legacySteps = StepChanges(script["steps"]);
+            Assert.That(DescribeSteps(legacySteps), Is.EqualTo("100/0/0 20000/20/1"), "el legacy cambia de paso a los 20 s");
+            var legacy = new List<string>();
+            foreach (var point in script["points"].Items)
+            {
+                if (!point["step_index"].IsNull && point["step_index"].AsLong() == 0)
+                {
+                    legacy.Add(Describe(point));
+                }
+            }
+
+            var run = RunScript(script);
+            Assert.That(legacy.Count, Is.EqualTo(4), "los puntos de los segundos 5 a 20");
+            Assert.That(run.Points.Count, Is.GreaterThanOrEqualTo(legacy.Count));
+            for (var i = 0; i < legacy.Count; i++)
+            {
+                Assert.That(Describe(run.Points[i]), Is.EqualTo(legacy[i]), "punto " + i + " del paso 0");
+            }
+        }
+
+        private static ScriptRun RunScript(JsonNode script)
+        {
+            var routines = new Dictionary<string, Routine>(StringComparer.Ordinal);
+            foreach (var entry in script["routines"].Properties)
+            {
+                routines[entry.Key] = BuildRoutine(entry.Value);
+            }
+
+            var actions = new List<(long Ms, string Kind, JsonNode? Arg)>();
+            foreach (var action in script["actions"].Items)
+            {
+                actions.Add((action.Items[0].AsLong(), action.Items[1].AsString(), action.Items.Count > 2 ? action.Items[2] : null));
+            }
+
+            var endMs = script["endMs"].AsLong();
+            var run = new ScriptRun();
+            using (var h = new WorkoutHarness(Reading(script["reading"].AsString())))
+            {
+                var inAction = false;
+                var finished = false;
+                var endedThisTick = false;
+                // La rutina que termina sola: el legacy queda en "terminada" con su último paso y sus objetivos hasta el reset;
+                // el motor nuevo también (It. 4b, DT4a-15: espera a AcknowledgeCompletion).
+                using (h.Engine.State.Subscribe(s =>
+                       {
+                           if (s.Phase != WorkoutPhase.Finished)
+                           {
+                               finished = false;
+                               return;
+                           }
+
+                           if (finished)
+                           {
+                               return;
+                           }
+
+                           finished = true;
+                           if (inAction)
+                           {
+                               return;
+                           }
+
+                           endedThisTick = true;
+                           run.AutoFinishes++;
+                           for (var i = 0; i < 64; i++)
+                           {
+                               var r = h.Engine.Targets.ResultOf(i);
+                               if (r.HasValue)
+                               {
+                                   run.Targets.Add(Fmt.Integer(run.AutoFinishes) + ":" + Fmt.Integer(i) + ":" + (r.Value == StepResult.Met ? "met" : "missed"));
+                               }
+                           }
+                       }, false))
+                {
+                    void DoActions(long t)
+                    {
+                        foreach (var a in actions)
+                        {
+                            if (a.Ms != t)
+                            {
+                                continue;
+                            }
+
+                            inAction = true;
+                            switch (a.Kind)
+                            {
+                                case "free":
+                                    Assert.That(h.Engine.StartFree(), Is.EqualTo(StartOutcome.Started), t + " ms: free");
+                                    break;
+                                case "routine":
+                                    Assert.That(h.Engine.StartWithRoutine(routines[a.Arg!.AsString()]), Is.EqualTo(StartOutcome.Started), t + " ms: routine");
+                                    break;
+                                case "pause":
+                                    h.Engine.Pause();
+                                    break;
+                                case "resume":
+                                    h.Engine.Resume();
+                                    break;
+                                case "finish":
+                                    h.Engine.FinishAsync();
+                                    break;
+                                case "reset":
+                                    // It. 4b: con la rutina terminada sola, el Terminar del diálogo (AcknowledgeCompletion). A mano el
+                                    // motor ya volvió solo a reposo al cerrar (AC-WKT-01-06): no hay nada que tocar.
+                                    if (h.Engine.Phase == WorkoutPhase.Finished && h.State.EndedBy == WorkoutEndKind.Completed)
+                                    {
+                                        h.Engine.AcknowledgeCompletion();
+                                    }
+
+                                    break;
+                                case "bpm":
+                                    h.HeartRate.EmitBpm((int)a.Arg!.AsLong());
+                                    break;
+                                case "status":
+                                    h.HeartRate.SetStatus((HrmStatus)Enum.Parse(typeof(HrmStatus), a.Arg!.AsString(), true));
+                                    break;
+                                default:
+                                    throw new InvalidOperationException("acción desconocida en " + FileName + ": " + a.Kind);
+                            }
+
+                            inAction = false;
+                            if (a.Kind != "finish")
+                            {
+                                // Terminar a mano es distinto a propósito (AC-WKT-01-06): el legacy queda "terminado" con el reloj
+                                // hasta su reset; el motor nuevo vuelve solo a reposo cuando vuelve el cierre.
+                                run.Events.Add(t + "/" + a.Kind + "/" + h.State.TotalElapsedSeconds + "/" + h.State.Phase.ToString().ToLowerInvariant());
+                            }
+                        }
+                    }
+
+                    h.At(0);
+                    DoActions(0);
+                    long tMs = 0;
+                    var lastStep = -2;
+                    var afterAutoFinish = false;
+                    while (tMs < endMs)
+                    {
+                        var nextMs = tMs / 100 * 100 + 100;
+                        foreach (var a in actions)
+                        {
+                            if (a.Ms > tMs && a.Ms < nextMs)
+                            {
+                                nextMs = a.Ms;
+                            }
+                        }
+
+                        if (nextMs > endMs)
+                        {
+                            nextMs = endMs;
+                        }
+
+                        endedThisTick = false;
+                        h.At(nextMs / 1000.0);
+                        tMs = nextMs;
+                        if (endedThisTick)
+                        {
+                            run.AutoFinishMs.Add(tMs);
+                            afterAutoFinish = true;
+                        }
+
+                        var step = h.State.Step;
+                        var index = step.HasValue ? step.Value.StepIndex : -1;
+                        if (index != lastStep)
+                        {
+                            // It. 4b: el motor espera al reset como el legacy, así que la vuelta a reposo es un cambio de paso de los
+                            // dos (antes, la vuelta sola después del fin automático se salteaba).
+                            run.Steps.Add(new[] { tMs, (long)h.State.TotalElapsedSeconds, index });
+                            run.ShowsZeroOfANegativeStep.Add(step.HasValue && step.Value.Step.DurationSeconds < 0 && step.Value.RemainingInStep == 0);
+                            run.AfterAutoFinish.Add(afterAutoFinish);
+                            lastStep = index;
+                        }
+
+                        if (index >= 0)
+                        {
+                            afterAutoFinish = false;
+                        }
+
+                        DoActions(tMs);
+                    }
+                }
+
+                run.Points = h.Points();
+                run.Sessions = h.Memory!.Sessions;
+            }
+
+            return run;
+        }
+
+        private static void CompareScript(string name, JsonNode script, ScriptRun run, List<string> problems, bool negativeStep)
+        {
+            var legacyPoints = script["points"].Items;
+            if (legacyPoints.Count != run.Points.Count)
+            {
+                problems.Add(name + ": " + legacyPoints.Count + " puntos en el legacy y " + run.Points.Count + " en el motor nuevo");
+            }
+            else
+            {
+                for (var i = 0; i < legacyPoints.Count; i++)
+                {
+                    if (Describe(legacyPoints[i]) != Describe(run.Points[i]))
+                    {
+                        problems.Add(name + " punto " + i + ": legacy " + Describe(legacyPoints[i]) + ", nuevo " + Describe(run.Points[i]));
+                    }
+                }
+            }
+
+            // Las altas (rutina de la plantilla) y los cierres, en orden; todas las sesiones del motor nuevo quedan cerradas.
+            var created = script["sessions"].Items;
+            if (created.Count != run.Sessions.Count)
+            {
+                problems.Add(name + ": " + created.Count + " sesiones en el legacy y " + run.Sessions.Count + " en el motor nuevo");
+            }
+            else
+            {
+                for (var i = 0; i < created.Count; i++)
+                {
+                    var expected = (created[i]["routine_id"].IsNull ? "-" : Fmt.Integer(created[i]["routine_id"].AsLong())) + "|"
+                                   + (created[i]["routine_name"].IsNull ? "-" : created[i]["routine_name"].AsString());
+                    var s = run.Sessions[i];
+                    var actual = (s.RoutineId.HasValue ? Fmt.Integer(s.RoutineId.Value) : "-") + "|" + (s.RoutineName ?? "-");
+                    if (expected != actual)
+                    {
+                        problems.Add(name + " alta " + i + ": legacy " + expected + ", nuevo " + actual);
+                    }
+                }
+            }
+
+            var closes = script["closes"].Items;
+            var closed = new List<WorkoutSession>();
+            foreach (var s in run.Sessions)
+            {
+                if (s.FinishedAt.HasValue)
+                {
+                    closed.Add(s);
+                }
+            }
+
+            if (closes.Count != closed.Count)
+            {
+                problems.Add(name + ": " + closes.Count + " cierres en el legacy y " + closed.Count + " en el motor nuevo");
+            }
+            else
+            {
+                for (var i = 0; i < closes.Count; i++)
+                {
+                    if (DescribeClose(closes[i]) != DescribeClose(closed[i]))
+                    {
+                        problems.Add(name + " cierre " + i + ": legacy " + DescribeClose(closes[i]) + ", nuevo " + DescribeClose(closed[i]));
+                    }
+                }
+            }
+
+            var targets = new List<string>();
+            foreach (var target in script["targets"].Items)
+            {
+                targets.Add(Fmt.Integer(target.Items[0].AsLong()) + ":" + Fmt.Integer(target.Items[1].AsLong()) + ":" + target.Items[2].AsString());
+            }
+
+            if (string.Join(",", targets) != string.Join(",", run.Targets))
+            {
+                problems.Add(name + " objetivos: legacy " + string.Join(",", targets) + ", nuevo " + string.Join(",", run.Targets));
+            }
+
+            var autoFinish = new List<long>();
+            foreach (var t in script["finishedAtMs"].Items)
+            {
+                autoFinish.Add(t.AsLong());
+            }
+
+            if (string.Join(",", autoFinish) != string.Join(",", run.AutoFinishMs))
+            {
+                problems.Add(name + ": la rutina termina sola a los " + string.Join(",", autoFinish) + " ms en el legacy y a los "
+                             + string.Join(",", run.AutoFinishMs) + " en el nuevo");
+            }
+
+            // Los cambios de paso. Con DV-37, donde el legacy lanza (-99) el motor nuevo tiene que estar en un paso de duración
+            // negativa mostrando 0 restante; lo demás, igual.
+            var legacySteps = StepChanges(script["steps"]);
+            var sameSteps = legacySteps.Count == run.Steps.Count;
+            for (var i = 0; sameSteps && i < legacySteps.Count; i++)
+            {
+                var l = legacySteps[i];
+                var n = run.Steps[i];
+                if (l[0] != n[0] || l[1] != n[1])
+                {
+                    sameSteps = false;
+                }
+                else if (l[2] == LegacyStepThrew)
+                {
+                    sameSteps = negativeStep && n[2] >= 0 && run.ShowsZeroOfANegativeStep[i];
+                }
+                else if (l[2] != n[2])
+                {
+                    sameSteps = false;
+                }
+            }
+
+            if (!sameSteps)
+            {
+                problems.Add(name + " pasos: legacy " + DescribeSteps(legacySteps) + ", nuevo " + DescribeSteps(run.Steps));
+            }
+
+            // El reloj y la fase después de cada acción (salvo Terminar a mano: AC-WKT-01-06). It. 4b: también después del reset.
+            var events = new List<string>();
+            foreach (var e in script["events"].Items)
+            {
+                var kind = e.Items[1].AsString();
+                if (kind != "finish")
+                {
+                    events.Add(e.Items[0].AsLong() + "/" + kind + "/" + e.Items[2].AsLong() + "/" + e.Items[3].AsString());
+                }
+            }
+
+            if (string.Join(" ", events) != string.Join(" ", run.Events))
+            {
+                problems.Add(name + " acciones: legacy " + string.Join(" ", events) + ", nuevo " + string.Join(" ", run.Events));
+            }
+        }
+
+        private static Routine BuildRoutine(JsonNode routine)
+        {
+            var steps = new List<IntervalStep>();
+            foreach (var s in routine["steps"].Items)
+            {
+                steps.Add(RoutineSeeds.Step((StepType)Enum.Parse(typeof(StepType), s["type"].AsString(), true), dur: OptionalInt(s["dur"]),
+                    dist: OptionalInt(s["dist"]), wMin: OptionalInt(s["wMin"]), spm: OptionalInt(s["spm"]),
+                    g: s["g"].IsNull ? null : s["g"].AsString(), rep: OptionalInt(s["rep"]), pSpm: OptionalInt(s["pSpm"])));
+            }
+
+            var createdAt = DateTimeOffset.Parse(routine["createdAt"].AsString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
+            return WorkoutHarness.Saved(RoutineSeeds.Make(routine["name"].AsString(), createdAt, steps.ToArray()), routine["id"].AsLong());
+        }
+
+        private static int? OptionalInt(JsonNode node)
+        {
+            return node.IsNull ? (int?)null : (int)node.AsLong();
+        }
+
+        private static IEnumerable<JsonNode> Scripts()
+        {
+            return GoldenVectors.Load(FileName).Section("scripts").Items;
+        }
+
+        private static JsonNode Script(string name)
+        {
+            foreach (var script in Scripts())
+            {
+                if (script["name"].AsString() == name)
+                {
+                    return script;
+                }
+            }
+
+            throw new InvalidOperationException("no está el guion " + name);
+        }
+
+        private sealed class ScriptRun
+        {
+            public List<long[]> Steps { get; } = new List<long[]>();
+
+            // Paralelo a Steps: el paso de ese cambio tiene duración negativa y muestra 0 restante (DV-37).
+            public List<bool> ShowsZeroOfANegativeStep { get; } = new List<bool>();
+
+            // Paralelo a Steps: el cambio llegó después de un fin automático (con la It. 4b, solo el del reset).
+            public List<bool> AfterAutoFinish { get; } = new List<bool>();
+
+            public List<long> AutoFinishMs { get; } = new List<long>();
+
+            public int AutoFinishes { get; set; }
+
+            public List<string> Targets { get; } = new List<string>();
+
+            public List<string> Events { get; } = new List<string>();
+
+            public IReadOnlyList<DataPoint> Points { get; set; } = new DataPoint[0];
+
+            public IReadOnlyList<WorkoutSession> Sessions { get; set; } = new WorkoutSession[0];
         }
 
         // ── El motor nuevo manejado como el oráculo ──
@@ -378,6 +875,9 @@ namespace RowMate.Tests.EditMode.Workout
                     return RowerScripts.R4R;
                 case "R-4Z":
                     return RowerScripts.R4Z;
+                case "R-4/2s":
+                    // QA-V4a-L01: +11 m en los k pares (5,5 m/s informados cada 2 s), como r4every2s del oráculo.
+                    return k => RowerScripts.R4(k).CopyWith(distanceMeters: 1000 + 11 * (k / 2));
                 default:
                     throw new InvalidOperationException("lectura desconocida en " + FileName + ": " + name);
             }

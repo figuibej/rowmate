@@ -156,8 +156,13 @@ namespace RowMate.Core.Design
                            HudZone bandZone, HudZone controlsZone, DpRect topBar, DpRect spm, DpRect split, DpRect watts, DpRect kcal,
                            DpRect? bpm, DpRect band, DpRect controls, DpRect boatZone, DpRect? wrench, double? panelCeiling,
                            double wattsWithTargetBottom, double horizon, bool vitalsInRow, bool vitalsMinWidth, double spmScale,
-                           double splitScale, double wattsScale, double vitalsScale, double bandScale)
+                           double splitScale, double wattsScale, double vitalsScale, double bandScale, DpRect topBarMax, DpRect bigCount,
+                           bool bigCountFits, System.Collections.Generic.IReadOnlyList<DpRect> leftLaneObstacles)
         {
+            TopBarMax = topBarMax;
+            BigCount = bigCount;
+            BigCountFits = bigCountFits;
+            LeftLaneObstacles = leftLaneObstacles;
             WindowWidth = windowWidth;
             WindowHeight = windowHeight;
             Scale = scale;
@@ -237,9 +242,30 @@ namespace RowMate.Core.Design
         // El lugar de la llave (solo con ReserveWrench; DN4a-14): lo declara la página en OverlaySurface.WrenchSlot.
         public DpRect? Wrench { get; }
 
-        // En vertical, 8 dp debajo del lugar de Watts CON su objetivo (AC-BLE-16-03; así no cambia de alto al cambiar de
-        // paso); en horizontal, null (el panel no llega a Split ni a Watts).
+        // It. 4b (DN4b-23; AC-BLE-16-03): en las dos orientaciones. En vertical, 8 dp debajo del disco del lugar centro alto
+        // (BigCount, que está debajo de Watts con su objetivo; en la 4a, 8 debajo de Watts); en horizontal, 8 dp debajo de la barra
+        // en su alto mayor (74·s, con el sello). El panel abierto no tapa el sello ni el lugar de la cuenta grande y de PAUSA, y
+        // su alto no cambia con el paso, con el sello ni con la cuenta.
         public double? PanelCeiling { get; }
+
+        // It. 4b: la barra de pasos en su alto máximo (74·s, con el sello; DN4b-14). Las tarjetas siguen a 90·s del margen
+        // superior: la barra crece hacia abajo dentro de ese lugar (AC-WKT-14-01).
+        public DpRect TopBarMax { get; }
+
+        // It. 4b (§3.5; DN4b-14; AC-WKT-14-18, AC-WKT-13-12): el disco de 72·s del lugar "centro alto", de la cuenta grande y de
+        // PAUSA. Centrado en x en la ventana; en y, centrado entre lo que tiene arriba más 8·s (la barra en su alto máximo, o
+        // SPM, Split o Watts con objetivo si se cruzan con él en x, agrandados 8·s) y el borde de arriba de la zona del bote
+        // menos 8·s. Al rotar cambia en el acto.
+        public DpRect BigCount { get; }
+
+        // false: entre lo de arriba y la zona del bote no entra el disco (no pasa en los cinco perfiles con los valores de la
+        // spec; con valores extremos en vertical, una tarjeta de la derecha se cruza con él): la vista no lo muestra esa vez.
+        public bool BigCountFits { get; }
+
+        // It. 4b (R10; DN4b-22; AC-BLE-16-02): las piezas del HUD que se cruzan con el carril izquierdo de la llave (x 16-56 desde
+        // el margen izquierdo, agrandado 8): las tarjetas, la banda, kcal y BPM, los controles y la barra. La página las declara
+        // con el diálogo de completado abierto (OverlaySurface.Workout).
+        public System.Collections.Generic.IReadOnlyList<DpRect> LeftLaneObstacles { get; }
 
         // El borde de abajo de Watts con su objetivo (con Split sin objetivo), y desde arriba.
         public double WattsWithTargetBottom { get; }
@@ -312,6 +338,41 @@ namespace RowMate.Core.Design
         public const double MediumValue = 44, MediumLabel = 12, MediumMinWidth = 118, MediumPadH = 14, MediumPadV = 10;
         public const double SmallValue = 32, SmallLabel = 11, SmallPadH = 12, SmallPadV = 8;
         public const double LabelGap = 2, TargetGap = 2, TargetSize = 12;
+
+        // ── It. 4b (02-tech-design §3.1, §3.4 a §3.9; 04-design-notes §3; DN4b-14, -21 a -23), dp base ──
+        // La barra de pasos: dos filas (píldoras 20 + información 22 + 8 abajo) = 52; con el sello, 74 (17 de contenido + 5).
+        // La libre sigue en 40 (TopBarHeight, de la 4a).
+        public const double TopBarHeightSteps = 52, TopBarHeightSeal = 74, TopBarHeightFree = TopBarHeight;
+        public const double SealRowGap = 5, SealRowHeight = 17, SealRowPadH = 12, InfoRowPadBottom = 8;
+
+        // El reloj de pared (series_panels.dart:92-103; 04-design-notes §3.4): 10 a la derecha de la cuenta, el ícono schedule de
+        // 16 al 70 % con 5 de aire.
+        public const double WallClockGap = 10, WallClockIcon = 16, WallClockIconGap = 5, WallClockIconAlpha = 0.70;
+
+        // El chip de fase (immersive_workout_screen.dart:536-547; 04-design-notes §3.5): 10 del reloj, 8 × 3 de relleno, radio 8,
+        // 11/700 con 0,08 em, el tinte al 15 % y el borde al 50 % del color base; el punto de 6 y su aire de 4 solo en EN MARCHA.
+        public const double PhaseChipGap = 10, PhaseChipPadH = 8, PhaseChipPadV = 3, PhaseChipRadius = 8, PhaseChipText = 11;
+        public const double PhaseChipTrackingEm = 0.08, PhaseChipTintAlpha = 0.15, PhaseChipBorderAlpha = 0.50, PhaseChipDotSlot = 10;
+        public const double LiveDotSize = 6, LiveDotGap = 4;
+
+        // El disco del lugar centro alto (DT4b-04, DN4b-03, -14): 72 con la cifra num.hero de 64, el aro de 3 (línea central a
+        // 34,5) con la pista al 20 % y 8 de aire con lo de arriba y con la zona del bote. PAUSA en el mismo disco: el glifo de 28,
+        // 4 de aire y la etiqueta 12/700 con 0,08 em.
+        public const double BigCountDiameter = 72, BigCountDigit = 64, BigCountRingStroke = 3, BigCountRingTrackAlpha = 0.20, BigCountGap = 8;
+        public const double PausedGlyphDp = 28, PausedGlyphGap = 4, PausedLabelSize = 12, PausedLabelTrackingEm = 0.08;
+
+        // El techo del panel en el entrenamiento (DN4b-23), 8 dp debajo del disco o de la barra de 74·s; el diálogo de completado
+        // (DN4b-21): el check de 32 y la m de sufijo a 3.
+        public const double PanelCeilingGap = 8, CompletionCheckDp = 32, CompletionUnitGapDp = 3;
+
+        // El carril izquierdo de la llave (R10): x 16-56 desde el margen izquierdo.
+        public static double LeftLaneLeft(SafeInsets insets)
+        {
+            return insets.Left + WrenchEdge;
+        }
+
+        // La línea central del aro: (72 − 3) / 2 = 34,5 (× s).
+        public static double BigCountRingRadius => (BigCountDiameter - BigCountRingStroke) / 2;
 
         // clamp(lado corto / 390; 0,9; 1,6): 0,923 en L640 y P360, 1,054 en TV y TH, 1,6 en W1280 (ART_BIBLE §5.3).
         public static double Scale(double width, double height)
@@ -535,10 +596,63 @@ namespace RowMate.Core.Design
             var rightZone = new HudZone(right, cardsTop, HudCorner.TopRight, columnMax / s);
             var bandZone = new HudZone(left, bandBottom, HudCorner.BottomLeft, cap / s);
             var controlsZone = new HudZone(w / 2, controlsBottom, HudCorner.BottomCenter, w / s);
-            double? ceiling = landscape ? (double?)null : wattsWithTargetBottom + WrenchGap;
+
+            // It. 4b: la barra en su alto máximo y el disco del lugar centro alto (§3.5; DN4b-14). Lo de arriba se mide con SPM,
+            // Split y Watts CON su objetivo (así el disco no se mueve al cambiar de paso).
+            var topBarMax = DpRect.FromEdges(TopBarSide * s, top + TopBarTop * s, w - TopBarSide * s, top + (TopBarTop + TopBarHeightSeal) * s);
+            var spmTargeted = new Card(LargeValue, LargeLabel, LargeMinWidth, LargePadH, LargePadV, n.SpmValue, n.SpmLabel, n.SpmTarget, true);
+            var splitTargeted = new Card(MediumValue, MediumLabel, MediumMinWidth, MediumPadH, MediumPadV, n.SplitValue, n.SplitLabel, n.SplitTarget, true);
+            var wattsTargeted = new Card(MediumValue, MediumLabel, MediumMinWidth, MediumPadH, MediumPadV, n.WattsValue, n.WattsLabel, n.WattsTarget, true);
+            var spmAbove = DpRect.FromEdges(left, cardsTop, Math.Max(spmRect.Right, left + spmTargeted.Width(spmTargeted.FitFor(spmMax / s), true) * s),
+                cardsTop + spmTargeted.Height * s);
+            var splitAbove = DpRect.FromEdges(Math.Min(splitRect.Left, right - splitTargeted.Width(splitTargeted.FitFor(columnMax / s), true) * s),
+                cardsTop, right, cardsTop + splitTargeted.Height * s);
+            var wattsAboveTop = cardsTop + splitTargeted.Height * s + CardGap * s;
+            var wattsAbove = DpRect.FromEdges(Math.Min(wattsRect.Left, right - wattsTargeted.Width(wattsTargeted.FitFor(columnMax / s), true) * s),
+                wattsAboveTop, right, wattsAboveTop + wattsTargeted.Height * s);
+            var diameter = BigCountDiameter * s;
+            var discLeft = (w - diameter) / 2;
+            var discRight = discLeft + diameter;
+            var above = topBarMax.Bottom;
+            var aside = BigCountGap * s;
+            foreach (var card in new[] { spmAbove, splitAbove, wattsAbove })
+            {
+                if (card.Left - aside < discRight && discLeft < card.Right + aside && card.Bottom > above)
+                {
+                    above = card.Bottom;
+                }
+            }
+
+            var bandTop = above + aside;
+            var bandBottomLimit = boat.Top - aside;
+            var bigCountFits = bandBottomLimit - bandTop >= diameter - 1e-9;
+            var discCenter = bigCountFits ? (bandTop + bandBottomLimit) / 2 : bandTop + diameter / 2;
+            var bigCount = new DpRect(discLeft, discCenter - diameter / 2, diameter, diameter);
+
+            // El techo del panel (DN4b-23): 8 dp debajo del disco en vertical, de la barra de 74·s en horizontal.
+            double? ceiling = (landscape ? topBarMax.Bottom : Math.Max(bigCount.Bottom, wattsWithTargetBottom)) + PanelCeilingGap;
+
+            // Las piezas del carril izquierdo (R10): las que se cruzan con x 16-56, agrandado 8.
+            var laneLeft = LeftLaneLeft(insets);
+            var lane = DpRect.FromEdges(laneLeft, 0, laneLeft + WrenchSize, h);
+            var obstacles = new System.Collections.Generic.List<DpRect>(8);
+            foreach (var piece in new DpRect?[] { topBarMax, spmAbove, splitAbove, wattsAbove, kcalRect, bpmRect, bandRect, controls })
+            {
+                if (piece.HasValue && piece.Value.Intersects(lane, WrenchGap))
+                {
+                    obstacles.Add(piece.Value);
+                }
+            }
+
             return new HudLayout(w, h, s, landscape, topBarZone, spmZone, rightZone, vitalsZone, bandZone, controlsZone, topBar, spmRect, splitRect,
                 wattsRect, kcalRect, bpmRect, bandRect, controls, boat, wrench, ceiling, wattsWithTargetBottom, Horizon(w, h), landscape,
-                vitalsMinWidth, spmScale, splitScale, wattsScale, vitalsScale, bandScale);
+                vitalsMinWidth, spmScale, splitScale, wattsScale, vitalsScale, bandScale, topBarMax, bigCount, bigCountFits, obstacles);
+        }
+
+        // Alto de la barra superior (base) para la fila de pasos, con o sin sello, o la libre (AC-WKT-14-01).
+        public static double TopBarHeightFor(bool routine, bool seal)
+        {
+            return !routine ? TopBarHeightFree : seal ? TopBarHeightSeal : TopBarHeightSteps;
         }
 
         // Una tarjeta a tamaño base (04-design-notes §3.2): ancho = max(rótulo, `obj.`, (hueco + valor) × escala) + 2 × relleno,

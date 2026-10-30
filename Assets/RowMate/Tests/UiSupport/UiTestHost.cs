@@ -72,6 +72,7 @@ namespace RowMate.Tests.UiSupport
             Clipboard = clipboard;
             Keyboard = keyboard;
             Lifecycle = new FakeAppLifecycle(logger);
+            SystemUi = new FakeSystemUi(scheduler);
             Profile = options.Profile;
             Backend = null!;
             App = null!;
@@ -154,6 +155,35 @@ namespace RowMate.Tests.UiSupport
 
         // El ciclo de vida de prueba del host (spec §0.4).
         public FakeAppLifecycle Lifecycle { get; }
+
+        // It. 4b (F-APP-15; 04b-hud-exr/02-tech-design §5.2 punto 6): la interfaz del sistema de prueba del host (anota cada pedido
+        // con su instante; ninguna prueba ni toma llama al sistema).
+        public FakeSystemUi SystemUi { get; }
+
+        // It. 4b: el diálogo de rutina completada abierto (null si no hay).
+        public CompletionDialog? Completion => Immersive?.Completion;
+
+        // It. 4b (QA-G4bT-11 (d)): abre el diálogo de completado con los totales de un caso, sin correr la rutina.
+        public CompletionDialog OpenCompletion(RowMate.App.Workout.HudCompletion completion)
+        {
+            var page = Immersive ?? throw new InvalidOperationException("OpenCompletion: no hay inmersivo.");
+            var dialog = page.OpenCompletionForTest(completion);
+            Handle.Tick();
+            return dialog;
+        }
+
+        // It. 4b (§2.8, §5.2): la zona horaria y la hora del equipo.
+        public void SetLocalOffset(TimeSpan offset)
+        {
+            Scheduler.SetLocalOffset(offset);
+            Handle.Tick();
+        }
+
+        public void ShiftWallClock(TimeSpan by)
+        {
+            Scheduler.ShiftUtc(by);
+            Handle.Tick();
+        }
 
         // El remo de prueba de la It. 4a (HostBackends.TestRower), si es el del host.
         public ScriptedRower? ScriptedRower => Backend.Rower as ScriptedRower;
@@ -240,7 +270,7 @@ namespace RowMate.Tests.UiSupport
             Sessions = options.Sessions(Scheduler, _logger, Routines);
             var texts = LocalizationSet.Load(UiAssetsLocator.StringsEs(), UiAssetsLocator.StringsEn());
             App = AppComposer.Compose(new AppServices(Backend, repository, Sessions, Scheduler, _logger, texts, Locale, Accessibility,
-                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock, Lifecycle = Lifecycle });
+                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock, Lifecycle = Lifecycle, SystemUi = SystemUi });
             Handle = ShellHost.Build(App, Root, new ShellHostOptions(Scheduler, options.IsDesktop, _backButton, Display,
                 TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard) { Pipeline = options.Pipeline, BoatZoneOutline = options.BoatZoneOutline });
             Handle.Shell.Ui.TextMenuTouchMode = options.TextMenuTouchMode;

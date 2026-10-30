@@ -174,11 +174,15 @@ namespace RowMate.Tests.PlayMode
             yield return AdvanceTo(31);
             Assert.That(dialog!.WasConfirmed, Is.False, "se cerró sin efecto, como Cancelar");
             Assert.That(dialog.IsOpen, Is.False);
+            // It. 4b (AC-WKT-20-07, AC-WKT-21-01): a los 300 ms del fin entra el diálogo de completado (nunca los dos a la vez); su
+            // Terminar vuelve a reposo y la página sale. Sin el aviso workoutCompleted (AC-WKT-03-05): es el título del diálogo.
+            yield return Settle();
+            Assert.That(H.TopDialog, Is.InstanceOf<CompletionDialog>(), "el de completado, a los 300 ms");
+            yield return Tap("completion-finish");
             yield return Settle();
             Assert.That(H.TopDialog, Is.Null, "ningún diálogo del inmersivo sobre Workout en reposo");
             Assert.That(H.Immersive, Is.Null);
-            Assert.That(H.Shell.Toasts.CurrentText, Is.EqualTo("¡Entrenamiento completado!"), "sigue el fin automático");
-            Assert.That(Inside("toast"), Is.True);
+            Assert.That(H.Shell.Toasts.IsVisible, Is.False, "sin aviso de completado (AC-WKT-03-05)");
         }
 
         [UnityTest, Category("AC-WKT-20-07")]
@@ -196,7 +200,10 @@ namespace RowMate.Tests.PlayMode
             H.TapAt(confirmAt);
             yield return Settle();
             Assert.That(dialog.WasConfirmed, Is.False, "un Terminar después del fin no hace nada");
-            Assert.That(H.Shell.Toasts.CurrentText, Is.EqualTo("¡Entrenamiento completado!"), "y queda el fin automático, no uno a mano");
+            Assert.That(H.App.Workout.State.Value.EndedBy, Is.EqualTo(RowMate.Core.Workout.WorkoutEndKind.Completed), "y queda el fin automático, no uno a mano");
+            Assert.That(H.TopDialog, Is.InstanceOf<CompletionDialog>(), "con su diálogo de completado");
+            yield return Tap("completion-finish");
+            yield return Settle();
             Assert.That(H.Immersive, Is.Null);
         }
 
@@ -212,9 +219,14 @@ namespace RowMate.Tests.PlayMode
             H.BringToForeground(15);
             yield return Settle();
             Assert.That(dialog.WasConfirmed, Is.False);
-            Assert.That(H.TopDialog, Is.Null, "el diálogo se cerró antes de que la página salga");
+            Assert.That(dialog.IsOpen, Is.False, "el de terminar se cerró sin efecto");
+            // It. 4b (AC-WKT-21-09): al volver, el de completado ya está, sin su entrada y con los totales finales.
+            Assert.That(H.TopDialog, Is.InstanceOf<CompletionDialog>(), "el de completado ya abierto al volver");
+            Assert.That(((CompletionDialog)H.TopDialog!).OpenedInstantly, Is.True, "sin entrada");
+            yield return Tap("completion-finish");
+            yield return Settle();
             Assert.That(H.Immersive, Is.Null);
-            Assert.That(H.Shell.Toasts.CurrentText, Is.EqualTo("¡Entrenamiento completado!"), "el aviso del fin, al volver");
+            Assert.That(H.Shell.Toasts.IsVisible, Is.False, "sin aviso de completado (AC-WKT-03-05)");
         }
 
         [UnityTest, Category("AC-WKT-13-03")]
@@ -297,6 +309,62 @@ namespace RowMate.Tests.PlayMode
             H.PressBack(BackSource.Escape);
             yield return Settle();
             Assert.That((H.Focused as VisualElement)?.name, Is.EqualTo("hud-finish"), "con el teclado, vuelve a Terminar");
+        }
+
+        // QA-V4a-04 (AC-APP-05-07): sin ningún control enfocado (lo que deja DT4a-01 después de un clic), el primer Tab enfoca
+        // Terminar CON el anillo. El KeyDown y la navegación de ese Tab van a la raíz del panel (UiTestHost.KeyTarget: sin foco,
+        // la raíz), que no pasa por #app-root: FocusHighlight tiene que escuchar en la raíz del panel.
+        [UnityTest, Category("AC-APP-05-07")]
+        public IEnumerator FirstTabWithoutFocusShowsTheRing()
+        {
+            CreateWorkout(RoutineSeeds.Lista);
+            yield return StartFree();
+            yield return Tap("hud-finish");
+            yield return Tap("dialog-cancel");
+            Assert.That(H.TopDialog, Is.Null);
+            Assert.That(H.Focused, Is.Null, "después de Cancelar con el puntero no queda nada enfocado (DT4a-01)");
+            Assert.That(H.Shell.KeyboardFocus.IsKeyboardNavigation, Is.False, "sin teclado, sin anillo");
+            Assert.That(H.Shell.KeyboardFocus.ListeningOn, Is.SameAs(H.Root.panel.visualTree), "escucha en la raíz del panel");
+
+            H.PressTab();
+            yield return Frames();
+            var focused = H.Focused as VisualElement;
+            Assert.That(focused?.name, Is.EqualTo("hud-finish"), "el primer Tab enfoca Terminar");
+            Assert.That(H.Shell.KeyboardFocus.IsKeyboardNavigation, Is.True, "el primer Tab ya es navegación con teclado");
+            var ring = focused!.Q(className: "rm-focus-ring");
+            Assert.That(ring, Is.Not.Null);
+            Assert.That(ring.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex), "con el anillo a la vista");
+
+            // Un toque lo apaga otra vez, y el próximo primer Tab lo vuelve a prender.
+            using (var down = PointerDownEvent.GetPooled(new Event { type = EventType.MouseDown, button = 0, mousePosition = H.Root.worldBound.center }))
+            {
+                down.target = H.Root;
+                H.Root.SendEvent(down);
+            }
+
+            yield return Frames();
+            Assert.That(H.Shell.KeyboardFocus.IsKeyboardNavigation, Is.False, "el puntero apaga el anillo");
+            Assert.That(ring.resolvedStyle.display, Is.EqualTo(DisplayStyle.None));
+        }
+
+        // QA-V4a-04 en Workout en reposo (equipo E9, 55a y 55b): el primer Tab, sin foco, muestra el anillo donde cae.
+        [UnityTest, Category("AC-APP-05-07")]
+        public IEnumerator FirstTabWithoutFocusShowsTheRingAtRest()
+        {
+            CreateWorkout(RoutineSeeds.Lista);
+            yield return GoToWorkout();
+            (H.Focused as VisualElement)?.Blur();
+            yield return Frames();
+            Assert.That(H.Focused, Is.Null, "sin foco, como después de un clic");
+            Assert.That(H.Shell.KeyboardFocus.IsKeyboardNavigation, Is.False);
+            H.PressTab();
+            yield return Frames();
+            var focused = H.Focused as VisualElement;
+            Assert.That(focused, Is.Not.Null, "el primer Tab enfoca algo");
+            Assert.That(H.Shell.KeyboardFocus.IsKeyboardNavigation, Is.True);
+            var ring = focused!.Q(className: "rm-focus-ring");
+            Assert.That(ring, Is.Not.Null, "#" + focused!.name + " tiene anillo");
+            Assert.That(ring!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex), "#" + focused!.name + " con el anillo a la vista");
         }
     }
 }

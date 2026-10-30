@@ -12,6 +12,7 @@ namespace RowMate.Core.Workout
     {
         private readonly Dictionary<int, Accumulator> _accumulators = new Dictionary<int, Accumulator>();
         private readonly Dictionary<int, StepResult> _results = new Dictionary<int, StepResult>();
+        private readonly Dictionary<int, StepOutcome> _outcomes = new Dictionary<int, StepOutcome>();
 
         // :23-26: vatios mín., SPM o split (los vatios máx. no cuentan).
         public static bool HasTargets(IntervalStep step)
@@ -54,7 +55,8 @@ namespace RowMate.Core.Workout
         }
 
         // :43-62: cierra el paso comparando los promedios con sus objetivos. Sin objetivos no hay resultado; sin lecturas
-        // remando, Missed ("nunca remó"); sin dato de split, ese objetivo no se evalúa.
+        // remando, Missed ("nunca remó"); sin dato de split, ese objetivo no se evalúa. It. 4b: guarda además los promedios que
+        // decidieron el veredicto (StepOutcome, para el sello; 02-tech-design §2.5). La regla no cambia (LT-39 a LT-44).
         public void Complete(int stepIndex, IntervalStep step)
         {
             if (!HasTargets(step))
@@ -65,6 +67,7 @@ namespace RowMate.Core.Workout
             if (!_accumulators.TryGetValue(stepIndex, out var a) || a.Samples == 0)
             {
                 _results[stepIndex] = StepResult.Missed;
+                _outcomes[stepIndex] = new StepOutcome(stepIndex, StepResult.Missed, 0, double.NaN, double.NaN, 0, double.NaN);
                 return;
             }
 
@@ -74,7 +77,9 @@ namespace RowMate.Core.Workout
             var wattsOk = !step.TargetWattsMin.HasValue || avgWatts >= step.TargetWattsMin.Value;
             var spmOk = !step.TargetSpm.HasValue || avgSpm >= step.TargetSpm.Value;
             var splitOk = !step.TargetSplitSeconds.HasValue || !avgSplit.HasValue || avgSplit.Value <= step.TargetSplitSeconds.Value;
-            _results[stepIndex] = wattsOk && spmOk && splitOk ? StepResult.Met : StepResult.Missed;
+            var result = wattsOk && spmOk && splitOk ? StepResult.Met : StepResult.Missed;
+            _results[stepIndex] = result;
+            _outcomes[stepIndex] = new StepOutcome(stepIndex, result, a.Samples, avgWatts, avgSpm, a.SplitSamples, avgSplit ?? double.NaN);
         }
 
         // :65: null = sin objetivo o todavía no completado.
@@ -83,11 +88,18 @@ namespace RowMate.Core.Workout
             return _results.TryGetValue(stepIndex, out var result) ? result : (StepResult?)null;
         }
 
+        // Los promedios con que se cerró el paso (02-tech-design §2.5 de la It. 4b): null sin objetivo o sin completar.
+        public StepOutcome? OutcomeOf(int stepIndex)
+        {
+            return _outcomes.TryGetValue(stepIndex, out var outcome) ? outcome : (StepOutcome?)null;
+        }
+
         // :67-70.
         public void Reset()
         {
             _accumulators.Clear();
             _results.Clear();
+            _outcomes.Clear();
         }
 
         private sealed class Accumulator

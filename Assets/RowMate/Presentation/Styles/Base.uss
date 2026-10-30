@@ -1877,8 +1877,10 @@
 /* ── El inmersivo y el HUD funcional (It. 4a; F-WKT-13 a -20; 02-tech-design §6.3 a §6.8, §9.5) ──
    Cada zona es un elemento absoluto: el ancla, la escala hudScale con su origen y los topes van por código (HudZones); los
    tamaños base, los colores con transparencia y las líneas de base, también por código (QA-G4aT-14). */
+/* It. 4b (§3.2, §3.3; §7.5): la página del inmersivo es NEGRA: la de la entrada "sumergirse" (Workout funde a negro en 220,
+   después aparece el fondo) y la de la salida (el fondo funde a negro y vuelve Workout). */
 .rm-immersive {
-    background-color: var(--rm-bg-app);
+    background-color: var(--rm-overlay-scrim);
 }
 
 .rm-hud,
@@ -1955,7 +1957,8 @@
     flex-shrink: 0;
 }
 
-/* La pastilla de objetivo (DV-35, DV-38): se recorta con "…" y nunca empuja la cuenta. */
+/* La pastilla de objetivo (DV-35, DV-38; It. 4b DN4b-16, DD4b-03): un slot que recorta y nunca empuja la cuenta; el texto lo
+   arma el código con los fragmentos ENTEROS del plan y el "…" en text.primary (sin text-overflow). */
 .rm-hud-pill {
     flex-shrink: 1;
     min-width: 0;
@@ -1963,7 +1966,6 @@
     border-radius: 6px;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .rm-flex-spacer {
@@ -2028,6 +2030,11 @@
 .rm-hud-band__row {
     flex-direction: row;
     align-items: flex-start;
+    flex-shrink: 0;
+}
+
+/* QA-V4a-03 (AC-WKT-17-04): el divisor de 1 × 32 no cede su ancho cuando el contenido queda apenas más ancho que la banda. */
+.rm-hud-band__divider {
     flex-shrink: 0;
 }
 
@@ -2103,4 +2110,65 @@
 .rm-button--hud-success .rm-button__label,
 .rm-button--hud-success .rm-icon {
     color: var(--rm-text-on-accent);
+}
+
+/* ── El HUD EXR (It. 4b; 04b-hud-exr/02-tech-design §3.4 a §3.9, §7.5): la estructura; los tamaños, los colores con
+   transparencia, las escalas y los aires van por código (USS no tiene em ni baseline). ── */
+.rm-hud-topbar--steps {
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+.rm-hud-pill-row {
+    flex-shrink: 0;
+}
+
+.rm-hud-seal {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.rm-hud-seal__text {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rm-hud-wall-clock {
+    flex-shrink: 0;
+}
+
+.rm-hud-phase-chip {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.rm-hud-phase-chip__label {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rm-hud-big-countdown,
+.rm-hud-paused-label {
+    position: absolute;
+}
+
+.rm-completion__header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.rm-completion__title,
+.rm-completion__message {
+    white-space: normal;
+}
+
+.rm-completion__row {
+    flex-direction: row;
+    align-items: center;
 }

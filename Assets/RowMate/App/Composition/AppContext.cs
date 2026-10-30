@@ -33,9 +33,10 @@ namespace RowMate.App.Composition
         internal AppContext(DeviceBackend devices, DeviceStore device, HeartRateStore heartRate, ShellStore shell, SceneSettings scene,
                             RoutinesStore routines, WorkoutEngine workout, WorkoutStore workoutRest, LanguageState language,
                             DerivedObservable<AppLanguage, Localizer> texts, IReadOnlyObservable<AccessibilitySnapshot> accessibility,
-                            IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger)
+                            IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, ImmersiveSystemBars systemBars)
         {
             _devices = devices;
+            SystemBars = systemBars;
             Device = device;
             HeartRate = heartRate;
             Shell = shell;
@@ -71,6 +72,9 @@ namespace RowMate.App.Composition
 
         // El ciclo de vida con que se armó (ForegroundLifecycle si AppServices no trajo uno).
         public IAppLifecycle Lifecycle { get; }
+
+        // It. 4b (F-APP-15; §4.1): la regla de las barras del sistema, una por app; la usa cada inmersivo.
+        public ImmersiveSystemBars SystemBars { get; }
 
         public LanguageState Language { get; }
 
@@ -141,7 +145,8 @@ namespace RowMate.App.Composition
                 throw new ObjectDisposedException(nameof(AppContext));
             }
 
-            return new WorkoutHudStore(Workout, Texts, Logger);
+            // It. 4b: con el programador y el ciclo de vida (el reloj de pared, WallClockTicker).
+            return new WorkoutHudStore(Workout, Texts, Scheduler, Lifecycle, Logger);
         }
 
         // Al recuperar el foco (AC-APP-09-05): la lista de idiomas del sistema se vuelve a resolver; si el idioma cambia,
@@ -167,6 +172,8 @@ namespace RowMate.App.Composition
             }
 
             _disposed = true;
+            // It. 4b: si quedaron ocultas, las barras del sistema se muestran.
+            SystemBars.Dispose();
             WorkoutRest.Dispose();
             Workout.Dispose();
             Routines.Dispose();

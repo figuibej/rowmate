@@ -378,3 +378,31 @@
     right: -5.5px;
     bottom: -5.5px;
 }
+
+/* ════ It. 4b — El HUD EXR (04b-hud-exr/04-design-notes §2.2, §3.8 y §11; contrato de 04b-hud-exr/02-tech-design §7.5) ════
+   Casi todo lo de la 4b lo dibuja y lo mueve el código: las píldoras, el halo, el pulgar, el sello, la cuenta grande y PAUSA
+   en su disco, el chip, el velo y el check del diálogo (tamaños, colores con transparencia y escalas por código, porque USS
+   no tiene em ni baseline). Terminar del diálogo de completado (#completion-finish) es el primario de la app y toma de arriba
+   su capa, su presionado (accent.primaryPressed) y su anillo de foco 16 / 20, sin reglas nuevas.
+   Lo de acá salió de mirar las capturas de it4b (04-design-notes, "Cambios por implementación de WP-D2"): */
+
+/* El diálogo de completado (§3.8): esconde el título de la It. 3 y pone su encabezado (el check de 32, 12 de aire y el título)
+   en el bloque fijo, que en la It. 3 iba DEBAJO del título y por eso no tiene relleno arriba. Sin esto el check y el título
+   quedaban a 1 dp del borde de arriba del diálogo (CAP-07, -09, -11) y había 28 dp hasta el mensaje en lugar de 12 (el
+   encabezado ya trae sus 12 por código). Arriba va el relleno del diálogo, 24 (16 con la ventana de menos de 480 dp de
+   alto), y de la caja de totales a Terminar quedan 20 (§3.8; el contrato de §7.5: "12 hasta el contenido", "20 hasta las
+   acciones"). Con eso el diálogo mide lo de las notas (TV 40,0-371,0 × 298,0-616,0 ± 1; TH 63,2-347,8; W1280 209,7-510,3). */
+.rm-dialog--completion .rm-dialog__pinned {
+    padding-top: 24px;
+    padding-bottom: 0;
+}
+
+.rm-dialog--compact.rm-dialog--completion .rm-dialog__pinned {
+    padding-top: 16px;
+    padding-bottom: 0;
+}
+
+.rm-dialog--completion .rm-dialog__actions,
+.rm-dialog--compact.rm-dialog--completion .rm-dialog__actions {
+    padding-top: 20px;
+}

@@ -153,24 +153,29 @@ La regla R3 con los controles de ART_BIBLE §3.5 (Terminar 128 × 56, 16 de sepa
 | Cambio | Cómo | Con reducir movimiento |
 |---|---|---|
 | Entre pestañas | No se mueve | — |
-| Pestaña ↔ pantalla apilada (la altura de R2) | `CriticalSpring` ω 22 en y, desde su posición y su velocidad actuales. Baja cuando termina la entrada de la página (240 ms, `CoversShellChanged(true)`) y sube cuando empieza su salida, como en la It. 3 | En el acto |
+| Pestaña ↔ pantalla apilada (la altura de R2) | `CriticalSpring` ω 22 en y, desde su posición y su velocidad actuales. Baja cuando termina la entrada de la página (240 ms, `CoversShellChanged(true)`) y sube cuando empieza su salida, como en la It. 3.<br>**Con el panel abierto** (precisado al empezar la It. 4b): el panel va con la llave, anclado en su borde de abajo, que sigue el mismo resorte. Su alto máximo se calcula **en cada cuadro**, con el borde de abajo de ese cuadro (§1.7), no con el del destino. Si el contenido no entra, el borde de arriba queda quieto en `margen superior + 32` y el panel se estira o se encoge (en L640, de 248 a 312 al abrir el editor y de 312 a 248 al cerrarlo). Si entra, se traslada entero (en TV, 64 dp con su alto de unos 409). Conserva su desplazamiento interno, acotado si se achica. Nunca sale de la ventana ni salta | En el acto: la llave y el panel, en su lugar nuevo |
 | Entrar o salir del entrenamiento (cambio de carril) | No viaja de un lado al otro. En el cuadro 0 de la transición sale (opacidad 1 → 0 en 90, `ease.exit`) y, cuando la transición termina, entra en el otro carril (opacidad 0 → 1 y escala 0,85 → 1 en 160, `ease.enter`, como la vuelta de la llave de la It. 2). Mientras sale no recibe toques | Solo opacidad: 90 y 120 |
 | Dentro del entrenamiento (cambian los obstáculos: aparece BPM, otro layout) | Va a su lugar nuevo con ω 22. Al rotar, en el acto, junto con el fundido cruzado del HUD (ANIMATION_BIBLE §2.12) | En el acto |
 
 Se puede tocar mientras se mueve, como hoy.
+
+Hasta la 4a, el panel tomaba el alto máximo del destino. En L640, con el contenido más alto que el panel, al abrir el editor su borde de arriba salía 32 dp por arriba de la ventana y volvía en ≈ 330 ms, y al cerrarlo bajaba 64 de golpe. La tabla cuadro por cuadro está en [04b/00-deuda-diseno §3.2](../04b-hud-exr/00-deuda-diseno.md), y el pedido, en su DD4b-04.
 
 ### 1.7 Panel (consecuencia de R9; lo confirma el PO en AC-BLE-16-03)
 
 - **Dónde.** Se abre donde está la llave y crece desde su esquina: en la app, abajo a la izquierda (`left 16`, a la altura de la llave); en el entrenamiento, abajo a la derecha.
   - La transición de la It. 2 no cambia (opacidad en 160, escala 0,92 → 1 en 240); solo cambia el origen.
   - En Rutinas deja el `+` libre desde 368 dp de ancho: el panel termina en x 296 y el `+` empieza en el ancho − 72. En un teléfono de 360 dp le tapa los 8 dp de la izquierda.
-- **Alto máximo.** Se mide desde el borde de abajo del panel: alto de la ventana − borde de abajo − margen seguro superior − 16, con mínimo 120.
-  - En las pestañas da la fórmula de siempre (360 → 248; 914 → 802).
-  - En el editor, 64 dp más.
-- **En el entrenamiento** (propuesta), el panel además termina 8 dp debajo de la tarjeta de Vatios, para que se vean Split y Vatios mientras se los corrige (demo b de la 4a).
-  - En W1280 quedan unos 265 dp: se ven la cabecera, los perfiles, Vatios, Ritmo y Hora, y el resto se desplaza adentro.
-  - En TV no cambia nada: hay unos 544 dp y el panel mide unos 409.
-- **La cinta.** En una ventana baja, el panel llega a la esquina de la cinta `SIMULADOR`. La cinta tapa solo su esquina redondeada: el título empieza 12 dp adentro y queda fuera de la franja.
+- **Alto máximo** (precisado al empezar la It. 4b, con AC-BLE-16-03). Se mide desde el borde de abajo del panel, que es el de la llave: alto de la ventana − borde de abajo − (margen seguro superior + reserva), con mínimo 120.
+  - Fuera del entrenamiento, la reserva es **32**. En las pestañas, con la llave a 80 dp del borde de abajo (barra de 64 + 16), da los valores de la It. 2: 360 → 248, 914 → 802 y 200 → 120.
+  - En una pantalla apilada (el editor, con la llave a 16), da 64 dp más: 312, 866 y 152.
+  - **Por qué 32.** Son los 16 dp de aire del legacy más los 16 que la llave bajó con la barra de 64 (DV-07). El legacy tenía la llave a 96 (`simulator_overlay.dart:42`) y la fórmula `alto − 96 − margen − 16` (`:83-86`). Así, abierto al máximo, el panel tiene el borde de arriba en `margen superior + 32` en toda la app, igual que en la It. 2. Es lo que hace `SimulatorPanelLayout.AppTopReserve`.
+  - El texto anterior ("margen seguro superior − 16") daba 264 y 818 con la llave a 80: no coincidía con AC-BLE-16-03 (spec de la 4a §15).
+- **En el entrenamiento.** La reserva es 16, con el techo de Vatios con su objetivo siempre encendido en vertical: lo fija 04a/04-design-notes §3.9, que reemplaza la propuesta de esta sección.
+  - Con esos datos, en W1280 quedan 653,6 dp y en TV, 316,4 (las medidas por perfil, en esa sección).
+- **La cinta.** En una ventana baja, el panel abierto al máximo llega a la esquina de la cinta `SIMULADOR`, pero no a su parte visible.
+  - La franja de la cinta termina en x + y = 56,5. La esquina del panel está en (16; 32), y el punto de su arco de radio 16 más cercano a la cinta (a 45°) está en x + y = 57,37: queda a 0,87 dp.
+  - El título empieza 12 dp adentro.
 
 ### 1.8 Pedidos al Architect (DD4a-01 a DD4a-04)
 
@@ -460,3 +465,14 @@ No se editaron documentos de iteraciones cerradas. La contradicción de §5.0 y 
 4. **Curvas de §2**: `choreo.py`, con las cubic-bezier de `Tokens.cs` y el método de `Easing.cs`.
 5. **HUD de §4.1**: `hud_column.py`.
 6. **El repositorio**: solo cambiaron este documento y las dos biblias. Ningún token, código, asset ni captura. El trabajo en curso del Architect se leyó con `git diff`, sin tocarlo. Unity no se abrió y dotnet no se corrió.
+
+---
+
+## 8. Precisiones al empezar la It. 4b
+
+Lo dejaron pendiente la spec de la 4a (§15), sus 04-design-notes (§14) y el REPORT (§7.2). Se resolvió el 2026-10-29, en [04b/00-deuda-diseno §3](../04b-hud-exr/00-deuda-diseno.md). No cambia ningún criterio: AC-BLE-16-02 ya pedía "sin saltos" y AC-BLE-16-03 ya fijaba los valores.
+
+| Dónde | Qué se precisó |
+|---|---|
+| §1.6 | El panel abierto entre una pestaña y una pantalla apilada: va con la llave y su alto máximo se calcula en cada cuadro con el borde de abajo de ese cuadro, así su borde de arriba no salta ni sale de la ventana (DD4b-04) |
+| §1.7 | El alto máximo fuera del entrenamiento, con la reserva de 32 (`alto − borde de abajo − margen superior − 32`): son los valores de la It. 2 que fija AC-BLE-16-03. En el entrenamiento vale 04a/04-design-notes §3.9. La cinta no llega a la parte visible del panel |

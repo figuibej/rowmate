@@ -650,7 +650,7 @@ Ningún test cubre las progresiones ni el fin de paso.
 
 **Comportamientos observables**
 
-1. Se abre encima de toda la app al iniciar una sesión, libre o con rutina. Al entrar oculta las barras del sistema (modo inmersivo que reaparece con un gesto) y al cerrarse las restaura.
+1. Se abre encima de toda la app al iniciar una sesión, libre o con rutina. Oculta las barras del sistema al crearse la página, cuando empieza su transición de entrada (`:34`), en modo inmersivo persistente: si se las revela con un gesto, se vuelven a ocultar solas. Las restaura al destruirse la página, cuando termina su salida (`:39`), en modo "de borde a borde", que queda así el resto de la sesión de uso.
 2. Capas, de atrás hacia adelante:
    1. la escena 2.5D (SCN), con fondo negro;
    2. la barra superior, a `margen seguro superior + 8`: la barra de pasos (F-WKT-14) si hay rutina, o la barra libre (F-WKT-16) si no;
@@ -697,7 +697,7 @@ Ningún test cubre las progresiones ni el fin de paso.
    - estado de cada una: hecha (con el resultado de F-WKT-09) si su índice es menor que el actual, en curso (con el progreso de F-WKT-04) si es el actual y pendiente si es mayor (F-WKT-15).
 3. **Fila de información** (padding 12/0/12/8), de izquierda a derecha:
    1. el tipo del paso localizado (`stepTypeWork`, `stepTypeRest`, `stepTypeWarmup`, `stepTypeCooldown`), en el color del tipo, tamaño 13, peso 700 y tracking 0,5;
-   2. si el paso tiene etiqueta de objetivo (F-WKT-11, punto 13), un chip con fondo del color del tipo al 20 %, radio 6, padding 6×2 y texto de 11 peso 600, que se recorta con "…" en pantallas angostas;
+   2. si el paso tiene etiqueta de objetivo (F-WKT-11, punto 13), a 6 px, un chip con fondo del color del tipo al 20 %, radio 6, padding 6×2 y texto de 11 peso 600. Va en un `Flexible` que se reparte el espacio libre por mitades con el espacio flexible del punto 3: recibe **a lo sumo la mitad**, se recorta por carácter con "…" y nunca se oculta. Por eso, con chip, el grupo de la derecha (a continuación, la cuenta y el reloj) no queda pegado al borde y se corre cuando entra "a continuación"; sin chip, sí queda pegado (`:394-416`);
    3. un espacio flexible;
    4. el chip "a continuación", cuando aplica;
    5. 8 px;
@@ -710,14 +710,14 @@ Ningún test cubre las progresiones ni el fin de paso.
    - fondo del color del paso siguiente al 25 %, borde al 50 %, radio 8, padding 7×3;
    - la opacidad pulsa entre 0,6 y 1,0: 600 ms de ida y 600 de vuelta (`AnimationController(600 ms)..repeat(reverse: true)`, `:319-322`).
 5. **Cuenta regresiva:** formato de F-WKT-11, puntos 7 y 8. Normalmente es blanca, de 18 y peso 800. **Por terminar** (de 1 a 5 s) pasa a tamaño 20 y su color oscila entre blanco y el color del paso, al mismo ritmo de 600 + 600 ms. Un paso sin meta muestra `nullm` (`:456-458`; en la app, `?`: DV-25).
-6. **Píldora en curso por terminar:** suma un halo del color del paso que pulsa entre 30 % y 70 % de opacidad, con desenfoque 8, expansión 2 y radio 5.
+6. **Píldora en curso por terminar:** suma un halo del color del paso que pulsa entre 30 % y 70 % de opacidad, con desenfoque 8, expansión 2 y radio 5. Es la sombra de un contenedor que envuelve la píldora, así que también se pinta **debajo** de ella: se ve a través de la pista al 30 %, que se aclara con el pulso, y se extiende ≈ 14 dp, por debajo de la fila de información (`step_pill.dart:82-101`).
 7. No muestra "paso N de M" ni el nombre de la rutina.
 8. Con la rutina terminada, la barra sigue visible: el último paso queda "en curso" con la píldora llena y la cuenta en `0:00`.
 9. En pausa, la barra queda congelada; los pulsos siguen si el paso estaba por terminar.
 
 **Casos borde y errores**
 
-- Con muchos pasos (por ejemplo 10 × 2 + 2 = 22) las píldoras quedan muy finas, pero no se recortan ni se desplazan.
+- Con muchos pasos (por ejemplo 10 × 2 + 2 = 22) las píldoras quedan muy finas, pero no se recortan ni se desplazan. Eso vale hasta que las separaciones de 3 px se comen el ancho: con más de ≈ 120 pasos en un teléfono de 411 (≈ 410 en una ventana de 1280), cada píldora mide 0 y la fila queda vacía; solo se ve el halo de la en curso (`:361-375`).
 - Los pasos por distancia nunca muestran relleno ni "a continuación", y la cuenta muestra su largo total (por ejemplo `1000m`).
 
 **UI:** ver arriba. No tiene interacciones: la barra no responde al toque.
@@ -799,7 +799,7 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
    Fondo del color al 15 %, borde al 50 %, radio 8, padding 8×3, texto de 11 peso 800 con tracking 0,8.
 4. Todos los textos están fijos en español, aun con la app en inglés. Existe la clave `metricFreeLabel` ("Entrenamiento libre" / "Free workout"), pero esta barra no la usa.
 
-**Casos borde y errores:** "FINALIZADO" casi no se llega a ver, porque terminar a mano lleva al reset de inmediato.
+**Casos borde y errores:** "FINALIZADO" casi no se llega a ver, porque terminar a mano lleva al reset de inmediato. Se ve, en cambio, si llega una lectura del monitor durante el guardado, porque la pantalla se redibuja con cada lectura. Y mientras la página sale, después del reset, se redibuja en reposo: el chip pasa a "—" (`:534`).
 
 **UI:** sin interacciones.
 
@@ -811,7 +811,7 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
 
 **Dependencias:** F-WKT-01, F-WKT-19.
 
-**Mejora EXR:** el chip "EN MARCHA" lleva un punto "en vivo" que late con suavidad. En pausa, el chip y la barra se atenúan de forma coherente con el velo de pausa.
+**Mejora EXR:** el chip "EN MARCHA" lleva un punto "en vivo" que late con suavidad. En pausa no se atenúa nada del HUD, por el contraste (ART_BIBLE §3.2): la pausa la dicen el velo, `PAUSA`, el chip y `Reanudar`.
 
 ---
 
@@ -1004,15 +1004,15 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
 **Comportamientos observables**
 
 1. Aparece una sola vez, cuando la sesión llega a la fase terminada **y** el diálogo todavía no se mostró. En la práctica pasa solo cuando la rutina termina sola (F-WKT-03); ver el caso borde de F-WKT-13.
-2. Es modal: no se cierra tocando afuera ni con "atrás".
+2. Es modal: no se cierra tocando afuera, ni con "atrás", ni con Escape en escritorio (`barrierDismissible: false` y `PopScope(canPop: false)`, `:207-212`).
 3. **Título:** un ícono de check verde `#06D6A0` de 28 y el texto `workoutCompleted` ("¡Entrenamiento completado!" / "Workout Completed!").
 4. **Texto:** `workoutCompletedMessage` ("Has completado tu rutina exitosamente." / "You have successfully completed your routine.").
 5. **Resumen:** un recuadro de fondo blanco al 4 % (alfa 10 de 255), radio 8 y padding 12, con tres filas separadas 8 px. Cada fila tiene un ícono `#00B4D8` de 20, la etiqueta en blanco 70 % y el valor en negrita de 16:
-   - **"Tiempo"**: el reloj activo, con formato `H:MM:SS` o `MM:SS`;
-   - **"Distancia"**: la distancia actual del monitor, como `"{n} m"`;
-   - **"Calorías"**: las calorías actuales del monitor, sin unidad.
+   - ícono `timer`, **"Tiempo"**: el reloj activo, con formato `H:MM:SS` o `MM:SS`;
+   - ícono `straighten`, **"Distancia"**: la distancia del monitor, como `"{n} m"`;
+   - ícono `local_fire_department`, **"Calorías"**: las calorías del monitor, sin unidad.
 
-   Las etiquetas están fijas en español.
+   Las etiquetas están fijas en español (`:981-991`). Los tres valores se leen **una sola vez**, cuando se arma el diálogo, un cuadro después del fin: ni las lecturas nuevas, ni rotar, ni cambiar el tamaño de la ventana los vuelven a leer, porque nada vuelve a armar el diálogo (`:50-54`, `:207-229`, `:965-991`). Si la rutina termina con la app en segundo plano en Android, el diálogo se arma recién al volver, con la lectura de ese momento.
 6. **Botones:**
    - Si se cumple todo esto: Strava configurado, la app no está en modo simulador, el perfil está conectado y la preferencia de subida es **"preguntar"**, hay dos botones:
      - **`workoutFinish`** ("Terminar", con contorno): cierra el diálogo y hace el reset;
@@ -1023,6 +1023,7 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
 **Casos borde y errores**
 
 - El guardado arranca sin esperar al terminar la rutina. Si el usuario toca un botón antes de que termine, `lastFinishedSessionId` puede seguir apuntando a la sesión **anterior**, o estar vacío, y la subida usaría ese valor (ver Preguntas abiertas).
+- Ese mismo toque temprano también **pierde el cierre de la sesión**: el reset vacía el inicio de la sesión mientras el guardado espera a la base, el cierre falla en silencio y la sesión queda sin hora de fin ni totales (`workout_provider.dart:283-299`).
 - La distancia y las calorías son los totales del monitor, no los guardados.
 - El texto habla siempre de "rutina", lo que es correcto porque las sesiones libres no terminan solas.
 
@@ -1220,3 +1221,19 @@ Pendientes del PO de la [spec de la It. 4a §15](../../iterations/04a-motor-hud-
 | F-WKT-12, casos borde | Dos toques rápidos pueden crear dos sesiones (DV-30) |
 | F-WKT-14, puntos 4 y 5 | El pulso es de 600 ms de ida y 600 de vuelta, y la cuenta de un paso sin meta muestra `nullm` |
 | F-WKT-17, casos borde | En un teléfono horizontal, kcal se encima con Watts, y en 640 × 360 la banda con los controles (DV-33) |
+
+## Cambios al cerrar la It. 4b
+
+Pendientes del PO de la [spec de la It. 4b §15](../../iterations/04b-hud-exr/01-po-spec.md), releídos en el legacy (`3ae0f3a`: `lib/features/workout/immersive_workout_screen.dart:27-65`, `:205-215`, `:359-377`, `:392-418`, `:528-537`, `:980-992`; `lib/features/workout/step_pill.dart:82-101`; `lib/features/workout/workout_provider.dart:252-318`), 2026-10-30. Describen el legacy; lo que la app hace distinto lleva su DV de la It. 4b.
+
+| Dónde | Qué cambió |
+|---|---|
+| F-WKT-13, punto 1 | Las barras se ocultan al crearse la página (al empezar su entrada) y vuelven al destruirse (al terminar su salida), en modo "de borde a borde" (AC-APP-15-01, -04) |
+| F-WKT-14, punto 3.2 | La pastilla de objetivo recibe a lo sumo la mitad del espacio libre, se corta por carácter y nunca se oculta; con pastilla, la cuenta y el reloj no quedan pegados al borde y se corren cuando entra "a continuación" (DV-45, DV-46) |
+| F-WKT-14, punto 6 | El halo también se pinta debajo de la píldora, tiñe la pista y pasa por debajo de la fila de información (§11.1.1 de la spec de la 4b) |
+| F-WKT-14, casos borde | Con más de ≈ 120 pasos en un teléfono, las píldoras miden 0 y la fila queda vacía (DV-40) |
+| F-WKT-16, casos borde | `FINALIZADO` también se ve si llega una lectura durante el guardado; mientras la página sale, el chip dice `—` (DV-41) |
+| F-WKT-16, mejora EXR | En pausa no se atenúa nada del HUD (ART_BIBLE §3.2; AC-WKT-13-12) |
+| F-WKT-21, punto 2 | Tampoco se cierra con Escape en escritorio (AC-WKT-21-02) |
+| F-WKT-21, punto 5 | Los íconos de cada fila del resumen, y los totales leídos una sola vez al armar el diálogo (DV-43) |
+| F-WKT-21, casos borde | Un `Terminar` antes de que termine el guardado deja la sesión sin hora de fin ni totales (DV-42) |

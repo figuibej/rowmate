@@ -599,5 +599,28 @@ namespace RowMate.Tests.PlayMode
             Assert.That(Editor.Steps.IsAnimating, Is.False, "lo borrado se fue sin animar el alto");
             Assert.That(Block(0).layout.height, Is.LessThan(before));
         }
+
+        // QA-V4a-04 (AC-APP-05-07; equipo E9 b): el editor abierto con un clic, sin ningún control enfocado. El primer Tab cae en
+        // la flecha `←` y tiene que mostrar el anillo: sin él, un Enter salía del editor sin que se viera qué estaba enfocado (el
+        // editor sale sin confirmar, como el legacy; lo que se corrige es el anillo).
+        [UnityTest, Category("AC-APP-05-07")]
+        public IEnumerator FirstTabWithoutFocusShowsTheRingInTheEditor()
+        {
+            CreateRoutines(RoutineSeeds.Lista);
+            yield return OpenEditorOf(0);
+            yield return Settle();
+            (H.Focused as VisualElement)?.Blur();
+            yield return Frames();
+            Assert.That(H.Focused, Is.Null, "sin foco, como en la PC después del clic en la tarjeta");
+            Assert.That(H.Shell.KeyboardFocus.IsKeyboardNavigation, Is.False);
+
+            H.PressTab();
+            yield return Frames();
+            Assert.That(H.Focused, Is.SameAs(Editor.Back), "el primer Tab cae en la flecha");
+            Assert.That(H.Shell.KeyboardFocus.IsKeyboardNavigation, Is.True, "y ya es navegación con teclado");
+            var ring = Editor.Back.Q(className: "rm-focus-ring");
+            Assert.That(ring, Is.Not.Null);
+            Assert.That(ring.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex), "la flecha enfocada se ve");
+        }
     }
 }

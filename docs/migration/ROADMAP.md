@@ -238,7 +238,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Incluye.** WKT: F-WKT-13, F-WKT-14, F-WKT-15, F-WKT-16, F-WKT-17, F-WKT-19, F-WKT-21.
 
-**También toca.** F-APP-15 (barras del sistema ocultas al entrar al inmersivo y visibles al salir; se cierra en la It. 14), F-WKT-04 y F-WKT-09 (pulso de la píldora y sello de resultado, D-ANI-05).
+**También toca.** F-APP-15 (barras del sistema ocultas al entrar al inmersivo y visibles al salir; se cierra en la It. 14), F-WKT-04 y F-WKT-09 (pulso de la píldora y sello de resultado, D-ANI-05). Además cambia criterios de F-WKT-01, F-WKT-02, F-WKT-03, F-WKT-06 y F-WKT-20 (el fin automático espera al diálogo de completado, DT4a-15, y P-17 de la 4a) y usa F-APP-03, F-APP-05, F-APP-10 y F-BLE-16 (el diálogo modal, teclado, letra y movimiento, 12 claves nuevas, y la cinta, la llave y el panel con las piezas nuevas) ([spec de la 4b §5](iterations/04b-hud-exr/01-po-spec.md)).
 
 **Tests legacy a portar (1 caso).** `step_pill_test` (1).
 **Criterios nuevos.**
@@ -247,7 +247,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 - Al terminar a mano nunca aparece el diálogo de completado (Q-53).
 - Píldoras del mismo ancho (Q-59).
 - Las animaciones nunca adelantan ni frenan el reloj ni las métricas (ANIMATION_BIBLE §0.1).
-- Con el equipo suspendido y una sesión en marcha, el tiempo suspendido no cuenta como tiempo de sesión: al despertar sigue desde donde quedó, sin puntos de ese lapso (P-17 de la 4a, según lo que conteste el usuario en su gate; QA-V4a-ROB-05). Lo verifica el usuario en la demo, porque QA no suspende su equipo.
+- Con el equipo suspendido y una sesión en marcha, el tiempo suspendido no cuenta como tiempo de sesión: al despertar sigue desde donde quedó, sin puntos de ese lapso (P-17 de la 4a, aceptada por el usuario en el gate de la 4a; QA-V4a-ROB-05; AC-WKT-02-11). Lo verifica el usuario en la demo, porque QA no suspende su equipo.
 
 **Demo.** Con el simulador y una rutina: barra de pasos con píldoras que se llenan, pulso de la píldora en los últimos 5 s y cuenta grande en los últimos 3 s. Al cerrar cada paso, sello "Objetivo cumplido / No alcanzado" (si se aprueba D-ANI-05). Al terminar, el diálogo de rutina completada. En entrenamiento libre, barra superior con chip de fase y reloj de pared. Entrar al inmersivo oculta las barras del sistema con una transición y salir las devuelve.
 
@@ -592,7 +592,7 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-BLE-13 | C | 2 | 3, 12 |
 | F-BLE-14 | C | 1 | 2 |
 | F-BLE-15 | C | 2 | — |
-| F-BLE-16 | C | 2 | 6a |
+| F-BLE-16 | C | 2 | 4b, 6a |
 | F-HRM-01 | C | 1 | S-1, 11 |
 | F-HRM-02 | C | 11 | 2, 10b |
 | F-HRM-03 | C | 11 | 2, 10b |
@@ -629,12 +629,12 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-RUT-18 | C | 1 | 4a, 9 |
 | F-RUT-19 | → F-APP-08 | 2 | — |
 | F-RUT-20 | C | 9 | 12 |
-| F-WKT-01 | C | 4a | — |
-| F-WKT-02 | C | 4a | — |
-| F-WKT-03 | C | 4a | — |
+| F-WKT-01 | C | 4a | 4b |
+| F-WKT-02 | C | 4a | 4b |
+| F-WKT-03 | C | 4a | 4b |
 | F-WKT-04 | C | 4a | 4b |
 | F-WKT-05 | C | 4a | 11 |
-| F-WKT-06 | C | 4a | 9 |
+| F-WKT-06 | C | 4a | 4b, 9 |
 | F-WKT-07 | C | 5 | — |
 | F-WKT-08 | C | 5 | — |
 | F-WKT-09 | C | 4a | 4b |
@@ -648,7 +648,7 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-WKT-17 | C | 4b | 4a, 6b |
 | F-WKT-18 | C | 5 | — |
 | F-WKT-19 | C | 4b | — |
-| F-WKT-20 | C | 4a | 12 |
+| F-WKT-20 | C | 4a | 4b, 12 |
 | F-WKT-21 | C | 4b | 12 |
 | F-WKT-22 | → F-STR-06 | 12 | — |
 | F-WKT-23 | C | 4a | — |
@@ -718,9 +718,9 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-STR-18 | C | 12 | — |
 | F-APP-01 | C | 2 | 3, 9, 11 |
 | F-APP-02 | C | 2 | 9, 12 |
-| F-APP-03 | C | 3 | 4a, 9 |
+| F-APP-03 | C | 3 | 4a, 4b, 9 |
 | F-APP-04 | → F-STR-01 | 12 | — |
-| F-APP-05 | C | 2 | 14 |
+| F-APP-05 | C | 2 | 4b, 14 |
 | F-APP-06 | C | 2 | 4a, 9 |
 | F-APP-07 | → F-RUT-01 | 1 | — |
 | F-APP-08 | C | 2 | — |
@@ -805,7 +805,7 @@ Las propuestas del Designer ([ART_BIBLE §0.2](design/ART_BIBLE.md), [ANIMATION_
 | D-ART-02 | HUD +15-25 % (SPM 64, Split/Watts 44, kcal/BPM 32, banda 34) en las mismas zonas y orden | PO | 4a | Se adopta. QA verifica en 640×360 que no tape el bote | Sí |
 | D-ART-09 | Objetivo en chico debajo del valor ("obj. 26") | PO | 4a | Se adopta (es la mejora EXR de F-WKT-10) | No |
 | D-ART-10 | La llave del simulador abajo a la izquierda fuera del entrenamiento y, en el entrenamiento, sobre kcal y BPM en vertical o junto a `Pausa` en horizontal; el panel se abre desde la llave, la sigue y deja a la vista Split y Watts (DV-39, que reemplaza a DV-13 de la It. 3; QA-V3-09) | PO + Designer | 4a | Se adopta ([spec de la 4a](iterations/04a-motor-hud-funcional/01-po-spec.md) AC-BLE-16-02, -03) | Sí |
-| It. 4a · P-17 | Con el equipo suspendido y una sesión en marcha, el tiempo suspendido no cuenta como tiempo de sesión (QA-V4a-ROB-05) | PO | 4a | Como el legacy: no cuenta; el criterio va en la 4b | Sí |
+| It. 4a · P-17 | Con el equipo suspendido y una sesión en marcha, el tiempo suspendido no cuenta como tiempo de sesión (QA-V4a-ROB-05) | PO | 4a | Como el legacy: no cuenta; el criterio va en la 4b. **Aceptada** por el usuario en el gate de la 4a (AC-WKT-02-11 de la 4b) | Sí |
 | QA-P-17 | Respaldo del vidrio sin desenfoque | PO + Designer | 4a | Token `glass.fallback` del Designer (`#070D16 @86 %`, ART_BIBLE §3.2), con el borde y el radio del legacy: garantiza el contraste en el peor caso. Reemplaza al `#000000 @55 %` del legacy | No |
 | Q-91 | Sesión en segundo plano | PO | 4a | Paridad: la sesión sigue (FEATURE_INVENTORY Q-91) | No |
 | D-ANI-05 | Cuenta grande centrada en los últimos 3 s del paso y sello "Objetivo cumplido / No alcanzado" de 2 s | PO | 4b | Se adopta (agregado). Si el usuario lo rechaza, queda la cuenta regresiva normal | Sí |
@@ -874,3 +874,4 @@ Correcciones por el gate de armonía del plan ([QA_PLAN_REVIEW.md](QA_PLAN_REVIE
 | It. 2 (gate, PO) | Demo de la It. 2: la cantidad de columnas depende del ancho de la ventana (hasta 640 dp, 2; más, 3), no de la orientación ([spec de la It. 2](iterations/02-dispositivo-simulador/01-po-spec.md) AC-BLE-11-05 y §15; QA-G2-18) |
 | It. 3 (cierre, PO) | Pendientes de la [spec de la It. 3 §15](iterations/03-rutinas/01-po-spec.md): en la It. 3, repeticiones `-2` con guion (sin cambio) y `−2` con el signo menos tipográfico (×1), como AC-RUT-14-05; en la It. 14, criterio nuevo de lectores de pantalla (DT-05). Además, en la It. 4a, criterio nuevo para una rutina fuera de los topes de Q-92 cargada a mano (R3-08) |
 | It. 4a (cierre, PO) | Pendientes de la [spec de la It. 4a §15](iterations/04a-motor-hud-funcional/01-po-spec.md): F-WKT-14 (la fila de información) en "También toca" de la 4a y en la matriz §4; el rojo fuera de objetivo es `#FF625B` en la demo de la 4a y en D-ART-01 (§6); D-ART-10 en §6, con su gate. Por la verificación: P-17 (la suspensión del equipo no cuenta como tiempo de sesión) en §6 y como criterio de la 4b (QA-V4a-ROB-05), y en la 10a el paso por distancia que nunca queda trabado (QA-V4a-L01) |
+| It. 4b (cierre, PO) | Pendientes de la [spec de la It. 4b §15](iterations/04b-hud-exr/01-po-spec.md): P-17 aceptada por el usuario en el gate de la 4a (§2, It. 4b, y §6); "También toca" de la 4b con F-WKT-01, -02, -03, -06 y -20, F-APP-03, -05 y -10 y F-BLE-16 (§2 y la matriz §4). Para la It. 5 quedan, como insumo de su spec, dos decisiones de la 4b: los paneles de series expandidos contra el lugar de la cuenta grande en vertical (04b/00-deuda-diseno §4.8) y el presupuesto de elementos del HUD, que la 4b deja en su tope ([REPORT de la 4b §9](iterations/04b-hud-exr/REPORT.md)) |

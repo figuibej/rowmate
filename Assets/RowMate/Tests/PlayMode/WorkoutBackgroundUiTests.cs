@@ -40,31 +40,33 @@ namespace RowMate.Tests.PlayMode
             Assert.That(Phase, Is.EqualTo(WorkoutPhase.Active));
         }
 
-        [UnityTest, Category("AC-WKT-02-06"), Category("AC-WKT-03-05")]
-        public IEnumerator CompletedToastOnceOnReturn()
+        // It. 4b (AC-WKT-02-06, AC-WKT-21-09; DT4a-15): Corta termina sola en segundo plano; al volver, el diálogo de completado ya
+        // está, SIN su entrada y con los totales finales, la sesión cerrada con sus 7 puntos y sin el aviso workoutCompleted
+        // (AC-WKT-03-05: es el título del diálogo). Su Terminar vuelve a reposo y la página sale.
+        [UnityTest, Category("AC-WKT-02-06"), Category("AC-WKT-03-05"), Category("AC-WKT-21-09")]
+        public IEnumerator CortaEndsInBackgroundDialogAlreadyOpen()
         {
             CreateWorkout(RoutineSeeds.F4A);
             yield return StartRoutine("Corta");
             yield return AdvanceTo(5.05);
             H.SendToBackground();
             H.BringToForeground(35);
-            var back = H.Scheduler.MonotonicSeconds;
-            yield return Settle();
-            Assert.That(H.Immersive, Is.Null, "al volver, Workout en reposo");
-            Assert.That(Screen.IsOnScreen, Is.True);
-            Assert.That(H.Shell.Toasts.CurrentText, Is.EqualTo("¡Entrenamiento completado!"), "el aviso del fin, retenido");
-            var shown = H.Shell.Toasts.ShowCount;
+            yield return Frames();
+            var dialog = H.Completion;
+            Assert.That(dialog, Is.Not.Null, "al volver, el diálogo de completado ya está");
+            Assert.That(dialog!.OpenedInstantly, Is.True, "sin su entrada");
+            Assert.That(dialog.Motion.IsRunning, Is.False, "con el check dibujado y los totales finales");
+            Assert.That(dialog.TimeValue.Text, Is.EqualTo("00:30"));
+            Assert.That(H.Shell.Toasts.IsVisible, Is.False, "sin aviso de completado (AC-WKT-03-05)");
             var session = LastSession();
             Assert.That(session, Is.Not.Null);
             Assert.That(session!.IsCut, Is.False, "cerrada como en primer plano");
             Assert.That(session.PointCount, Is.EqualTo(7), "con sus 7 puntos");
-            H.Advance(back + 3.8 - H.Scheduler.MonotonicSeconds);
-            yield return Frames();
-            Assert.That(H.Shell.Toasts.IsVisible, Is.True, "con sus 4 s desde la vuelta");
-            yield return Advance(1);
+            yield return Tap("completion-finish");
             yield return Settle();
-            Assert.That(H.Shell.Toasts.IsVisible, Is.False);
-            Assert.That(H.Shell.Toasts.ShowCount, Is.EqualTo(shown), "una sola vez");
+            Assert.That(H.Immersive, Is.Null, "Terminar: Workout en reposo");
+            Assert.That(Screen.IsOnScreen, Is.True);
+            Assert.That(H.Shell.Toasts.IsVisible, Is.False, "sin aviso");
         }
 
         [UnityTest, Category("AC-WKT-02-08")]

@@ -26,6 +26,7 @@ namespace RowMate.Presentation.Workout
         private bool _enabled = true;
         private bool _resume;
         private bool _saving;
+        private bool _interactive = true;
 
         public HudControls(UiContext ui, Action finish, Action pause, Action resume)
         {
@@ -34,12 +35,12 @@ namespace RowMate.Presentation.Workout
             AddToClassList("rm-hud-controls");
             pickingMode = PickingMode.Ignore;
 
-            Finish = Button("hud-finish", "hud-danger", null, finish, "rm-type-button");
+            Finish = Button("hud-finish", "hud-danger", null, () => { if (_interactive) finish(); }, "rm-type-button");
             Add(Finish);
-            Pause = Button("hud-pause", "hud-outline", Icons.Pause, pause, "rm-type-button");
+            Pause = Button("hud-pause", "hud-outline", Icons.Pause, () => { if (_interactive) pause(); }, "rm-type-button");
             Pause.style.marginLeft = (float)HudGeometry.ControlsGap;
             Add(Pause);
-            Resume = Button("hud-resume", "hud-success", Icons.PlayArrow, resume, "rm-type-header-s");
+            Resume = Button("hud-resume", "hud-success", Icons.PlayArrow, () => { if (_interactive) resume(); }, "rm-type-header-s");
             Resume.style.marginLeft = (float)HudGeometry.ControlsGap;
             Resume.style.display = DisplayStyle.None;
             Add(Resume);
@@ -52,6 +53,30 @@ namespace RowMate.Presentation.Workout
         public RmButton Resume { get; }
 
         public bool ShowsResume => _resume;
+
+        // It. 4b (P-15; AC-WKT-13-07, AC-APP-05-07; QA-G4bT-09 (a); 04b-hud-exr/02-tech-design §3.2): los controles responden desde
+        // que empieza su tramo de la cascada (840; con reducir movimiento, desde el cuadro 0), al toque Y al teclado. Antes, un
+        // toque en su lugar no hace nada y ningún control se puede enfocar (opacidad 0 no saca a un control del anillo de Tab).
+        public bool IsInteractive => _interactive;
+
+        public void SetInteractive(bool interactive)
+        {
+            if (_interactive == interactive)
+            {
+                return;
+            }
+
+            _interactive = interactive;
+            foreach (var button in new[] { Finish, Pause, Resume })
+            {
+                if (!interactive && button.focusController?.focusedElement == button)
+                {
+                    button.Blur();
+                }
+
+                button.focusable = interactive;
+            }
+        }
 
         public bool IsEnabled => _enabled;
 

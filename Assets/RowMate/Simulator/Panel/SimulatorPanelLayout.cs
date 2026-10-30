@@ -52,5 +52,24 @@ namespace RowMate.Simulator.Panel
             var height = windowHeightDp - panelBottomDp - top;
             return height < MinMaxHeight ? MinMaxHeight : height;
         }
+
+        // It. 4b (DD4b-04; 04b/00-deuda-diseno §3.2): el panel va con la llave, anclado a su borde de abajo, con el mismo resorte,
+        // y su alto se calcula EN CADA CUADRO con el borde de abajo de ese cuadro (no con el del destino). Si el contenido no
+        // entra, el borde de arriba queda quieto (en una pestaña o una pantalla apilada, margen superior + 32) y el panel se
+        // estira o se encoge; si entra, se traslada entero. Nunca sale de la ventana ni salta. contentHeightDp: el alto que
+        // pide el contenido. Devuelve el alto del panel en ese cuadro.
+        public static double FrameHeight(double contentHeightDp, double windowHeightDp, SafeInsets insets, double panelBottomDp, double topReserveDp,
+                                         double? ceilingFromTopDp)
+        {
+            var max = MaxHeight(windowHeightDp, insets, panelBottomDp, topReserveDp, ceilingFromTopDp);
+            return contentHeightDp < max ? contentHeightDp : max;
+        }
+
+        // El borde de arriba del panel (dp desde ARRIBA) en ese cuadro.
+        public static double FrameTop(double contentHeightDp, double windowHeightDp, SafeInsets insets, double panelBottomDp, double topReserveDp,
+                                      double? ceilingFromTopDp)
+        {
+            return windowHeightDp - panelBottomDp - FrameHeight(contentHeightDp, windowHeightDp, insets, panelBottomDp, topReserveDp, ceilingFromTopDp);
+        }
     }
 }

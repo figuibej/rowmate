@@ -4,10 +4,12 @@
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it4a por defecto desde la It. 4a: el entrenamiento, 30 CAP (CAP-27 con a, b y c), DEMO-01..14 y VID-01..03
+# -Set: el catalogo (it4b por defecto desde la It. 4b: el HUD EXR, CAP-01..31, DEMO-01..12 y VID-01..08 en
+# docs/migration/iterations/04b-hud-exr/snapshots; it4a: el entrenamiento de la 4a, con las tomas del HUD reemplazadas por las de
+# it4b (no se vuelven a tomar), 30 CAP (CAP-27 con a, b y c), DEMO-01..14 y VID-01..03
 # = 49 archivos en docs/migration/iterations/04a-motor-hud-funcional/snapshots; it3: Rutinas, 42 IDs = 47 archivos en
 # docs/migration/iterations/03-rutinas/snapshots;
 # it2: Dispositivo y simulador, en docs/migration/iterations/02-dispositivo-simulador/snapshots). Sin -Out, la carpeta del
@@ -20,7 +22,7 @@
 #   1. Unity -batchmode -quit -executeMethod RowMate.EditorTools.SimulatorDefine.EnableForTests: agrega el define (y deja la
 #      marca Library/RowMate/simulator-tests.txt, con la que SimulatorBuildGuard frena cualquier build).
 #   2. Unity -batchmode -executeMethod RowMate.Snapshots.SnapshotCli.Run, SIN -quit: el arnes registra su maquina de estados
-#      en EditorApplication.update y sale solo con EditorApplication.Exit (0 bien, 1 alguna toma fallo, 3 tope de 15 min).
+#      en EditorApplication.update y sale solo con EditorApplication.Exit (0 bien, 1 alguna toma fallo, 3 tope de 30 min).
 #   3. SIEMPRE (finally), aunque el paso 2 falle o se corte: RestoreAfterTests deja los defines como estaban y borra la marca;
 #      despues se verifica en ProjectSettings/ProjectSettings.asset que ROWMATE_SIMULATOR quedo igual que antes del paso 1.
 # Con -NoSimulator solo el paso 2 (sin el define el arnes hace CAP-22 y CAP-23).
@@ -28,8 +30,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it4a', 'it3', 'it2')]
-    [string]$Set = 'it4a',
+    [ValidateSet('it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it4b',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -121,7 +123,8 @@ function Get-SetFolder {
     if ($Out -ne '') { return $Out }
     if ($Set -eq 'it2') { return 'docs/migration/iterations/02-dispositivo-simulador/snapshots' }
     if ($Set -eq 'it3') { return 'docs/migration/iterations/03-rutinas/snapshots' }
-    return 'docs/migration/iterations/04a-motor-hud-funcional/snapshots'
+    if ($Set -eq 'it4a') { return 'docs/migration/iterations/04a-motor-hud-funcional/snapshots' }
+    return 'docs/migration/iterations/04b-hud-exr/snapshots'
 }
 
 function Invoke-Harness {

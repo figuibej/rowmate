@@ -62,6 +62,19 @@ namespace RowMate.Tests.EditMode.Design
             }
         }
 
+        // QA-V4b-02 = QA-V4b-P01 (AC-WKT-16-03): el tracking por código (style.letterSpacing) va en la misma unidad que el USS, la
+        // de TextCore (N = N/100 em por letra): el chip de fase y PAUSA, 0,08 em → 8. Escrito en dp (0,08 × 11 = 0,88) quedaba en
+        // 0,0088 em, una novena parte.
+        [Test, Category("AC-WKT-16-03"), Category("AC-WKT-13-12")]
+        public void CodeTrackingUsesTheTextCoreUnit()
+        {
+            Assert.That(TypographyUssWriter.LetterSpacingUnits(HudGeometry.PhaseChipTrackingEm), Is.EqualTo(8).Within(1e-9), "el chip de fase");
+            Assert.That(TypographyUssWriter.LetterSpacingUnits(HudGeometry.PausedLabelTrackingEm), Is.EqualTo(8).Within(1e-9), "PAUSA");
+            Assert.That(TypographyUssWriter.LetterSpacingUnits(TypographyUssWriter.LabelTrackingEm) + "px",
+                Is.EqualTo(TypographyUssWriter.LetterSpacingPx(TypographyUssWriter.LabelTrackingEm)), "la misma unidad que el USS");
+            Assert.That(TypographyUssWriter.LetterSpacingUnits(0.04), Is.EqualTo(4).Within(1e-9), "el tipo del paso de la 4a (StepInfoBar)");
+        }
+
         [Test, Category("AC-APP-05-05")]
         public void ScaledClassesMatchTokens()
         {
@@ -106,7 +119,7 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(rules[".rm-icon"], Does.Contain("white-space: nowrap;"));
             Assert.That(rules[".rm-icon"], Does.Contain("letter-spacing: 0;"));
             Assert.That(rules[".rm-icon--filled"], Does.Contain(FontAssetPaths.IconsFilled));
-            Assert.That(rules[".rm-type-num-xl"], Does.Contain("BarlowSemiCondensed-Bold-SDF.asset"), "números del tablero en Barlow SC");
+            Assert.That(rules[".rm-type-num-xl"], Does.Contain("RowMateNumericSC-Bold-SDF.asset"), "números del tablero en RowMate Numeric SC (DD4a-07)");
             Assert.That(rules[".rm-type-title"], Does.Contain("Inter-SemiBold-SDF.asset"));
 
             // Cada FontAsset sale de un .ttf versionado (ASSET_SLOTS §3-§4) y las rutas no tienen espacios (van en url()).

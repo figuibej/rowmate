@@ -88,9 +88,17 @@ namespace RowMate.EditorTools
 
             var named = NamedBuildTarget.FromBuildTargetGroup(request.BuildTargetGroup);
             var previousBackend = PlayerSettings.GetScriptingBackend(named);
+            // It. 4b (AC-WKT-14-19; 04b-hud-exr/02-tech-design §3.13): FrameTimeProbe necesita las estadísticas de tiempo de cuadro;
+            // se prenden SOLO en el build de desarrollo con simulador y se restauran al terminar (ProjectSettings no cambia).
+            var previousFrameTiming = PlayerSettings.enableFrameTimingStats;
             try
             {
                 PlayerSettings.SetScriptingBackend(named, request.ScriptingBackend);
+                if (request.Simulator)
+                {
+                    PlayerSettings.enableFrameTimingStats = true;
+                }
+
                 Directory.CreateDirectory(request.OutputFolder);
                 var options = OptionsFor(request, scenes);
                 Debug.Log(Prefix + request.Target + " " + request.Variant + " " + request.ScriptingBackend + (request.Development ? " Development" : "")
@@ -135,6 +143,7 @@ namespace RowMate.EditorTools
             finally
             {
                 PlayerSettings.SetScriptingBackend(named, previousBackend);
+                PlayerSettings.enableFrameTimingStats = previousFrameTiming;
                 AssetDatabase.SaveAssets();
             }
         }

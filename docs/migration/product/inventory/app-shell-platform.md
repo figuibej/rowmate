@@ -513,7 +513,7 @@ Siglas de otras áreas que se citan: **BLE** (remo FTMS y su conexión), **HRM**
 **Valor para el usuario.** Remar con la escena a pantalla completa, en vertical u horizontal, y usar la app en escritorio con una ventana cómoda.
 
 **Comportamiento observable.**
-1. **Al entrar al entrenamiento inmersivo** se ocultan las barras del sistema (estado y navegación) en modo "inmersivo persistente": si el usuario las revela deslizando desde el borde, vuelven a ocultarse solas. **Al salir del inmersivo**, las barras vuelven a estar visibles y la app dibuja de borde a borde (`immersive_workout_screen.dart:32-40`; el detalle está en HUD).
+1. **Al entrar al entrenamiento inmersivo** se ocultan las barras del sistema (estado y navegación) en modo "inmersivo persistente": si el usuario las revela deslizando desde el borde, vuelven a ocultarse solas. Pasa cuando se crea la página, al empezar su transición de entrada (`immersive_workout_screen.dart:34`). **Al salir del inmersivo**, cuando la página se destruye al terminar su salida (`:39`), las barras vuelven a estar visibles y la app dibuja de borde a borde (`immersive_workout_screen.dart:32-40`; el detalle está en HUD).
 2. Fuera del entrenamiento, la barra de estado está visible (`Info.plist:56-57`).
 3. **Orientación: la app no se bloquea.** En iPhone: vertical, horizontal izquierda y horizontal derecha (no vertical invertida). En iPad: las cuatro (`Info.plist:31-43`). En Android sigue la rotación del sistema sin restricción y **sin reiniciar la pantalla** al rotar, así que se conserva el estado (`AndroidManifest.xml:30`). Las pantallas se acomodan a la orientación (cada área).
 4. **Teclado en Android**: el contenido se achica para dejar lugar al teclado, en lugar de quedar tapado (`AndroidManifest.xml:32`), por ejemplo en el editor de rutina.
@@ -944,3 +944,11 @@ Correcciones por el gate de armonía del plan ([QA_PLAN_REVIEW.md](../../QA_PLAN
 | ID | Qué cambió |
 |---|---|
 | QA-P-18 | Requisitos mínimos: el mínimo real de Android del legacy es API 24 (Android 7.0, el valor por defecto de Flutter 3.47.6). La app nueva pide Android 8.0 (API 26) y ARM64 (Q-90 de FEATURE_INVENTORY) |
+
+## Cambios al cerrar la It. 4b
+
+Pendiente del PO de la [spec de la It. 4b §15](../../iterations/04b-hud-exr/01-po-spec.md), releído en el legacy (`3ae0f3a`, `lib/features/workout/immersive_workout_screen.dart:27-41`), 2026-10-30.
+
+| Dónde | Qué cambió |
+|---|---|
+| F-APP-15, punto 1 | Las barras se ocultan al crearse la página del inmersivo (al empezar su entrada) y vuelven al destruirse (al terminar su salida), no "al entrar" y "al cerrarse" en general (AC-APP-15-01, -04 de la It. 4b) |

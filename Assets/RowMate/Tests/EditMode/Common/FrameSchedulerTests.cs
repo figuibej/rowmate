@@ -208,6 +208,58 @@ namespace RowMate.Tests.EditMode.Common
             Assert.Throws<ArgumentOutOfRangeException>(() => queue.CatchUp(0, 1, _ => { }, 0));
         }
 
+        // ── It. 4b: el reloj despierto (P-17 de la 4a; 02-tech-design §2.9; ADR 020) ──
+
+        [Test, Category("AC-WKT-02-11")]
+        public void TickWithTheAwakeClock()
+        {
+            // Tick(in FrameClock): la conducta de la 4a con el monótono despierto. Con la medida del sueño (600 s que el crudo contó),
+            // el periódico de 1 s no dispara por el lapso y la hora de pared sigue siendo la real; Woke sale después de lo vencido.
+            var scheduler = Build(out var _);
+            var order = new List<string>();
+            scheduler.SchedulePeriodic(TimeSpan.FromSeconds(1), () => order.Add("tick@" + Fmt(scheduler.MonotonicSeconds)));
+            scheduler.Woke += wake => order.Add("woke " + Fmt(wake.DiscountedSeconds));
+            for (var frame = 1; frame <= 60; frame++)
+            {
+                scheduler.Tick(new FrameClock(frame * Frame, Start.AddSeconds(frame * Frame), Offset, 0));
+            }
+
+            order.Clear();
+            scheduler.Tick(new FrameClock(601.5, Start.AddSeconds(601.5), Offset, 600));
+            Assert.That(scheduler.MonotonicSeconds, Is.EqualTo(1.5).Within(1e-9), "el lapso dormido no existe");
+            Assert.That(scheduler.UtcNow, Is.EqualTo(Start.AddSeconds(601.5)), "la hora de pared, la real");
+            Assert.That(scheduler.SleepBias, Is.EqualTo(600).Within(1e-9));
+            Assert.That(order, Is.EqualTo(new[] { "woke 600" }), "ningún disparo del lapso; el de los 2 s todavía no venció");
+            scheduler.Tick(new FrameClock(602.0, Start.AddSeconds(602), Offset, 600));
+            Assert.That(order[order.Count - 1], Is.EqualTo("tick@2"));
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void WokeAfterTheDueTimers()
+        {
+            var scheduler = Build(out var _);
+            var order = new List<string>();
+            scheduler.Schedule(TimeSpan.FromSeconds(0.5), () => order.Add("timer"));
+            scheduler.Woke += _ => order.Add("woke");
+            scheduler.Tick(new FrameClock(0.1, Start, Offset, 0));
+            scheduler.Tick(new FrameClock(100.6, Start.AddSeconds(100.6), Offset, 100));
+            Assert.That(order, Is.EqualTo(new[] { "timer", "woke" }), "Woke DESPUÉS de correr lo vencido");
+        }
+
+        [Test, Category("AC-WKT-02-04")]
+        public void TheFourATickIsAFrameClockWithoutMeasure()
+        {
+            // Tick(double, …) sigue: sin medida ni avisos, un cuadro tarde es un cuadro tarde (la 4a).
+            var scheduler = Build(out var _);
+            var woke = 0;
+            scheduler.Woke += _ => woke++;
+            scheduler.Tick(3600, Start.AddSeconds(3600), Offset);
+            Assert.That(scheduler.MonotonicSeconds, Is.EqualTo(3600));
+            Assert.That(scheduler.SleepBias, Is.EqualTo(0));
+            Assert.That(woke, Is.EqualTo(0));
+            Assert.That(scheduler.SuspendPending, Is.False);
+        }
+
         private static FrameScheduler Build(out RecordingLogger logger)
         {
             logger = new RecordingLogger();

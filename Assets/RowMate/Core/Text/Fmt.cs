@@ -118,6 +118,48 @@ namespace RowMate.Core.Text
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
+        // Caracteres que puede ocupar Integer: long.MinValue = '-' y 19 cifras.
+        public const int IntegerMaxChars = 20;
+
+        // It. 4b (QA-V4b-MOT-01): los mismos caracteres que Integer(value), escritos en buffer desde offset SIN ASIGNAR (el conteo
+        // del diálogo de completado, una vez por cuadro). Devuelve cuántos escribió.
+        public static int WriteInteger(long value, char[] buffer, int offset)
+        {
+            if (buffer == null)
+            {
+                throw new ArgumentNullException(nameof(buffer));
+            }
+
+            var negative = value < 0;
+            var magnitude = negative ? (ulong)(-(value + 1)) + 1 : (ulong)value;
+            var digits = 1;
+            for (var rest = magnitude / 10; rest > 0; rest /= 10)
+            {
+                digits++;
+            }
+
+            var length = digits + (negative ? 1 : 0);
+            if (offset < 0 || offset + length > buffer.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            }
+
+            var at = offset + length - 1;
+            do
+            {
+                buffer[at--] = (char)('0' + (int)(magnitude % 10));
+                magnitude /= 10;
+            }
+            while (magnitude > 0);
+
+            if (negative)
+            {
+                buffer[offset] = '-';
+            }
+
+            return length;
+        }
+
         // q = ⌊m · 10^n · 2^e + ½⌋ con aritmética de ulong (02-tech-design §3.1, pasos 4-5). false si no entra.
         internal static bool TryQuotientFast(double x, int fractionDigits, out ulong q)
         {

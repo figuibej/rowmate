@@ -32,6 +32,7 @@ Los scripts importan solo `dart:*`, `../lib/golden.dart` y archivos del legacy q
 - Al terminar, `git status --porcelain --untracked-files=all tools/oracle/engine` no puede mostrar nada fuera de `pubspec.yaml` y `test/`: lo que `pub get` deje sin ignorar hace fallar la corrida.
 - Con `-LegacyPath` escribe `engine/pubspec_overrides.yaml` (ignorado: tiene la ruta absoluta); sin `-LegacyPath` lo borra si quedó de antes. `-FlutterExe` (o `ROWMATE_FLUTTER`) elige el `flutter`; si no, el del `PATH` (`<flutter-sdk>/bin/flutter`). Solo corre el motor: los scripts de `bin/` siguen con su comando.
 - Escenarios (spec §0.4, con `R-4`): libre terminado a los 12,3 s; `Corta`; `Corta` con `R-4(19)`; `Prueba 4a`; `Distancia 100` con `R-4`, `R-4R`, `R-4Z` y la pausa de 20 s; la pausa de Q-58; la pausa del muestreo; la sesión de 3 s. Cada uno con los puntos (sin `id`), la fila del alta y la del cierre (sin fechas: el legacy toma la hora real), los objetivos, los cambios de paso y el orden de las operaciones. Los compara `WorkoutGoldenTests` (sin Flutter).
+- Guiones (`scripts`, QA-V4a-L02, al empezar la It. 4b): los 15 caminos que la lente de paridad de la 4a comprobó a mano. Pasos de 0 s, de duración negativa y último de 0 s; sin meta con `Terminar`; terminar en pausa, en el segundo del cambio y en un múltiplo de 5; último paso por distancia; tiempo y distancia; el pulso del sensor en los puntos; pausa antes del primer segundo y pausa que cruza un cambio de paso; dos sesiones seguidas; varias pausas en un mismo segundo, y el monitor que informa la distancia cada 2 s (QA-V4a-L01). Cada guion es una lista de acciones `[ms, tipo, argumento]` con sus rutinas adentro, así `WorkoutGoldenTests` corre lo mismo en el motor nuevo. Diferencias esperadas: DV-37 (el `stepProgress` del legacy lanza con un paso negativo; queda anotado como `-99`) y QA-V4a-L01 (se comparan los puntos hasta el primer cambio de paso).
 
 ## Formato (`lib/golden.dart`)
 
@@ -60,6 +61,6 @@ Los scripts importan solo `dart:*`, `../lib/golden.dart` y archivos del legacy q
 | `bin/fmt_vectors.dart` | `fmt.json`: `toStringAsFixed`, `round`, `parseFixed`, `toString`, `toStringPow2` (las 2 098 potencias de 2), `toStringTies` (500 empates), `mod`, `modInt`, `truncDiv`, `truncDivF64`, `iso8601`, `iso8601Local`, `isoParse`, `isoParseLocal`, `isoParseInvalid` | A |
 | `bin/rowing_data_vectors.dart`, `ftms_vectors.dart`, `heart_rate_vectors.dart`, `simulator_vectors.dart` | `rowing_data.json`, `ftms.json`, `heart_rate.json`, `simulator.json` | B |
 | `bin/routine_vectors.dart`, `session_vectors.dart`, `l10n_vectors.dart` | `routines.json`, `session.json`, `l10n_legacy.json` | C |
-| `engine/test/engine_vectors_test.dart` (`-Engine`) | `workout_engine.json`: `scenarios` (11) | A de la It. 4a |
+| `engine/test/engine_vectors_test.dart` (`-Engine`) | `workout_engine.json`: `scenarios` (11) y `scripts` (15) | A de la It. 4a |
 
 `run-oracle.ps1` es solo ASCII a propósito (Windows PowerShell 5.1 lee un `.ps1` sin BOM como ANSI).

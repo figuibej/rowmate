@@ -222,5 +222,147 @@ namespace RowMate.Core.Design
 
         // P2 (DN4a-20): Terminar muestra su spinner de 16 si el cierre tarda más de 300 ms (= SaveSpinnerDelayMs).
         public const double FinishSpinnerDelayMs = SaveSpinnerDelayMs;
+
+        // ════ It. 4b — HUD EXR (04b-hud-exr/02-tech-design §3.1; 04-design-notes §4.15; DN4b-01 a -03 confirman los números de
+        // la spec, que son estos; las alternativas de 04b/00-deuda-diseno quedan retiradas, §8.2). Las líneas de tiempo que los
+        // usan son puras (HudTimelines, WP-A); los IMotion de WP-D1 solo las evalúan. Se reusan sin cambios DigitRoll.DurationMs
+        // (180), ReducedFadeMs (80), HudColorMs, StepPulseHalfMs, UpNextMinOpacity, los de BPM y kcal, ToastTextOutMs /
+        // ToastTextInEndMs (la etiqueta del chip), FabInScaleFrom (la llave) y los del diálogo de la It. 3. ════
+
+        // ── Entrada "sumergirse" (§3.2; AC-WKT-13-06): Workout funde a negro en 220 (ease.enter); el fondo aparece en 220-400;
+        // la cascada (barra 400, SPM 520, Split y Watts 600, banda 680, kcal y BPM 760, controles 840), cada pieza en 280
+        // (ease.enter) de opacidad 0 a 1 y de +8 (shift.s; la spec pide ≤ 12) a 0; todo quieto a los 1120, cuando entra la llave
+        // (160). Con reducir movimiento, fundido lineal de 120 (ReducedImmersiveFadeMs) sin negro ni cascada. ──
+        public const double ImmersiveBlackInMs = 220;
+        public const double ImmersiveBackdropInStartMs = 220;
+        public const double ImmersiveBackdropInEndMs = 400;
+        public const double ImmersiveCascadeTopBarMs = 400;
+        public const double ImmersiveCascadeSpmMs = 520;
+        public const double ImmersiveCascadeSplitWattsMs = 600;
+        public const double ImmersiveCascadeBandMs = 680;
+        public const double ImmersiveCascadeVitalsMs = 760;
+        public const double ImmersiveCascadeControlsMs = 840;
+        public const double ImmersivePieceInMs = 280;
+        public const double ImmersivePieceShiftDp = 8;
+        public const double ImmersiveEntryEndMs = 1120;
+        public const double ImmersiveWrenchInMs = 160;
+
+        // ── Salida con la última foto (§3.3; AC-WKT-13-08; O-01): el HUD se va junto en 200 (ease.exit), el fondo funde a negro
+        // en 200-400 (ease.exit) y vuelve Workout en 400-640 (ease.enter); los avisos del final a los 400 (DN4b-24). ──
+        public const double ImmersiveHudOutMs = 200;
+        public const double ImmersiveBlackOutStartMs = 200;
+        public const double ImmersiveBlackOutEndMs = 400;
+        public const double ImmersiveRevealStartMs = 400;
+        public const double ImmersiveRevealMs = 240;
+        public const double EndToastStartMs = ImmersiveRevealStartMs;
+
+        // ── Las píldoras (§3.4; 04-design-notes §4.5): la que termina completa su relleno en 0-120 (ease.move); cumplida o sin
+        // objetivo se solidifica en 120-340 (1 → 0,85) con el destello 0,40·(1 − ease.enter) y el brillo que se va; no cumplida
+        // baja su interior y dibuja su borde en 120-440; la nueva sube su pista en 0-150. Con reducir movimiento, SIN destello
+        // ni trazo: el borde de la hueca funde en 160 (QA-G4bT-03). ──
+        public const double PillFillCompleteMs = 120;
+        public const double PillSolidifyStartMs = 120;
+        public const double PillSolidifyEndMs = 340;
+        public const double PillFlashPeak = 0.40;
+        public const double PillMissedStartMs = 120;
+        public const double PillMissedEndMs = 440;
+        public const double PillTrackInMs = 150;
+        public const double ReducedPillBorderFadeMs = 160;
+
+        // El borde del relleno se repinta cuando avanzó un cuarto de píxel (§3.4).
+        public const double PillRepaintPx = 0.25;
+
+        // ── El halo de los últimos 5 s (§3.4; 04-design-notes §3.2, §4.4; DN4b-17): α = a·(0,30 + 0,40·p), con la rampa a de 150
+        // (ease.move); en el borde de la píldora se ve 0,65·α (lo del BoxShadow del legacy) y se apaga como (1 − d/E)² hasta
+        // 10·s a los costados, 8·s arriba y 4·s abajo. Con reducir movimiento, fijo en 0,70 con la rampa. ──
+        public const double PillGlowMin = 0.30;
+        public const double PillGlowMax = 0.70;
+        public const double PillGlowRampMs = 150;
+        public const double PillGlowEdgeFactor = 0.65;
+        public const double PillGlowExtentSideDp = 10;
+        public const double PillGlowExtentTopDp = 8;
+        public const double PillGlowExtentBottomDp = 4;
+
+        // Referencia del legacy (step_pill.dart:88-94), para la prueba del 0,65.
+        public const double PillGlowBlurDp = 8;
+        public const double PillGlowSpreadDp = 2;
+        public const double PillGlowRadiusDp = 5;
+
+        // El brillo del relleno (DN4b-19): sí, ya no es opcional; se va en 120-340 con la sólida.
+        public const double PillHighlightAlpha = 0.25;
+        public const double PillHighlightDp = 1;
+
+        // El pulgar que pasa (DN4b-18): el que se va baja a la franja y se apaga mientras el nuevo sube, en 150 (ease.move).
+        public const double PillThumbSwapMs = 150;
+
+        // ── La fila de información (§2.15; DN4b-16): el cambio de modo en 0-240 (ease.move) con el cambio de paso; la pastilla
+        // que no entra con Próximo funde en 120 (ease.exit). ──
+        public const double InfoRowModeChangeMs = 240;
+        public const double TargetPillOutMs = 120;
+
+        // ── La cuenta grande y PAUSA, un disco por vez (§3.5; 04-design-notes §4.6, §4.8; DN4b-14): la cuenta entra en 200
+        // (0,85 → 1, ease.enter) y sale en 200 (opacidad ease.exit, escala 1 → 1,10 ease.enter); con reducir movimiento, 160 y
+        // 120 solo opacidad. PAUSA entra y sale en 240 (0,96 ↔ 1). En el cambio de disco el que sale funde en 0-120 (ease.exit,
+        // sin escala) y el que entra empieza a los 120. El aro avanza en el sentido del reloj (DN4b-20). ──
+        public const double BigCountInMs = 200;
+        public const double BigCountInScaleFrom = 0.85;
+        public const double BigCountOutMs = 200;
+        public const double BigCountOutScaleTo = 1.10;
+        public const double ReducedBigCountInMs = 160;
+        public const double ReducedBigCountOutMs = 120;
+        public const double CalloutSwapOutMs = 120;
+        public const double CalloutSwapInStartMs = 120;
+        public const bool BigCountRingClockwise = true;
+
+        // ── El sello (§3.6; 04-design-notes §4.7): todo dentro de los 2 s. La barra crece de 52 a 74 en 0-240 (ease.move); el
+        // contenido funde en 40-240 (ease.enter); el ícono se estampa de 0,6 a 1 en 60-300 (ease.emphasis); el contenido se va en
+        // 1800-1920 (ease.exit) y la barra vuelve en 1800-2000 (ease.move). Un sello nuevo: el viejo funde en 0-80 y el nuevo
+        // entra en 80-200 (el ícono otra vez en 80-320). Con reducir movimiento, el alto en el acto y el contenido en 160 / 120. ──
+        public const double SealDurationMs = 2000;
+        public const double SealGrowMs = 240;
+        public const double SealContentInStartMs = 40;
+        public const double SealContentInEndMs = 240;
+        public const double SealIconScaleFrom = 0.6;
+        public const double SealIconStartMs = 60;
+        public const double SealIconEndMs = 300;
+        public const double SealContentOutStartMs = 1800;
+        public const double SealContentOutEndMs = 1920;
+        public const double SealCollapseStartMs = 1800;
+        public const double SealCollapseEndMs = 2000;
+        public const double SealSwapOutMs = 80;
+        public const double SealSwapInEndMs = 200;
+        public const double SealSwapIconEndMs = 320;
+        public const double ReducedSealContentInMs = 160;
+        public const double ReducedSealContentOutMs = 120;
+
+        // ── El diálogo de completado (§3.9; 04-design-notes §4.12; DN4b-21): entra a los 300 del fin; el disco del check de 0,6
+        // a 1 en 60-300 (ease.emphasis) y su trazo en 180-500 (ease.move), desde que entra el diálogo; los totales cuentan en 700
+        // (ease.enter) desde los 220, escalonados 120: el conteo termina a los 1160 del diálogo (1460 del fin). ──
+        public const double CompletedDialogDelayMs = 300;
+        public const double CompletedCheckScaleFrom = 0.6;
+        public const double CompletedCheckStartMs = 60;
+        public const double CompletedCheckEndMs = 300;
+        public const double CompletedCheckStrokeStartMs = 180;
+        public const double CompletedCheckStrokeEndMs = 500;
+        public const double TotalsCountMs = 700;
+        public const double TotalsStaggerMs = 120;
+        public const double TotalsStartMs = 220;
+
+        // ── Pausa (§3.7; 04-design-notes §4.8): el fondo se oscurece un 15 % en 300 (ease.move) y vuelve en 240; PAUSA entra en
+        // 240 (ease.enter, 0,96 → 1) y sale en 240 (ease.exit, 1 → 0,96). ──
+        public const double PauseVeilAlpha = 0.15;
+        public const double PauseVeilInMs = 300;
+        public const double PauseVeilOutMs = 240;
+        public const double PausedLabelInMs = 240;
+        public const double PausedLabelScaleFrom = 0.96;
+        public const double PausedLabelOutMs = 240;
+        public const double PausedLabelOutScaleTo = 0.96;
+
+        // ── El chip de fase y el punto en vivo (§3.7; 04-design-notes §4.9; DN4b-26): los colores cruzan en 150 (ease.move) y la
+        // etiqueta se reemplaza (0-80 y 80-200); el punto late entre 0,35 y 1 (800 + 800, ease.pulse) y empieza en 1, bajando,
+        // cada vez que el chip pasa a EN MARCHA. ──
+        public const double PhaseChipColorMs = HudColorMs;
+        public const double LiveDotHalfMs = 800;
+        public const double LiveDotMinOpacity = 0.35;
     }
 }

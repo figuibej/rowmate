@@ -413,6 +413,8 @@ No portarlos como "comportamiento"; el Architect y el PO deciden los que tocan p
 | 15 | Tipografía distinta por plataforma. | Fuente propia OFL. |
 | 16 | La salpicadura dura ≈ 0,2 s y son 6 puntos; los charcos casi no se ven (`@30 %`). | VFX reales de catch, gotas desde la pala en la recuperación y charcos con normales. |
 | 17 | **HUD horizontal en un teléfono**: con las zonas del HUD (`immersive_workout_screen.dart:639-663`, `:709-733`), en 914 × 411 y 640 × 360 la tarjeta kcal (desde abajo, `bottom 140`) se encima con la de Watts (desde arriba, `top + 90`), y en 640 × 360 la banda tiempo / distancia se encima con los controles. El escritorio no lo sufre porque el legacy no escala el HUD. | En Unity (It. 4a, DV-33): en horizontal, kcal y BPM van en fila a la altura de los controles (kcal en el rincón) y la banda es compacta; lo que no entra achica solo sus cifras. Nada se encima en los cinco perfiles medidos ([04a/04-design-notes §3.1, §3.7](../iterations/04a-motor-hud-funcional/04-design-notes.md); CAP-15, CAP-16, CAP-23, CAP-24) |
+| 18 | **El halo de la píldora pasa por debajo de la fila de información**: el `BoxShadow` del pulso de los últimos 5 s (`step_pill.dart:82-100`: el color al `0,3 + 0,4·pulso`, `blurRadius` 8, `spreadRadius` 2, radio 5) se pinta también debajo de la píldora y se extiende unos 14 dp, y la fila de píldoras deja solo 4 dp abajo (`immersive_workout_screen.dart:360`) antes de la fila de información, que no tiene relleno arriba (`:381`): el halo tiñe el tipo del paso y la pastilla. Además aclara la pista de la píldora con el pulso | En Unity (It. 4b, DN4b-17): el halo empieza en el borde, **solo por fuera** (la pista no se tiñe, así el avance del relleno se sigue leyendo), a 0,65·α (lo que el `BoxShadow` deja en el borde) y se apaga como `(1 − d/E)²` hasta 10 / 8 / 4·s, dentro de su fila. El PO lo tomó como sistema visual (spec §11.1.1, AC-WKT-14-11) |
+| 19 | **Con muchos pasos la fila de píldoras queda vacía**: cada píldora es un `Expanded` con 3 dp de separación (`step_pill.dart:103`; `immersive_workout_screen.dart:364`), así que en un teléfono de 411 dp (344 base útiles) desde **116 pasos** las separaciones solas ocupan la fila, las píldoras miden 0 y la fila desborda (con el editor se llega a 1 998 pasos con ×999) | En Unity (It. 4b, DV-40, DN4b-18): mismo ancho para todas, la separación baja de 3 a 1 cuando miden menos de 6 base y después la fila pasa a una tira continua, por columnas de píxel; la en curso es un pulgar de 4·s × 10·s y la hueca angosta va con dos rieles. Se ve cuánto se hizo, dónde estás y lo que falta con cualquier cantidad de pasos (CAP-22) |
 
 ---
 
@@ -543,3 +545,15 @@ Fuente: [04a-motor-hud-funcional/04-design-notes](../iterations/04a-motor-hud-fu
 | §8 | Hallazgo 17 nuevo: el defecto del HUD horizontal del legacy en un teléfono (kcal sobre Watts; la banda sobre los controles en 640 × 360) y cómo lo resuelve la 4a (DV-33: la fila de abajo y la banda compacta) |
 
 Lo que la 4a cambió del aspecto del HUD frente al legacy queda en el registro de diferencias de la spec y en ART_BIBLE ("Cambios de la It. 4a"): las unidades en `.hud @80 %` en lugar del color base al 55 % (DV-31; §9 punto 2 sigue diciendo "unidades al 55 %" como contrato **del legacy**), las pastillas de la barra con el texto en blanco y el latido solo en el fondo y el borde de `Próximo` (DV-38), y el hueco de la flecha con `obj.` alineado con las cifras.
+
+---
+
+## Cambios de la It. 4b
+
+Fuente: [04b-hud-exr/04-design-notes](../iterations/04b-hud-exr/04-design-notes.md) (§3.2, §12 y §15) y la spec corregida ([01-po-spec §11.1](../iterations/04b-hud-exr/01-po-spec.md): DV-40, AC-WKT-14-11), 2026-10-29. Solo lectura del legacy (`lib/features/workout/step_pill.dart`, `lib/features/workout/immersive_workout_screen.dart:205-250`, `:355-395` y `:955-1019`).
+
+| Dónde | Qué cambió |
+|---|---|
+| §8 | Hallazgos 18 y 19 nuevos: el halo de la píldora que pasa por debajo de la fila de información (y aclara la pista) y la fila de píldoras que queda vacía desde 116 pasos en un teléfono, con cómo lo resuelve la 4b (DN4b-17; DV-40 y DN4b-18) |
+
+Lo que la 4b cambió del aspecto del HUD frente al legacy queda en el registro de diferencias de la spec (DV-40 a DV-47) y en ART_BIBLE y ANIMATION_BIBLE ("Cambios de la It. 4b"): el brillo del relleno, el aro de la cuenta grande, `PAUSA` en un disco con el glifo, `FINALIZADO` en `phase.finished.hud`, el check de 32 dibujado y los valores del diálogo de completado en las cifras de tablero.

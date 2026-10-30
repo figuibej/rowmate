@@ -26,10 +26,10 @@ namespace RowMate.Snapshots
     // de qué se dibujó antes: dos corridas, la de un conjunto después del otro o una con -Filter dan lo mismo. En cada foto fija
     // corren además WrenchAudit (con simulador) y HudOverlap (en el inmersivo): DD4a-04, 02-tech-design §7.1 de la 4a.
     // Códigos de salida: 0 todo bien; 1 alguna toma falló (error, sonda que no es de aspecto, auditoría o comprobación);
-    // 3 venció el tope de 15 min.
+    // 3 venció el tope de 30 min (15 hasta la It. 4a; el conjunto it4b simula 50 min de sesiones: Serie larga y Pirámide 500).
     public sealed class SnapshotRunner
     {
-        public const double TimeLimitSeconds = 15 * 60;
+        public const double TimeLimitSeconds = 30 * 60;
         private const float CropMarginDp = 8;
 
         private readonly List<SnapshotScenario> _scenarios;
@@ -77,7 +77,7 @@ namespace RowMate.Snapshots
 
             if (_clock.Elapsed.TotalSeconds > TimeLimitSeconds)
             {
-                Fail("venció el tope de 15 min");
+                Fail("venció el tope de 30 min");
                 Finish(3);
                 return;
             }
@@ -139,6 +139,13 @@ namespace RowMate.Snapshots
             _shotClock = Stopwatch.StartNew();
             _record = NewRecord(scenario);
             Debug.Log("[SNAPSHOT] " + scenario.Id + " (" + scenario.FileName + ")");
+            if (scenario.SupersededBy != null)
+            {
+                // It. 4b (§5.6; DT4b-07): reemplazada por it4b. No se vuelve a tomar: el archivo de la 4a queda como registro.
+                AddSuperseded(scenario);
+                return BeginNext();
+            }
+
             if (scenario.Kind == SnapshotKind.Rt1)
             {
                 _stack.Push(Rt1Routine(scenario));
@@ -164,12 +171,38 @@ namespace RowMate.Snapshots
             return true;
         }
 
+        // Las tomas reemplazadas van al manifest con su conjunto y sin archivo nuevo (las secuencias, una por toma).
+        private void AddSuperseded(SnapshotScenario scenario)
+        {
+            if (scenario.Kind == SnapshotKind.Sequence)
+            {
+                foreach (var shot in scenario.SequenceShots)
+                {
+                    var record = NewRecord(scenario);
+                    record.Id = shot.Id;
+                    record.File = shot.Stem + ".png";
+                    record.State = shot.State;
+                    record.Superseded = scenario.SupersededBy;
+                    record.SupersededIds = scenario.SupersededIds;
+                    _manifest.Add(record);
+                }
+
+                _record = null;
+                return;
+            }
+
+            _record!.Superseded = scenario.SupersededBy;
+            _record.SupersededIds = scenario.SupersededIds;
+            _manifest.Add(_record);
+            _record = null;
+        }
+
         private SnapshotScenario? _sequence;
         private readonly HashSet<string> _sequenceTaken = new HashSet<string>(StringComparer.Ordinal);
 
         private IEnumerator SequenceRoutine(SnapshotScenario scenario, UiTestHost host)
         {
-            var script = new ScenarioScript(host) { OnShot = (id, checks) => ShotRoutine(scenario, host, id, checks) };
+            var script = new ScenarioScript(host) { OnShot = (id, checks) => ShotRoutine(scenario, host, id, checks), AlignSession = scenario.ExactInstant };
             yield return script.Frames(3);
             if (scenario.Arrange != null)
             {
@@ -270,7 +303,7 @@ namespace RowMate.Snapshots
 
         private IEnumerator StillRoutine(SnapshotScenario scenario, UiTestHost host)
         {
-            var script = new ScenarioScript(host);
+            var script = new ScenarioScript(host) { AlignSession = scenario.ExactInstant };
             yield return script.Frames(3);
             if (scenario.Arrange != null)
             {
@@ -288,6 +321,22 @@ namespace RowMate.Snapshots
         // toma "lo que haya").
         private IEnumerator TakeRule(SnapshotScenario scenario, UiTestHost host)
         {
+            if (scenario.ExactInstant)
+            {
+                // It. 4b (§5.2, DT4b-19): en el instante exacto; falla si algo de la lista de bloqueos corre (nunca espera).
+                yield return null;
+                var inFlight = new List<string>();
+                var blockers = SnapshotTakeRule.Blockers(host, inFlight);
+                _record!.InFlight = inFlight;
+                _record.TakenAtSeconds = host.Scheduler.MonotonicSeconds;
+                if (blockers.Count > 0)
+                {
+                    throw new InvalidOperationException("regla de toma de la 4b: corre " + string.Join("; ", blockers));
+                }
+
+                yield break;
+            }
+
             var now = host.Scheduler.MonotonicSeconds;
             double windowEnd;
             if (scenario.SkipReadingWindow)
@@ -427,7 +476,7 @@ namespace RowMate.Snapshots
 
         private IEnumerator VideoRoutine(SnapshotScenario scenario, UiTestHost host)
         {
-            var script = new ScenarioScript(host);
+            var script = new ScenarioScript(host) { AlignSession = scenario.ExactInstant };
             yield return script.Frames(3);
             if (scenario.Arrange != null)
             {
@@ -457,6 +506,23 @@ namespace RowMate.Snapshots
                     yield return null;
                     yield return null;
                     recorder.AddFrame(host.Target);
+                    if (spec.FrameValues != null)
+                    {
+                        var values = spec.FrameValues(host, t + 1.0 / spec.Fps);
+                        if (values != null)
+                        {
+                            (_record!.Values ??= new List<string>()).Add(values);
+                        }
+                    }
+
+                    if (spec.FrameCheck != null)
+                    {
+                        var problem = spec.FrameCheck(host, t + 1.0 / spec.Fps);
+                        if (problem != null && _record!.Problems.Count < 20)
+                        {
+                            _record.Problems.Add("cuadro " + (i + 1) + ": " + problem);
+                        }
+                    }
                 }
 
                 _record!.TakenAtSeconds = host.Scheduler.MonotonicSeconds;

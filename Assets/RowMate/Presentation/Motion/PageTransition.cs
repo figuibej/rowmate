@@ -4,11 +4,13 @@ using UnityEngine.UIElements;
 
 namespace RowMate.Presentation.Motion
 {
-    // Cómo entra y sale una página apilada: Slide (el editor, It. 3) o Fade (el inmersivo, It. 4a).
+    // Cómo entra y sale una página apilada: Slide (el editor, It. 3), Fade (el inmersivo de la It. 4a) o Immerse (el inmersivo
+    // de la It. 4b: "sumergirse").
     public enum PageTransitionKind
     {
         Slide,
         Fade,
+        Immerse,
     }
 
     // Abrir y cerrar una página apilada (03-rutinas/04-design-notes §5.1; MotionSpecs.Page*):
@@ -24,6 +26,10 @@ namespace RowMate.Presentation.Motion
     // opacidad 0 → 1 en 240 (ease.enter) y sale 1 → 0 en 200 (ease.exit), entera, sin desplazamientos ni oscurecido; con
     // reducir movimiento, 120 lineal. La salida arranca desde la opacidad que tiene (la sesión volvió a reposo a mitad de la
     // entrada). La entrada "sumergirse" es de la 4b.
+    // It. 4b (04b-hud-exr/02-tech-design §3.2, §3.3; AC-WKT-13-06, -08; DN4b-01, -09): PageTransitionKind.Immerse. Entra la página
+    // NEGRA de 0 a 1 en 220 (ease.enter): Workout "funde a negro" (el fondo y la cascada los hace el HUD, ImmersiveCascadeMotion).
+    // Sale DESPUÉS de la salida del HUD: queda a 1 los primeros 400 (el HUD se va en 0-200 y el fondo funde a negro en 200-400,
+    // ImmersiveExitMotion) y funde de 1 a 0 en 400-640 (ease.enter): vuelve Workout. Con reducir movimiento, 120 lineal en las dos.
     public sealed class PageTransition : TimedMotion
     {
         private VisualElement? _page;
@@ -34,6 +40,7 @@ namespace RowMate.Presentation.Motion
         private bool _entering;
         private bool _reduced;
         private bool _fade;
+        private bool _immerse;
         private double _fromPageX;
         private double _fromPageOpacity;
         private double _fromBehindX;
@@ -43,14 +50,17 @@ namespace RowMate.Presentation.Motion
             : base(driver)
         {
             Kind = kind;
-            _fade = kind == PageTransitionKind.Fade;
+            _fade = kind == PageTransitionKind.Fade || kind == PageTransitionKind.Immerse;
+            _immerse = kind == PageTransitionKind.Immerse;
         }
 
         public PageTransitionKind Kind { get; }
 
         public bool IsEntering => IsRunning && _entering;
 
-        protected override double TotalMs => _fade
+        protected override double TotalMs => _immerse
+            ? _reduced ? MotionSpecs.ReducedImmersiveFadeMs : _entering ? MotionSpecs.ImmersiveBlackInMs : MotionSpecs.ImmersiveRevealStartMs + MotionSpecs.ImmersiveRevealMs
+            : _fade
             ? _reduced ? MotionSpecs.ReducedImmersiveFadeMs : _entering ? MotionSpecs.ImmersiveInMs : MotionSpecs.ImmersiveOutMs
             : _reduced ? MotionSpecs.ReducedPageFadeMs : _entering ? MotionSpecs.PageInMs : MotionSpecs.PageOutMs;
 
@@ -206,6 +216,20 @@ namespace RowMate.Presentation.Motion
             {
                 var u = Easing.Evaluate(Tokens.EaseLinear, Progress(elapsedMs, 0, MotionSpecs.ReducedImmersiveFadeMs));
                 _page!.style.opacity = (float)(_entering ? u : _fromPageOpacity * (1 - u));
+                return;
+            }
+
+            if (_immerse)
+            {
+                if (_entering)
+                {
+                    _page!.style.opacity = (float)Easing.Evaluate(Tokens.EaseEnter, Progress(elapsedMs, 0, MotionSpecs.ImmersiveBlackInMs));
+                    return;
+                }
+
+                var reveal = Easing.Evaluate(Tokens.EaseEnter, Progress(elapsedMs, MotionSpecs.ImmersiveRevealStartMs,
+                    MotionSpecs.ImmersiveRevealStartMs + MotionSpecs.ImmersiveRevealMs));
+                _page!.style.opacity = (float)(_fromPageOpacity * (1 - reveal));
                 return;
             }
 

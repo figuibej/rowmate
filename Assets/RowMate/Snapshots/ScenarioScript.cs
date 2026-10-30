@@ -28,6 +28,13 @@ namespace RowMate.Snapshots
 
         public IEnumerator Advance(double seconds)
         {
+            if (AlignSession && seconds <= TailSeconds && !double.IsNaN(SessionStart))
+            {
+                // It. 4b: un lapso corto antes de una toma, cuadro a cuadro (como AdvanceTo).
+                yield return AdvanceTo(Host.Scheduler.MonotonicSeconds + seconds - SessionStart);
+                yield break;
+            }
+
             Host.Advance(seconds);
             yield return Frames(2);
         }
@@ -153,6 +160,7 @@ namespace RowMate.Snapshots
         public IEnumerator StartFree()
         {
             yield return GoToWorkout();
+            AlignWallClock();
             Host.Tap("workout-free");
             SessionStart = Host.Scheduler.MonotonicSeconds;
             yield return Settle();
@@ -177,6 +185,7 @@ namespace RowMate.Snapshots
         public IEnumerator ConfirmStart()
         {
             yield return Frames(2);
+            AlignWallClock();
             Host.Tap("dialog-confirm");
             SessionStart = Host.Scheduler.MonotonicSeconds;
             yield return Settle();
@@ -192,6 +201,32 @@ namespace RowMate.Snapshots
 
             var target = SessionStart + secondsSinceStart;
             var now = Host.Scheduler.MonotonicSeconds;
+            if (AlignSession)
+            {
+                // It. 4b (§5.2): los últimos 2 s cuadro a cuadro (1/60 s, con el layout de cada cuadro), como en la app: lo que pasa
+                // cerca de la toma (un diálogo que entra, la llave que cambia de carril) se anima con sus tiempos y no de un salto.
+                if (target - now > TailSeconds)
+                {
+                    Host.Advance(target - TailSeconds - now);
+                    yield return null;
+                }
+
+                while (target - Host.Scheduler.MonotonicSeconds > UiTestHost.FrameSeconds + 1e-9)
+                {
+                    Host.Step();
+                    yield return null;
+                }
+
+                var rest = target - Host.Scheduler.MonotonicSeconds;
+                if (rest > 1e-9)
+                {
+                    Host.Advance(rest);
+                }
+
+                yield return Frames(2);
+                yield break;
+            }
+
             if (target > now + 1e-9)
             {
                 Host.Advance(target - now);
@@ -199,6 +234,9 @@ namespace RowMate.Snapshots
 
             yield return Frames(2);
         }
+
+        // Lo que AdvanceTo recorre cuadro a cuadro antes de una toma de it4b.
+        public const double TailSeconds = 2;
 
         // "A los N s" para una foto fija: un instante del segundo N de la sesión, con los rodillos del cambio de segundo ya
         // quietos (N + 0,45 o más) y dentro de la ventana de la lectura [k + 0,56; k + 0,84] del reloj de prueba, así la regla
@@ -230,6 +268,46 @@ namespace RowMate.Snapshots
             }
 
             yield return AdvanceTo(n + (double.IsNaN(chosen) ? 0 : chosen));
+        }
+
+        // It. 4b (§5.2 punto 5): la sesión se crea a los 2026-10-28T13:00:00.000Z del reloj de prueba (con la zona UTC−03:00, el
+        // reloj de pared dice 10:00 en el primer minuto): la hora de pared se corre hasta ahí justo antes del toque (el monótono no).
+        // Además, el toque cae en un instante k + 0,5 del reloj de prueba: las lecturas del remo (L(k) en el instante k del host)
+        // llegan en los k − 0,5 de la sesión, lejos de los segundos del motor y de las tomas de k + 0,2 (§5.2 punto 2). Solo con
+        // AlignSession (las tomas de it4b, ExactInstant).
+        public bool AlignSession { get; set; }
+
+        private void AlignWallClock()
+        {
+            if (!AlignSession)
+            {
+                return;
+            }
+
+            var now = Host.Scheduler.MonotonicSeconds;
+            var fraction = now - Math.Floor(now);
+            var wait = 0.5 - fraction;
+            if (wait < 0)
+            {
+                wait += 1;
+            }
+
+            if (wait > 1e-9)
+            {
+                Host.Advance(wait);
+            }
+
+            // La lectura que llega a los 0,5 s de la sesión es L(1): L(n) en los n − 0,5 (como dice R-4 para las tomas de la 4b).
+            if (Host.ScriptedRower != null)
+            {
+                Host.ScriptedRower.Next = 1;
+            }
+
+            var shift = UiHostOptions.WorkoutStartUtc - Host.Scheduler.UtcNow;
+            if (Host.Options.StartUtc == UiHostOptions.WorkoutStartUtc && shift != TimeSpan.Zero)
+            {
+                Host.Scheduler.ShiftUtc(shift);
+            }
         }
 
         private static bool InReadingWindow(double monotonic)

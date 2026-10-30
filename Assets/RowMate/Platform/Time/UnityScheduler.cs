@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using RowMate.Core.Common;
+using RowMate.Platform.Power;
 
 namespace RowMate.Platform.Time
 {
@@ -17,25 +18,46 @@ namespace RowMate.Platform.Time
     // - Volver sin haberse ido (Unity llama OnApplicationPause(false) al arrancar): no hace nada (FrameScheduler).
     // - RA-19 (R4a-12): en Android el Stopwatch no cuenta el sueño profundo; la fuente se elige en la 10a y cambia SOLO acá
     //   (la función monotonic que recibe el constructor de prueba es ese punto).
-    // - Hora local del sistema: solo acá (el Core no toca el reloj del sistema). El offset se vuelve a leer cada 5 s.
-    public sealed class UnityScheduler : IScheduler
+    // - Hora local del sistema: solo acá (el Core no toca el reloj del sistema).
+    // It. 4b (04b-hud-exr/02-tech-design §2.8.3, §2.9; ADR 020):
+    // - P-17: arma el FrameClock con la fuente de sueño (ISystemSleepSource: lo dormido según el sistema y los avisos de "se
+    //   suspende" y "reanuda") en cada cuadro Y en la vuelta del segundo plano; FrameScheduler descuenta lo dormido (el reloj de la
+    //   app es el despierto) y avisa Woke, que este reenvía (AppRoot lo pasa a AppLifecycle.SignalWake).
+    // - El offset de la zona se vuelve a leer cada 0,5 s (antes 5 s), sin la caché de TimeZoneInfo (LocalOffsetSource): con el
+    //   periódico de 250 ms del reloj de pared, la hora nueva se ve antes de 1 s (AC-WKT-19-04).
+    public sealed class UnityScheduler : IScheduler, IDisposable
     {
-        private const double OffsetRefreshSeconds = 5;
+        public const double OffsetRefreshSeconds = 0.5;
 
         private readonly Func<double> _monotonic;
         private readonly Func<DateTimeOffset> _utc;
         private readonly Func<DateTimeOffset, TimeSpan> _offsetFor;
+        private readonly ISystemSleepSource _sleep;
         private readonly FrameScheduler _frames;
+        private readonly LocalOffsetSource? _ownedOffset;
         private TimeSpan _offset;
         private double _offsetReadAt;
 
         public UnityScheduler(IAppLogger logger)
-            : this(logger, StopwatchSeconds(), () => DateTimeOffset.UtcNow, utc => TimeZoneInfo.Local.GetUtcOffset(utc))
+            : this(logger, NullSleepSource.Instance)
+        {
+        }
+
+        // La de la app: el Stopwatch, la hora UTC, el offset sin caché y la fuente de sueño de la plataforma.
+        public UnityScheduler(IAppLogger logger, ISystemSleepSource sleep)
+            : this(logger, StopwatchSeconds(), () => DateTimeOffset.UtcNow, null, sleep)
         {
         }
 
         // Con un reloj inyectado (UnitySchedulerTests): el monótono en segundos, la hora UTC y el offset local de una hora.
         public UnityScheduler(IAppLogger logger, Func<double> monotonic, Func<DateTimeOffset> utc, Func<DateTimeOffset, TimeSpan> offsetFor)
+            : this(logger, monotonic, utc, offsetFor, NullSleepSource.Instance)
+        {
+        }
+
+        // Con todo inyectado (UnitySchedulerTests de la 4b: la fuente de sueño de prueba).
+        public UnityScheduler(IAppLogger logger, Func<double> monotonic, Func<DateTimeOffset> utc, Func<DateTimeOffset, TimeSpan>? offsetFor,
+                              ISystemSleepSource sleep)
         {
             if (logger == null)
             {
@@ -44,15 +66,28 @@ namespace RowMate.Platform.Time
 
             _monotonic = monotonic ?? throw new ArgumentNullException(nameof(monotonic));
             _utc = utc ?? throw new ArgumentNullException(nameof(utc));
-            _offsetFor = offsetFor ?? throw new ArgumentNullException(nameof(offsetFor));
+            _sleep = sleep ?? throw new ArgumentNullException(nameof(sleep));
+            if (offsetFor == null)
+            {
+                _ownedOffset = new LocalOffsetSource();
+                offsetFor = _ownedOffset.OffsetFor;
+            }
+
+            _offsetFor = offsetFor;
             var now = _utc();
             _offset = _offsetFor(now);
             _offsetReadAt = _monotonic();
             _frames = new FrameScheduler(_offsetReadAt, now, _offset, logger);
+            _frames.Woke += wake => Woke?.Invoke(wake);
         }
 
         // El programador puro que hay adentro (las pruebas miran Pending, InBackground).
         public FrameScheduler Frames => _frames;
+
+        // El equipo despertó (P-17): en el cuadro (o la vuelta) que lo trae, después de correr lo vencido.
+        public event Action<SystemWake>? Woke;
+
+        public ISystemSleepSource SleepSource => _sleep;
 
         public DateTimeOffset UtcNow => _frames.UtcNow;
 
@@ -84,9 +119,8 @@ namespace RowMate.Platform.Time
         // Un cuadro (AppRoot.Update): fija la hora del cuadro y corre lo vencido. Devuelve cuántos callbacks corrieron.
         public int Tick()
         {
-            var monotonic = _monotonic();
-            var utc = _utc();
-            return _frames.Tick(monotonic, utc, Offset(monotonic, utc));
+            var clock = Clock();
+            return _frames.Tick(in clock);
         }
 
         // OnApplicationPause(true) (Android e iOS): solo anota; los timers quedan como están.
@@ -95,12 +129,24 @@ namespace RowMate.Platform.Time
             _frames.EnterBackground();
         }
 
-        // OnApplicationPause(false): el alcance en tiempo virtual hasta ahora (sin un EnterBackground antes, nada).
+        // OnApplicationPause(false): el alcance en tiempo virtual hasta el monótono DESPIERTO (QA-G4bT-05 (a)); sin un
+        // EnterBackground antes, nada.
         public int ResumeFromBackground()
+        {
+            var clock = Clock();
+            return _frames.ResumeFromBackground(in clock);
+        }
+
+        public void Dispose()
+        {
+            _ownedOffset?.Dispose();
+        }
+
+        private FrameClock Clock()
         {
             var monotonic = _monotonic();
             var utc = _utc();
-            return _frames.ResumeFromBackground(monotonic, utc, Offset(monotonic, utc));
+            return new FrameClock(monotonic, utc, Offset(monotonic, utc), _sleep.AsleepSeconds, _sleep.SuspendSignals, _sleep.ResumeSignals);
         }
 
         private TimeSpan Offset(double monotonic, DateTimeOffset utc)

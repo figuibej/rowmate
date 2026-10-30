@@ -104,8 +104,10 @@ namespace RowMate.Bootstrap
             }
 
             // 3. Reloj y sistema (idioma, accesibilidad, densidad, "Atrás", base, portapapeles y teclado).
-            _scheduler = new UnityScheduler(logger);
+            // It. 4b (P-17; 04b-hud-exr/02-tech-design §2.9): el programador con la fuente de sueño de la plataforma (el reloj de
+            // la app es el despierto) y el offset de la zona sin caché.
             _platform = PlatformFactory.Create(logger);
+            _scheduler = new UnityScheduler(logger, _platform.SleepSource);
             _backSource = Application.platform == RuntimePlatform.Android ? BackSource.SystemBack : BackSource.Escape;
 
             // Barra de título de Windows en el tema del sistema desde el primer cuadro (legacy win32_window.cpp:147, QA-V2-08);
@@ -116,6 +118,8 @@ namespace RowMate.Bootstrap
             //     (AC-APP-14-01: desde el arranque, en toda la app; lib/main.dart:42). ScreenKeepAwake vuelve a pedir al volver
             //     del segundo plano y al recuperar el foco (AC-APP-14-02); un rechazo solo va al registro (AC-APP-14-04).
             _lifecycle = new AppLifecycle(logger);
+            var lifecycle = _lifecycle;
+            _scheduler.Woke += wake => lifecycle.SignalWake(wake);
             _keepAwake = new ScreenKeepAwake(_platform.WakeLock, _lifecycle, logger);
             _keepAwake.Start();
 
@@ -134,7 +138,7 @@ namespace RowMate.Bootstrap
             // 5. La app pura. Perfil apagado (su regla real es de la It. 12, D-20).
             var texts = LocalizationSet.Load(_assets.StringsEs!.text, _assets.StringsEn!.text);
             _app = AppComposer.Compose(new AppServices(_backend, _store.Routines, _store.Sessions, _scheduler, logger, texts, _platform.Locale,
-                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle });
+                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle, SystemUi = _platform.SystemUi });
 
             // 6. Superficie: copia del panel con sus respaldos de fuente (RuntimePanelFactory: el asset no se toca, R2-05;
             //    QA-G3-12), RT limpia a bg.app y presentador (S-B1). El documento de la escena no tiene panel: se engancha a la
@@ -294,6 +298,8 @@ namespace RowMate.Bootstrap
             _surface = null;
             _keepAwake?.Dispose();
             _keepAwake = null;
+            _scheduler?.Dispose();
+            _platform?.SleepSource.Dispose();
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

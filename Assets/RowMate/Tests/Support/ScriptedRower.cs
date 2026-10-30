@@ -56,8 +56,8 @@ namespace RowMate.Tests.Support
 
         public string? ConnectedDeviceName => _status.Value == BleStatus.Connected ? "Remo de prueba" : null;
 
-        // El índice k de la próxima lectura.
-        public int Next { get; private set; }
+        // El índice k de la próxima lectura. It. 4b: el arnés lo fija al empezar la sesión (L(n) en los n − 0,5 de la sesión, 04b §5.2).
+        public int Next { get; set; }
 
         // La última lectura mandada.
         public RowingData? Last { get; private set; }

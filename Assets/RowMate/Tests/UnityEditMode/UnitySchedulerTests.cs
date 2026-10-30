@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using RowMate.Core.Common;
+using RowMate.Platform.Power;
 using RowMate.Platform.Time;
 using RowMate.Tests.Support;
 
@@ -82,6 +84,89 @@ namespace RowMate.Tests.UnityEditMode
             Assert.That(scheduler.ResumeFromBackground(), Is.EqualTo(0), "Unity llama OnApplicationPause(false) al arrancar: nada");
             Assert.That(count, Is.EqualTo(0));
             Assert.That(scheduler.Tick(), Is.EqualTo(1), "en primer plano, a lo sumo un disparo de cada periódico por cuadro");
+        }
+
+        // It. 4b (P-17 de la 4a; 04b-hud-exr/02-tech-design §2.9; QA-G4bT-05 (a)): la fuente de sueño entra en el FrameClock del
+        // cuadro Y de la vuelta del segundo plano; lo dormido no cuenta para el reloj de la app, y Woke sale después de lo vencido.
+        private sealed class TestSleep : ISystemSleepSource
+        {
+            public double AsleepSeconds { get; set; }
+
+            public int SuspendSignals { get; set; }
+
+            public int ResumeSignals { get; set; }
+
+            public bool SignalsRegistered => false;
+
+            public void Dispose()
+            {
+            }
+        }
+
+        private UnityScheduler NewScheduler(ISystemSleepSource sleep)
+        {
+            _monotonic = 100;
+            _utc = Start;
+            return new UnityScheduler(new RecordingLogger(), () => _monotonic, () => _utc, _ => TimeSpan.FromHours(-3), sleep);
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void TheSleepMeasureIsDiscountedInTheFrame()
+        {
+            var sleep = new TestSleep { AsleepSeconds = 10 };
+            var scheduler = NewScheduler(sleep);
+            var woke = new List<SystemWake>();
+            scheduler.Woke += woke.Add;
+            var fired = new List<double>();
+            scheduler.SchedulePeriodic(TimeSpan.FromSeconds(1), () => fired.Add(scheduler.MonotonicSeconds));
+            Move(1);
+            scheduler.Tick();
+            Assert.That(fired.Count, Is.EqualTo(1));
+            // El equipo duerme 600 s y el crudo los cuenta: el reloj de la app no.
+            sleep.AsleepSeconds += 600;
+            Move(600);
+            scheduler.Tick();
+            Assert.That(scheduler.MonotonicSeconds, Is.EqualTo(101).Within(0.05), "el lapso dormido no existe para la app");
+            Assert.That(scheduler.Frames.SleepBias, Is.EqualTo(600).Within(0.05));
+            Assert.That(woke.Count, Is.EqualTo(1), "un despertar");
+            Assert.That(woke[0].Evidence & SleepEvidence.Measure, Is.EqualTo(SleepEvidence.Measure));
+            Assert.That(fired.Count, Is.EqualTo(1), "ningún segundo del lapso");
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void TheSleepSourceAlsoGoesThroughTheBackgroundReturn()
+        {
+            var sleep = new TestSleep { AsleepSeconds = 0 };
+            var scheduler = NewScheduler(sleep);
+            var woke = 0;
+            scheduler.Woke += _ => woke++;
+            var count = 0;
+            scheduler.SchedulePeriodic(TimeSpan.FromSeconds(1), () => count++);
+            Move(1);
+            scheduler.Tick();
+            scheduler.EnterBackground();
+            sleep.AsleepSeconds += 300;
+            Move(305);
+            var ran = scheduler.ResumeFromBackground();
+            Assert.That(ran, Is.EqualTo(5), "el alcance hasta el monótono despierto: 5 s, no 305");
+            Assert.That(woke, Is.EqualTo(1), "Woke después del alcance");
+        }
+
+        [Test, Category("AC-WKT-19-04")]
+        public void TheLocalOffsetIsReadEveryHalfSecond()
+        {
+            var offset = TimeSpan.FromHours(-3);
+            _monotonic = 100;
+            _utc = Start;
+            var scheduler = new UnityScheduler(new RecordingLogger(), () => _monotonic, () => _utc, _ => offset, NullSleepSource.Instance);
+            Assert.That(UnityScheduler.OffsetRefreshSeconds, Is.EqualTo(0.5));
+            offset = TimeSpan.FromHours(-5);
+            Move(0.3);
+            scheduler.Tick();
+            Assert.That(scheduler.LocalNow.Offset, Is.EqualTo(TimeSpan.FromHours(-3)), "todavía no");
+            Move(0.3);
+            scheduler.Tick();
+            Assert.That(scheduler.LocalNow.Offset, Is.EqualTo(TimeSpan.FromHours(-5)), "a los 0,5 s");
         }
     }
 }

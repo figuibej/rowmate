@@ -21,12 +21,12 @@ namespace RowMate.Presentation.Workout
     // Una tarjeta de vidrio del HUD (AC-WKT-17-01 a -06, AC-WKT-10-05; 02-tech-design §6.5 de la It. 4a; 04-design-notes §3.2,
     // §4.4, §5.3):
     //   #hud-<métrica> .rm-hud-card .rm-hud-glass --large|--medium|--small [--target] [--off]
-    //   ├── .rm-hud-card__glow      absoluto, 12 por fuera, solo con objetivo (GlowTexture, color base @20 %)
-    //   ├── .rm-hud-card__label     rótulo 13 / 12 / 11 /600, tracking 0,08 em, color base (pulso metric.hr.hud) [♥ en BPM]
-    //   ├── [.rm-hud-card__value]   solo Watts: la fila número + unidad
-    //   │   └── .rm-hud-card__number (TabularNumber num.hero / num.l / num.m)   con margin-left = el HUECO de la flecha (0,48 em)
-    //   │       └── .rm-hud-card__arrow  "▲" / "▼" Inter 700 a 0,4 em, absoluta en el hueco, su línea de base por código
-    //   │   └── .rm-hud-card__unit   4 + "W" 13/500, en la variante .hud de Watts @80 %, en la línea de base de las cifras (DV-31)
+    //   │   (el halo, 12 por fuera, solo con objetivo: GlowTexture en 9 partes, color base @20 %, lo dibuja la tarjeta: M4)
+    //   ├── .rm-hud-card__label     rótulo 13 / 12 / 11 /600, tracking 0,08 em, color base (pulso metric.hr.hud)
+    //   ├── [.rm-hud-card__heart]   solo BPM: ♥ 11, absoluto a la izquierda del rótulo, a 4 (M6)
+    //   ├── .rm-hud-card__number (TabularNumber num.hero / num.l / num.m)   con margin-left = el HUECO de la flecha (0,48 em)
+    //   │       la flecha "▲" / "▼" (Inter 700 a 0,4 em, en el hueco, su línea de base por código) es su PREFIJO (M1) y, en Watts,
+    //   │       4 + "W" 13/500 en la variante .hud @80 %, en la línea de base de las cifras (DV-31), su SUFIJO (M2)
     //   └── #hud-target-<métrica> .rm-hud-card__target   2 + "obj. N" 12/600 text.secondary, margin-left = el hueco
     // Con objetivo (Q-60, DV-32): borde del color base @70 % de 1,5; halo por fuera; el hueco existe toda la duración del paso
     // (el número no se corre al cruzar el umbral, DN4a-15); el valor blanco si cumple o state.offTarget.hud con la flecha si
@@ -34,6 +34,14 @@ namespace RowMate.Presentation.Workout
     // Medidas en em y líneas de base por código (USS no tiene em ni baseline: QA-G4aT-14). El achique de las cifras (los topes
     // T1 a T5 de HudGeometry, D-10) va por el tamaño de letra de la fila del valor (cifras, unidad, hueco y flecha juntos), así la
     // tarjeta no suma dos elementos por valor (presupuesto de 60, 02-tech-design §6.13); el alto de la fila no cambia.
+    // It. 4b (04b-hud-exr/02-tech-design §3.11, el presupuesto del HUD; R4a-03), sin cambiar lo que se ve:
+    //   M1 la flecha la dibuja su TabularNumber como PREFIJO en el hueco (Inter 700 a 0,4 em, con su línea de base, color, alfa
+    //      y desplazamiento): sale .rm-hud-card__arrow;
+    //   M2 la unidad W la dibuja su TabularNumber como SUFIJO (Inter 500 13, @80 %, a 4, en la línea de base de las cifras): salen
+    //      .rm-hud-card__value y .rm-hud-card__unit;
+    //   M4 el halo de objetivo lo dibuja la tarjeta (el mismo GlowTexture en 9 partes, por fuera, en su generateVisualContent):
+    //      sale .rm-hud-card__glow;
+    //   M6 el corazón de BPM va en posición absoluta en su tarjeta (centrado en el alto del rótulo): sale .rm-hud-card__label-row.
     public sealed class HudCard : VisualElement
     {
         public const string UssClass = "rm-hud-card";
@@ -53,14 +61,18 @@ namespace RowMate.Presentation.Workout
         public const string ArrowDown = "▼";
 
         private readonly UiContext _ui;
-        private readonly VisualElement? _glow;
-        private readonly VisualElement? _row;
-        private readonly Label? _unit;
+        private readonly bool _withGlow;
+        private readonly bool _withUnit;
+        private readonly bool _withArrow;
         private readonly Label? _target;
-        private readonly Label? _arrow;
         private readonly IconView? _heart;
-        private readonly VisualElement? _labelRow;
         private readonly OffTargetMotion? _offTarget;
+        private readonly Vertex[] _glowVertices = new Vertex[16];
+        private static readonly ushort[] GlowIndices = BuildGlowIndices();
+        private Texture2D? _glowTexture;
+        private Color _glowTint;
+        private float _glowOpacity;
+        private string _arrowGlyph = Arrow;
         private readonly TargetDecor? _decor;
         private bool? _hasTarget;
         private bool _off;
@@ -94,52 +106,31 @@ namespace RowMate.Presentation.Workout
             LabelSizeDp = LabelSizeFor(size);
             style.minWidth = MinWidthFor(size);
 
+            // M4: el halo lo dibuja la tarjeta, por fuera (generateVisualContent, antes que los hijos).
+            _withGlow = withTarget;
             if (withTarget)
             {
-                _glow = new VisualElement();
-                _glow.AddToClassList(UssClass + "__glow");
-                _glow.pickingMode = PickingMode.Ignore;
-                _glow.style.position = Position.Absolute;
-                _glow.style.left = -GlowOutsideDp - BorderRestDp;
-                _glow.style.top = -GlowOutsideDp - BorderRestDp;
-                _glow.style.right = -GlowOutsideDp - BorderRestDp;
-                _glow.style.bottom = -GlowOutsideDp - BorderRestDp;
-                var slice = GlowTexture.SlicePx;
-                _glow.style.unitySliceLeft = slice;
-                _glow.style.unitySliceRight = slice;
-                _glow.style.unitySliceTop = slice;
-                _glow.style.unitySliceBottom = slice;
-                _glow.style.unitySliceScale = 1f / GlowTexture.Scale;
-                _glow.style.display = DisplayStyle.None;
-                Add(_glow);
+                _glowTint = HudText.WithAlpha(TokenColors.ToColor(MetricPalette.For(kind)), GlowAlpha);
+                generateVisualContent += DrawGlow;
             }
 
             Label = HudText.Label(elementName + "-label", "rm-type-label", LabelSizeDp);
             Label.AddToClassList(UssClass + "__label");
             Label.style.color = TokenColors.ToColor(MetricPalette.LabelFor(kind));
+            Add(Label);
             if (heart)
             {
-                // El corazón va al lado del rótulo, en una fila (no adentro del Label: un TextElement con hijos deja de medirse
-                // por su texto y el rótulo quedaba de ancho 0).
-                _labelRow = new VisualElement();
-                _labelRow.AddToClassList(UssClass + "__label-row");
-                _labelRow.pickingMode = PickingMode.Ignore;
-                _labelRow.style.flexDirection = FlexDirection.Row;
-                _labelRow.style.alignItems = Align.Center;
-                _labelRow.style.alignSelf = Align.FlexStart;
+                // M6: el corazón va en posición absoluta, a la izquierda del rótulo y centrado en su alto (como la fila de la 4a,
+                // sin la fila): el rótulo deja su lugar con su margen izquierdo.
                 _heart = new IconView(Icons.Favorite, true, HeartSizeDp);
                 _heart.AddToClassList(UssClass + "__heart");
                 _heart.pickingMode = PickingMode.Ignore;
-                _heart.style.marginRight = HeartGapDp;
+                _heart.style.position = Position.Absolute;
                 _heart.style.color = TokenColors.ToColor(Tokens.MetricHrHud);
-                _labelRow.Add(_heart);
-                _labelRow.Add(Label);
+                Label.style.marginLeft = HeartSizeDp + HeartGapDp;
                 Heartbeat = new HeartbeatAnimator(ui.Motion, _heart);
-                Add(_labelRow);
-            }
-            else
-            {
-                Add(Label);
+                Add(_heart);
+                Label.RegisterCallback<GeometryChangedEvent>(_ => PlaceHeart());
             }
 
             Number = new TabularNumber(ui.Motion) { name = elementName + "-value" };
@@ -147,34 +138,19 @@ namespace RowMate.Presentation.Workout
             Number.AddToClassList(NumClassFor(size));
             Number.style.fontSize = ValueSizeDp;
             Number.style.color = TokenColors.ToColor(MetricPalette.HudFor(kind));
+            _withArrow = withTarget;
             if (withTarget)
             {
-                _arrow = HudText.Label(elementName + "-arrow", "rm-type-header-s", (float)(HudGeometry.ArrowEm * ValueSizeDp));
-                _arrow.AddToClassList(UssClass + "__arrow");
-                _arrow.style.position = Position.Absolute;
-                _arrow.style.color = TokenColors.ToColor(Tokens.StateOffTargetHud);
-                _arrow.style.display = DisplayStyle.None;
-                _arrow.text = Arrow;
-                Number.Add(_arrow);
-                _offTarget = new OffTargetMotion(ui.Motion, Number, _arrow);
+                // M1: la flecha es el prefijo del número, en el hueco; empieza oculta.
+                Number.SetGutterPrefix(Arrow, "rm-type-header-s", (float)(HudGeometry.ArrowEm * ValueSizeDp), TokenColors.ToColor(Tokens.StateOffTargetHud),
+                    (float)(HudGeometry.ArrowGutterEm * ValueSizeDp), (float)(HudGeometry.ArrowUpBaselineEm * ValueSizeDp));
+                Number.SetPrefixVisual(0, 0);
+                _offTarget = new OffTargetMotion(ui.Motion, Number);
             }
 
-            if (withUnit)
-            {
-                _row = new VisualElement();
-                _row.AddToClassList(UssClass + "__value");
-                _row.pickingMode = PickingMode.Ignore;
-                _row.Add(Number);
-                _unit = HudText.Label(elementName + "-unit", "rm-type-caption", UnitSizeDp);
-                _unit.AddToClassList(UssClass + "__unit");
-                _unit.style.color = HudText.WithAlpha(TokenColors.ToColor(MetricPalette.HudFor(kind)), (float)HudGeometry.UnitAlpha);
-                _row.Add(_unit);
-                Add(_row);
-            }
-            else
-            {
-                Add(Number);
-            }
+            // M2: la unidad (W) es el sufijo del número.
+            _withUnit = withUnit;
+            Add(Number);
 
             if (withTarget)
             {
@@ -206,13 +182,24 @@ namespace RowMate.Presentation.Workout
 
         public TabularNumber Number { get; }
 
-        public Label? Unit => _unit;
+        // M2: la unidad es el sufijo del número ("" sin unidad).
+        public string UnitText => _withUnit ? Number.SuffixText : "";
 
         public Label? Target => _target;
 
-        public Label? ArrowLabel => _arrow;
+        // M1: la flecha es el prefijo del número; se ve con alfa > 0.
+        public bool HasArrow => _withArrow;
 
-        public VisualElement? Glow => _glow;
+        public bool ArrowShown => _withArrow && Number.PrefixAlpha > 0.001f;
+
+        public string ArrowGlyph => _withArrow ? Number.PrefixText : "";
+
+        // M4: el halo que dibuja la tarjeta, su opacidad (0 sin objetivo) y su tinte (color base @20 %).
+        public bool HasGlow => _withGlow;
+
+        public float GlowOpacity => _withGlow ? _glowOpacity : 0;
+
+        public Color GlowTint => _glowTint;
 
         public IconView? Heart => _heart;
 
@@ -231,23 +218,11 @@ namespace RowMate.Presentation.Workout
 
         // ── Anchos naturales a tamaño BASE para HudGeometry (DN4a-13) ──
 
-        // Las cifras (Watts con 4 + "W"), sin el hueco.
-        public double NaturalValueWidth
-        {
-            get
-            {
-                var width = HudText.BaseWidth(Number, _fit);
-                if (_unit != null)
-                {
-                    width += UnitGapDp + (_fit > 0 ? _unit.layout.width / _fit : _unit.layout.width);
-                }
-
-                return width;
-            }
-        }
+        // Las cifras (Watts con 4 + "W", el sufijo de la caja), sin el hueco.
+        public double NaturalValueWidth => HudText.BaseBoxWidth(Number, _fit);
 
         // Con el corazón (BPM), el rótulo con el corazón de 11 y su aire de 4 (HudNaturalWidths).
-        public double NaturalLabelWidth => _labelRow != null ? _labelRow.layout.width : Label.layout.width;
+        public double NaturalLabelWidth => _heart != null ? HeartSizeDp + HeartGapDp + Label.layout.width : Label.layout.width;
 
         public double NaturalTargetWidth => _target != null && HasTarget ? _target.layout.width : 0;
 
@@ -262,11 +237,23 @@ namespace RowMate.Presentation.Workout
 
         public void SetUnit(string text)
         {
-            if (_unit != null && _unitText != text)
+            if (_withUnit && _unitText != text)
             {
                 _unitText = text;
-                _unit.text = text;
+                ApplyUnit();
             }
+        }
+
+        // M2: la W como sufijo, a la escala de las cifras.
+        private void ApplyUnit()
+        {
+            if (!_withUnit)
+            {
+                return;
+            }
+
+            var color = HudText.WithAlpha(TokenColors.ToColor(MetricPalette.HudFor(Kind)), (float)HudGeometry.UnitAlpha);
+            Number.SetSuffix(_unitText, "rm-type-caption", UnitSizeDp * _fit, color, UnitGapDp * _fit);
         }
 
         // Un valor sin semáforo (kcal, BPM).
@@ -301,13 +288,13 @@ namespace RowMate.Presentation.Workout
             var color = !metric.HasTarget ? TokenColors.ToColor(MetricPalette.HudFor(Kind))
                 : _off ? TokenColors.ToColor(Tokens.StateOffTargetHud)
                 : TokenColors.ToColor(Tokens.TextHudPrimary);
-            if (_arrow != null)
+            if (_withArrow)
             {
                 var down = metric.Arrow == TargetArrow.Down;
                 var glyph = down ? ArrowDown : Arrow;
-                if (_arrow.text != glyph)
+                if (_arrowGlyph != glyph)
                 {
-                    _arrow.text = glyph;
+                    _arrowGlyph = glyph;
                     PlaceArrowAndUnit();
                 }
             }
@@ -338,21 +325,9 @@ namespace RowMate.Presentation.Workout
             var size = ValueSizeDp * f;
             Number.SetFontSize(size);
             var spare = (ValueSizeDp - size) / 2f;
-            var top = (_row == null ? LabelGapDp : 0) + spare;
-            Number.style.marginTop = top;
+            Number.style.marginTop = LabelGapDp + spare;
             Number.style.marginBottom = spare;
-            if (_row != null)
-            {
-                _row.style.marginTop = LabelGapDp;
-                _unit!.style.fontSize = UnitSizeDp * f;
-                _unit.style.marginLeft = UnitGapDp * f;
-            }
-
-            if (_arrow != null)
-            {
-                _arrow.style.fontSize = (float)(HudGeometry.ArrowEm * size);
-            }
-
+            ApplyUnit();
             ApplyGutter();
             PlaceArrowAndUnit();
         }
@@ -372,11 +347,6 @@ namespace RowMate.Presentation.Workout
             var first = _hasTarget == null;
             _hasTarget = hasTarget;
             EnableInClassList(UssClass + "--target", hasTarget);
-            if (_glow != null)
-            {
-                _glow.style.unityBackgroundImageTintColor = HudText.WithAlpha(TokenColors.ToColor(MetricPalette.For(Kind)), GlowAlpha);
-            }
-
             if (_decor != null && !first && !instant && _ui.Motion.Armed)
             {
                 _sizeFrom = _sizeShown;
@@ -416,16 +386,13 @@ namespace RowMate.Presentation.Workout
             var target = HudText.WithAlpha(TokenColors.ToColor(MetricPalette.For(Kind)), BorderTargetAlpha);
             var width = BorderRestDp + ((float)Tokens.StrokeTarget.Value - BorderRestDp) * (float)layout;
             SetBorder(TokenColors.Lerp(rest, target, decor), width);
-            if (_glow != null)
+            if (_withGlow)
             {
-                _glow.style.display = decor > 0.0005 ? DisplayStyle.Flex : DisplayStyle.None;
-                if (decor >= 1)
+                var opacity = decor > 0.0005 ? (float)Math.Min(1.0, decor) : 0f;
+                if (Math.Abs(opacity - _glowOpacity) > 1e-5f)
                 {
-                    _glow.style.opacity = StyleKeyword.Null;
-                }
-                else
-                {
-                    _glow.style.opacity = (float)decor;
+                    _glowOpacity = opacity;
+                    MarkDirtyRepaint();
                 }
             }
 
@@ -501,10 +468,108 @@ namespace RowMate.Presentation.Workout
         // El halo usa la textura que generó el HUD al armarse.
         public void SetGlowTexture(Texture2D texture)
         {
-            if (_glow != null)
+            if (_withGlow)
             {
-                _glow.style.backgroundImage = new StyleBackground(texture);
+                _glowTexture = texture;
+                MarkDirtyRepaint();
             }
+        }
+
+        // M4: el halo en 9 partes con GlowTexture (transparente por dentro): del borde de afuera de la tarjeta hacia afuera 12 dp,
+        // con las esquinas de 26 dp (12 + el radio 14) y los bordes estirados; el centro no se dibuja. Tinte = color base @20 %
+        // por la opacidad del objetivo (el cambio de paso lo funde). Sin asignaciones: los vértices son del elemento.
+        private void DrawGlow(MeshGenerationContext context)
+        {
+            if (_glowTexture == null || !(_glowOpacity > 0.0005f))
+            {
+                return;
+            }
+
+            var rect = new Rect(0, 0, layout.width, layout.height);
+            if (!(rect.width > 0) || !(rect.height > 0))
+            {
+                return;
+            }
+
+            var outside = GlowOutsideDp;
+            var corner = GlowTexture.GlowDp + GlowTexture.RadiusDp;
+            var x0 = -outside;
+            var y0 = -outside;
+            var x3 = rect.width + outside;
+            var y3 = rect.height + outside;
+            var x1 = x0 + corner;
+            var y1 = y0 + corner;
+            var x2 = x3 - corner;
+            var y2 = y3 - corner;
+            // Las UV van en [0; 1] de la textura: en Unity 6.3 el renderer las lleva al atlas solo (uvRegion quedó obsoleto).
+            var mesh = context.Allocate(16, GlowIndices.Length, _glowTexture);
+            var slice = (float)GlowTexture.SlicePx / GlowTexture.SizePx;
+            var tint = _glowTint;
+            tint.a *= _glowOpacity;
+            Color32 tint32 = tint;
+            var xs = new Vector4(x0, x1, x2, x3);
+            var ys = new Vector4(y0, y1, y2, y3);
+            var us = new Vector4(0, slice, 1 - slice, 1);
+            for (var row = 0; row < 4; row++)
+            {
+                for (var column = 0; column < 4; column++)
+                {
+                    var uv = new Vector2(us[column], 1 - us[row]);
+                    _glowVertices[row * 4 + column] = new Vertex
+                    {
+                        position = new Vector3(xs[column], ys[row], Vertex.nearZ),
+                        tint = tint32,
+                        uv = uv,
+                    };
+                }
+            }
+
+            mesh.SetAllVertices(_glowVertices);
+            mesh.SetAllIndices(GlowIndices);
+        }
+
+        // Las 8 partes del borde del 9-slice (sin el centro), en sentido horario (UI Toolkit dibuja los triángulos en ese orden).
+        private static ushort[] BuildGlowIndices()
+        {
+            var indices = new ushort[8 * 6];
+            var k = 0;
+            for (var row = 0; row < 3; row++)
+            {
+                for (var column = 0; column < 3; column++)
+                {
+                    if (row == 1 && column == 1)
+                    {
+                        continue;
+                    }
+
+                    var a = (ushort)(row * 4 + column);
+                    var b = (ushort)(a + 1);
+                    var c = (ushort)(a + 4);
+                    var d = (ushort)(c + 1);
+                    indices[k++] = a;
+                    indices[k++] = b;
+                    indices[k++] = d;
+                    indices[k++] = a;
+                    indices[k++] = d;
+                    indices[k++] = c;
+                }
+            }
+
+            return indices;
+        }
+
+        // M6: el corazón centrado en el alto del rótulo, a la izquierda (donde estaba en la fila de la 4a).
+        private void PlaceHeart()
+        {
+            if (_heart == null)
+            {
+                return;
+            }
+
+            var label = Label.layout;
+            var heartHeight = _heart.layout.height > 0 ? _heart.layout.height : HeartSizeDp;
+            _heart.style.left = label.x - HeartSizeDp - HeartGapDp;
+            _heart.style.top = label.y + (label.height - heartHeight) / 2f;
         }
 
         private void SetBorder(Color color, float width)
@@ -525,15 +590,6 @@ namespace RowMate.Presentation.Workout
             style.paddingRight = padH;
             style.paddingTop = padV;
             style.paddingBottom = padV;
-            if (_glow != null)
-            {
-                // El anillo empieza en el borde de afuera de la tarjeta (los absolutos se ubican dentro del borde).
-                var outside = -GlowOutsideDp - width;
-                _glow.style.left = outside;
-                _glow.style.top = outside;
-                _glow.style.right = outside;
-                _glow.style.bottom = outside;
-            }
         }
 
         // El hueco de la flecha: 0,48 em del valor (con la escala de las cifras) por lo que se ve del objetivo (0 … 1).
@@ -551,22 +607,15 @@ namespace RowMate.Presentation.Workout
         // (04-design-notes §3.2); la unidad en la línea de base de las cifras.
         private void PlaceArrowAndUnit()
         {
+            // M1: la flecha, en el hueco y con su línea de base sobre la de las cifras; M2: la unidad va en la línea de base de
+            // las cifras (TabularNumber.SetSuffix). El color y la opacidad de la flecha los conserva el prefijo.
             var size = Number.FontSize > 0 ? Number.FontSize : ValueSizeDp * _fit;
-            var digitsBaseline = Number.BaselineFromTop;
-            if (_arrow != null)
+            if (_withArrow)
             {
                 var arrowSize = (float)(HudGeometry.ArrowEm * size);
-                var lift = (float)((_arrow.text == ArrowDown ? HudGeometry.ArrowDownBaselineEm : HudGeometry.ArrowUpBaselineEm) * size);
-                var arrowBaseline = HudText.BaselineFromTop(_arrow, arrowSize);
-                _arrow.style.left = -(float)(HudGeometry.ArrowGutterEm * size);
-                _arrow.style.top = digitsBaseline - lift - arrowBaseline;
-            }
-
-            if (_unit != null)
-            {
-                var unitSize = UnitSizeDp * _fit;
-                var unitBaseline = HudText.BaselineFromTop(_unit, unitSize);
-                _unit.style.marginTop = Mathf.Max(0, Number.resolvedStyle.marginTop + digitsBaseline - unitBaseline);
+                var lift = (float)((_arrowGlyph == ArrowDown ? HudGeometry.ArrowDownBaselineEm : HudGeometry.ArrowUpBaselineEm) * size);
+                Number.SetGutterPrefix(_arrowGlyph, "rm-type-header-s", arrowSize, TokenColors.ToColor(Tokens.StateOffTargetHud),
+                    (float)(HudGeometry.ArrowGutterEm * size), lift);
             }
         }
 

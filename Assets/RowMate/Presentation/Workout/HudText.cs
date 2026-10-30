@@ -72,5 +72,11 @@ namespace RowMate.Presentation.Workout
         {
             return fit > 0 ? number.NaturalWidth / fit : number.NaturalWidth;
         }
+
+        // It. 4b (M2): el ancho natural de la caja (las cifras con sus afijos de adentro, la W y la m) a tamaño base.
+        public static float BaseBoxWidth(TabularNumber number, float fit)
+        {
+            return fit > 0 ? number.NaturalBoxWidth / fit : number.NaturalBoxWidth;
+        }
     }
 }

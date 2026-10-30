@@ -4,7 +4,7 @@
     "generator": "tools/oracle/engine/test/engine_vectors_test.dart",
     "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"windows_x64\"",
     "legacyCommit": "3ae0f3a8bed5966700e830db3d8a5f050f34a0bc",
-    "generatedAt": "2026-10-28T19:05:31.351868Z"
+    "generatedAt": "2026-10-29T18:05:16.324511Z"
   },
   "scenarios": [
     {
@@ -2979,6 +2979,2224 @@
       },
       "closeHasFinishedAt": true,
       "targets": []
+    }
+  ],
+  "scripts": [
+    {
+      "name": "zero_steps",
+      "reading": "R-4",
+      "routines": {
+        "Ceros": {
+          "id": 21,
+          "name": "Ceros",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 0,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            },
+            {
+              "type": "rest",
+              "dur": 0,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            },
+            {
+              "type": "work",
+              "dur": 7,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Ceros"]
+      ],
+      "endMs": 15000,
+      "steps": [
+        [100,0,0],
+        [1000,1,1],
+        [2000,2,2]
+      ],
+      "events": [
+        [0,"routine",0,"active"]
+      ],
+      "finishedAtMs": [9000],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 21,
+          "routine_name": "Ceros",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 309,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 109,
+          "distance_meters": 1036,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 21,
+          "routine_name": "Ceros",
+          "total_distance_meters": 1036,
+          "total_time_seconds": 309,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 40,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "neg_step",
+      "reading": "R-4",
+      "routines": {
+        "Negativo": {
+          "id": 22,
+          "name": "Negativo",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": -5,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            },
+            {
+              "type": "rest",
+              "dur": 3,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Negativo"]
+      ],
+      "endMs": 10000,
+      "steps": [
+        [100,0,-99],
+        [1000,1,1]
+      ],
+      "events": [
+        [0,"routine",0,"active"]
+      ],
+      "finishedAtMs": [4000],
+      "ops": ["insertSession","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 22,
+          "routine_name": "Negativo",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 304,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 104,
+          "distance_meters": 1016,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 22,
+          "routine_name": "Negativo",
+          "total_distance_meters": 1016,
+          "total_time_seconds": 304,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 40,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "nogoal_finish",
+      "reading": "R-4",
+      "routines": {
+        "Sin meta": {
+          "id": 23,
+          "name": "Sin meta",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": null,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Sin meta"],
+        [12300,"finish"],
+        [12300,"reset"]
+      ],
+      "endMs": 13000,
+      "steps": [
+        [100,0,0],
+        [12400,0,-1]
+      ],
+      "events": [
+        [0,"routine",0,"active"],
+        [12300,"finish",12,"finished"],
+        [12300,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 23,
+          "routine_name": "Sin meta",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 312,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 112,
+          "distance_meters": 1048,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 23,
+          "routine_name": "Sin meta",
+          "total_distance_meters": 1048,
+          "total_time_seconds": 312,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 41,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "finish_in_pause",
+      "reading": "R-4",
+      "routines": {
+        "Corta": {
+          "id": 7,
+          "name": "Corta",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 10,
+              "dist": null,
+              "wMin": null,
+              "spm": 18,
+              "pSpm": 2,
+              "g": "g1",
+              "rep": 2
+            },
+            {
+              "type": "rest",
+              "dur": 5,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": "g1",
+              "rep": 2
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Corta"],
+        [12400,"pause"],
+        [20000,"finish"],
+        [20000,"reset"]
+      ],
+      "endMs": 21000,
+      "steps": [
+        [100,0,0],
+        [10000,10,1],
+        [20100,0,-1]
+      ],
+      "events": [
+        [0,"routine",0,"active"],
+        [12400,"pause",12,"paused"],
+        [20000,"finish",12,"finished"],
+        [20000,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 1080,
+          "total_time_seconds": 320,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 42,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "dist_last",
+      "reading": "R-4",
+      "routines": {
+        "Distancia al final": {
+          "id": 24,
+          "name": "Distancia al final",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "warmup",
+              "dur": 3,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            },
+            {
+              "type": "work",
+              "dur": null,
+              "dist": 50,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Distancia al final"]
+      ],
+      "endMs": 30000,
+      "steps": [
+        [100,0,0],
+        [3000,3,1]
+      ],
+      "events": [
+        [0,"routine",0,"active"]
+      ],
+      "finishedAtMs": [16000],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 24,
+          "routine_name": "Distancia al final",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 316,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 116,
+          "distance_meters": 1064,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "work"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 24,
+          "routine_name": "Distancia al final",
+          "total_distance_meters": 1064,
+          "total_time_seconds": 316,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 41,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "time_and_distance",
+      "reading": "R-4",
+      "routines": {
+        "Tiempo y distancia": {
+          "id": 25,
+          "name": "Tiempo y distancia",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 7,
+              "dist": 1000,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            },
+            {
+              "type": "rest",
+              "dur": 2,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Tiempo y distancia"]
+      ],
+      "endMs": 15000,
+      "steps": [
+        [100,0,0],
+        [7000,7,1]
+      ],
+      "events": [
+        [0,"routine",0,"active"]
+      ],
+      "finishedAtMs": [9000],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 25,
+          "routine_name": "Tiempo y distancia",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 309,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 109,
+          "distance_meters": 1036,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 25,
+          "routine_name": "Tiempo y distancia",
+          "total_distance_meters": 1036,
+          "total_time_seconds": 309,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 40,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "hr_points",
+      "reading": "R-4",
+      "routines": {},
+      "actions": [
+        [0,"free"],
+        [2200,"bpm",120],
+        [7200,"bpm",130],
+        [11200,"status","disconnected"],
+        [16000,"finish"],
+        [16000,"reset"]
+      ],
+      "endMs": 17000,
+      "steps": [
+        [100,0,-1]
+      ],
+      "events": [
+        [0,"free",0,"active"],
+        [2200,"bpm",2,"active"],
+        [7200,"bpm",7,"active"],
+        [11200,"status",11,"active"],
+        [16000,"finish",16,"finished"],
+        [16000,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 120,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 130,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 316,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 116,
+          "distance_meters": 1064,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 1064,
+          "total_time_seconds": 316,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 41,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "pause_early",
+      "reading": "R-4",
+      "routines": {},
+      "actions": [
+        [0,"free"],
+        [50,"pause"],
+        [2050,"resume"],
+        [8000,"finish"],
+        [8000,"reset"]
+      ],
+      "endMs": 9000,
+      "steps": [
+        [50,0,-1]
+      ],
+      "events": [
+        [0,"free",0,"active"],
+        [50,"pause",0,"paused"],
+        [2050,"resume",0,"active"],
+        [8000,"finish",5,"finished"],
+        [8000,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 307,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 107,
+          "distance_meters": 1028,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 308,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 108,
+          "distance_meters": 1032,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 1032,
+          "total_time_seconds": 308,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 40,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "corta_pause_across_change",
+      "reading": "R-4",
+      "routines": {
+        "Corta": {
+          "id": 7,
+          "name": "Corta",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 10,
+              "dist": null,
+              "wMin": null,
+              "spm": 18,
+              "pSpm": 2,
+              "g": "g1",
+              "rep": 2
+            },
+            {
+              "type": "rest",
+              "dur": 5,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": "g1",
+              "rep": 2
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Corta"],
+        [9500,"pause"],
+        [15300,"resume"]
+      ],
+      "endMs": 45000,
+      "steps": [
+        [100,0,0],
+        [16300,10,1],
+        [21300,15,2],
+        [31300,25,3]
+      ],
+      "events": [
+        [0,"routine",0,"active"],
+        [9500,"pause",9,"paused"],
+        [15300,"resume",9,"active"]
+      ],
+      "finishedAtMs": [36300],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 316,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 116,
+          "distance_meters": 1064,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 321,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 121,
+          "distance_meters": 1084,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 326,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 126,
+          "distance_meters": 1104,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 331,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 131,
+          "distance_meters": 1124,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 336,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 136,
+          "distance_meters": 1144,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 336,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 136,
+          "distance_meters": 1144,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 1144,
+          "total_time_seconds": 336,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 43,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": [
+        [1,0,"met"],
+        [1,2,"met"]
+      ]
+    },
+    {
+      "name": "two_sessions",
+      "reading": "R-4",
+      "routines": {
+        "Corta": {
+          "id": 7,
+          "name": "Corta",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 10,
+              "dist": null,
+              "wMin": null,
+              "spm": 18,
+              "pSpm": 2,
+              "g": "g1",
+              "rep": 2
+            },
+            {
+              "type": "rest",
+              "dur": 5,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": "g1",
+              "rep": 2
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"free"],
+        [6000,"finish"],
+        [6000,"reset"],
+        [9000,"routine","Corta"]
+      ],
+      "endMs": 45000,
+      "steps": [
+        [100,0,-1],
+        [9100,0,0],
+        [19000,10,1],
+        [24000,15,2],
+        [34000,25,3]
+      ],
+      "events": [
+        [0,"free",0,"active"],
+        [6000,"finish",6,"finished"],
+        [6000,"reset",0,"idle"],
+        [9000,"routine",0,"active"]
+      ],
+      "finishedAtMs": [39000],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","updateSession","insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        },
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 306,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 106,
+          "distance_meters": 1024,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 2,
+          "elapsed_seconds": 314,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 114,
+          "distance_meters": 1056,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 2,
+          "elapsed_seconds": 319,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 119,
+          "distance_meters": 1076,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 2,
+          "elapsed_seconds": 324,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 124,
+          "distance_meters": 1096,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 2,
+          "elapsed_seconds": 329,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 129,
+          "distance_meters": 1116,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 2,
+          "elapsed_seconds": 334,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 134,
+          "distance_meters": 1136,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 2,
+          "elapsed_seconds": 339,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 139,
+          "distance_meters": 1156,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 2,
+          "elapsed_seconds": 339,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 139,
+          "distance_meters": 1156,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 1024,
+          "total_time_seconds": 306,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 40,
+          "strava_activity_id": null
+        },
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 1156,
+          "total_time_seconds": 339,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 43,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true,true],
+      "targets": [
+        [1,0,"met"],
+        [1,2,"met"]
+      ]
+    },
+    {
+      "name": "pause_resume_jitter",
+      "reading": "R-4",
+      "routines": {},
+      "actions": [
+        [0,"free"],
+        [3200,"pause"],
+        [3400,"resume"],
+        [3600,"pause"],
+        [3800,"resume"],
+        [12000,"finish"],
+        [12000,"reset"]
+      ],
+      "endMs": 13000,
+      "steps": [
+        [100,0,-1]
+      ],
+      "events": [
+        [0,"free",0,"active"],
+        [3200,"pause",3,"paused"],
+        [3400,"resume",3,"active"],
+        [3600,"pause",3,"paused"],
+        [3800,"resume",3,"active"],
+        [12000,"finish",11,"finished"],
+        [12000,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 306,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 106,
+          "distance_meters": 1024,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 311,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 111,
+          "distance_meters": 1044,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 312,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 112,
+          "distance_meters": 1048,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 1048,
+          "total_time_seconds": 312,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 41,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "finish_at_step_change",
+      "reading": "R-4",
+      "routines": {
+        "Corta": {
+          "id": 7,
+          "name": "Corta",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 10,
+              "dist": null,
+              "wMin": null,
+              "spm": 18,
+              "pSpm": 2,
+              "g": "g1",
+              "rep": 2
+            },
+            {
+              "type": "rest",
+              "dur": 5,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": "g1",
+              "rep": 2
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Corta"],
+        [10000,"finish"],
+        [10000,"reset"]
+      ],
+      "endMs": 11000,
+      "steps": [
+        [100,0,0],
+        [10000,10,1],
+        [10100,0,-1]
+      ],
+      "events": [
+        [0,"routine",0,"active"],
+        [10000,"finish",10,"finished"],
+        [10000,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 1040,
+          "total_time_seconds": 310,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 41,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "last_step_zero",
+      "reading": "R-4",
+      "routines": {
+        "Ultimo cero": {
+          "id": 26,
+          "name": "Ultimo cero",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 3,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            },
+            {
+              "type": "rest",
+              "dur": 0,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Ultimo cero"]
+      ],
+      "endMs": 8000,
+      "steps": [
+        [100,0,0],
+        [3000,3,1]
+      ],
+      "events": [
+        [0,"routine",0,"active"]
+      ],
+      "finishedAtMs": [4000],
+      "ops": ["insertSession","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 26,
+          "routine_name": "Ultimo cero",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 304,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 104,
+          "distance_meters": 1016,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 26,
+          "routine_name": "Ultimo cero",
+          "total_distance_meters": 1016,
+          "total_time_seconds": 304,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 40,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "free_finish_at_5",
+      "reading": "R-4",
+      "routines": {},
+      "actions": [
+        [0,"free"],
+        [5000,"finish"],
+        [5000,"reset"]
+      ],
+      "endMs": 6000,
+      "steps": [
+        [100,0,-1]
+      ],
+      "events": [
+        [0,"free",0,"active"],
+        [5000,"finish",5,"finished"],
+        [5000,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": null,
+          "step_type": null
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": null,
+          "routine_name": null,
+          "total_distance_meters": 1020,
+          "total_time_seconds": 305,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 40,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "dist100_every_2s",
+      "reading": "R-4/2s",
+      "routines": {
+        "Distancia 100": {
+          "id": 9,
+          "name": "Distancia 100",
+          "createdAt": "2026-10-25T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": null,
+              "dist": 100,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            },
+            {
+              "type": "rest",
+              "dur": 5,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": null,
+              "rep": null
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Distancia 100"]
+      ],
+      "endMs": 60000,
+      "steps": [
+        [100,0,0],
+        [20000,20,1]
+      ],
+      "events": [
+        [0,"routine",0,"active"]
+      ],
+      "finishedAtMs": [25000],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 9,
+          "routine_name": "Distancia 100",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1022,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1055,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1077,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1110,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1132,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1132,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 9,
+          "routine_name": "Distancia 100",
+          "total_distance_meters": 1132,
+          "total_time_seconds": 325,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 42,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": []
+    },
+    {
+      "name": "completed_hold_reset",
+      "reading": "R-4",
+      "routines": {
+        "Corta": {
+          "id": 7,
+          "name": "Corta",
+          "createdAt": "2026-10-26T00:00:00.000Z",
+          "steps": [
+            {
+              "type": "work",
+              "dur": 10,
+              "dist": null,
+              "wMin": null,
+              "spm": 18,
+              "pSpm": 2,
+              "g": "g1",
+              "rep": 2
+            },
+            {
+              "type": "rest",
+              "dur": 5,
+              "dist": null,
+              "wMin": null,
+              "spm": null,
+              "pSpm": null,
+              "g": "g1",
+              "rep": 2
+            }
+          ]
+        }
+      },
+      "actions": [
+        [0,"routine","Corta"],
+        [32000,"bpm",128],
+        [34000,"reset"]
+      ],
+      "endMs": 36000,
+      "steps": [
+        [100,0,0],
+        [10000,10,1],
+        [15000,15,2],
+        [25000,25,3],
+        [34100,0,-1]
+      ],
+      "events": [
+        [0,"routine",0,"active"],
+        [32000,"bpm",30,"finished"],
+        [34000,"reset",0,"idle"]
+      ],
+      "finishedAtMs": [30000],
+      "ops": ["insertSession","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","insertDataPoint","updateSession"],
+      "sessions": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 0,
+          "total_time_seconds": 0,
+          "avg_power_watts": 0,
+          "avg_stroke_rate": {
+            "v": 0.0,
+            "bits": "0000000000000000"
+          },
+          "total_calories": 0,
+          "strava_activity_id": null
+        }
+      ],
+      "points": [
+        {
+          "session_id": 1,
+          "elapsed_seconds": 305,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 105,
+          "distance_meters": 1020,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 40,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 310,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 110,
+          "distance_meters": 1040,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 0,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 315,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 115,
+          "distance_meters": 1060,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 41,
+          "heart_rate": 0,
+          "step_index": 1,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 320,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 120,
+          "distance_meters": 1080,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 325,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 125,
+          "distance_meters": 1100,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 42,
+          "heart_rate": 0,
+          "step_index": 2,
+          "step_type": "work"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        },
+        {
+          "session_id": 1,
+          "elapsed_seconds": 330,
+          "stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "stroke_count": 130,
+          "distance_meters": 1120,
+          "pace_500m_seconds": 125,
+          "power_watts": 150,
+          "calories": 43,
+          "heart_rate": 0,
+          "step_index": 3,
+          "step_type": "rest"
+        }
+      ],
+      "closes": [
+        {
+          "routine_id": 7,
+          "routine_name": "Corta",
+          "total_distance_meters": 1120,
+          "total_time_seconds": 330,
+          "avg_power_watts": 150,
+          "avg_stroke_rate": {
+            "v": 24.0,
+            "bits": "4038000000000000"
+          },
+          "total_calories": 43,
+          "strava_activity_id": null
+        }
+      ],
+      "closesHaveFinishedAt": [true],
+      "targets": [
+        [1,0,"met"],
+        [1,2,"met"]
+      ]
     }
   ]
 }

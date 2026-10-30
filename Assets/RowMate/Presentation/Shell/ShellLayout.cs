@@ -54,6 +54,7 @@ namespace RowMate.Presentation.Shell
         {
             _display = display ?? throw new ArgumentNullException(nameof(display));
             _insets = display.SafeArea;
+            _immersiveInsets = display.ImmersiveSafeArea;
         }
 
         public SafeInsets Insets => _insets;
@@ -158,6 +159,44 @@ namespace RowMate.Presentation.Shell
         {
             Wrench = wrench;
         }
+
+        // It. 4b (§5.7; ANIMATION_BIBLE §2.11): la superficie "oculta" de la llave. Mientras algún dueño la retiene (el inmersivo
+        // durante su cascada), la llave que cambia de carril no entra: espera a que se suelte (la cascada terminó) y recién ahí
+        // entra en su lugar nuevo (y el panel abierto se abre ahí).
+        public bool WrenchHeld => _wrenchHolds.Count > 0;
+
+        public void HoldWrench(object owner, bool hold)
+        {
+            if (owner == null)
+            {
+                throw new ArgumentNullException(nameof(owner));
+            }
+
+            var index = _wrenchHolds.IndexOf(owner);
+            if (hold == index >= 0)
+            {
+                return;
+            }
+
+            if (hold)
+            {
+                _wrenchHolds.Add(owner);
+            }
+            else
+            {
+                _wrenchHolds.RemoveAt(index);
+            }
+
+            SurfaceChanged?.Invoke();
+        }
+
+        private readonly List<object> _wrenchHolds = new List<object>();
+
+        // It. 4b (F-APP-15; AC-APP-15-01; §4.3): los márgenes del inmersivo (solo el recorte de la pantalla), que no cambian
+        // cuando las barras del sistema se ocultan o vuelven. Los de la app (Insets) tampoco se mueven con las barras.
+        public SafeInsets ImmersiveInsets => _immersiveInsets;
+
+        private SafeInsets _immersiveInsets;
 
         // La caja de la llave en coordenadas del panel si se ve y se puede tocar (para los menús, DD4a-02); null si no.
         public Rect? VisibleWrenchBounds()
@@ -306,12 +345,14 @@ namespace RowMate.Presentation.Shell
         public void Poll()
         {
             var insets = _display.SafeArea;
-            if (Same(insets, _insets))
+            var immersive = _display.ImmersiveSafeArea;
+            if (Same(insets, _insets) && Same(immersive, _immersiveInsets))
             {
                 return;
             }
 
             _insets = insets;
+            _immersiveInsets = immersive;
             for (var i = 0; i < _appBars.Count; i++)
             {
                 ApplyAppBar(_appBars[i]);

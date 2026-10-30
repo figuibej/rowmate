@@ -377,9 +377,41 @@ namespace RowMate.Presentation.Workout
             List.RenderTexts();
         }
 
+        // It. 4b (DN4b-24; AC-APP-03-11; 04b-hud-exr/02-tech-design §3.3): los avisos del final salen cuando empieza a verse Workout,
+        // a los 400 de la salida del inmersivo (RevealStarted); sus 4 s cuentan desde ahí. Sin un inmersivo saliendo, en el acto.
         private void OnToast(string key)
         {
+            // Solo los del final (la sesión ya volvió a reposo y su inmersivo sale): los de una sesión en marcha (un guardado que falló
+            // con el HUD arriba) salen en el acto, como en la 4a.
+            var page = _immersive;
+            var ending = _ui.App.Workout.State.Value.Phase == RowMate.Core.Workout.WorkoutPhase.Idle || page != null && page.IsExiting;
+            if (ending && page != null && _ui.Pages.HasPage(page) && !page.HasRevealed)
+            {
+                _exitingImmersive = page;
+                _heldToasts.Add(key);
+                return;
+            }
+
             _ui.Toasts.Show(_ui.Texts.Get(key));
+        }
+
+        private readonly System.Collections.Generic.List<string> _heldToasts = new System.Collections.Generic.List<string>();
+        private ImmersiveWorkoutPage? _exitingImmersive;
+
+        private void OnImmersiveRevealed(ImmersiveWorkoutPage page)
+        {
+            if (!ReferenceEquals(page, _exitingImmersive))
+            {
+                return;
+            }
+
+            _exitingImmersive = null;
+            for (var i = 0; i < _heldToasts.Count; i++)
+            {
+                _ui.Toasts.Show(_ui.Texts.Get(_heldToasts[i]));
+            }
+
+            _heldToasts.Clear();
         }
 
         private void OnFree()
@@ -422,7 +454,9 @@ namespace RowMate.Presentation.Workout
 
             var page = new ImmersiveWorkoutPage(_ui, _layout);
             _immersive = page;
-            _ui.Pages.Push(page, PageTransitionKind.Fade);
+            page.RevealStarted += () => OnImmersiveRevealed(page);
+            page.Root.RegisterCallback<DetachFromPanelEvent>(_ => OnImmersiveRevealed(page));
+            _ui.Pages.Push(page, PageTransitionKind.Immerse);
             if (!_ui.Pages.HasPage(page))
             {
                 _immersive = null;

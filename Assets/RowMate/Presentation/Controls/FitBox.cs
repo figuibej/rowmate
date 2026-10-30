@@ -14,7 +14,9 @@ namespace RowMate.Presentation.Controls
     //   movimiento: en el acto.
     // - SizeToContentHeight: la caja toma el alto del contenido escalado (la del pulso, en una fila); si no, la caja es la
     //   que manda (la del tablero, que crece con flex-grow) y el contenido se centra en los dos ejes.
-    public sealed class FitBox : VisualElement, IMotion
+    // - It. 4b (02-tech-design §5.2, §7.4): ISettlingMotion dice cuánto le falta a la escala, en dp por el ancho del contenido,
+    //   así la regla de toma no la cuenta a menos de 0,15 dp de su destino. La conducta no cambia.
+    public sealed class FitBox : VisualElement, IMotion, ISettlingMotion
     {
         public const string UssClass = "rm-fitbox";
 
@@ -80,6 +82,21 @@ namespace RowMate.Presentation.Controls
 
         // Escala aplicada ahora (distinta de FitScale solo mientras el resorte se mueve).
         public float AppliedScale => (float)_spring.Position;
+
+        // Lo que le falta al resorte de la escala, en dp: |destino − escala| × el ancho natural del contenido (0 quieto).
+        public double RemainingDp
+        {
+            get
+            {
+                if (_motion == null || !_motion.Contains(this))
+                {
+                    return 0;
+                }
+
+                var width = Content.layout.width;
+                return float.IsNaN(width) || width <= 0 ? 0 : Math.Abs(_target - _spring.Position) * width;
+            }
+        }
 
         // El contenido, con la escala aplicada, entra en la caja (± 0,5 dp).
         public bool Fits

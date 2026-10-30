@@ -24,6 +24,61 @@ namespace RowMate.Presentation.Shell
             AddToClassList("rm-layer");
             pickingMode = PickingMode.Ignore;
             _layout.Changed += RelayoutAll;
+            // It. 4b (QA-G4bT-09 (b); AC-WKT-21-11, AC-APP-05-07): sin nada enfocado, el primer Tab llega a la raíz del panel y no
+            // al árbol del diálogo, donde escucha FocusTrap. Con un diálogo arriba y el foco fuera de su caja, el Tab va al primer
+            // control del diálogo (FocusTrap.Next) y se ignora el evento. Vale para todos los diálogos.
+            RegisterCallback<AttachToPanelEvent>(_ => HookPanelRoot());
+            RegisterCallback<DetachFromPanelEvent>(_ => UnhookPanelRoot());
+        }
+
+        private VisualElement? _panelRoot;
+
+        private void HookPanelRoot()
+        {
+            var root = panel?.visualTree;
+            if (root == null || ReferenceEquals(root, _panelRoot) || _disposed)
+            {
+                return;
+            }
+
+            UnhookPanelRoot();
+            _panelRoot = root;
+            _panelRoot.RegisterCallback<NavigationMoveEvent>(OnPanelNavigation, TrickleDown.TrickleDown);
+        }
+
+        private void UnhookPanelRoot()
+        {
+            _panelRoot?.UnregisterCallback<NavigationMoveEvent>(OnPanelNavigation, TrickleDown.TrickleDown);
+            _panelRoot = null;
+        }
+
+        private void OnPanelNavigation(NavigationMoveEvent evt)
+        {
+            if (evt.direction != NavigationMoveEvent.Direction.Next && evt.direction != NavigationMoveEvent.Direction.Previous)
+            {
+                return;
+            }
+
+            var top = Top;
+            if (top == null)
+            {
+                return;
+            }
+
+            var target = evt.target as VisualElement;
+            var focused = panel?.focusController?.focusedElement as VisualElement;
+            var inside = focused != null && (ReferenceEquals(focused, top.Box) || top.Box.Contains(focused))
+                         || target != null && !ReferenceEquals(target, _panelRoot) && (ReferenceEquals(target, top.Box) || top.Box.Contains(target));
+            if (inside)
+            {
+                // Lo resuelve FocusTrap, en el árbol del diálogo.
+                return;
+            }
+
+            var next = FocusTrap.Next(top.Box, null, evt.direction == NavigationMoveEvent.Direction.Next);
+            next?.Focus();
+            _panelRoot?.panel?.focusController?.IgnoreEvent(evt);
+            evt.StopPropagation();
         }
 
         // El de arriba que no está saliendo.
@@ -74,6 +129,13 @@ namespace RowMate.Presentation.Shell
 
         public void Open(ModalDialog dialog)
         {
+            Open(dialog, false);
+        }
+
+        // It. 4b (AC-WKT-21-09): instantly = sin transición, con todo en su estado final (el de rutina completada al volver del
+        // segundo plano).
+        public void Open(ModalDialog dialog, bool instantly)
+        {
             if (dialog == null)
             {
                 throw new ArgumentNullException(nameof(dialog));
@@ -84,13 +146,15 @@ namespace RowMate.Presentation.Shell
                 return;
             }
 
+            HookPanelRoot();
             var focused = panel?.focusController?.focusedElement;
             _dialogs.Add(dialog);
             Add(dialog.Host);
-            dialog.Open(this, focused);
+            dialog.Open(this, focused, instantly);
         }
 
-        // "Atrás" o Escape (BackNavigation, paso 2): cancela el de arriba. false = no había ninguno abierto.
+        // "Atrás" o Escape (BackNavigation, paso 2): el camino del usuario del de arriba (ModalDialog.Dismiss): lo cancela si es
+        // descartable y, si no lo es (el de rutina completada), se consume sin cerrarlo. false = no había ninguno abierto.
         public bool CancelTop()
         {
             var top = Top;
@@ -99,7 +163,7 @@ namespace RowMate.Presentation.Shell
                 return false;
             }
 
-            top.Cancel();
+            top.Dismiss();
             return true;
         }
 
@@ -124,6 +188,7 @@ namespace RowMate.Presentation.Shell
 
             _disposed = true;
             _layout.Changed -= RelayoutAll;
+            UnhookPanelRoot();
             for (var i = _dialogs.Count - 1; i >= 0; i--)
             {
                 _dialogs[i].Host.RemoveFromHierarchy();

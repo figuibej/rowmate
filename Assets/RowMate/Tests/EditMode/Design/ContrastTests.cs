@@ -15,6 +15,7 @@ namespace RowMate.Tests.EditMode.Design
         private const string White = "white";
         private const string WorstGlass = "worstGlass";
         private const string WhiteGlass = "white|glass.fallback";
+        private const string SkyGlass = "backdrop.sky|glass.fallback";
 
         [Test, Category("AC-BASE-05")]
         public void WorstGlassIs2A2F37()
@@ -288,6 +289,66 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(RenderedRatio("metric.distance", "|step.warmup@20"), Is.GreaterThanOrEqualTo(3.0));
         }
 
+        // It. 4b (04b-hud-exr/04-design-notes §8.1, B1-B10; DN4b-29): el chip de fase y su punto, el sello, el aro de la cuenta
+        // grande y el de PAUSA, el ícono del reloj de pared, las píldoras hechas y huecas sobre el fondo provisorio de la 4b y el
+        // diálogo de completado (el check, los íconos, los rótulos y los valores). Mismo formato de pila que las It. 2 a 4a:
+        // "white|glass.fallback" es el peor vidrio (una nube blanca detrás) y "backdrop.sky|glass.fallback" el vidrio sobre el
+        // cielo provisorio, que es el fondo de la barra de pasos en los cinco perfiles. Las excepciones de §8.2 (la pendiente al
+        // 18 %, la pista al 30 % y la del aro al 20 %, el borde del chip al 50 %, el halo, el destello, el brillo, el velo y el
+        // punto en lo bajo de su latido) no se prueban como umbral. Datos del test, nunca hex.
+        [TestCaseSource(nameof(ItFourBPairCases))]
+        public void ItFourBDesignerPairs(string front, string layers, double threshold)
+        {
+            var ratio = Contrast.RatioOver(Layer(front), Stack(layers));
+            TestContext.Out.WriteLine(front + " / " + layers + ": " + Fmt.Fixed(ratio, 3) + " (umbral " + Fmt.DartToString(threshold) + ")");
+            Assert.That(ratio, Is.GreaterThanOrEqualTo(threshold));
+        }
+
+        // Los valores de 04-design-notes de la It. 4b §8.1 a 3 decimales y, donde las notas los dan, los del margen de render
+        // (contra #2B3038, el peor vidrio renderizado + 1). Si cambia un token, cambia acá y en las notas.
+        [Test, Category("AC-BASE-05")]
+        public void ItFourBControlValuesMatchTheDesignNotes()
+        {
+            const string Glass = WhiteGlass;
+            Assert.That(Ratio("phase.running", Glass + "|phase.running@15"), Is.EqualTo(5.324).Within(0.0006), "B1 EN MARCHA (y B2, el punto)");
+            Assert.That(Ratio("phase.paused", Glass + "|phase.paused@15"), Is.EqualTo(6.432).Within(0.0006), "B1 PAUSADO");
+            Assert.That(Ratio("phase.finished.hud", Glass + "|phase.finished@15"), Is.EqualTo(4.677).Within(0.0006), "B1 FINALIZADO (DN4b-15)");
+            Assert.That(Ratio("step.work.hud", Glass + "|phase.finished@15"), Is.EqualTo(3.942).Within(0.0006), "FINALIZADO en #FF5D7F, el de la spec, no llegaba (DV-44)");
+            Assert.That(Ratio("state.success", Glass), Is.EqualTo(7.154).Within(0.0006), "B3 Objetivo cumplido y su ícono");
+            Assert.That(Ratio("phase.paused", Glass), Is.EqualTo(9.358).Within(0.0006), "B3 No alcanzado y su ícono; B5 el aro de PAUSA");
+            var types = new[] { "work", "rest", "warmup", "cooldown" };
+            var arc = new[] { 3.727, 7.154, 9.358, 3.407 };
+            var done = new[] { 3.868, 7.204, 9.259, 3.645 };
+            var hollow = new[] { 3.404, 5.305, 6.460, 3.064 };
+            for (var i = 0; i < types.Length; i++)
+            {
+                var step = "step." + types[i];
+                Assert.That(Ratio(step, Glass), Is.EqualTo(arc[i]).Within(0.0006), "B4 el arco de la cuenta grande " + types[i]);
+                Assert.That(Ratio(step + "@85", SkyGlass), Is.EqualTo(done[i]).Within(0.0006), "B7 la píldora hecha " + types[i]);
+                Assert.That(Ratio(step + "@85", SkyGlass + "|" + step + "@18"), Is.EqualTo(hollow[i]).Within(0.0006), "B8 el borde de la hueca " + types[i]);
+            }
+
+            Assert.That(Ratio("text.secondary", Glass), Is.EqualTo(7.448).Within(0.0006), "B6 el ícono del reloj de pared");
+            Assert.That(Ratio("state.success", "surface.overlay"), Is.EqualTo(6.626).Within(0.0006), "B9 el disco del check");
+            Assert.That(Ratio("surface.overlay", "state.success"), Is.EqualTo(6.626).Within(0.0006), "B9 el trazo del check");
+            const string Summary = "surface.overlay|text.primary@4";
+            Assert.That(Ratio("accent.primary", Summary), Is.EqualTo(4.501).Within(0.0006), "B10 los íconos de las filas");
+            Assert.That(Ratio("text.secondary", Summary), Is.EqualTo(6.361).Within(0.0006), "B10 los rótulos y la m");
+            Assert.That(Ratio("text.primary", Summary), Is.EqualTo(11.093).Within(0.0006), "B10 los valores");
+
+            // Margen de render: contra el peor vidrio renderizado + 1 (#2B3038).
+            Assert.That(RenderedRatio("phase.running", "|phase.running@15"), Is.EqualTo(5.244).Within(0.0006), "B1 EN MARCHA renderizado");
+            Assert.That(RenderedRatio("phase.paused", "|phase.paused@15"), Is.EqualTo(6.332).Within(0.0006), "B1 PAUSADO renderizado");
+            Assert.That(RenderedRatio("phase.finished.hud", "|phase.finished@15"), Is.EqualTo(4.606).Within(0.0006), "B1 FINALIZADO renderizado");
+            Assert.That(RenderedRatio("step.work.hud", "|phase.finished@15"), Is.EqualTo(3.883).Within(0.0006), "FINALIZADO en #FF5D7F renderizado");
+            Assert.That(RenderedRatio("state.success", ""), Is.EqualTo(7.035).Within(0.0006), "B3 Objetivo cumplido renderizado");
+            Assert.That(RenderedRatio("phase.paused", ""), Is.EqualTo(9.203).Within(0.0006), "B3 No alcanzado renderizado");
+            Assert.That(RenderedRatio("step.work", ""), Is.EqualTo(3.665).Within(0.0006), "B4 el arco del trabajo renderizado");
+            Assert.That(RenderedRatio("step.cooldown", ""), Is.EqualTo(3.350).Within(0.0006), "B4 el arco del enfriamiento renderizado");
+            Assert.That(RenderedRatio("phase.finished.hud", "|phase.finished@15"), Is.GreaterThanOrEqualTo(4.5));
+            Assert.That(RenderedRatio("step.cooldown", ""), Is.GreaterThanOrEqualTo(3.0));
+        }
+
         // Valores de control (02-tech-design §4.4 y 04-design-notes §4): mismos números que el Designer y QA, a 3 decimales.
         // Los del HUD, con los valores de la It. 3 (QA-V2-12; antes 7,004 · 7,016 · 7,040 · 4,508 · 4,519 · 4,512).
         [Test, Category("AC-BASE-05")]
@@ -542,6 +603,37 @@ namespace RowMate.Tests.EditMode.Design
             yield return ItTwoCase("W3", "text.tertiary", "surface.card", 3.0);
             yield return ItTwoCase("W3", "text.tertiary", "surface.card" + Hover, 3.0);
             yield return ItTwoCase("W4", "text.onAccent", "accent.primary", 4.5);
+        }
+
+        // B1-B10 de 04-design-notes de la It. 4b §8.1, uno por caso (los valores, en ItFourBControlValuesMatchTheDesignNotes).
+        private static IEnumerable<TestCaseData> ItFourBPairCases()
+        {
+            const string Glass = WhiteGlass;
+            yield return ItTwoCase("B1", "phase.running", Glass + "|phase.running@15", 4.5);
+            yield return ItTwoCase("B1", "phase.paused", Glass + "|phase.paused@15", 4.5);
+            yield return ItTwoCase("B1", "phase.finished.hud", Glass + "|phase.finished@15", 4.5);
+            yield return ItTwoCase("B2", "phase.running", Glass + "|phase.running@15", 3.0);
+            yield return ItTwoCase("B3", "state.success", Glass, 4.5);
+            yield return ItTwoCase("B3", "phase.paused", Glass, 4.5);
+            foreach (var type in new[] { "work", "rest", "warmup", "cooldown" })
+            {
+                yield return ItTwoCase("B4", "step." + type, Glass, 3.0);
+            }
+
+            yield return ItTwoCase("B5", "phase.paused", Glass, 3.0);
+            yield return ItTwoCase("B6", "text.secondary", Glass, 3.0);
+            foreach (var type in new[] { "work", "rest", "warmup", "cooldown" })
+            {
+                var step = "step." + type;
+                yield return ItTwoCase("B7", step + "@85", SkyGlass, 3.0);
+                yield return ItTwoCase("B8", step + "@85", SkyGlass + "|" + step + "@18", 3.0);
+            }
+
+            yield return ItTwoCase("B9", "state.success", "surface.overlay", 3.0);
+            yield return ItTwoCase("B9", "surface.overlay", "state.success", 3.0);
+            yield return ItTwoCase("B10", "accent.primary", "surface.overlay|text.primary@4", 3.0);
+            yield return ItTwoCase("B10", "text.secondary", "surface.overlay|text.primary@4", 4.5);
+            yield return ItTwoCase("B10", "text.primary", "surface.overlay|text.primary@4", 4.5);
         }
 
         // El frente también puede llevar "@NN" (Layer): sin alfa propia es el token tal cual.

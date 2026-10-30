@@ -48,6 +48,10 @@ namespace RowMate.Tests.EditMode.Workout
             var session = run.Sessions.Session(1)!;
             Assert.That(session.FinishedAt, Is.EqualTo(new DateTimeOffset(2026, 10, 28, 13, 0, 30, TimeSpan.Zero)), "2026-10-28T13:00:30.000Z");
             Assert.That(run.Sessions.PointsOf(1).Count, Is.EqualTo(7));
+            // It. 4b (AC-WKT-21-09): al volver, terminada y con el cierre ya vuelto: el diálogo espera; con su Terminar, a reposo.
+            Assert.That(run.Engine.State.Value.Phase, Is.EqualTo(WorkoutPhase.Finished));
+            Assert.That(run.Engine.State.Value.Close, Is.EqualTo(CloseStatus.Saved));
+            run.Engine.AcknowledgeCompletion();
             Assert.That(run.Engine.State.Value.Phase, Is.EqualTo(WorkoutPhase.Idle));
             Assert.That(run.Notices.Values[run.Notices.Count - 1].ToString(), Is.EqualTo("Ended(Completed, true)"));
             Assert.That(run.Engine.LastFinishedSessionId, Is.EqualTo(1));
@@ -81,6 +85,10 @@ namespace RowMate.Tests.EditMode.Workout
                         harness.Background(8);
                         harness.Foreground(330);
                         await engine.FinishTask;
+                        // It. 4b: el cierre volvió bien y el motor espera al Terminar del diálogo (AC-WKT-21-09).
+                        Assert.That(engine.State.Value.Phase, Is.EqualTo(WorkoutPhase.Finished));
+                        Assert.That(engine.State.Value.Close, Is.EqualTo(CloseStatus.Saved), "ningún workoutSaveError falso");
+                        await engine.AcknowledgeCompletion();
                         Assert.That(engine.State.Value.Phase, Is.EqualTo(WorkoutPhase.Idle));
                         Assert.That(notices.Values[notices.Count - 1].ToString(), Is.EqualTo("Ended(Completed, true)"));
                         foreach (var notice in notices.Values)

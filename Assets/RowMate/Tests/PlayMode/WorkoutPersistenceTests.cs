@@ -16,7 +16,11 @@ namespace RowMate.Tests.PlayMode
         public IEnumerator FreeStartCreatesTheSessionAndTheClockRuns()
         {
             CreateWorkout(RoutineSeeds.Lista);
-            yield return StartFree();
+            // It. 4b: sin esperar la cascada de la entrada (1,12 s), para ver el reloj en 00:00.
+            yield return GoToWorkout();
+            yield return Frames();
+            H.Tap("workout-free");
+            yield return Frames();
             Assert.That(H.Immersive, Is.Not.Null, "el inmersivo en el acto");
             Assert.That(Phase, Is.EqualTo(WorkoutPhase.Active));
             var session = LastSession();
@@ -24,7 +28,8 @@ namespace RowMate.Tests.PlayMode
             Assert.That(session!.RoutineName, Is.Null, "sin rutina");
             Assert.That(session.IsCut, Is.True, "abierta mientras dura");
             Assert.That(H.TextOf("hud-time-value"), Is.EqualTo("00:00"));
-            yield return AdvanceTo(1.05);
+            H.Advance(1.05);
+            yield return Frames();
             Assert.That(H.TextOf("hud-time-value"), Is.EqualTo("00:01"), "el primer segundo se ve 1 s después");
         }
 

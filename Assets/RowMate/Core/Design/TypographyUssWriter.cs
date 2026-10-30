@@ -136,7 +136,14 @@ namespace RowMate.Core.Design
         // em → valor de letter-spacing de USS en la unidad de TextCore (0,08 em → "8px").
         public static string LetterSpacingPx(double em)
         {
-            return Px(DartMath.RoundToFixed(em * 100, 2));
+            return Px(LetterSpacingUnits(em));
+        }
+
+        // em → el número de style.letterSpacing por código, en la misma unidad de TextCore (N = N/100 em por letra; 0,08 em → 8).
+        // Nunca em × tamaño en dp: eso da 1/(tamaño/100) del tracking pedido (QA-G2-02 en el USS; QA-V4b-02 en el chip y PAUSA).
+        public static double LetterSpacingUnits(double em)
+        {
+            return DartMath.RoundToFixed(em * 100, 2);
         }
 
         private static void Property(StringBuilder sb, string name, string value)

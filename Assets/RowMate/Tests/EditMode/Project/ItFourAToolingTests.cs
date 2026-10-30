@@ -21,12 +21,13 @@ namespace RowMate.Tests.EditMode.Project
         private static readonly Regex MachinePath = new Regex(@"(?<![A-Za-z])[A-Za-z]:[\\/]|[\\/]Users[\\/]|[\\/]home[\\/]|AppData[\\/]|\\\\[A-Za-z0-9]", RegexOptions.IgnoreCase);
 
         [Test, Category("DD4a-04")]
-        public void CaptureScriptDefaultsToIt4a()
+        public void CaptureScriptKeepsTheIt4aSet()
         {
+            // It. 4b (§5.6): it4b es el conjunto por defecto (ItFourBToolingTests); it4a sigue con su carpeta (CAP-01 a CAP-11 y el
+            // registro de las tomas reemplazadas).
             var script = File.ReadAllText(RepoPaths.Combine(CaptureScript));
-            Assert.That(script, Does.Contain("[ValidateSet('it4a', 'it3', 'it2')]"));
-            Assert.That(script, Does.Contain("[string]$Set = 'it4a',"), "it4a por defecto desde la 4a");
-            Assert.That(script, Does.Contain("return '" + Snapshots + "'"), "su carpeta de salida");
+            Assert.That(script, Does.Contain("[ValidateSet('it4b', 'it4a', 'it3', 'it2')]"));
+            Assert.That(script, Does.Contain("if ($Set -eq 'it4a') { return '" + Snapshots + "' }"), "su carpeta de salida");
             Assert.That(script, Does.Contain("if ($Set -eq 'it3') { return 'docs/migration/iterations/03-rutinas/snapshots' }"), "it3 sigue igual");
             Assert.That(script, Does.Contain("if ($Set -eq 'it2') { return 'docs/migration/iterations/02-dispositivo-simulador/snapshots' }"), "it2 también");
             var bytes = File.ReadAllBytes(RepoPaths.Combine(CaptureScript));
@@ -41,7 +42,7 @@ namespace RowMate.Tests.EditMode.Project
         {
             var cli = File.ReadAllText(RepoPaths.Combine(Cli));
             Assert.That(cli, Does.Contain("public const string It4aOutput = \"" + Snapshots + "\";"));
-            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it4a\";"));
+            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it4b\";"), "it4b por defecto desde la 4b");
             Assert.That(File.Exists(RepoPaths.Combine(Catalog)), Is.True, "WorkoutCatalog");
         }
 

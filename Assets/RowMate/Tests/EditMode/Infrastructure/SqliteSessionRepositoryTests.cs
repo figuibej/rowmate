@@ -460,8 +460,11 @@ namespace RowMate.Tests.EditMode.Infrastructure
             {
                 h.Routine(WorkoutHarness.Saved(RoutineSeeds.Corta(), 3));
                 h.At(31);
-                Assert.That(h.Engine.Phase, Is.EqualTo(WorkoutPhase.Idle));
+                // It. 4b (DT4a-15): el cierre volvió y el motor espera al Terminar del diálogo de completado.
+                Assert.That(h.Engine.Phase, Is.EqualTo(WorkoutPhase.Finished));
                 Assert.That(h.Engine.LastFinishedSessionId, Is.EqualTo(1));
+                h.Engine.AcknowledgeCompletion();
+                Assert.That(h.Engine.Phase, Is.EqualTo(WorkoutPhase.Idle));
             }
         }
 

@@ -70,5 +70,22 @@ namespace RowMate.Tests.Support
                 _levels.Clear();
             }
         }
+
+        // It. 4b: alguna línea contiene el texto (ordinal).
+        public bool Contains(string text)
+        {
+            lock (_gate)
+            {
+                foreach (var line in _lines)
+                {
+                    if (line.IndexOf(text, StringComparison.Ordinal) >= 0)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
     }
 }

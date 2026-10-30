@@ -177,3 +177,14 @@
    (capa, sin escala). Todo lo demás del inmersivo lo mueve el código con el reloj de prueba (§5.0): la entrada y la salida,
    el rodillo, el semáforo, los pulsos, el cambio de paso, BPM y la llave; la escala por zona (hudScale) también va por código
    y sus zonas no tienen ninguna transición. ════ */
+
+/* ════ It. 4b (04b-hud-exr/04-design-notes §4 y §11; 02-tech-design §3): ninguna regla nueva. Todo el motion de la 4b va por
+   código con el reloj del MotionDriver y sus líneas de tiempo puras (HudTimelines): la entrada "sumergirse" y la salida con la
+   última foto, el relleno, el halo, el cambio de paso y el pulgar, la fila de información, la cuenta grande, PAUSA y un disco
+   por vez, el sello, el velo, el chip y su punto, kcal y el diálogo de completado con su check y sus totales. Ninguna de esas
+   piezas ni sus clases (.rm-hud-pill-row, .rm-hud-seal, .rm-hud-phase-chip, .rm-hud-big-countdown, .rm-hud-paused-label,
+   .rm-hud-wall-clock, .rm-dialog--completion, .rm-completion__*) tiene una transición de USS: en batchmode las transiciones
+   corren con el reloj real del panel y quedarían congeladas a mitad en una toma, y al salir del inmersivo seguirían
+   animando algo que ya no está (AC-WKT-13-09). Terminar del diálogo es .rm-button.rm-button--primary y toma las de arriba:
+   la capa y la escala 0,97 solo con el puntero apoyado (el clic simulado del arnés no las dispara), sin escala con
+   .rm-reduce-motion. ════ */

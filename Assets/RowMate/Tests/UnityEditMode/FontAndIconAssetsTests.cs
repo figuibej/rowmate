@@ -30,6 +30,33 @@ namespace RowMate.Tests.UnityEditMode
             }
         }
 
+        // DD4a-07 (WP-B0, QA-V4a-06): en cada cara de RowMate Numeric SC las diez cifras son las tabulares de Barlow (tnum,
+        // congeladas en el cmap por tools/fonts/freeze_tnum.py): un solo avance, 507, 521 y 535 unidades en 600, 700 y 800 (de
+        // 1000), y el `1` con pie, igual de ancho que el resto. TextCore las mide en puntos del tamaño de muestreo (90).
+        [Test, Category("AC-APP-05-04"), Category("QA-V4a-06")]
+        public void DerivedDigitsShareOneAdvance()
+        {
+            var expected = new[] { (600, 507), (700, 521), (800, 535) };
+            foreach (var (weight, units) in expected)
+            {
+                var path = FontAssetPaths.For(FontFamilyRole.Numeric, weight);
+                Assert.That(path, Does.Contain("/RowMateNumericSC-"), path);
+                var asset = AssetDatabase.LoadAssetAtPath<FontAsset>(path);
+                Assert.That(asset, Is.Not.Null, path);
+                Assert.That(asset.faceInfo.familyName, Is.EqualTo("RowMate Numeric SC"), path + ": la familia de la derivada (OFL 1.1)");
+                asset.TryAddCharacters("0123456789", out string missing, false);
+                Assert.That(missing, Is.Null.Or.Empty, path);
+                var pointSize = (double)asset.faceInfo.pointSize;
+                Assert.That(pointSize, Is.EqualTo(90).Within(0.001), path + ": muestreo de 90");
+                for (var c = '0'; c <= '9'; c++)
+                {
+                    var character = asset.characterLookupTable[c];
+                    var advance = character.glyph.metrics.horizontalAdvance * character.glyph.scale;
+                    Assert.That(advance / pointSize * 1000.0, Is.EqualTo(units).Within(0.5), path + ": avance de '" + c + "'");
+                }
+            }
+        }
+
         [Test, Category("AC-APP-05-03")]
         public void IconFontHasEveryIconCodepoint()
         {

@@ -98,6 +98,37 @@ namespace RowMate.Tests.EditMode.Workout
             Assert.That(t.ResultOf(0), Is.EqualTo(StepResult.Met), "con vatios no es parado");
         }
 
+        [Test, Category("AC-WKT-09-09")]
+        public void OutcomeOfKeepsTheAveragesOfTheVerdict()
+        {
+            // It. 4b (§2.5): Complete guarda además los promedios que decidieron el veredicto; OutcomeOf los devuelve (null sin
+            // objetivo o sin completar) y Reset los borra. La regla no cambia (LT-39 a LT-44).
+            var t = new StepTargetTracker();
+            t.Update(0, D(watts: 150, spm: 24, split: 124));
+            t.Update(0, D(watts: 170, spm: 22, split: 126));
+            t.Update(0, D(watts: 0, spm: 0, split: 0));
+            Assert.That(t.OutcomeOf(0), Is.Null, "sin completar");
+            t.Complete(0, Work(watts: 160, spm: 22, split: 125));
+            var outcome = t.OutcomeOf(0)!.Value;
+            Assert.That(outcome.StepIndex, Is.EqualTo(0));
+            Assert.That(outcome.Result, Is.EqualTo(t.ResultOf(0)));
+            Assert.That(outcome.Result, Is.EqualTo(StepResult.Met));
+            Assert.That(outcome.Samples, Is.EqualTo(2), "la parada no cuenta");
+            Assert.That(outcome.AverageWatts, Is.EqualTo(160));
+            Assert.That(outcome.AverageSpm, Is.EqualTo(23));
+            Assert.That(outcome.SplitSamples, Is.EqualTo(2));
+            Assert.That(outcome.AverageSplit, Is.EqualTo(125));
+            t.Complete(1, Work());
+            Assert.That(t.OutcomeOf(1), Is.Null, "sin objetivo, sin resultado");
+            t.Complete(2, Work(spm: 20));
+            var never = t.OutcomeOf(2)!.Value;
+            Assert.That(never.Result, Is.EqualTo(StepResult.Missed), "nunca remó");
+            Assert.That(never.Samples, Is.EqualTo(0));
+            Assert.That(double.IsNaN(never.AverageSpm), Is.True);
+            t.Reset();
+            Assert.That(t.OutcomeOf(0), Is.Null);
+        }
+
         private static IntervalStep Work(int? watts = null, int? spm = null, int? split = null)
         {
             return new IntervalStep(1, 0, StepType.Work)

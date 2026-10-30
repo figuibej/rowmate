@@ -11,8 +11,9 @@ namespace RowMate.Tests.UiSupport
     // "medido sobre el trazo del valor"). Tolerancia en unidades por canal (0-255).
     public sealed class PixelProbe
     {
-        private PixelProbe(string name, string element, bool dominant, Vector2 relative, string expectedHex, int tolerance)
+        private PixelProbe(string name, string element, bool dominant, Vector2 relative, string expectedHex, int tolerance, Func<VisualElement, Rect>? region = null)
         {
+            Region = region;
             Name = name;
             Element = element;
             IsDominant = dominant;
@@ -33,6 +34,10 @@ namespace RowMate.Tests.UiSupport
 
         public int Tolerance { get; }
 
+        // It. 4b (M1, M2): una parte del elemento en coordenadas del panel (el prefijo o el sufijo de un TabularNumber, que no son
+        // elementos). null = el elemento entero.
+        public Func<VisualElement, Rect>? Region { get; }
+
         public static PixelProbe Point(string name, string element, Vector2 relative, string expectedHex, int tolerance = 1)
         {
             return new PixelProbe(name, element, false, relative, expectedHex, tolerance);
@@ -41,6 +46,30 @@ namespace RowMate.Tests.UiSupport
         public static PixelProbe Dominant(string name, string element, string expectedHex, int tolerance = 2)
         {
             return new PixelProbe(name, element, true, Vector2.zero, expectedHex, tolerance);
+        }
+
+        // It. 4b (WP-D2; 04-design-notes §7.1 y §7.2): un píxel en un punto relativo (0..1) de una parte del elemento (la píldora
+        // n de la fila o una franja de ella, que no son elementos; el disco de la cuenta grande). Mide como Point.
+        public static PixelProbe PointIn(string name, string element, Func<VisualElement, Rect> region, Vector2 relative, string expectedHex, int tolerance = 1)
+        {
+            return new PixelProbe(name, element, false, relative, expectedHex, tolerance, region);
+        }
+
+        // El color dominante en una parte del elemento (region: del elemento resuelto a su rectángulo en el panel).
+        public static PixelProbe DominantIn(string name, string element, Func<VisualElement, Rect> region, string expectedHex, int tolerance = 2)
+        {
+            return new PixelProbe(name, element, true, Vector2.zero, expectedHex, tolerance, region);
+        }
+
+        // El afijo de un TabularNumber (la flecha o la unidad) en coordenadas del panel.
+        public static Rect PrefixOf(VisualElement element)
+        {
+            return element is RowMate.Presentation.Controls.TabularNumber number ? number.LocalToWorld(number.PrefixLocalRect) : Rect.zero;
+        }
+
+        public static Rect SuffixOf(VisualElement element)
+        {
+            return element is RowMate.Presentation.Controls.TabularNumber number ? number.LocalToWorld(number.SuffixLocalRect) : Rect.zero;
         }
 
         // Color esperado de un token translúcido sobre un fondo opaco, compuesto en sRGB (la tubería GammaRt).
@@ -58,7 +87,7 @@ namespace RowMate.Tests.UiSupport
                 return new ProbeResult(this, "", 255, "no existe #" + Element);
             }
 
-            var bounds = element.worldBound;
+            var bounds = Region != null ? Region(element) : element.worldBound;
             if (!(bounds.width > 0) || !(bounds.height > 0))
             {
                 return new ProbeResult(this, "", 255, "#" + Element + " sin tamaño");

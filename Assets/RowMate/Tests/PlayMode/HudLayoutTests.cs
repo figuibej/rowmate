@@ -9,6 +9,7 @@ using RowMate.Presentation.Workout;
 using RowMate.Tests.Support;
 using RowMate.Tests.UiSupport;
 using UnityEngine;
+using UnityEngine.UIElements;
 using UnityEngine.TestTools;
 
 namespace RowMate.Tests.PlayMode
@@ -168,9 +169,13 @@ namespace RowMate.Tests.PlayMode
                     yield return Arrange(profile, c);
                     var layout = Immersive.Layout!;
                     var window = H.Root.worldBound;
+                    // It. 4b (§3.4): la barra de pasos mide 52 (74 con el sello; 40 la libre), con el mismo borde de arriba.
+                    var topBar = layout.TopBar;
+                    var barHeight = HudGeometry.TopBarHeightFor(Hud.IsRoutine, Hud.Steps != null && Hud.Steps.BarHeight > HudGeometry.TopBarHeightSteps + 0.5) * layout.Scale;
+                    topBar = new DpRect(topBar.Left, topBar.Top, topBar.Width, barHeight);
                     var pairs = new List<(string Name, DpRect Rect)>
                     {
-                        ("hud-topbar", layout.TopBar), ("hud-spm", layout.Spm), ("hud-split", layout.Split), ("hud-watts", layout.Watts),
+                        ("hud-topbar", topBar), ("hud-spm", layout.Spm), ("hud-split", layout.Split), ("hud-watts", layout.Watts),
                         ("hud-kcal", layout.Kcal), ("hud-band", layout.Band),
                     };
                     if (layout.Bpm.HasValue && H.IsShown("hud-bpm"))
@@ -217,14 +222,17 @@ namespace RowMate.Tests.PlayMode
 
             var watts = Hud.Watts;
             Assert.That(watts.IsOff, Is.True, "150 contra 160: fuera, con ▲");
+            // It. 4b (M1): la flecha es el prefijo del número (lo dibuja el mismo TabularNumber): su línea de base y su caja.
             var number = watts.Number;
-            var arrow = watts.ArrowLabel!;
+            Assert.That(watts.ArrowShown && watts.ArrowGlyph == HudCard.Arrow, Is.True, "▲ a la vista");
             var numberBaseline = number.worldBound.yMin + number.BaselineFromTop * s;
-            var arrowBaseline = arrow.worldBound.yMin + HudText.BaselineFromTop(arrow, arrow.resolvedStyle.fontSize) * s;
+            var arrowBaseline = number.worldBound.yMin + number.PrefixBaselineFromTop * s;
             var expected = (float)(HudGeometry.ArrowUpBaselineEm * number.FontSize) * s;
             Assert.That(numberBaseline - arrowBaseline, Is.EqualTo(expected).Within(1f), "la línea de base de ▲, 0,196 em del valor sobre la de las cifras (± 1 dp)");
             Assert.That(watts.Target!.worldBound.xMin, Is.EqualTo(number.worldBound.xMin).Within(1f), "obj. empieza donde empiezan las cifras");
-            Assert.That(arrow.worldBound.xMax, Is.LessThanOrEqualTo(number.worldBound.xMin + 0.5f), "la flecha en el hueco, a la izquierda de las cifras");
+            var arrowRect = number.LocalToWorld(number.PrefixLocalRect);
+            Assert.That(arrowRect.width, Is.GreaterThan(0), "la flecha tiene su avance (Inter 700)");
+            Assert.That(arrowRect.xMax, Is.LessThanOrEqualTo(number.worldBound.xMin + 0.5f), "la flecha en el hueco, a la izquierda de las cifras");
 
             CreateWorkout(RoutineSeeds.Lista);
             yield return StartFree();
@@ -234,6 +242,117 @@ namespace RowMate.Tests.PlayMode
             Assert.That(Responds("hud-pause"), Is.True, "el toque llega a los botones con la escala de la zona");
             yield return Tap("hud-pause");
             Assert.That(Hud.Controls.ShowsResume, Is.True);
+        }
+
+        // QA-V4a-03 (AC-WKT-17-04, 04-design-notes §3.4): el divisor de la banda mide 1 × 32 dp base en todos los perfiles y con
+        // todos los valores, también cuando las cifras se achican (Long, Extremes). Antes cedía su ancho (flex-shrink 1) y quedaba
+        // en 0 en TV, TH y L640: el hueco entre el reloj y la distancia era 32·s y no (16 + 1 + 16)·s (10 + 1 + 10 compacta).
+        [UnityTest, Category("AC-WKT-17-04")]
+        public IEnumerator BandDividerKeepsItsWidth()
+        {
+            var problems = new List<string>();
+            foreach (var profile in Profiles)
+            {
+                foreach (var c in new[] { Case.Free, Case.FreeWithPulse, Case.RoutineWithTargets, Case.Long, Case.Extremes })
+                {
+                    yield return Arrange(profile, c);
+                    var label = profile.Code + " " + c;
+                    var band = Hud.Band;
+                    var divider = band.Divider;
+                    var s = (float)Immersive.Layout!.Scale;
+                    var gap = (float)(band.IsCompact ? HudGeometry.BandDividerGapLandscape : HudGeometry.BandDividerGapPortrait);
+                    // 1 dp redondeado a la grilla de píxeles físicos (UI Toolkit ubica cada borde en un píxel: con densidad 2,625
+                    // el divisor queda en 2 o 3 px, 0,762 o 1,143 dp), y nunca menos de un píxel: así se ve (con 0 no se dibujaba).
+                    var ppp = divider.scaledPixelsPerPoint > 0 ? divider.scaledPixelsPerPoint : 1f;
+                    var width = divider.layout.width;
+                    if (width * ppp < 0.99f || Math.Abs(width - 1f) > 1f / ppp + 0.01f || Math.Abs(divider.layout.height - HudBand.DividerHeightDp) > 1f / ppp + 0.01f)
+                    {
+                        problems.Add(label + ": el divisor mide " + width.ToString("0.###") + " × " + divider.layout.height.ToString("0.###")
+                                     + " dp con densidad " + ppp.ToString("0.###") + " (1 × 32, al píxel)");
+                    }
+
+                    if (divider.resolvedStyle.flexShrink != 0f)
+                    {
+                        problems.Add(label + ": flex-shrink del divisor = " + divider.resolvedStyle.flexShrink);
+                    }
+
+                    if (divider.resolvedStyle.display != UnityEngine.UIElements.DisplayStyle.Flex || divider.resolvedStyle.backgroundColor.a < HudBand.DividerAlpha - 0.005f)
+                    {
+                        problems.Add(label + ": el divisor no se dibuja (display " + divider.resolvedStyle.display + ", alfa "
+                                     + divider.resolvedStyle.backgroundColor.a.ToString("0.###") + ")");
+                    }
+
+                    // En dp de ventana: el reloj, su margen, el divisor de al menos un píxel, su margen y la distancia, a la escala de
+                    // la zona (± un píxel de layout por el redondeo de cada borde). Con el bug, el divisor medía 0 en la ventana.
+                    var pixel = s / ppp;
+                    var left = divider.worldBound.xMin - band.TimeColumn.worldBound.xMax;
+                    var right = band.DistanceColumn.worldBound.xMin - divider.worldBound.xMax;
+                    if (divider.worldBound.width < pixel - 0.01f)
+                    {
+                        problems.Add(label + ": el divisor ocupa " + divider.worldBound.width.ToString("0.000") + " dp en la ventana (menos de un píxel)");
+                    }
+
+                    if (Math.Abs(left - gap * s) > pixel + 0.05f || Math.Abs(right - gap * s) > pixel + 0.05f)
+                    {
+                        problems.Add(label + ": márgenes del divisor " + left.ToString("0.00") + " y " + right.ToString("0.00") + " (se esperaba "
+                                     + (gap * s).ToString("0.00") + " a cada lado)");
+                    }
+                }
+            }
+
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        // QA-V4a-06 (DD4a-07; 04b/00-deuda-diseno §2.2): los anchos de TabularNumber a tamaño base con las cifras tabulares de
+        // RowMate Numeric SC (0,535 em en 800, 0,521 en 700; `:` y `.` en celdas de 0,32 em), ± 0,5 por el redondeo a píxeles.
+        // Con las cifras de Barlow medían entre un 3,5 y un 4,6 % más (24.0 en 64/800: 129,2; 00:42 en 34: 84,9).
+        [UnityTest, Category("AC-APP-05-04"), Category("AC-WKT-17-01")]
+        public IEnumerator DerivedDigitWidthsOfTheDesignNotes()
+        {
+            CreateWorkout(RoutineSeeds.Lista);
+            yield return GoToWorkout();
+            var cases = new (string Class, float Size, string Text, float Width)[]
+            {
+                ("rm-type-num-hero", 64, "24.0", 123.2f),
+                ("rm-type-num-l", 44, "02:13", 105.8f),
+                ("rm-type-num-l", 44, "150", 68.8f),
+                ("rm-type-num-band", 34, "00:42", 81.7f),
+                ("rm-type-num-band", 34, "1048", 70.9f),
+                ("rm-type-num-band", 32, "11", 33.3f),
+                ("rm-type-num-band", 20, "0:40", 37.7f),
+            };
+            var numbers = new List<RowMate.Presentation.Controls.TabularNumber>();
+            foreach (var c in cases)
+            {
+                var number = new RowMate.Presentation.Controls.TabularNumber(H.Handle.Motion);
+                number.AddToClassList(c.Class);
+                H.Root.Add(number);
+                number.SetFontSize(c.Size);
+                number.SetValue(c.Text, 0, false);
+                numbers.Add(number);
+            }
+
+            yield return Frames(3);
+            var problems = new List<string>();
+            for (var i = 0; i < cases.Length; i++)
+            {
+                var number = numbers[i];
+                var font = number.Font;
+                if (font == null || font.faceInfo.familyName != "RowMate Numeric SC")
+                {
+                    problems.Add(cases[i].Text + ": no está en RowMate Numeric SC (" + (font == null ? "sin FontAsset" : font.faceInfo.familyName) + ")");
+                }
+
+                if (Math.Abs(number.NaturalWidth - cases[i].Width) > 0.5f)
+                {
+                    problems.Add(cases[i].Text + " en " + cases[i].Class + " " + cases[i].Size + ": " + number.NaturalWidth.ToString("0.00") + " (se esperaba "
+                                 + cases[i].Width.ToString("0.0") + ")");
+                }
+
+                number.RemoveFromHierarchy();
+            }
+
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
         }
 
         [UnityTest, Category("AC-WKT-17-08")]
@@ -295,10 +414,9 @@ namespace RowMate.Tests.PlayMode
         }
 
         // Las escalas de 04-design-notes §3.7 (± 0,005) en la pantalla real (la parte de los valores que se achican). Salen de
-        // los anchos de las cifras de RowMate Numeric SC (la derivada con tnum, DD4a-07), que entrega WP-D0: con las cifras de
-        // hoy dan un 4 % menos en todos los casos (por ejemplo, L640 banda 0,746 en lugar de 0,776).
+        // los anchos de las cifras de RowMate Numeric SC (la derivada con tnum, DD4a-07). Estuvo ignorada hasta que WP-B0 integró
+        // la derivada (QA-V4a-06, al empezar la 4b): con las cifras de Barlow daban un 4 % menos (L640 banda 0,746 y no 0,776).
         [UnityTest, Category("AC-WKT-17-08"), Category("AC-WKT-17-10")]
-        [Ignore("NO VERIFICABLE hasta WP-D0: las escalas de 04-design-notes §3.7 se calcularon con las cifras de RowMate Numeric SC (DD4a-07), que todavía no está")]
         public IEnumerator ScalesOfTheDesignNotes()
         {
             var expected = new (DeviceProfile Profile, Case Case, HudValue Value, double Scale)[]
@@ -330,6 +448,57 @@ namespace RowMate.Tests.PlayMode
             }
 
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        // AC-WKT-17-07 (02-tech-design §6.4; QA-V4b-05: era una prueba temporal de QA): al rotar con el diálogo de completado, la
+        // cuenta grande o el sello a la vista, todo se reacomoda en el acto dentro de la ventana y nada se repite ni se reinicia.
+        [UnityTest, Category("AC-WKT-17-07"), Category("AC-WKT-13-11"), Category("AC-WKT-21-04")]
+        public IEnumerator RotationWithDialogSealOrBigCount()
+        {
+            // El diálogo de completado: TV → TH → TV.
+            CreateWorkout(RoutineSeeds.F4A);
+            yield return StartRoutine("Corta");
+            yield return AdvanceTo(32);
+            yield return Settle();
+            var page = Immersive;
+            var dialog = H.Completion!;
+            Assert.That(dialog, Is.Not.Null, "el diálogo de completado");
+            foreach (var profile in new[] { DeviceProfile.TH, DeviceProfile.TV })
+            {
+                H.Resize(profile);
+                yield return Frames(3);
+                yield return Settle();
+                var label = "diálogo en " + profile.Code + ": ";
+                Assert.That(H.Immersive, Is.SameAs(page), label + "el mismo inmersivo");
+                Assert.That(H.Completion, Is.SameAs(dialog), label + "el mismo diálogo");
+                Assert.That(H.Shell.Dialogs.Count, Is.EqualTo(1), label + "uno solo");
+                Assert.That(H.Root.worldBound.Contains(dialog.Box.worldBound.min) && H.Root.worldBound.Contains(dialog.Box.worldBound.max - Vector2.one * 0.5f), Is.True,
+                    label + "entero en la ventana");
+                Assert.That(dialog.TimeValue.Text + " · " + dialog.DistanceValue.Text + " · " + dialog.CaloriesValue.Text, Is.EqualTo("00:30 · 1120 · 43"), label + "los mismos totales");
+                Assert.That(dialog.Motion.IsRunning, Is.False, label + "sin volver a contar");
+            }
+
+            // La cuenta grande (3) en TV → TH y el sello en TH → TV.
+            CreateWorkout(RoutineSeeds.F4B);
+            yield return StartRoutine("Estados");
+            yield return AdvanceTo(7.6);
+            Assert.That(H.IsShown("hud-big-countdown"), Is.True, "la cuenta grande");
+            Assert.That(H.TextOf("hud-big-countdown"), Is.EqualTo("3"));
+            page = Immersive;
+            H.Resize(DeviceProfile.TH);
+            yield return Frames(3);
+            Assert.That(H.Immersive, Is.SameAs(page), "cuenta en TH: el mismo inmersivo");
+            Assert.That(H.IsShown("hud-big-countdown") && Inside("hud-big-countdown"), Is.True, "cuenta en TH: a la vista, en la ventana");
+            Assert.That(H.TextOf("hud-big-countdown"), Is.EqualTo("3"), "cuenta en TH: el mismo número");
+            Assert.That(H.Root.Query<VisualElement>("hud-big-countdown").ToList().Count, Is.EqualTo(1), "cuenta en TH: una sola");
+            yield return AdvanceTo(10.6);
+            Assert.That(Hud.Steps!.Seal.IsShowing, Is.True, "el sello");
+            H.Resize(DeviceProfile.TV);
+            yield return Frames(3);
+            Assert.That(H.Immersive, Is.SameAs(page), "sello en TV: el mismo inmersivo");
+            Assert.That(Hud.Steps!.Seal.IsShowing && Inside("hud-seal-title"), Is.True, "sello en TV: a la vista, en la ventana");
+            Assert.That(H.Root.Query<VisualElement>("hud-seal-title").ToList().Count, Is.EqualTo(1), "sello en TV: uno solo");
+            Assert.That(Bounds("hud-topbar").yMax, Is.LessThanOrEqualTo(Bounds("hud-spm").yMin + 0.5f), "sello en TV: la barra crecida no tapa SPM");
         }
     }
 }

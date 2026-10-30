@@ -61,6 +61,12 @@ namespace RowMate.Platform
         // Pantalla siempre encendida de la plataforma (WakeLockFactory); cuándo pedirla lo decide ScreenKeepAwake (Core).
         public IWakeLock WakeLock { get; }
 
+        // It. 4b (F-APP-15; 04b-hud-exr/02-tech-design §4.2): las barras del sistema (Android por JNI; escritorio, sin efecto).
+        public ISystemUi SystemUi { get; set; } = RowMate.Platform.SystemUi.DesktopSystemUi.Instance;
+
+        // It. 4b (P-17 de la 4a; §2.9.3): lo que el sistema dice del sueño del equipo (Windows) o nada.
+        public RowMate.Platform.Power.ISystemSleepSource SleepSource { get; set; } = RowMate.Platform.Power.NullSleepSource.Instance;
+
         public void Refresh()
         {
             Locale.Refresh();

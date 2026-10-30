@@ -191,6 +191,9 @@ namespace RowMate.Tests.EditMode.Workout
                 h.Routine(RoutineSeeds.Corta());
                 h.HeartRate.EmitBpm(133);
                 h.At(31);
+                // It. 4b (DT4a-15): la rutina terminada sola espera al Terminar del diálogo (el reset() del legacy).
+                Assert.That(h.State.Phase, Is.EqualTo(WorkoutPhase.Finished));
+                h.Engine.AcknowledgeCompletion();
                 Assert.That(h.State.Phase, Is.EqualTo(WorkoutPhase.Idle));
                 Assert.That(h.State.TotalElapsedSeconds, Is.EqualTo(0));
                 Assert.That(h.State.Step.HasValue, Is.False);
@@ -257,6 +260,10 @@ namespace RowMate.Tests.EditMode.Workout
                     Assert.That(engine.State.Value.Step!.Value.StepIndex, Is.EqualTo(1), "los pasos avanzan");
                     Assert.That(engine.Targets.ResultOf(0), Is.EqualTo(StepResult.Met), "los objetivos se evalúan");
                     h.At(31);
+                    // It. 4b: sin alta, el cierre "volvió" fallado y el motor espera al diálogo (AC-WKT-21-06).
+                    Assert.That(engine.State.Value.Phase, Is.EqualTo(WorkoutPhase.Finished));
+                    Assert.That(engine.State.Value.Close, Is.EqualTo(CloseStatus.Failed));
+                    Assert.That(engine.AcknowledgeCompletion().IsCompleted, Is.True);
                     Assert.That(engine.State.Value.Phase, Is.EqualTo(WorkoutPhase.Idle));
                     Assert.That(notices.Values[notices.Count - 1].ToString(), Is.EqualTo("Ended(Completed, false)"));
                     Assert.That(failing.Calls, Is.EqualTo(new[] { "create" }), "ni puntos ni cierre");
@@ -313,7 +320,11 @@ namespace RowMate.Tests.EditMode.Workout
                 }
 
                 Assert.That(phases, Does.Contain(WorkoutPhase.Finished), "terminada en el segundo 30");
-                Assert.That(h.State.Phase, Is.EqualTo(WorkoutPhase.Idle), "con la base al día, el cierre vuelve en el acto");
+                // It. 4b (DT4a-15): con la base al día el cierre vuelve en el acto, y el motor espera al Terminar del diálogo.
+                Assert.That(h.State.Phase, Is.EqualTo(WorkoutPhase.Finished));
+                Assert.That(h.State.Close, Is.EqualTo(CloseStatus.Saved), "el cierre volvió en el acto");
+                Assert.That(h.Engine.AcknowledgeCompletion().IsCompleted, Is.True);
+                Assert.That(h.State.Phase, Is.EqualTo(WorkoutPhase.Idle));
                 Assert.That(h.Notices.Values[h.Notices.Count - 1].ToString(), Is.EqualTo("Ended(Completed, true)"));
                 var session = h.Session()!;
                 Assert.That(session.FinishedAt, Is.EqualTo(WorkoutHarness.SessionStart.AddSeconds(30)));
@@ -466,6 +477,8 @@ namespace RowMate.Tests.EditMode.Workout
                     }
 
                     h.At(60);
+                    Assert.That(engine.State.Value.Close, Is.EqualTo(CloseStatus.Saved), "el cierre volvió");
+                    engine.AcknowledgeCompletion();
                     Assert.That(engine.State.Value.Phase, Is.EqualTo(WorkoutPhase.Idle));
                     var calls = slow.Calls;
                     Assert.That(calls[0], Is.EqualTo("create"));

@@ -117,6 +117,9 @@ namespace RowMate.Presentation.Workout
 
             Place(_view.Controls, layout.ControlsZone, w, h, s);
 
+            // It. 4b (§3.5; DN4b-14): el disco del lugar "centro alto" (la cuenta grande y PAUSA), con la escala del HUD.
+            _view.Callouts.Place(layout.BigCount, s);
+
             // Cada tarjeta y la banda miden lo que calculó HudGeometry (en dp base: el rectángulo / s). Así la vista es la
             // geometría probada en dotnet (zonas sin cruces, la zona del bote libre) y no la suma de redondeos de los textos, que
             // con las cifras achicadas daba hasta 2 dp de más (S-B4a). Lo que adentro mida un poco más cae en el relleno.

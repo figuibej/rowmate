@@ -108,7 +108,11 @@ namespace RowMate.Simulator.Presentation
             }
 
             Place();
+            // It. 4b (§3.13): el resumen del tiempo de CPU del hilo principal en el registro del build mientras el inmersivo está arriba.
+            Probe = new FrameTimeProbe(ui, this);
         }
+
+        public FrameTimeProbe Probe { get; }
 
         public Button Fab { get; }
 
@@ -237,10 +241,13 @@ namespace RowMate.Simulator.Presentation
                 return;
             }
 
-            if (previous.Value.RightLane != spot.RightLane)
+            var workoutChange = (previousKind == OverlayContextKind.Workout) != (surface.Kind == OverlayContextKind.Workout);
+            if (previous.Value.RightLane != spot.RightLane || workoutChange)
             {
                 // Cambio de carril (entrar o salir del entrenamiento): sale en el cuadro 0, en su lugar, y entra en el nuevo (x e y)
-                // al terminar la transición: nunca se ve desplazarse.
+                // al terminar la transición: nunca se ve desplazarse. It. 4b (QA-V4b-01, H-D2-02; ANIMATION_BIBLE §2.11): salir del
+                // entrenamiento es siempre un cambio de carril, también desde el diálogo de completado, donde la llave ya está en el
+                // carril izquierdo (R10): se va en el cuadro 0 y no queda a la vista sobre el negro de la salida.
                 _laneSwap.Start();
                 UpdateObstacle();
                 return;
@@ -279,8 +286,11 @@ namespace RowMate.Simulator.Presentation
             }
         }
 
-        // El panel en la esquina de la llave: el borde de abajo, el de la llave (que puede estar moviéndose); el borde izquierdo
-        // y el alto máximo, los del lugar de destino (PanelFor).
+        // El panel en la esquina de la llave: el borde de abajo, el de la llave (que puede estar moviéndose); el borde izquierdo,
+        // el del lugar de destino (PanelFor). It. 4b (DD4b-04; 04b/00-deuda-diseno §3.2): el alto máximo se calcula EN CADA CUADRO
+        // con el borde de abajo de ese cuadro (SimulatorPanelLayout.MaxHeight), no con el del destino: si el contenido no entra,
+        // el borde de arriba queda quieto y el panel se estira o se encoge con la llave; si entra, se traslada entero. Nunca salta
+        // entre una pestaña y una pantalla apilada.
         private void ApplyPanel(double bottom)
         {
             if (Panel == null)
@@ -291,7 +301,21 @@ namespace RowMate.Simulator.Presentation
             Panel.style.left = (float)_anchor.Left;
             Panel.style.right = StyleKeyword.Auto;
             Panel.style.bottom = (float)bottom;
-            Panel.style.maxHeight = (float)_anchor.MaxHeight;
+            Panel.style.maxHeight = (float)FrameMaxHeight(bottom);
+        }
+
+        private double FrameMaxHeight(double bottom)
+        {
+            var height = _layout.WindowSize.y > 0 ? _layout.WindowSize.y : layout.height;
+            if (!(height > 0))
+            {
+                return _anchor.MaxHeight;
+            }
+
+            var surface = _layout.Surface;
+            var workout = surface.Kind == OverlayContextKind.Workout;
+            return SimulatorPanelLayout.MaxHeight(height, _layout.Insets, bottom, workout ? SimulatorPanelLayout.WorkoutTopReserve : SimulatorPanelLayout.AppTopReserve,
+                workout ? surface.PanelCeiling : null);
         }
 
         // La llave como obstáculo inferior mientras se ve (el aviso no la tapa ni ella al aviso, DN3-13), en su lugar de destino.
@@ -381,7 +405,9 @@ namespace RowMate.Simulator.Presentation
                     target.style.opacity = 0;
                 }
 
-                if (_owner._ui.Pages.IsTransitioning)
+                // It. 4b (§5.7): también espera la cascada del inmersivo (la página retiene la llave hasta ImmersiveEntryEndMs) y la
+                // entrada o la salida de un diálogo (R10: con el de rutina completada cambia de carril cuando termina su entrada).
+                if (_owner._ui.Pages.IsTransitioning || _owner._layout.WrenchHeld || _owner._ui.Dialogs.IsTransitioning)
                 {
                     return true;
                 }

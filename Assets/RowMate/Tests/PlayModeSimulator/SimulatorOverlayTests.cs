@@ -429,6 +429,8 @@ namespace RowMate.Tests.PlayMode.Simulator
             Assert.That(H.WhyNotTappable("sim-open"), Is.Null);
         }
 
+        private const double MotionSpecsEntryEnd = RowMate.Core.Design.MotionSpecs.ImmersiveEntryEndMs / 1000.0;
+
         [UnityTest, Category("AC-BLE-16-02")]
         public IEnumerator WrenchChangesLaneWithAFade()
         {
@@ -441,8 +443,10 @@ namespace RowMate.Tests.PlayMode.Simulator
             var lastOpacity = wrench.resolvedStyle.opacity;
             var jumps = 0;
             var sawFade = false;
+            var jumpFrame = -1;
             H.Tap("workout-free");
-            for (var i = 0; i < 45; i++)
+            // It. 4b (§5.7): la página retiene la llave durante la cascada; entra en su lugar del HUD recién a los 1120 ms.
+            for (var i = 0; i < 90; i++)
             {
                 H.Step();
                 yield return null;
@@ -452,6 +456,7 @@ namespace RowMate.Tests.PlayMode.Simulator
                 if ((position - lastPosition).magnitude > 0.5f)
                 {
                     jumps++;
+                    jumpFrame = i;
                     Assert.That(lastOpacity, Is.LessThanOrEqualTo(0.01f), "cambia de lugar solo cuando no se ve (sin desplazarse): cuadro " + i + ", "
                                                                           + lastPosition + " → " + position + ", opacidad " + lastOpacity);
                 }
@@ -463,8 +468,107 @@ namespace RowMate.Tests.PlayMode.Simulator
             yield return Settle();
             Assert.That(sawFade, Is.True, "sale en 90 y entra en 160");
             Assert.That(jumps, Is.EqualTo(1), "un solo salto, invisible");
+            Assert.That((jumpFrame + 1) / 60.0, Is.GreaterThanOrEqualTo(MotionSpecsEntryEnd - 0.02), "después de la cascada (1120 ms)");
             Assert.That(wrench.resolvedStyle.opacity, Is.EqualTo(1).Within(0.001f));
             Assert.That(H.SimulatorLayer!.Spot!.Value.RightLane, Is.True);
+        }
+
+        // QA-V4b-01 (H-D2-02; ANIMATION_BIBLE §2.11): con el diálogo de completado la llave está en el carril izquierdo (R10), el
+        // mismo carril que en Workout en reposo. Al tocar Terminar, la salida la saca igual en el cuadro 0 (90, ease.exit) y no
+        // vuelve hasta que el inmersivo terminó de salir: nunca queda a la vista sobre el negro (VID-05), como en VID-02.
+        [UnityTest, Category("AC-BLE-16-02")]
+        public IEnumerator WrenchLeavesInTheFirstFrameAlsoFromTheCompletionDialog()
+        {
+            CreateSimWith(HostRoutines.Seeded(RoutineSeeds.F4A));
+            yield return Tap("tab-workout");
+            yield return Frames();
+            H.TapRoutineNamed("Corta");
+            yield return Settle();
+            yield return Tap("dialog-confirm");
+            var page = H.Immersive;
+            Assert.That(page, Is.Not.Null);
+            yield return Advance(31);
+            yield return Settle();
+            Assert.That(H.Completion, Is.Not.Null, "el diálogo de completado");
+            var wrench = H.Find("sim-open")!;
+            Assert.That(H.SimulatorLayer!.Spot!.Value.RightLane, Is.False, "con el diálogo, en el carril izquierdo (R10)");
+            Assert.That(wrench.resolvedStyle.opacity, Is.EqualTo(1).Within(0.001f), "a la vista y se puede usar");
+
+            H.Tap("completion-finish");
+            var lastPosition = wrench.layout.position;
+            var lastOpacity = wrench.resolvedStyle.opacity;
+            var jumps = 0;
+            var hiddenAt = -1;
+            var shownDuringExit = -1;
+            for (var i = 0; i < 60 && H.Shell.Pages.HasPage(page!); i++)
+            {
+                H.Step();
+                yield return null;
+                var position = wrench.layout.position;
+                var opacity = wrench.resolvedStyle.opacity;
+                if (hiddenAt < 0 && opacity <= 0.01f)
+                {
+                    hiddenAt = i;
+                }
+
+                if (hiddenAt >= 0 && opacity > 0.01f && shownDuringExit < 0 && H.Shell.Pages.HasPage(page!))
+                {
+                    shownDuringExit = i;
+                }
+
+                if ((position - lastPosition).magnitude > 0.5f)
+                {
+                    jumps++;
+                    Assert.That(lastOpacity, Is.LessThanOrEqualTo(0.01f), "cambia de lugar solo cuando no se ve: cuadro " + i + ", " + lastPosition + " → " + position);
+                }
+
+                lastPosition = position;
+                lastOpacity = opacity;
+            }
+
+            Assert.That(hiddenAt, Is.InRange(0, 6), "se va desde el cuadro 0 (90 ms, ease.exit), no queda sobre el negro");
+            Assert.That(shownDuringExit, Is.EqualTo(-1), "no vuelve mientras sale el inmersivo");
+            yield return Settle();
+            Assert.That(H.Immersive, Is.Null, "el inmersivo salió");
+            Assert.That(jumps, Is.LessThanOrEqualTo(1), "a lo sumo un salto, invisible");
+            Assert.That(wrench.resolvedStyle.opacity, Is.EqualTo(1).Within(0.001f), "vuelve en su lugar de Workout al terminar la salida");
+            Assert.That(WrenchLeft(), Is.EqualTo(16).Within(0.6f), "abajo a la izquierda");
+            Assert.That(WrenchBottom(), Is.EqualTo(64 + 16).Within(0.6f), "barra + 16");
+        }
+
+        // AC-BLE-16-01 (02-tech-design §6.4; QA-V4b-05): la cinta sigue arriba de todo con el diálogo de completado: la capa del
+        // simulador va después de la de los diálogos y el velo no la oscurece (su color, #FF5722 opaco, en un punto sin letras).
+        [UnityTest, Category("AC-BLE-16-01")]
+        public IEnumerator RibbonAboveTheCompletionDialog()
+        {
+            CreateSimWith(HostRoutines.Seeded(RoutineSeeds.F4A));
+            yield return Tap("tab-workout");
+            yield return Frames();
+            H.TapRoutineNamed("Corta");
+            yield return Settle();
+            yield return Tap("dialog-confirm");
+            yield return Advance(31);
+            yield return Settle();
+            Assert.That(H.Completion, Is.Not.Null, "el diálogo de completado");
+            var layer = H.Find("simulator-layer")!;
+            var dialogs = H.Find("dialog-layer")!;
+            Assert.That(ReferenceEquals(layer.hierarchy.parent, dialogs.hierarchy.parent), Is.True, "hermanas en el shell");
+            Assert.That(layer.hierarchy.parent.hierarchy.IndexOf(layer), Is.GreaterThan(dialogs.hierarchy.parent.hierarchy.IndexOf(dialogs)), "la capa del simulador, después");
+            Assert.That(layer.hierarchy[layer.hierarchy.childCount - 1].name, Is.EqualTo("sim-ribbon"), "la cinta es el último hijo");
+            // Un punto de la cinta sin letras: a 4,5 de su línea del centro (la cinta mide 12 y gira −45°).
+            var ribbon = H.BoundsOf("sim-ribbon");
+            var point = ribbon.center + new Vector2(4.5f * 0.7071f, 4.5f * 0.7071f);
+            var frame = H.ReadPixels();
+            try
+            {
+                var c = RtReader.PixelTopLeft(frame, Mathf.RoundToInt(point.x * (float)H.Profile.Density), Mathf.RoundToInt(point.y * (float)H.Profile.Density));
+                var hex = new RowMate.Core.Design.Rgb(c.r, c.g, c.b).ToHex();
+                Assert.That(PixelProbe.Distance(hex, RowMate.Core.Design.Tokens.DevSimulator.Rgb.ToHex()), Is.LessThanOrEqualTo(2), "la cinta sin el velo encima: " + hex);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(frame);
+            }
         }
 
         [UnityTest, Category("AC-BLE-16-03")]
@@ -518,9 +622,12 @@ namespace RowMate.Tests.PlayMode.Simulator
             Assert.That(Overlap(panel, H.BoundsOf("hud-watts")), Is.False, "Watts a la vista");
             var layout = H.Immersive!.Layout!;
             Assert.That(layout.PanelCeiling.HasValue, Is.True, "en vertical, el techo del panel");
-            Assert.That((float)layout.PanelCeiling!.Value, Is.EqualTo((float)(layout.WattsWithTargetBottom + 8)).Within(0.01f), "8 dp debajo de Watts con su objetivo");
+            // It. 4b (DN4b-23; AC-BLE-16-03): en vertical, 8 dp debajo del disco del lugar centro alto (que está debajo de Watts con su
+            // objetivo): el panel no tapa el lugar de la cuenta grande ni de PAUSA.
+            Assert.That((float)layout.PanelCeiling!.Value, Is.EqualTo((float)(Math.Max(layout.BigCount.Bottom, layout.WattsWithTargetBottom) + 8)).Within(0.01f),
+                "8 dp debajo del disco (y de Watts con su objetivo)");
             Assert.That(InWindow("sim-panel").yMin, Is.GreaterThanOrEqualTo((float)layout.PanelCeiling.Value - 0.5f));
-            Assert.That(H.Find("sim-panel")!.resolvedStyle.maxHeight.value, Is.EqualTo(316f).Within(0.5f), "TV: 316 dp, con el contenido desplazable adentro");
+            Assert.That(H.Find("sim-panel")!.resolvedStyle.maxHeight.value, Is.EqualTo(298f).Within(0.5f), "TV: 298 dp (DN4b-23), con el contenido desplazable adentro");
             Assert.That(H.WhyNotTappable("sim-close"), Is.Null, "el botón de cerrar a la vista");
         }
 
@@ -562,7 +669,11 @@ namespace RowMate.Tests.PlayMode.Simulator
             yield return Tap("sim-open");
             yield return Advance(31);
             yield return Settle();
-            Assert.That(H.Immersive, Is.Null, "la rutina terminó y el inmersivo salió solo");
+            // It. 4b (DT4a-15): terminada sola, el diálogo de completado; su Terminar (el panel abierto queda encima: sin hit-test).
+            Assert.That(H.Completion, Is.Not.Null, "el diálogo de completado");
+            H.TapUnchecked("completion-finish");
+            yield return Settle();
+            Assert.That(H.Immersive, Is.Null, "Terminar: el inmersivo salió");
             Assert.That(H.IsShown("sim-panel"), Is.True, "el panel sigue abierto");
             Assert.That(H.BoundsOf("sim-panel").xMin - H.Root.worldBound.xMin, Is.EqualTo(16).Within(0.6f), "en el carril izquierdo");
             Assert.That(H.BoundsOf("tab-bar").yMin - H.BoundsOf("sim-panel").yMax, Is.EqualTo(16).Within(0.6f));

@@ -51,6 +51,12 @@ namespace RowMate.Core.Workout
             return TimeFormats.Elapsed(seconds);
         }
 
+        // 6 · lo mismo, en buffer y sin asignar (el conteo del diálogo de completado, QA-V4b-MOT-01). Devuelve cuántos escribió.
+        public static int WriteSessionClock(long seconds, char[] buffer, int offset)
+        {
+            return TimeFormats.WriteElapsed(seconds, buffer, offset);
+        }
+
         // 7 · Cuenta regresiva de un paso por tiempo: M:SS con los minutos sin cero a la izquierda (:456-457):
         // '${r ~/ 60}:${(r % 60).toString().padLeft(2, '0')}'. 65 → 1:05; 0 → 0:00; 359 999 → 5999:59.
         public static string Countdown(long remaining)

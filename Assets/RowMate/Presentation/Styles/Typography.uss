@@ -74,47 +74,47 @@
 
 .rm-type-num-band {
     font-size: 34px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-num-hero {
     font-size: 64px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-ExtraBold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-ExtraBold-SDF.asset");
 }
 
 .rm-type-num-l {
     font-size: 44px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-num-lap {
     font-size: 34px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-num-m {
     font-size: 32px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-num-row {
     font-size: 24px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-num-s {
     font-size: 20px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-num-stat {
     font-size: 16px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-num-xl {
     font-size: 52px;
-    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/BarlowSemiCondensed-Bold-SDF.asset");
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
 }
 
 .rm-type-title {

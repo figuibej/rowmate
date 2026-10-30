@@ -5,6 +5,7 @@ using RowMate.Core.Ble;
 using RowMate.Core.Common;
 using RowMate.Core.Models;
 using RowMate.Core.Ports;
+using RowMate.Core.Text;
 
 namespace RowMate.Core.Workout
 {
@@ -24,6 +25,12 @@ namespace RowMate.Core.Workout
     // - En segundo plano (o durante el alcance) no publica fotos: una sola al volver, con Instant (QA-G4aT-07). Lo mismo con un
     //   cuadro de primer plano que llega con varios segundos vencidos (QA-V4a-ROB-05). Al pasar a segundo plano con una sesión
     //   en curso manda lo pendiente y espera la base hasta 1 s (AC-WKT-06-15).
+    // - It. 4b (DT4a-15; 02-tech-design §2.6): con la rutina terminada SOLA el motor queda en Finished aunque el cierre haya
+    //   vuelto, hasta AcknowledgeCompletion() (el Terminar del diálogo de completado = el reset() del legacy,
+    //   immersive_workout_screen.dart:261-289). El terminar a mano no cambia: vuelve solo a reposo cuando vuelve el cierre. La
+    //   foto suma la sesión, cómo terminó, los totales del punto final (el diálogo), el estado del cierre y el último paso
+    //   cerrado con objetivos con sus promedios (el sello). Al despertar el equipo (IAppLifecycle.Woke, P-17 de la 4a) publica
+    //   una foto Instant.
     public sealed class WorkoutEngine : IDisposable
     {
         public const string Tag = "WORKOUT";
@@ -45,6 +52,7 @@ namespace RowMate.Core.Workout
         private readonly IDisposable _bpmSubscription;
         private readonly IDisposable _statusSubscription;
         private readonly IDisposable _backgroundSubscription;
+        private readonly IDisposable _wokeSubscription;
         private readonly Action _onClock;
 
         private WorkoutPhase _phase = WorkoutPhase.Idle;
@@ -68,6 +76,16 @@ namespace RowMate.Core.Workout
         private bool _coalescing;
         private Task _finishTask = Task.CompletedTask;
         private bool _disposed;
+
+        // It. 4b (§2.6): cómo terminó, los totales del diálogo, el cierre, el Terminar del diálogo y la tarea que espera el
+        // reposo; el último paso cerrado con objetivos (el sello) y el instante de su segundo.
+        private WorkoutEndKind? _endedBy;
+        private CompletionSummary? _completion;
+        private CloseStatus _close;
+        private bool _acknowledged;
+        private TaskCompletionSource<bool>? _idleWaiter;
+        private StepOutcome? _lastOutcome;
+        private double _lastOutcomeAt = double.NaN;
 
         public WorkoutEngine(IRowerService rower, IHeartRateService heartRate, ISessionRepository sessions, IScheduler scheduler,
                              IAppLifecycle lifecycle, IAppLogger logger)
@@ -95,6 +113,7 @@ namespace RowMate.Core.Workout
             _bpmSubscription = heartRate.Bpm.Subscribe(OnSensorBpm);
             _statusSubscription = heartRate.Status.Subscribe(OnSensorStatus, emitCurrent: false);
             _backgroundSubscription = lifecycle.InBackground.Subscribe(OnBackgroundChanged, emitCurrent: false);
+            _wokeSubscription = lifecycle.Woke.Subscribe(OnWoke);
         }
 
         // Arranca en reposo con RowingData.Empty. Una foto por aviso (Revision sube siempre).
@@ -117,8 +136,15 @@ namespace RowMate.Core.Workout
 
         public WorkoutPhase Phase => _phase;
 
-        // La tarea del cierre en curso (o la del último): FinishAsync la devuelve.
+        // La tarea del cierre en curso (o la del último): FinishAsync la devuelve. Con la rutina terminada sola se completa cuando
+        // vuelve el cierre, no al volver a reposo (eso espera a AcknowledgeCompletion).
         public Task FinishTask => _finishTask;
+
+        // It. 4b: la generación de la sesión (sube en cada inicio; la conserva el reposo).
+        public long Session => _generation;
+
+        // It. 4b: el estado del cierre (None fuera de Finished).
+        public CloseStatus CloseState => _close;
 
         // :115-117: un entrenamiento libre.
         public StartOutcome StartFree()
@@ -209,6 +235,29 @@ namespace RowMate.Core.Workout
             return _finishTask;
         }
 
+        // "Terminar" del diálogo de rutina completada (AC-WKT-21-06, -08; DV-42; 02-tech-design §2.6 de la It. 4b). Con la rutina
+        // terminada sola: vuelve a reposo en el acto si el cierre ya volvió, o cuando vuelva (o venza su tope). Tocar rápido
+        // nunca pierde el cierre: Terminar solo marca la intención y la vuelta a reposo espera su resultado (el legacy llama a
+        // reset() sin esperar y el cierre falla en silencio, workout_provider.dart:283-299). La tarea se completa al volver a
+        // reposo. Idempotente; fuera de ese estado, una tarea completa sin efecto.
+        public Task AcknowledgeCompletion()
+        {
+            if (_disposed || _phase != WorkoutPhase.Finished || _endedBy != WorkoutEndKind.Completed)
+            {
+                return Task.CompletedTask;
+            }
+
+            if (_close == CloseStatus.Saved || _close == CloseStatus.Failed)
+            {
+                ReturnToIdle(WorkoutEndKind.Completed, _close == CloseStatus.Saved);
+                return Task.CompletedTask;
+            }
+
+            _acknowledged = true;
+            _idleWaiter ??= new TaskCompletionSource<bool>();
+            return _idleWaiter.Task;
+        }
+
         // :320-327: la app se cierra. Da de baja las suscripciones y el timer; una sesión en curso queda cortada con lo que ya
         // tenía (manda lo pendiente y no la cierra, P-03).
         public void Dispose()
@@ -223,6 +272,7 @@ namespace RowMate.Core.Workout
             _bpmSubscription.Dispose();
             _statusSubscription.Dispose();
             _backgroundSubscription.Dispose();
+            _wokeSubscription.Dispose();
             CancelTimer();
             _graceTimer?.Dispose();
             _graceTimer = null;
@@ -233,6 +283,11 @@ namespace RowMate.Core.Workout
                 recorder.Abandon();
                 recorder.Dispose();
             }
+
+            // La app se cierra con el diálogo de completado abierto (QA-V4a-ROB-04): nadie queda esperando el reposo.
+            var waiter = _idleWaiter;
+            _idleWaiter = null;
+            waiter?.TrySetResult(true);
         }
 
         // ── Inicio y reloj ──
@@ -244,6 +299,12 @@ namespace RowMate.Core.Workout
             var generation = ++_generation;
             _phase = WorkoutPhase.Active;
             _saving = false;
+            _endedBy = null;
+            _completion = null;
+            _close = CloseStatus.None;
+            _acknowledged = false;
+            _lastOutcome = null;
+            _lastOutcomeAt = double.NaN;
             var startedAt = _scheduler.UtcNow;
             _points.Clear();
             _sampleTick = 0;
@@ -418,6 +479,15 @@ namespace RowMate.Core.Workout
             Targets.Complete(_stepIndex, step);
             if (_stepIndex + 1 < steps.Count)
             {
+                // It. 4b (§2.5, AC-WKT-09-08): el último paso que cerró solo con objetivos, con el instante de su segundo (el
+                // sello). El último paso y uno cortado con Terminar nunca lo fijan.
+                var outcome = Targets.OutcomeOf(_stepIndex);
+                if (outcome.HasValue)
+                {
+                    _lastOutcome = outcome;
+                    _lastOutcomeAt = at / (double)ActiveClock.TicksPerSecond;
+                }
+
                 _stepIndex++;
                 _stepElapsed = 0;
                 _stepStartMeters = _meter.Meters;
@@ -432,6 +502,8 @@ namespace RowMate.Core.Workout
 
         // Terminada (a mano o sola): se cancela el timer, se detiene el reloj, se avisa (los controles se apagan: AC-WKT-20-06)
         // y empieza el cierre.
+        // It. 4b: cómo terminó y, con la rutina terminada sola, los totales del diálogo (los del punto final: el reloj activo y la
+        // distancia y las kcal de la lectura de ese momento, workout_provider.dart:259-273; DV-43).
         private void EndSession(WorkoutEndKind kind, DateTimeOffset finishedAt)
         {
             _phase = WorkoutPhase.Finished;
@@ -440,6 +512,12 @@ namespace RowMate.Core.Workout
             _graceTimer = null;
             _clock.Stop();
             _saving = true;
+            _endedBy = kind;
+            _close = CloseStatus.Pending;
+            _acknowledged = false;
+            _completion = kind == WorkoutEndKind.Completed
+                ? new CompletionSummary(_totalElapsed, _fusion.Data.DistanceMeters, _fusion.Data.TotalCalories)
+                : (CompletionSummary?)null;
             Notify();
             _finishTask = Close(kind, finishedAt);
         }
@@ -451,7 +529,14 @@ namespace RowMate.Core.Workout
             var session = _session;
             if (recorder == null || session == null || recorder.CreateFailed)
             {
-                // :256: sin alta no hay punto final ni cierre; vuelve a reposo en el acto, con el error (AC-WKT-01-11).
+                // :256: sin alta no hay punto final ni cierre; a mano vuelve a reposo en el acto, con el error (AC-WKT-01-11). Con
+                // la rutina terminada sola el cierre "volvió" fallado y el motor espera al diálogo (AC-WKT-21-06).
+                if (kind == WorkoutEndKind.Completed)
+                {
+                    HoldClosed(false);
+                    return Task.CompletedTask;
+                }
+
                 ReturnToIdle(kind, false);
                 return Task.CompletedTask;
             }
@@ -513,7 +598,25 @@ namespace RowMate.Core.Workout
                 return;
             }
 
+            if (kind == WorkoutEndKind.Completed && !_acknowledged)
+            {
+                // It. 4b (AC-WKT-21-08): queda terminada hasta el Terminar del diálogo. Un cierre que vuelve bien después del tope
+                // y antes de Terminar cuenta como guardado (AC-WKT-21-06; DT4b-09).
+                HoldClosed(saved);
+                return;
+            }
+
             ReturnToIdle(kind, saved);
+        }
+
+        // It. 4b: el cierre de una rutina terminada sola volvió (o venció su tope) y todavía no se tocó Terminar: la foto lo dice
+        // (Close = Saved / Failed, sin el indicador de guardado) y el motor sigue en Finished, con el reloj quieto, los
+        // resultados de los objetivos en su lugar y sin puntos; las lecturas siguen llegando y publicándose.
+        private void HoldClosed(bool saved)
+        {
+            _saving = false;
+            _close = saved ? CloseStatus.Saved : CloseStatus.Failed;
+            Notify();
         }
 
         private void OnCloseTimeout(WorkoutEndKind kind, long generation)
@@ -524,6 +627,12 @@ namespace RowMate.Core.Workout
             }
 
             _logger.Log(LogLevel.Warning, Tag, "cierre sin respuesta");
+            if (kind == WorkoutEndKind.Completed && !_acknowledged)
+            {
+                HoldClosed(false);
+                return;
+            }
+
             ReturnToIdle(kind, false);
         }
 
@@ -543,8 +652,49 @@ namespace RowMate.Core.Workout
             _recorder = null;
             _meter.Begin(0, 0);
             Targets.Reset();
+            _endedBy = null;
+            _completion = null;
+            _close = CloseStatus.None;
+            _acknowledged = false;
+            _lastOutcome = null;
+            _lastOutcomeAt = double.NaN;
             Notify();
             _notices.Emit(WorkoutNotice.Ended(kind, saved));
+            var waiter = _idleWaiter;
+            _idleWaiter = null;
+            waiter?.TrySetResult(true);
+        }
+
+        // ── El equipo despertó (P-17 de la 4a; AC-WKT-02-11, -08; 02-tech-design §2.9.4 de la It. 4b) ──
+
+        // Sigue en la fase en que estaba y publica una foto Instant (el primer cuadro ya muestra el presente); no avisa nada. El
+        // lapso dormido no existe para el reloj de la app (SuspendAccounting): no hubo segundos, puntos ni lecturas de objetivos.
+        private void OnWoke(SystemWake wake)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (wake.Evidence != SleepEvidence.None)
+            {
+                var slept = wake.AsleepSeconds > 0 ? wake.AsleepSeconds : wake.DiscountedSeconds;
+                _logger.Log(LogLevel.Info, Tag, "el equipo durmió " + Fmt.Fixed(slept, 1) + " s: no cuenta (P-17; " + wake.EvidenceText + ")");
+            }
+
+            if (_phase == WorkoutPhase.Idle)
+            {
+                return;
+            }
+
+            _revision++;
+            if (_lifecycle.InBackground.Value || _scheduler.IsCatchingUp || _coalescing)
+            {
+                _pendingSnapshot = true;
+                return;
+            }
+
+            Publish(true);
         }
 
         // ── Lecturas (:220-237) ──
@@ -637,7 +787,15 @@ namespace RowMate.Core.Workout
         private void Publish(bool instant)
         {
             _pendingSnapshot = false;
-            _state.Value = new WorkoutSnapshot(_revision, _phase, _fusion.Data, _totalElapsed, CurrentProgress(), _steps != null, _saving, instant);
+            _state.Value = new WorkoutSnapshot(_revision, _phase, _fusion.Data, _totalElapsed, CurrentProgress(), _steps != null, _saving, instant)
+            {
+                Session = _generation,
+                EndedBy = _phase == WorkoutPhase.Finished ? _endedBy : null,
+                Completion = _phase == WorkoutPhase.Finished ? _completion : null,
+                Close = _phase == WorkoutPhase.Finished ? _close : CloseStatus.None,
+                LastOutcome = _lastOutcome,
+                LastOutcomeAt = _lastOutcome.HasValue ? _lastOutcomeAt : double.NaN,
+            };
         }
 
         private IntervalStep? CurrentStep()

@@ -13,6 +13,52 @@ namespace RowMate.Core.Text
             return Fmt.Integer(value).PadLeft(2, '0');
         }
 
+        // It. 4b (QA-V4b-MOT-01): Pad2(value) en buffer desde offset, sin asignar. Devuelve cuántos caracteres escribió.
+        public static int WritePad2(long value, char[] buffer, int offset)
+        {
+            if (value >= 0 && value < 10)
+            {
+                if (buffer == null)
+                {
+                    throw new System.ArgumentNullException(nameof(buffer));
+                }
+
+                if (offset < 0 || offset + 2 > buffer.Length)
+                {
+                    throw new System.ArgumentOutOfRangeException(nameof(offset));
+                }
+
+                buffer[offset] = '0';
+                buffer[offset + 1] = (char)('0' + (int)value);
+                return 2;
+            }
+
+            return Fmt.WriteInteger(value, buffer, offset);
+        }
+
+        // Caracteres que puede ocupar Elapsed: las horas de long.MaxValue (16 cifras) y ":MM:SS".
+        public const int ElapsedMaxChars = 22;
+
+        // It. 4b (QA-V4b-MOT-01): los mismos caracteres que Elapsed(seconds), en buffer desde offset y sin asignar (el conteo del
+        // diálogo de completado). Devuelve cuántos escribió.
+        public static int WriteElapsed(long seconds, char[] buffer, int offset)
+        {
+            var h = DartMath.TruncDiv(seconds, 3600);
+            var m = DartMath.TruncDiv(DartMath.Mod(seconds, 3600), 60);
+            var s = DartMath.Mod(seconds, 60);
+            var at = offset;
+            if (h > 0)
+            {
+                at += Fmt.WriteInteger(h, buffer, at);
+                buffer[at++] = ':';
+            }
+
+            at += WritePad2(m, buffer, at);
+            buffer[at++] = ':';
+            at += WritePad2(s, buffer, at);
+            return at - offset;
+        }
+
         // Pad2(t ~/ 60) + ":" + Pad2(t % 60). MinSec(-65) = "-1:55", MinSec(-5) = "00:55", MinSec(6000) = "100:00".
         public static string MinSec(long totalSeconds)
         {

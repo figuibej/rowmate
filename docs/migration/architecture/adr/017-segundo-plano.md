@@ -44,3 +44,11 @@ Detalle en [04a-motor-hud-funcional/02-tech-design](../../iterations/04a-motor-h
 - **Una sola foto al volver** (decisión 4): durante el alcance el motor procesa cada segundo con sus datos pero no publica fotos intermedias; al terminar publica una con `Instant`, que la vista aplica sin animar (sin rodillos ni empujón; los pulsos con origen en el primer cuadro real). Pruebas: `WBG.*`, `FSC.*`, `WEL.OneSnapshotPerReturn` (dotnet), `USC.*` (Unity EditMode), `WBU.*` (PlayMode).
 - **Pantalla encendida** (decisión 6 y ARCHITECTURE §13): `ScreenKeepAwake` (Core/Common) la pide al arrancar y otra vez al volver o al recuperar el foco; `WindowsWakeLock` pide y libera en el mismo hilo (un `Disable` desde otro hilo no llama al sistema y queda como Warning: `WLK.ReleaseRunsOnTheRequestingThread`).
 - **Sin cambio en el alcance de la 4a**: el keepalive nativo y el *buffer* de eventos con hora siguen siendo de la It. 10a (Android) y 10b (iOS, macOS); en Windows el loop sigue con `runInBackground`.
+
+## Cambios de la It. 4b
+
+Detalle en [04b-hud-exr/02-tech-design](../../iterations/04b-hud-exr/02-tech-design.md) §2.6, §2.8, §2.9 y "Cambios por implementación de WP-B"; el reloj despierto en el [ADR 020](020-reloj-despierto.md).
+
+- **El equipo suspendido no cuenta** (P-17 de la 4a): `UnityScheduler` arma el `FrameClock` con `WindowsSleepSource` (la medida del núcleo, `GetTickCount64 − QueryUnbiasedInterruptTime`, y en el build los avisos de `PowerRegisterSuspendResumeNotification`) en cada cuadro **y en la vuelta del segundo plano**: el alcance va hasta el monótono despierto. `AppRoot` pasa `FrameScheduler.Woke` a `AppLifecycle.SignalWake`; el motor publica una foto `Instant` y el reloj de pared salta sin rodillo. En el Editor no se registra el aviso (solo la medida).
+- **El fin de la rutina en segundo plano**: el motor queda en `Finished` hasta el `Terminar` del diálogo de completado (DT4a-15). Si el diálogo vence dentro del alcance o la primera foto al volver trae `Instant`, se abre sin su entrada, con los totales finales (AC-WKT-21-09); los avisos del final esperan a que empiece a verse Workout (DN4b-24).
+- **Nada corre en el alcance**: el reloj de pared no tiene periódico en segundo plano; las barras del sistema se vuelven a pedir ocultas al volver con el inmersivo arriba.

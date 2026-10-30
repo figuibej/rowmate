@@ -228,5 +228,24 @@ namespace RowMate.Core.Localization
         // Avisos nuevos (Q-13: AC-WKT-01-11, AC-WKT-06-12; R3-08: AC-WKT-12-08).
         public const string WorkoutSaveError = "workoutSaveError";
         public const string WorkoutRoutineCannotStart = "workoutRoutineCannotStart";
+
+        // ── Nuevas de la It. 4b (Q-01; 04b-hud-exr/01-po-spec §11.2): 202 → 214 ──
+        // El chip de fase (immersive_workout_screen.dart:530-534, con el español del legacy) y PAUSA del velo (AC-WKT-13-12).
+        public const string HudPhaseActive = "hudPhaseActive";
+        public const string HudPhasePaused = "hudPhasePaused";
+        public const string HudPhaseFinished = "hudPhaseFinished";
+        public const string HudPausedLabel = "hudPausedLabel";
+
+        // El sello (AC-WKT-09-08, -09): el veredicto y un fragmento por objetivo, con {avg} y {target} como texto.
+        public const string HudSealMet = "hudSealMet";
+        public const string HudSealMissed = "hudSealMissed";
+        public const string HudSealWatts = "hudSealWatts";
+        public const string HudSealSpm = "hudSealSpm";
+        public const string HudSealSplit = "hudSealSplit";
+
+        // El resumen del diálogo de rutina completada (immersive_workout_screen.dart:980-991, con el español del legacy).
+        public const string WorkoutCompletedTime = "workoutCompletedTime";
+        public const string WorkoutCompletedDistance = "workoutCompletedDistance";
+        public const string WorkoutCompletedCalories = "workoutCompletedCalories";
     }
 }

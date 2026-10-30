@@ -145,6 +145,9 @@ RowingData r4r(int k) => k >= 10 ? r4(k).copyWith(distanceMeters: 4 * (k - 10)) 
 
 RowingData r4z(int k) => k == 10 ? r4(k).copyWith(distanceMeters: 0) : r4(k);
 
+// R-4/2s (QA-V4a-L01): un monitor que actualiza la distancia cada 2 s a 5,5 m/s (split 1:31): +11 m en los k pares.
+RowingData r4every2s(int k) => r4(k).copyWith(distanceMeters: 1000 + 11 * (k ~/ 2));
+
 IntervalStep st(StepType t, {int? dur, int? dist, int? wMin, int? spm, int? pSpm, String? g, int? rep}) => IntervalStep(
       routineId: 1,
       order: 0,
@@ -310,6 +313,263 @@ Map<String, Object?> run(
   return out;
 }
 
+// ── Guiones (QA-V4a-L02, 05-qa-lens-paridad §2 y §4 de la It. 4a; hechos al empezar la 4b) ──
+//
+// Los caminos que la lente de paridad comprobó a mano contra este mismo WorkoutProvider: pasos de 0 s y de duración negativa,
+// paso sin meta con Terminar, terminar en pausa, último paso por distancia, tiempo y distancia a la vez, pulso del sensor en
+// los puntos, pausa antes del primer segundo, pausa que cruza un cambio de paso, dos sesiones seguidas, varias pausas en un
+// mismo segundo, terminar en el segundo del cambio, último paso de 0 s, terminar en un múltiplo de 5 y el monitor que informa
+// la distancia cada 2 s (QA-V4a-L01). Un guion es una lista de acciones [ms, tipo, argumento] desde el instante 0:
+//   free · routine <nombre> · pause · resume · finish · reset · bpm <int> · status <HrmStatus>
+// Las rutinas van en el mismo escenario (con sus pasos), así WorkoutGoldenTests corre exactamente lo mismo en el motor nuevo.
+// "reset" es el toque del diálogo de completado o la vuelta a Workout del legacy. It. 4b (AC-WKT-21-13; 02-tech-design §2.13):
+// con la rutina terminada sola el motor nuevo también queda terminado hasta ese toque (AcknowledgeCompletion, DT4a-15); a
+// mano vuelve solo a reposo al cerrar, y en los guiones el reset de un terminar a mano va en el mismo instante.
+// Se anota, en la grilla de 100 ms: los cambios de paso [t, segundos activos, paso] (-99 = stepProgress lanza: DV-37, la
+// pantalla del legacy falla con un paso de duración negativa), las acciones con su reloj y su fase, el instante en que la
+// rutina termina sola, los objetivos en ese instante, el orden de las operaciones de la base, las altas, los puntos y los
+// cierres (sin fechas ni id).
+
+Map<String, Object?> stepJson(IntervalStep s) => {
+      'type': s.type.name,
+      'dur': s.durationSeconds,
+      'dist': s.distanceMeters,
+      'wMin': s.targetWattsMin,
+      'spm': s.targetSpm,
+      'pSpm': s.progressionSpm,
+      'g': s.groupId,
+      'rep': s.groupRepeatCount,
+    };
+
+Map<String, Object?> routineJson(Routine r) => {
+      'id': r.id,
+      'name': r.name,
+      'createdAt': r.createdAt.toUtc().toIso8601String(),
+      'steps': [for (final s in r.steps) stepJson(s)],
+    };
+
+Routine mk(int id, String name, List<IntervalStep> steps) =>
+    Routine(id: id, name: name, createdAt: DateTime.utc(2026, 10, 26), steps: steps);
+
+Map<String, Object?> script(String name, String readingName, Reading reading, List<List<Object?>> actions, int endMs) {
+  final db = _CaptureDb();
+  final steps = <List<Object?>>[];
+  final events = <List<Object?>>[];
+  final targets = <List<Object?>>[];
+  final finishedAt = <int>[];
+  final routines = <String, Object?>{};
+  for (final a in actions) {
+    if (a[1] == 'routine') {
+      final r = a[2] as Routine;
+      routines[r.name] = routineJson(r);
+    }
+  }
+  fakeAsync((async) {
+    final ble = _FakeBle();
+    final hrm = _FakeHrm();
+    final wp = WorkoutProvider(ble, hrm, db);
+    // L(0) en el instante -0,5: el reloj falso arranca en 0 = instante -0,5.
+    var k = 0;
+    ble.data.add(reading(0));
+    async.flushMicrotasks();
+    Timer.periodic(const Duration(seconds: 1), (_) {
+      k++;
+      ble.data.add(reading(k));
+    });
+    async.elapse(const Duration(milliseconds: 500));
+    var tMs = 0;
+    var lastStep = -2;
+    var wasFinished = false;
+    void doActions() {
+      for (final a in actions) {
+        if (a[0] != tMs) continue;
+        final kind = a[1] as String;
+        switch (kind) {
+          case 'free':
+            wp.startFree();
+            break;
+          case 'routine':
+            wp.startWithRoutine(a[2] as Routine);
+            break;
+          case 'pause':
+            wp.pause();
+            break;
+          case 'resume':
+            wp.resume();
+            break;
+          case 'finish':
+            if (wp.phase != WorkoutPhase.finished) wp.finish();
+            break;
+          case 'reset':
+            wp.reset();
+            break;
+          case 'bpm':
+            hrm.bpmCtrl.add(a[2] as int);
+            break;
+          case 'status':
+            hrm.statusCtrl.add(a[2] as HrmStatus);
+            break;
+          default:
+            throw ArgumentError('acción desconocida: $kind');
+        }
+        async.flushMicrotasks();
+        events.add([tMs, kind, wp.totalElapsedSeconds, wp.phase.name]);
+      }
+    }
+
+    doActions();
+    while (tMs < endMs) {
+      var nextMs = (tMs ~/ 100) * 100 + 100; // de a 100 ms
+      for (final a in actions) {
+        final at = a[0] as int;
+        if (at > tMs && at < nextMs) nextMs = at;
+      }
+      if (nextMs > endMs) nextMs = endMs;
+      async.elapse(Duration(milliseconds: nextMs - tMs));
+      tMs = nextMs;
+      int idx;
+      try {
+        idx = wp.stepProgress?.stepIndex ?? -1;
+      } catch (e) {
+        // DV-37: con un paso de duración negativa, el clamp(0, d) de stepProgress lanza (workout_provider.dart:103).
+        idx = -99;
+      }
+      if (idx != lastStep) {
+        steps.add([tMs, wp.totalElapsedSeconds, idx]);
+        lastStep = idx;
+      }
+      if (wp.phase == WorkoutPhase.finished && !wasFinished) {
+        // La rutina terminó sola (los Terminar a mano de los guiones van con su reset en el mismo instante).
+        wasFinished = true;
+        finishedAt.add(tMs);
+        async.flushMicrotasks();
+        for (var i = 0; i < 64; i++) {
+          final r = wp.targets.resultOf(i);
+          if (r != null) targets.add([finishedAt.length, i, r.name]);
+        }
+      }
+      if (wp.phase != WorkoutPhase.finished) wasFinished = false;
+      doActions();
+    }
+    async.flushMicrotasks();
+  });
+  return {
+    'name': name,
+    'reading': readingName,
+    'routines': routines,
+    'actions': [
+      for (final a in actions)
+        [
+          a[0],
+          a[1],
+          if (a.length > 2) a[2] is Routine ? (a[2] as Routine).name : (a[2] is HrmStatus ? (a[2] as HrmStatus).name : a[2]),
+        ]
+    ],
+    'endMs': endMs,
+    'steps': steps,
+    'events': events,
+    'finishedAtMs': finishedAt,
+    'ops': db.ops,
+    'sessions': [for (final s in db.sessions) row(s)],
+    'points': [for (final p in db.points) row(p)],
+    'closes': [for (final c in db.closes) row(c)],
+    'closesHaveFinishedAt': [for (final c in db.closes) c['finished_at'] != null],
+    'targets': targets,
+  };
+}
+
+List<Map<String, Object?>> scripts() {
+  final zero = mk(21, 'Ceros', [st(StepType.work, dur: 0), st(StepType.rest, dur: 0), st(StepType.work, dur: 7)]);
+  final neg = mk(22, 'Negativo', [st(StepType.work, dur: -5), st(StepType.rest, dur: 3)]);
+  final noGoal = mk(23, 'Sin meta', [st(StepType.work)]);
+  final distLast = mk(24, 'Distancia al final', [st(StepType.warmup, dur: 3), st(StepType.work, dist: 50)]);
+  final timeAndDist = mk(25, 'Tiempo y distancia', [st(StepType.work, dur: 7, dist: 1000), st(StepType.rest, dur: 2)]);
+  final lastZero = mk(26, 'Ultimo cero', [st(StepType.work, dur: 3), st(StepType.rest, dur: 0)]);
+  return [
+    script('zero_steps', 'R-4', r4, [
+      [0, 'routine', zero]
+    ], 15000),
+    script('neg_step', 'R-4', r4, [
+      [0, 'routine', neg]
+    ], 10000),
+    script('nogoal_finish', 'R-4', r4, [
+      [0, 'routine', noGoal],
+      [12300, 'finish'],
+      [12300, 'reset']
+    ], 13000),
+    script('finish_in_pause', 'R-4', r4, [
+      [0, 'routine', corta()],
+      [12400, 'pause'],
+      [20000, 'finish'],
+      [20000, 'reset']
+    ], 21000),
+    script('dist_last', 'R-4', r4, [
+      [0, 'routine', distLast]
+    ], 30000),
+    script('time_and_distance', 'R-4', r4, [
+      [0, 'routine', timeAndDist]
+    ], 15000),
+    script('hr_points', 'R-4', r4, [
+      [0, 'free'],
+      [2200, 'bpm', 120],
+      [7200, 'bpm', 130],
+      [11200, 'status', HrmStatus.disconnected],
+      [16000, 'finish'],
+      [16000, 'reset']
+    ], 17000),
+    script('pause_early', 'R-4', r4, [
+      [0, 'free'],
+      [50, 'pause'],
+      [2050, 'resume'],
+      [8000, 'finish'],
+      [8000, 'reset']
+    ], 9000),
+    script('corta_pause_across_change', 'R-4', r4, [
+      [0, 'routine', corta()],
+      [9500, 'pause'],
+      [15300, 'resume']
+    ], 45000),
+    script('two_sessions', 'R-4', r4, [
+      [0, 'free'],
+      [6000, 'finish'],
+      [6000, 'reset'],
+      [9000, 'routine', corta()]
+    ], 45000),
+    script('pause_resume_jitter', 'R-4', r4, [
+      [0, 'free'],
+      [3200, 'pause'],
+      [3400, 'resume'],
+      [3600, 'pause'],
+      [3800, 'resume'],
+      [12000, 'finish'],
+      [12000, 'reset']
+    ], 13000),
+    script('finish_at_step_change', 'R-4', r4, [
+      [0, 'routine', corta()],
+      [10000, 'finish'],
+      [10000, 'reset']
+    ], 11000),
+    script('last_step_zero', 'R-4', r4, [
+      [0, 'routine', lastZero]
+    ], 8000),
+    script('free_finish_at_5', 'R-4', r4, [
+      [0, 'free'],
+      [5000, 'finish'],
+      [5000, 'reset']
+    ], 6000),
+    script('dist100_every_2s', 'R-4/2s', r4every2s, [
+      [0, 'routine', distancia100()]
+    ], 60000),
+    // It. 4b (AC-WKT-21-13): la rutina termina sola a los 30 s, llega un bpm a los 32 y el reset (el Terminar del diálogo)
+    // a los 34: entre el fin y el reset la fase es finished, el reloj queda en 30, no hay puntos y los objetivos siguen.
+    script('completed_hold_reset', 'R-4', r4, [
+      [0, 'routine', corta()],
+      [32000, 'bpm', 128],
+      [34000, 'reset']
+    ], 36000),
+  ];
+}
+
 void main() {
   test('vectores del motor legacy (It. 4a, workout_engine.json)', () {
     final outDir = Platform.environment['ROWMATE_ORACLE_OUT'];
@@ -336,7 +596,7 @@ void main() {
       ]),
       run('free_r4_short', routine: null, readingName: 'R-4', reading: r4, finishAtMs: 3000),
     ];
-    writeGolden('workout_engine.json', {'header': header(generator, commit), 'scenarios': scenarios},
+    writeGolden('workout_engine.json', {'header': header(generator, commit), 'scenarios': scenarios, 'scripts': scripts()},
         ['--out', outDir, '--legacy-commit', commit]);
   });
 }

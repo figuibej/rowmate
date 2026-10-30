@@ -202,7 +202,7 @@ namespace RowMate.Tests.EditMode.Workout
             var rower = new ScriptedRower(harness.Scheduler, RowerScripts.R4, harness.Logger);
             using (var engine = new WorkoutEngine(rower, new ScriptedHeartRateService(harness.Logger), new InMemorySessionRepository(),
                        harness.Scheduler, harness.Lifecycle, harness.Logger))
-            using (var hud = new WorkoutHudStore(engine, Texts(LocalizationFixture.Es), harness.Logger))
+            using (var hud = new WorkoutHudStore(engine, Texts(LocalizationFixture.Es), harness.Scheduler, harness.Lifecycle, harness.Logger))
             {
                 rower.Start();
                 harness.RunUntil(0);
@@ -237,7 +237,7 @@ namespace RowMate.Tests.EditMode.Workout
             var sessions = new InMemorySessionRepository();
             using (var engine = new WorkoutEngine(rower, new ScriptedHeartRateService(harness.Logger), sessions, harness.Scheduler,
                        harness.Lifecycle, harness.Logger))
-            using (var hud = new WorkoutHudStore(engine, Texts(LocalizationFixture.Es), harness.Logger))
+            using (var hud = new WorkoutHudStore(engine, Texts(LocalizationFixture.Es), harness.Scheduler, harness.Lifecycle, harness.Logger))
             {
                 rower.Start();
                 harness.RunUntil(0);
@@ -277,7 +277,7 @@ namespace RowMate.Tests.EditMode.Workout
             using (var h = new WorkoutHarness())
             {
                 var texts = new ObservableValue<Localizer>(LocalizationFixture.Es, h.Logger);
-                using (var hud = new WorkoutHudStore(h.Engine, new ReadOnlyObservable<Localizer>(texts), h.Logger))
+                using (var hud = new WorkoutHudStore(h.Engine, new ReadOnlyObservable<Localizer>(texts), h.Scheduler, h.Lifecycle, h.Logger))
                 {
                     h.Routine(RoutineSeeds.Corta());
                     h.At(2);
@@ -335,14 +335,172 @@ namespace RowMate.Tests.EditMode.Workout
             }
         }
 
+        // ── It. 4b (02-tech-design §2.11) ──
+
+        [Test, Category("AC-WKT-14-08"), Category("AC-WKT-14-09")]
+        public void PillsWithTheCache()
+        {
+            // Las píldoras: los tipos de la rutina expandida (el mismo objeto toda la sesión) y los aspectos (el mismo objeto
+            // mientras no cambia el paso: rehacerlos cuesta O(n) solo ahí). Estados con R-4 a los 40,2 s: sólida, hueca, sólida, en
+            // curso, pendiente (CAP-01).
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                h.Routine(RoutineSeeds.Estados());
+                h.At(30.6);
+                var first = hud.State.Value.Pills!;
+                h.At(40.2);
+                var pills = hud.State.Value.Pills!;
+                Assert.That(pills.Looks, Is.EqualTo(new[] { StepPillLook.Solid, StepPillLook.Hollow, StepPillLook.Solid, StepPillLook.Current, StepPillLook.Pending }));
+                Assert.That(pills.Types, Is.EqualTo(new[] { StepType.Work, StepType.Work, StepType.Rest, StepType.Work, StepType.Rest }));
+                Assert.That(pills.Types, Is.SameAs(first.Types), "una vez por sesión");
+                Assert.That(pills.Looks, Is.SameAs(first.Looks), "el mismo paso: los mismos aspectos");
+                Assert.That(pills.Current, Is.EqualTo(3));
+                Assert.That(pills.Elapsed, Is.EqualTo(10));
+                Assert.That(pills.Duration, Is.EqualTo(20));
+                Assert.That(pills.Running, Is.True);
+                h.At(50.2);
+                Assert.That(hud.State.Value.Pills!.Looks, Is.Not.SameAs(pills.Looks), "el cambio de paso los rehace");
+                h.Engine.Pause();
+                Assert.That(hud.State.Value.Pills!.Running, Is.False);
+            }
+
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                h.Routine(RoutineSeeds.FinalPorDistancia());
+                h.At(12.2);
+                Assert.That(hud.State.Value.Pills!.Duration, Is.Null, "por distancia no se llena (Q-51)");
+                h.Engine.FinishAsync();
+                h.Engine.StartFree();
+                Assert.That(hud.State.Value.Pills, Is.Null, "en libre, sin píldoras");
+            }
+        }
+
+        [Test, Category("AC-WKT-14-18"), Category("AC-WKT-09-08")]
+        public void BigCountAndSeal()
+        {
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                h.Routine(RoutineSeeds.Estados());
+                h.At(7.2);
+                Assert.That(hud.State.Value.BigCount, Is.EqualTo(3));
+                Assert.That(hud.State.Value.Seal, Is.Null);
+                h.At(10.2);
+                Assert.That(hud.State.Value.BigCount, Is.Null);
+                var seal = hud.State.Value.Seal!;
+                Assert.That(seal.StepIndex, Is.EqualTo(0));
+                Assert.That(seal.Title, Is.EqualTo("Objetivo cumplido"));
+                Assert.That(seal.Detail, Is.EqualTo("24.0 / 18 spm"));
+                Assert.That(seal.At, Is.EqualTo(10.5).Within(1e-9));
+                h.At(11.2);
+                Assert.That(hud.State.Value.Seal, Is.SameAs(seal), "el texto se arma una vez por paso cerrado");
+            }
+        }
+
+        [Test, Category("AC-WKT-21-03")]
+        public void CompletionTextsEsEn()
+        {
+            // AC-WKT-21-03: los totales del diálogo con el formato del legacy (immersive_workout_screen.dart:965-991): MM:SS (o
+            // H:MM:SS), "{n} m" sin miles y las kcal; los rótulos del catálogo en es y en.
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.En))
+            {
+                h.Routine(RoutineSeeds.Corta());
+                h.At(30.1);
+                var state = hud.State.Value;
+                Assert.That(state.EndedBy, Is.EqualTo(WorkoutEndKind.Completed));
+                Assert.That(state.Session, Is.EqualTo(1));
+                Assert.That(state.CloseReturned, Is.True);
+                Assert.That(state.Completion, Is.EqualTo(new HudCompletion("00:30", 30, "1120 m", 1120, "43", 43)));
+                Assert.That(state.Chip, Is.Null, "con rutina no hay chip");
+                Assert.That(LocalizationFixture.Es.Get(L10nKeys.WorkoutCompleted), Is.EqualTo("¡Entrenamiento completado!"));
+                Assert.That(LocalizationFixture.Es.Get(L10nKeys.WorkoutCompletedTime), Is.EqualTo("Tiempo"));
+                Assert.That(LocalizationFixture.En.Get(L10nKeys.WorkoutCompletedDistance), Is.EqualTo("Distance"));
+                Assert.That(LocalizationFixture.Es.Get(L10nKeys.WorkoutCompletedCalories), Is.EqualTo("Calorías"));
+                h.Engine.AcknowledgeCompletion();
+                Assert.That(hud.State.Value.Completion, Is.Null);
+                Assert.That(hud.State.Value.CloseReturned, Is.False);
+            }
+
+            var hours = WorkoutHudStore.CompletionTexts(new CompletionSummary(35999, 16777215, 65535));
+            Assert.That(hours.Time, Is.EqualTo("9:59:59"));
+            Assert.That(hours.Distance, Is.EqualTo("16777215 m"));
+            Assert.That(hours.Calories, Is.EqualTo("65535"));
+        }
+
+        [Test, Category("AC-WKT-16-03")]
+        public void ChipInFreeSession()
+        {
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.En))
+            {
+                h.Free();
+                h.At(2);
+                Assert.That(hud.State.Value.Chip!.Text, Is.EqualTo("ACTIVE"));
+                Assert.That(hud.State.Value.Chip!.LiveDot, Is.True);
+                h.Engine.Pause();
+                Assert.That(hud.State.Value.Chip!.Text, Is.EqualTo("PAUSED"), "en la misma foto que la fase");
+                Assert.That(hud.State.Value.Chip!.LiveDot, Is.False);
+            }
+        }
+
+        [Test, Category("AC-WKT-14-03")]
+        public void TargetLabelFragments()
+        {
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                h.Routine(RoutineSeeds.TextoLargo());
+                h.At(2.2);
+                var target = hud.State.Value.Step!.Target!;
+                Assert.That(target.Text, Is.EqualTo(">150W · 24 spm · 02:05/500m"));
+                Assert.That(target.Fragments.Count, Is.EqualTo(3));
+                Assert.That(target.Fragments[0].Text, Is.EqualTo(">150W"));
+                h.At(3.2);
+                Assert.That(hud.State.Value.Step!.Target, Is.SameAs(target), "una vez por paso, no por foto");
+            }
+        }
+
+        [Test, Category("AC-WKT-02-08")]
+        public void InstantOnWake()
+        {
+            // P-17 de la 4a: al despertar el equipo (IAppLifecycle.Woke) el motor publica una foto Instant y el HUD la aplica sin
+            // animar (AC-WKT-02-08); el reloj de pared salta sin rodillo.
+            var harness = new LifecycleHarness(WorkoutHarness.SessionStart);
+            var rower = new ScriptedRower(harness.Scheduler, RowerScripts.R4, harness.Logger);
+            using (var engine = new WorkoutEngine(rower, new ScriptedHeartRateService(harness.Logger), new InMemorySessionRepository(),
+                       harness.Scheduler, harness.Lifecycle, harness.Logger))
+            using (var hud = new WorkoutHudStore(engine, Texts(LocalizationFixture.Es), harness.Scheduler, harness.Lifecycle, harness.Logger))
+            {
+                rower.Start();
+                harness.RunUntil(0);
+                engine.StartWithRoutine(RoutineSeeds.Estados());
+                harness.Suspend(12.4);
+                var states = new StateRecorder<WorkoutHudState>(hud.State);
+                harness.Wake(600, monotonicCounts: true, measured: true);
+                Assert.That(states.Count, Is.GreaterThanOrEqualTo(1));
+                Assert.That(states.First.Instant, Is.True, "el primer estado despierto, Instant");
+                Assert.That(states.First.Clock, Is.EqualTo("00:12"));
+                Assert.That(hud.WallClock.Value.Instant, Is.True, "el reloj de pared, sin rodillo");
+                Assert.That(hud.WallClock.Value.Text, Is.EqualTo("10:10"), "la hora real (13:10:12Z)");
+                states.Dispose();
+            }
+
+            rower.Dispose();
+        }
+
         [Test]
         public void ArgumentsAreChecked()
         {
             using (var h = new WorkoutHarness())
             {
-                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(null!, Texts(LocalizationFixture.Es), h.Logger));
-                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(h.Engine, null!, h.Logger));
-                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(h.Engine, Texts(LocalizationFixture.Es), null!));
+                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(null!, Texts(LocalizationFixture.Es), h.Scheduler, h.Lifecycle, h.Logger));
+                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(h.Engine, null!, h.Scheduler, h.Lifecycle, h.Logger));
+                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(h.Engine, Texts(LocalizationFixture.Es), h.Scheduler, h.Lifecycle, null!));
+                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(h.Engine, Texts(LocalizationFixture.Es), null!, h.Lifecycle, h.Logger));
+                Assert.Throws<ArgumentNullException>(() => new WorkoutHudStore(h.Engine, Texts(LocalizationFixture.Es), h.Scheduler, null!, h.Logger));
                 Assert.Throws<ArgumentNullException>(() => WorkoutHudStore.Build(null!, LocalizationFixture.Es));
                 Assert.Throws<ArgumentNullException>(() => WorkoutHudStore.Build(h.State, null!));
             }
@@ -350,7 +508,7 @@ namespace RowMate.Tests.EditMode.Workout
 
         private static WorkoutHudStore Hud(WorkoutHarness h, Localizer l10n)
         {
-            return new WorkoutHudStore(h.Engine, Texts(l10n), h.Logger);
+            return new WorkoutHudStore(h.Engine, Texts(l10n), h.Scheduler, h.Lifecycle, h.Logger);
         }
 
         private static IReadOnlyObservable<Localizer> Texts(Localizer l10n)

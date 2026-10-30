@@ -16,5 +16,11 @@ namespace RowMate.Core.Ports
 
         // !InBackground.Value && HasFocus.Value.
         bool IsUserFacing { get; }
+
+        // It. 4b (P-17 de la 4a; 02-tech-design §2.9.4; ADR 020): el equipo despertó (FrameScheduler.Woke, en el cuadro que lo
+        // trae, después de correr lo vencido). El motor publica una foto Instant y el reloj de pared salta sin rodillo. Por
+        // defecto nunca avisa (NeverWakes: Android, iOS y quien no tiene la señal); AppLifecycle de Platform la implementa en
+        // WP-B2 y FakeAppLifecycle en las pruebas. La implementación por defecto deja compilar a Platform hasta entonces.
+        IEventSource<SystemWake> Woke => NeverWakes.Instance;
     }
 }

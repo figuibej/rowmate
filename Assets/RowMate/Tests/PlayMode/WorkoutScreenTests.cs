@@ -314,17 +314,56 @@ namespace RowMate.Tests.PlayMode
         // reposo responde debajo; la sesión nueva tiene que tener SU inmersivo en el mismo toque, con Pausa, Terminar y "Atrás":
         // la página que sale no cuenta como el inmersivo de la pestaña. Legacy: cada inicio apila su propia ruta en el toque
         // (lib/features/workout/workout_screen.dart:88-89, :164-169).
-        [UnityTest, Category("AC-WKT-13-01"), Category("AC-WKT-13-04"), Category("AC-WKT-01-09")]
+        [UnityTest, Category("AC-WKT-13-01"), Category("AC-WKT-13-04"), Category("AC-WKT-13-10"), Category("AC-WKT-01-09")]
         public IEnumerator StartDuringThePreviousExitHasItsOwnImmersive()
         {
             foreach (var reduceMotion in new[] { false, true })
             {
                 var label = reduceMotion ? "con reducir movimiento: " : "";
-                CreateWorkout(RoutineSeeds.F4A, o => o.ReduceMotion = reduceMotion);
+                CreateWorkout(RoutineSeeds.F4A, o =>
+                {
+                    o.ReduceMotion = reduceMotion;
+                    if (reduceMotion)
+                    {
+                        o.Sessions = HostSessions.Scripted(r => r.FinishDelay = TimeSpan.FromSeconds(1));
+                    }
+                });
                 yield return StartRoutine("Corta");
                 var old = Immersive;
-                yield return AdvanceTo(30.02); // fin automático a los 30 s; con la base en línea el cierre vuelve en el acto
-                Assert.That(Phase, Is.EqualTo(WorkoutPhase.Idle), label + "la Corta terminó sola");
+                if (!reduceMotion)
+                {
+                    yield return AdvanceTo(30.02); // fin automático a los 30 s; con la base en línea el cierre vuelve en el acto
+                    // It. 4b (DT4a-15): terminada sola, espera al diálogo de completado (a los 300 ms); su Terminar la vuelve a reposo.
+                    Assert.That(Phase, Is.EqualTo(WorkoutPhase.Finished), label + "la Corta terminó sola y espera el diálogo");
+                    yield return AdvanceTo(30.4);
+                    Assert.That(H.Completion, Is.Not.Null, label + "el diálogo de completado");
+                    H.Tap("completion-finish");
+                    Assert.That(Phase, Is.EqualTo(WorkoutPhase.Idle), label + "Terminar: a reposo en el acto (el cierre ya volvió)");
+                    // El velo del diálogo que sale se traga los toques sus 150 ms (DT-21), y el inmersivo que sale, los de su negro
+                    // hasta que empieza a verse Workout (QA-V4b-MOT-02: 400 ms). Desde ahí vale el toque; la página todavía sale (640).
+                    H.Advance(0.2);
+                    yield return Frames();
+                    Assert.That(H.WhyNotTappable("workout-free"), Is.Not.Null, label + "en el negro, Workout no recibe toques");
+                    H.Advance(0.25);
+                    yield return Frames();
+                    Assert.That(old.HasRevealed, Is.True, label + "ya se empieza a ver Workout");
+                }
+                else
+                {
+                    // Con reducir movimiento la salida del inmersivo dura 120, menos que los 150 en que el velo de un diálogo que se
+                    // cierra se traga los toques (DT-21): la salida que se toca es la que sigue a un cierre lento (Terminar →
+                    // Terminar, y la base vuelve 1 s después), con el diálogo ya ido.
+                    yield return AdvanceTo(10.2);
+                    yield return Tap("hud-finish");
+                    H.Tap("dialog-confirm");
+                    H.Advance(0.5);
+                    yield return Frames();
+                    Assert.That(Phase, Is.EqualTo(WorkoutPhase.Finished), label + "terminando: la base todavía no volvió");
+                    Assert.That(H.TopDialog, Is.Null, label + "el diálogo de terminar ya se fue");
+                    H.Advance(0.55); // el cierre vuelve al segundo: a reposo, y el inmersivo empieza a salir (120)
+                    yield return Frames();
+                    Assert.That(Phase, Is.EqualTo(WorkoutPhase.Idle), label + "a reposo cuando vuelve el cierre");
+                }
                 Assert.That(old.IsExiting && H.Shell.Pages.IsExiting(old), Is.True, label + "su inmersivo está saliendo");
                 Assert.That(Screen.Immersive, Is.Null, label + "la página que sale ya no es el inmersivo de la pestaña");
                 H.Tap("workout-free"); // la vista de reposo responde debajo (ExitLock)

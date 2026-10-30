@@ -71,6 +71,7 @@
     --rm-num-xl-size: 52px;
     --rm-overlay-scrim: #000000;
     --rm-phase-finished: #EF476F;
+    --rm-phase-finished-hud: #FF7A92;
     --rm-phase-paused: #FFD166;
     --rm-phase-running: #06D6A0;
     --rm-r-card: 16px;

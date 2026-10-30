@@ -21,8 +21,9 @@ namespace RowMate.Tests.Support
         private static readonly TimeSpan DefaultLocalOffset = TimeSpan.FromHours(-3);
 
         private readonly DateTimeOffset _startUtc;
-        private readonly TimeSpan _localOffset;
         private readonly List<Timer> _timers = new List<Timer>();
+        private TimeSpan _localOffset;
+        private TimeSpan _utcShift;
         private long _elapsedTicks;
         private long _nextSequence;
 
@@ -33,9 +34,23 @@ namespace RowMate.Tests.Support
             _localOffset = localOffset ?? DefaultLocalOffset;
         }
 
-        public DateTimeOffset UtcNow => _startUtc.AddTicks(_elapsedTicks);
+        public DateTimeOffset UtcNow => _startUtc.AddTicks(_elapsedTicks) + _utcShift;
 
         public DateTimeOffset LocalNow => UtcNow.ToOffset(_localOffset);
+
+        // La zona horaria del equipo (It. 4b, AC-WKT-19-04: de UTC−03:00 a UTC−05:00 a mitad de la sesión).
+        public TimeSpan LocalOffset => _localOffset;
+
+        public void SetLocalOffset(TimeSpan offset)
+        {
+            _localOffset = offset;
+        }
+
+        // El cambio de hora a mano (It. 4b, AC-WKT-19-04): mueve la hora de pared, no el monótono.
+        public void ShiftUtc(TimeSpan by)
+        {
+            _utcShift += by;
+        }
 
         // Arranca en 0.
         public double MonotonicSeconds => _elapsedTicks / (double)TimeSpan.TicksPerSecond;

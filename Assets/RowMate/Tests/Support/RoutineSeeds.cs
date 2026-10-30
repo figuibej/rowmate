@@ -131,9 +131,19 @@ namespace RowMate.Tests.Support
         // CAP-27: la rutina SINTÉTICA de la ventana del build normal: Escalera SPM de F-LISTA, sola (nunca datos del usuario).
         public static RoutineSeed Cap27 => Single("CAP-27", EscaleraSpm());
 
+        // It. 4b (HudBudgetTests, 04b-hud-exr/02-tech-design §3.11): el peor caso del presupuesto: dos trabajos de 4 s con objetivos
+        // en vatios mín. 200, SPM 30 y split 100 (con R-4, los tres fuera) y un descanso de 30 s. Entre los 5 y los 6 s se ven a la
+        // vez el sello del primero, la cuenta grande del segundo, Próximo y las tres flechas.
+        public static RoutineSeed Budget => Single("F-PRESUPUESTO", Make("Presupuesto 4b", Day(22), Step(K, dur: 4, wMin: 200, spm: 30, split: 100),
+            Step(K, dur: 4, wMin: 200, spm: 30, split: 100), Step(R, dur: 30)));
+
         // F-4A (04a-motor-hud-funcional/01-po-spec §0.4; 02-tech-design §7.2 de la It. 4a), de la más nueva a la más vieja:
         // Prueba 4a, Corta, Distancia 100 y Sin meta (se guardan de la más vieja a la más nueva).
         public static RoutineSeed F4A => new RoutineSeed("F-4A", new[] { SinMeta(), DistanciaCien(), Corta(), PruebaCuatroA() }, NoRaw);
+
+        // F-4B (04b-hud-exr/01-po-spec §0.4), de la más nueva a la más vieja: Estados, Final por distancia, Texto largo, Serie
+        // larga y Maratón (se guardan de la más vieja a la más nueva).
+        public static RoutineSeed F4B => new RoutineSeed("F-4B", new[] { Maraton(), SerieLarga(), TextoLargo(), FinalPorDistancia(), Estados() }, NoRaw);
 
         // Las F-RARA con los nombres de la spec de la 4a (§0.4), cada una en su base: "Serie enorme" (una serie ×2 000 000 000
         // de trabajo 60 s), "Vatios imposibles" (un trabajo de 60 s con vatios mín. 50 000), "Serie ×0" (solo una serie ×0 de
@@ -247,6 +257,43 @@ namespace RowMate.Tests.Support
         public static Routine SinMeta()
         {
             return Make("Sin meta", Day(24).AddHours(-1), Step(K), Step(R, dur: 5));
+        }
+
+        // ── Las rutinas de F-4B (04b §0.4) ──
+
+        // 2026-10-27: pasos sueltos trabajo 10 s (SPM 18); trabajo 10 s (SPM 30); descanso 10 s; trabajo 20 s (SPM 18); descanso
+        // 10 s. 5 pasos, 60 s. Con R-4, los pasos 0 y 3 se cumplen, el 1 no, y los descansos no tienen objetivo.
+        public static Routine Estados()
+        {
+            return Make("Estados", Day(27), Step(K, dur: 10, spm: 18), Step(K, dur: 10, spm: 30), Step(R, dur: 10), Step(K, dur: 20, spm: 18),
+                Step(R, dur: 10));
+        }
+
+        // 2026-10-26: trabajo 10 s (SPM 18); trabajo 100 m (SPM 18). Con R-4 termina a los 35 s, con el último paso por
+        // distancia y con objetivo.
+        public static Routine FinalPorDistancia()
+        {
+            return Make("Final por distancia", Day(26), Step(K, dur: 10, spm: 18), Step(K, dist: 100, spm: 18));
+        }
+
+        // 2026-10-25: calentamiento 20 s con vatios mín. 150, SPM 24 y split 125 (">150W · 24 spm · 02:05/500m"); enfriamiento
+        // 20 s. La fila de información más larga.
+        public static Routine TextoLargo()
+        {
+            return Make("Texto largo", Day(25), Step(W, dur: 20, wMin: 150, spm: 24, split: 125), Step(C, dur: 20));
+        }
+
+        // 2026-10-24: serie ×100 [trabajo 30 s; descanso 30 s]. 200 pasos, 6000 s.
+        public static Routine SerieLarga()
+        {
+            var g = SeriesId(Day(24), 0);
+            return Make("Serie larga", Day(24), Step(K, dur: 30, g: g, rep: 100), Step(R, dur: 30, g: g, rep: 100));
+        }
+
+        // 2026-10-23: trabajo 35 999 s (9:59:59).
+        public static Routine Maraton()
+        {
+            return Make("Maratón", Day(23), Step(K, dur: 35999));
         }
 
         // F-BORDE (AC-RUT-12-06): los 11 pasos, en el orden de la tabla.

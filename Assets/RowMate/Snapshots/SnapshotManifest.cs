@@ -70,7 +70,8 @@ namespace RowMate.Snapshots
                     .Append(shot.Profile).Append(" | ").Append(shot.Backend).Append(" | ").Append(Escape(shot.State)).Append(" | ")
                     .Append(Escape(ProbeCell(shot))).Append(" | ")
                     .Append(shot.Overflows.Count == 0 && shot.ClippedTexts.Count == 0 ? "sin desbordes" : Escape(string.Join("; ", shot.Overflows) + " " + string.Join("; ", shot.ClippedTexts)))
-                    .Append(" | ").Append(shot.Problems.Count == 0 ? (shot.Error == null ? "ok" : "") : Escape(string.Join("; ", shot.Problems)))
+                    .Append(" | ").Append(shot.Superseded != null ? "reemplazada por " + shot.Superseded + " (" + Escape(shot.SupersededIds ?? "") + ")"
+                        : shot.Problems.Count == 0 ? (shot.Error == null ? "ok" : "") : Escape(string.Join("; ", shot.Problems)))
                     .Append(shot.Error == null ? "" : " ERROR: " + Escape(shot.Error)).Append(" |\n");
             }
 
@@ -193,6 +194,13 @@ namespace RowMate.Snapshots
         public List<string> ClippedTexts = new List<string>();
         public List<string> Problems = new List<string>();
         public List<ProbeRecord> Probes = new List<ProbeRecord>();
+
+        // It. 4b (§5.2): lo que corría en el instante de la toma (con su progreso) y, si la toma de it4a quedó reemplazada, por qué
+        // conjunto. null en las tomas de antes (el manifest de it2 e it3 no cambia).
+        public List<string>? InFlight;
+        public string? Superseded;
+        public string? SupersededIds;
+        public List<string>? Values;
         public List<(string Name, Rect Bounds)> Elements = new List<(string, Rect)>();
 
         public bool Passed
@@ -263,6 +271,21 @@ namespace RowMate.Snapshots
             json.Append("      \"passed\": ").Append(Passed ? "true" : "false").Append(",\n");
             json.Append("      \"audit\": { \"overflows\": ").Append(List(Overflows)).Append(", \"clippedTexts\": ").Append(List(ClippedTexts)).Append(" },\n");
             json.Append("      \"checks\": ").Append(List(Problems)).Append(",\n");
+            if (Superseded != null)
+            {
+                json.Append("      \"superseded\": ").Append(SnapshotManifest.Q(Superseded)).Append(",\n");
+                json.Append("      \"supersededBy\": ").Append(SnapshotManifest.Q(SupersededIds)).Append(",\n");
+            }
+
+            if (InFlight != null)
+            {
+                json.Append("      \"inFlight\": ").Append(List(InFlight)).Append(",\n");
+            }
+
+            if (Values != null)
+            {
+                json.Append("      \"values\": ").Append(List(Values)).Append(",\n");
+            }
             json.Append("      \"probes\": [");
             for (var i = 0; i < Probes.Count; i++)
             {

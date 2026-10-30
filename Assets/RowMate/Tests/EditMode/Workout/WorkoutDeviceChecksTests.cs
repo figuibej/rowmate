@@ -58,5 +58,53 @@ namespace RowMate.Tests.EditMode.Workout
             // (FLAG_KEEP_SCREEN_ON otra vez). La regla de volver a pedirla la prueba SKA.RequestsAgainOnResumeAndFocus.
             Assert.Fail("solo en el equipo");
         }
+
+        // ── It. 4b (02-tech-design §6.6 de la It. 4b) ──
+
+        [Test, Category("AC-APP-15-01")]
+        [Ignore("NO VERIFICABLE: [Device-And] sin el módulo de Android ni un teléfono (las barras del sistema ocultas y su regreso)")]
+        public void AndroidSystemBarsHiddenAndBack()
+        {
+            // Android: al entrar al inmersivo las barras de estado y de navegación se ocultan en modo persistente (si el usuario las
+            // revela deslizando, se vuelven a ocultar solas) y vuelven al terminar la salida; nada del HUD ni de Workout se mueve. La
+            // regla la prueba SBR (dotnet) y la pantalla SBU (PlayMode, con el doble).
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-APP-15-03")]
+        [Ignore("NO VERIFICABLE: [Apple] la barra de estado y el indicador de inicio en iOS van en la It. 10b")]
+        public void AppleStatusBarHidden()
+        {
+            // iOS: prefersStatusBarHidden y prefersHomeIndicatorAutoHidden con el helper Swift (ARCHITECTURE §13). En la 4b,
+            // DesktopSystemUi (sin efecto).
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-13-07")]
+        [Ignore("NO VERIFICABLE: [Device-And] sin el módulo de Android ni un teléfono (\"Atrás\" del sistema durante la entrada)")]
+        public void AndroidBackDuringTheEntry()
+        {
+            // Android: "Atrás" durante la cascada de la entrada abre la confirmación de terminar desde el cuadro 0 (ITT.BackFromTheFirstFrame
+            // en PlayMode). Documental: sin sus resultados de Unity sigue en PENDIENTE UNITY.
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-21-02")]
+        [Ignore("NO VERIFICABLE: [Device-And] sin el módulo de Android ni un teléfono (\"Atrás\" con el diálogo de completado)")]
+        public void AndroidBackWithTheCompletionDialog()
+        {
+            // Android: "Atrás" con el diálogo de completado abierto no hace nada (no es descartable). La pantalla la prueba CDT.
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        [Ignore("NO VERIFICABLE: [Device-Win] lo verifica el usuario en la demo (c): QA no suspende su equipo")]
+        public void WindowsSuspendDoesNotCount()
+        {
+            // Windows (build de simulador): con una sesión en marcha se suspende el equipo unos minutos y se lo despierta: el reloj
+            // de la sesión sigue desde donde estaba, sin el lapso; el registro dice "[WORKOUT] el equipo durmió N s: no cuenta (P-17;
+            // …)" o, sin señal, "[TIME] cuadro de N s sin aviso de suspensión: cuenta". La regla la prueban SUS y WSU.
+            Assert.Fail("solo en el equipo");
+        }
     }
 }

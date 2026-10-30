@@ -72,6 +72,25 @@ namespace RowMate.Presentation.Motion
             }
         }
 
+        // It. 4b (la regla de toma del arnés, 04b-hud-exr/02-tech-design §5.2): copia las animaciones en curso (finitas y continuas).
+        public void CopyMotions(System.Collections.Generic.List<IMotion> into)
+        {
+            if (into == null)
+            {
+                throw new ArgumentNullException(nameof(into));
+            }
+
+            into.Clear();
+            for (var i = 0; i < _count; i++)
+            {
+                var item = _items[i];
+                if (item != null)
+                {
+                    into.Add(item);
+                }
+            }
+        }
+
         // Diagnóstico (arnés): los tipos de las animaciones finitas en curso.
         public string DescribeFinite()
         {

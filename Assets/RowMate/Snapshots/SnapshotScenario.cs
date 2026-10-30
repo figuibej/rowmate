@@ -63,6 +63,16 @@ namespace RowMate.Snapshots
 
         public string FileName => FileStem + (Kind == SnapshotKind.Video ? ".mp4" : ".png");
 
+        // It. 4b (04b-hud-exr/02-tech-design §5.6; DT4b-07): una toma de it4a reemplazada por las de it4b ("it4b" y los IDs que la
+        // reemplazan). El arnés no la vuelve a tomar, conserva el archivo de la 4a y la lista en el manifest como superseded.
+        public string? SupersededBy { get; set; }
+
+        public string SupersededIds { get; set; } = "";
+
+        // It. 4b (§5.2, DT4b-19): la regla de toma de la 4b. La toma se hace EXACTAMENTE en el instante del armado (nunca en un
+        // segundo entero del motor) y FALLA si algo de la lista de bloqueos corre (SnapshotTakeRule): nunca espera.
+        public bool ExactInstant { get; set; }
+
         // Sequence: las tomas que tiene que hacer, en orden (id, archivo sin extensión). Las que no se lleguen a tomar quedan en
         // el manifest como fallas.
         public List<(string Id, string Stem, string State)> SequenceShots { get; } = new List<(string, string, string)>();
@@ -99,6 +109,12 @@ namespace RowMate.Snapshots
         public int Fps { get; }
 
         public List<(double At, Action<UiTestHost> Action)> Actions { get; } = new List<(double, Action<UiTestHost>)>();
+
+        // It. 4b (§5.5): los valores de cada cuadro (los que devuelven los IMotion de WP-D1) para el manifest, y la comparación con
+        // las líneas de tiempo puras (± 0,01): devuelve un problema o null. t = segundos desde el comienzo del video.
+        public Func<UiTestHost, double, string?>? FrameValues { get; set; }
+
+        public Func<UiTestHost, double, string?>? FrameCheck { get; set; }
 
         public VideoSpec At(double seconds, Action<UiTestHost> action)
         {

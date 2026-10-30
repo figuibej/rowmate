@@ -402,5 +402,47 @@
     }
   },
   "workoutSaveError": "No se pudo guardar la sesión",
-  "workoutRoutineCannotStart": "Esta rutina no se puede iniciar: revisá sus pasos en Rutinas"
+  "workoutRoutineCannotStart": "Esta rutina no se puede iniciar: revisá sus pasos en Rutinas",
+  "hudPhaseActive": "EN MARCHA",
+  "hudPhasePaused": "PAUSADO",
+  "hudPhaseFinished": "FINALIZADO",
+  "hudPausedLabel": "PAUSA",
+  "hudSealMet": "Objetivo cumplido",
+  "hudSealMissed": "No alcanzado",
+  "hudSealWatts": "{avg} / {target} W",
+  "@hudSealWatts": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "hudSealSpm": "{avg} / {target} spm",
+  "@hudSealSpm": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "hudSealSplit": "{avg} / {target}/500m",
+  "@hudSealSplit": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "workoutCompletedTime": "Tiempo",
+  "workoutCompletedDistance": "Distancia",
+  "workoutCompletedCalories": "Calorías"
 }

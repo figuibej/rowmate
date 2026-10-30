@@ -92,6 +92,7 @@ namespace RowMate.Core.Design
         public static readonly ColorToken StepWarmupHud = ColorToken.Hex("step.warmup.hud", "#FFD166", ColorRole.HudText);          // = base
         public static readonly ColorToken StepCooldownHud = ColorToken.Hex("step.cooldown.hud", "#37A2CB", ColorRole.HudText);      // era #35A0C9
         public static readonly ColorToken StepUnknownHud = ColorToken.Hex("step.unknown.hud", "#7D9BA9", ColorRole.HudText);        // era #7C9AA8
+        public static readonly ColorToken PhaseFinishedHud = ColorToken.Hex("phase.finished.hud", "#FF7A92", ColorRole.HudText);    // It. 4b (DV-44, DN4b-15): FINALIZADO del chip, 4,677:1 sobre su tinte
         public static readonly ColorToken TextHudPrimary = ColorToken.Hex("text.hudPrimary", "#FFFFFF", ColorRole.HudValue);        // valor con objetivo cumplido (Q-60)
 
         // ── 3.2 Vidrio del HUD: respaldo sin desenfoque (QA-P-17, P-08) ───────────
@@ -170,7 +171,7 @@ namespace RowMate.Core.Design
         public static readonly TypeScaleToken Caption = TypeScaleToken.Of("caption", FontFamilyRole.Ui, 11, 14, 500);    // fechas, ayudas, ejes (mínimo legible)
         public static readonly TypeScaleToken Button = TypeScaleToken.Of("button", FontFamilyRole.Ui, 14, 20, 600);      // etiqueta de botones, chips y acciones de texto (It. 2, DN-01; M3 labelLarge 14)
 
-        // ── 4.3 Tipografía: números (Barlow Semi Condensed, siempre tabulares) ────
+        // ── 4.3 Tipografía: números (RowMate Numeric SC: Barlow Semi Condensed con tnum, DD4a-07) ────
         public static readonly TypeScaleToken NumHero = TypeScaleToken.Of("num.hero", FontFamilyRole.Numeric, 64, 64, 800);  // SPM del HUD (D-ART-02)
         public static readonly TypeScaleToken NumXl = TypeScaleToken.Of("num.xl", FontFamilyRole.Numeric, 52, 52, 700);      // tablero de Dispositivo, pulso
         public static readonly TypeScaleToken NumL = TypeScaleToken.Of("num.l", FontFamilyRole.Numeric, 44, 44, 700);        // Split y Watts del HUD

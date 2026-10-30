@@ -25,6 +25,10 @@ namespace RowMate.Presentation.Motion
 
         public double CurrentK { get; private set; } = AccentPulse.RestK;
 
+        // La tarjeta del destello (la regla de toma de la It. 4b no cuenta las animaciones de lo que no se ve: Dispositivo tapado por el
+        // inmersivo).
+        public VisualElement Card => _card;
+
         protected override double TotalMs => MotionSpecs.AccentFlashMs;
 
         public void SetColor(ColorToken color)

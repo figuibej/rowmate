@@ -1,7 +1,7 @@
 {
     "version": 3,
     "editorVersion": "6000.3.27f1",
-    "appliedAtUtc": "2026-10-28T05:19:24.9157400Z",
+    "appliedAtUtc": "2026-10-29T13:02:57.6940735Z",
     "steps": [
         {
             "id": "player.identity",
@@ -56,7 +56,7 @@
         {
             "id": "ui.fonts",
             "status": "ok",
-            "detail": "FontAsset creados: 1, ya existían: 9; getFontFeatures apagado en 7; USS reimportados"
+            "detail": "FontAsset creados: 0, ya existían: 10; getFontFeatures apagado en 0; kerning K2 (pares): Inter-Regular-SDF 1445, Inter-Medium-SDF 1695, Inter-SemiBold-SDF 1695, Inter-Bold-SDF 1695, RowMateNumericSC-SemiBold-SDF 0, RowMateNumericSC-Bold-SDF 1272, RowMateNumericSC-ExtraBold-SDF 0; FontAsset de Barlow borrados: 0; USS reimportados"
         },
         {
             "id": "ui.panel",

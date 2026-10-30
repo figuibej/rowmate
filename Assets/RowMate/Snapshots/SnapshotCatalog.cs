@@ -30,7 +30,13 @@ namespace RowMate.Snapshots
                 return All;
             }
 
-            return string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase) ? RoutinesCatalog.All : WorkoutCatalog.All;
+            if (string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase))
+            {
+                return RoutinesCatalog.All;
+            }
+
+            // It. 4b: it4b (por defecto) = HudExrCatalog; it4a = WorkoutCatalog (con las tomas del HUD reemplazadas).
+            return string.Equals(set, "it4a", StringComparison.OrdinalIgnoreCase) ? WorkoutCatalog.All : HudExrCatalog.All;
         }
 
         public static string TitleFor(string set)
@@ -40,7 +46,12 @@ namespace RowMate.Snapshots
                 return "It. 2";
             }
 
-            return string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase) ? "It. 3 (Rutinas)" : "It. 4a (Entrenar)";
+            if (string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 3 (Rutinas)";
+            }
+
+            return string.Equals(set, "it4a", StringComparison.OrdinalIgnoreCase) ? "It. 4a (Entrenar)" : "It. 4b (HUD EXR)";
         }
 
         public static IReadOnlyList<SnapshotScenario> All

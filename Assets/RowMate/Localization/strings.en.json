@@ -402,5 +402,47 @@
     }
   },
   "workoutSaveError": "Couldn't save the session",
-  "workoutRoutineCannotStart": "This routine can't be started: check its steps in Routines"
+  "workoutRoutineCannotStart": "This routine can't be started: check its steps in Routines",
+  "hudPhaseActive": "ACTIVE",
+  "hudPhasePaused": "PAUSED",
+  "hudPhaseFinished": "FINISHED",
+  "hudPausedLabel": "PAUSED",
+  "hudSealMet": "Target met",
+  "hudSealMissed": "Target missed",
+  "hudSealWatts": "{avg} / {target} W",
+  "@hudSealWatts": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "hudSealSpm": "{avg} / {target} spm",
+  "@hudSealSpm": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "hudSealSplit": "{avg} / {target}/500m",
+  "@hudSealSplit": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "workoutCompletedTime": "Time",
+  "workoutCompletedDistance": "Distance",
+  "workoutCompletedCalories": "Calories"
 }

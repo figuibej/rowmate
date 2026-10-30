@@ -18,7 +18,7 @@ namespace RowMate.Snapshots
     // conjunto por defecto; it3 e it2 siguen igual. SeedDatabase (otro -executeMethod, con -quit) escribe la base sintética de CAP-27
     // (-snapshotSeedDb <carpeta>/cap27.db -seed Cap27) para tools/unity/capture-cap27.ps1.
     // SIN -quit: Run() registra la máquina de estados en EditorApplication.update y vuelve; al terminar sale con
-    // EditorApplication.Exit (0 bien, 1 alguna toma falló, 3 venció el tope de 15 min). En batchmode sin -quit el Editor sigue
+    // EditorApplication.Exit (0 bien, 1 alguna toma falló, 3 venció el tope de 30 min). En batchmode sin -quit el Editor sigue
     // vivo y update corre (S-0). Casi todas las tomas necesitan ROWMATE_SIMULATOR (tools/unity/capture-snapshots.ps1 lo pone y
     // lo saca); sin el define solo hay CAP-22 y CAP-23, y lo avisa.
     public static class SnapshotCli
@@ -26,7 +26,10 @@ namespace RowMate.Snapshots
         public const string It2Output = "docs/migration/iterations/02-dispositivo-simulador/snapshots";
         public const string It3Output = "docs/migration/iterations/03-rutinas/snapshots";
         public const string It4aOutput = "docs/migration/iterations/04a-motor-hud-funcional/snapshots";
-        public const string DefaultSet = "it4a";
+
+        // It. 4b (04b-hud-exr/02-tech-design §5): el HUD EXR (HudExrCatalog), el conjunto por defecto desde la 4b.
+        public const string It4bOutput = "docs/migration/iterations/04b-hud-exr/snapshots";
+        public const string DefaultSet = "it4b";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
@@ -36,7 +39,12 @@ namespace RowMate.Snapshots
                 return It2Output;
             }
 
-            return string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase) ? It3Output : It4aOutput;
+            if (string.Equals(set, "it3", StringComparison.OrdinalIgnoreCase))
+            {
+                return It3Output;
+            }
+
+            return string.Equals(set, "it4a", StringComparison.OrdinalIgnoreCase) ? It4aOutput : It4bOutput;
         }
 
         public static void Run()
@@ -74,17 +82,27 @@ namespace RowMate.Snapshots
             var args = Environment.GetCommandLineArgs();
             var file = Value(args, "-snapshotSeedDb");
             var seedName = Value(args, "-seed") ?? "Cap27";
-            if (file == null || file.Length == 0 || seedName != "Cap27")
+            // It. 4b: -seed F4A (Prueba 4a, Corta, Distancia 100 y Sin meta) para probar a mano el build del simulador con una
+            // rutina corta, sobre una carpeta de ROWMATE_DATA_DIR temporal (nunca la del usuario).
+            if (file == null || file.Length == 0 || (seedName != "Cap27" && seedName != "F4A"))
             {
-                Debug.LogError("[SNAPSHOT] SeedDatabase: falta -snapshotSeedDb <archivo> (y solo existe -seed Cap27)");
+                Debug.LogError("[SNAPSHOT] SeedDatabase: falta -snapshotSeedDb <archivo> (y solo existen -seed Cap27 y -seed F4A)");
                 EditorApplication.Exit(2);
                 return;
             }
 
             try
             {
-                RoutineSeeds.WriteFile(file, RoutineSeeds.Cap27);
-                Debug.Log("[SNAPSHOT] base sintética de CAP-27 lista (Escalera SPM)");
+                if (seedName == "Cap27")
+                {
+                    RoutineSeeds.WriteFile(file, RoutineSeeds.Cap27);
+                }
+                else
+                {
+                    RoutineSeeds.WriteFile(file, RoutineSeeds.F4A);
+                }
+
+                Debug.Log("[SNAPSHOT] base sintética lista (" + seedName + ")");
                 EditorApplication.Exit(0);
             }
             catch (Exception error)

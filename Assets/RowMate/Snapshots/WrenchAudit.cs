@@ -34,7 +34,12 @@ namespace RowMate.Snapshots
 
         private static readonly string[] Surfaces = { "rm-field__box" };
 
-        private static readonly string[] HudPieces = { "hud-topbar", "hud-spm", "hud-split", "hud-watts", "hud-kcal", "hud-bpm", "hud-band" };
+        // It. 4b (§5.2 punto 7, §5.7): la barra con su alto vivo (las píldoras, la fila de información con su plan, el reloj, el chip
+        // y el sello son sus filas) y el disco del lugar centro alto (la cuenta grande o PAUSA).
+        private static readonly string[] HudPieces =
+        {
+            "hud-topbar", "hud-spm", "hud-split", "hud-watts", "hud-kcal", "hud-bpm", "hud-band", "hud-big-countdown", "hud-paused-label",
+        };
 
         public static IEnumerable<string> Run(UiTestHost host)
         {

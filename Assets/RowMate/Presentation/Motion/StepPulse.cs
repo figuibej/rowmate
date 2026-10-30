@@ -22,7 +22,9 @@ namespace RowMate.Presentation.Motion
     // - Mientras solo late es continua (no cuenta para Settle, como el corazón); la rampa y la escala son finitas.
     // - Sin paso (la foto de reposo) se apaga con Release; cuando la fila se va del panel, Stop la saca del MotionDriver en el
     //   acto (QA-V4a-02).
-    public sealed class StepPulse : IMotion
+    // - It. 4b (02-tech-design §5.2, §7.4): ISettlingMotion dice cuánto le falta a la escala de la cuenta, en dp por el ancho de
+    //   la cuenta, así la regla de toma no la cuenta a menos de 0,15 dp de su destino. La conducta no cambia.
+    public sealed class StepPulse : IMotion, ISettlingMotion
     {
         private readonly MotionDriver _driver;
         private readonly VisualElement _upNextBg;
@@ -72,6 +74,21 @@ namespace RowMate.Presentation.Motion
         public double Ramp => _ramp;
 
         public double Scale => _scale.Position;
+
+        // Lo que le falta a la escala de la cuenta, en dp: |destino − escala| × el ancho de la cuenta (0 sin layout).
+        public double RemainingDp
+        {
+            get
+            {
+                var width = _countdown.layout.width;
+                if (float.IsNaN(width) || width <= 0)
+                {
+                    return 0;
+                }
+
+                return Math.Abs(_scaleTarget - _scale.Position) * width;
+            }
+        }
 
         // p en un instante (0 sin pulso).
         public double PulseAt(double nowSeconds)

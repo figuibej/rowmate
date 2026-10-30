@@ -40,6 +40,7 @@ namespace RowMate.Snapshots
                 AddVideos(all);
 #endif
                 all.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
+                MarkSuperseded(all);
                 return all;
             }
         }
@@ -60,6 +61,36 @@ namespace RowMate.Snapshots
         }
 
         public const string HrmRow = "hrm-device-SIM:HRM";
+
+        // It. 4b (04b-hud-exr/02-tech-design §5.6; DT4b-07): las tomas del HUD de it4a (CAP-12 a CAP-30, la secuencia DEMO-01 a -14 y
+        // VID-01 a -03) muestran la barra de 40 sin píldoras ni reloj, el aviso workoutCompleted y la salida sin la última foto: con
+        // la 4b ya no son la app. Quedan REEMPLAZADAS por las de it4b: no se vuelven a tomar y sus archivos quedan como el registro
+        // de la 4a. CAP-01 a CAP-11 (Workout en reposo y el diálogo de inicio) se siguen tomando.
+        public const string SupersedingSet = "it4b";
+
+        private static void MarkSuperseded(List<SnapshotScenario> all)
+        {
+            foreach (var scenario in all)
+            {
+                var id = scenario.Id;
+                if (id.StartsWith("DEMO", StringComparison.Ordinal))
+                {
+                    scenario.SupersededBy = SupersedingSet;
+                    scenario.SupersededIds = "DEMO-01 a DEMO-12";
+                }
+                else if (id.StartsWith("VID", StringComparison.Ordinal))
+                {
+                    scenario.SupersededBy = SupersedingSet;
+                    scenario.SupersededIds = "VID-01 a VID-08";
+                }
+                else if (id.StartsWith("CAP-", StringComparison.Ordinal) && id.Length >= 6
+                         && int.TryParse(id.Substring(4, 2), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) && number >= 12)
+                {
+                    scenario.SupersededBy = SupersedingSet;
+                    scenario.SupersededIds = number <= 18 ? "CAP-13 a CAP-18" : "CAP-01 a CAP-31";
+                }
+            }
+        }
 
 #if ROWMATE_SIMULATOR
         // ── Workout en reposo y diálogo de inicio (CAP-01 a CAP-11; F-WKT-12, DV-21, DV-22) ──
@@ -186,7 +217,7 @@ namespace RowMate.Snapshots
                 ("#hud-free-title con rowing", () => Hud(h).Free != null && Hud(h).Free!.Icon.Codepoint == Icons.Rowing),
                 ("24.0", () => h.TextOf("hud-spm-value") == "24.0"),
                 ("02:13", () => h.TextOf("hud-split-value") == "02:13"),
-                ("150 W", () => h.TextOf("hud-watts-value") == "150" && h.TextOf("hud-watts-unit") == "W"),
+                ("150 W", () => h.TextOf("hud-watts-value") == "150" && Hud(h).Watts.UnitText == "W"),
                 ("00:42", () => h.TextOf("hud-time-value") == "00:42"),
                 ("sin #hud-bpm", () => !h.IsShown("hud-bpm")),
                 ("cielo arriba del 40 %", () => Near((float)Zones(h).Horizon, 0.40f, 0.001f)),
@@ -200,8 +231,9 @@ namespace RowMate.Snapshots
                 .WithProbe(PixelProbe.Dominant("rótulo Split metric.split", "hud-split-label", Tokens.MetricSplit.Rgb.ToHex(), 3), true)
                 .WithProbe(PixelProbe.Dominant("rótulo Watts metric.watts", "hud-watts-label", Tokens.MetricWatts.Rgb.ToHex(), 3), true)
                 .WithProbe(PixelProbe.Dominant("rótulo kcal metric.kcal", "hud-kcal-label", Tokens.MetricKcal.Rgb.ToHex(), 3), true)
-                .WithProbe(PixelProbe.Dominant("m metric.distance.hud @80 %", "hud-distance-unit", Over(Tokens.MetricDistanceHud, 0.8, glassWater), 3), true)
-                .WithProbe(PixelProbe.Point("contorno de Pausa border.strong", "hud-pause", new Vector2(0.5f, 0.004f), Over(Tokens.TextPrimary, 0.24, glassWater), 6), true);
+                .WithProbe(PixelProbe.DominantIn("m metric.distance.hud @80 %", "hud-distance-value", PixelProbe.SuffixOf, Over(Tokens.MetricDistanceHud, 0.8, glassWater), 3), true)
+                .WithProbe(PixelProbe.Point("contorno de Pausa border.strong", "hud-pause", new Vector2(0.5f, 0.004f), Over(Tokens.TextPrimary, 0.24, glassWater), 6), true)
+                .WithProbe(DividerProbe(), true);
             all.Add(cap12);
 
             var cap13 = Wk("CAP-13", "CAP-13-libre-con-pulso", DeviceProfile.TV, HostRoutines.Seeded(RoutineSeeds.Lista),
@@ -229,11 +261,20 @@ namespace RowMate.Snapshots
                 ("la banda compacta", () => Hud(h).Band.IsCompact),
                 ("BPM y kcal en fila, kcal en el rincón", () => Hud(h).VitalsInRow && h.BoundsOf("hud-kcal").xMin >= h.BoundsOf("hud-bpm").xMax),
                 ("la llave a la derecha de Pausa", () => h.BoundsOf("sim-open").xMin >= h.BoundsOf("hud-pause").xMax + 8 - 1)),
-                // Los rectángulos que no dependen del ancho de las cifras (los de la banda y de Split salen de RowMate Numeric SC,
-                // que entrega WP-D0): los controles (de Terminar a Pausa), la llave, kcal y BPM con sus mínimos y la barra.
+                // Los rectángulos de 04-design-notes §3.8: los controles (de Terminar a Pausa), la llave, kcal y BPM con sus mínimos,
+                // la barra y, desde WP-B0 (QA-V4a-06, las cifras de RowMate Numeric SC), también Split.
                 ControlsRect(h, 303.1, 610.9, 335.1, 394.1),
                 Rects(h, ("sim-open", 618.9, 658.9, 344.6, 384.6), ("hud-kcal", 798.1, 899.2, 327.1, 394.1), ("hud-bpm", 688.5, 789.6, 327.1, 394.1),
-                    ("hud-topbar", 12.6, 901.4, 8.4, 50.6)));
+                    ("hud-topbar", 12.6, 901.4, 8.4, 50.6), ("hud-split", 758.3, 899.2, 94.8, 180.1)),
+                Expect(
+                    // La banda de §3.8 (14,8-242,5) es la de `00:42 │ 1048 m`; acá el simulador lleva 3 cifras de distancia: la
+                    // misma esquina y el mismo alto, con el ancho que calcula HudGeometry para lo que muestra.
+                    ("la banda en 14,8 · 318,3-394,1 (± 1), del ancho de HudGeometry", () => Near(X(h, "hud-band").xMin, 14.8f, 1) && Near(X(h, "hud-band").yMin, 318.3f, 1)
+                        && Near(X(h, "hud-band").yMax, 394.1f, 1) && Near(X(h, "hud-band").width, (float)Zones(h).Band.Width, 1)),
+                    // DD4a-07: el reloj en celdas tabulares de la derivada 700 (cuatro cifras de 0,521 em y el `:` de 0,32 em, a 34).
+                    ("00:42 en celdas de RowMate Numeric SC (± 0,6 dp base)", () => h.TextOf("hud-time-value") == "00:42"
+                        && Near(X(h, "hud-time-value").width / (float)Zones(h).Scale, (4 * 0.521f + 0.32f) * HudBand.ValueSizeDp, 0.6f))));
+            cap15.WithProbe(DividerProbe(), true);
             all.Add(cap15);
 
             var cap16 = Wk("CAP-16", "CAP-16-valores-largos-l640", DeviceProfile.L640, HostRoutines.Seeded(RoutineSeeds.Empty), "Remo de prueba (Long); libre a los 3725 s",
@@ -245,12 +286,12 @@ namespace RowMate.Snapshots
             cap16.BackendName = "Prueba (Long)";
             cap16.Checks = h => Concat(BoatZoneFree(h), Expect(
                 ("1:02:05", () => h.TextOf("hud-time-value") == "1:02:05"),
-                ("123456 m", () => h.TextOf("hud-distance-value") == "123456" && h.TextOf("hud-distance-unit") == "m"),
+                ("123456 m", () => h.TextOf("hud-distance-value") == "123456" && Hud(h).Band.UnitText == "m"),
                 ("kcal 9999", () => h.TextOf("hud-kcal-value") == "9999"),
                 ("BPM 188", () => h.TextOf("hud-bpm-value") == "188"),
                 ("SPM 40.5", () => h.TextOf("hud-spm-value") == "40.5"),
-                // 0,561 en 04-design-notes §3.7 con las cifras de RowMate Numeric SC (WP-D0); acá, la que calculó HudGeometry, < 1.
-                ("la banda achicada, con la escala de HudGeometry", () => Hud(h).Band.Fit < 0.99f && Near(Hud(h).Band.Fit, (float)Zones(h).ValueScale(HudValue.Band), 0.001f)),
+                // 0,561 en 04-design-notes §3.7, con las cifras de RowMate Numeric SC (WP-B0, QA-V4a-06), y la que calculó HudGeometry.
+                ("la banda a escala 0,561 (± 0,005), la de HudGeometry", () => Near(Hud(h).Band.Fit, 0.561f, 0.005f) && Near(Hud(h).Band.Fit, (float)Zones(h).ValueScale(HudValue.Band), 0.001f)),
                 ("kcal y BPM a ancho de contenido", () => Zones(h).VitalsInRow && !Zones(h).VitalsMinWidth),
                 ("#hud-boat-zone a la vista", () => h.IsShown("hud-boat-zone")),
                 ("la llave sobre Pausa (414,8-454,8 · 245,5-285,5 ± 1)", () => RectIs(h, "sim-open", 414.8, 454.8, 245.5, 285.5))));
@@ -295,7 +336,7 @@ namespace RowMate.Snapshots
                 ("SPM sin objetivo", () => !Hud(h).SpmHasTarget));
             cap20.WithProbe(PixelProbe.Point("borde de Split @70 %", "hud-split", new Vector2(0.5f, 0.008f),
                     Over(Tokens.MetricSplit, 0.7, PixelProbe.Composite(Tokens.GlassFallback, Tokens.BackdropSky)), 6), true)
-                .WithProbe(PixelProbe.Dominant("flecha de Split state.offTarget.hud", "hud-split-arrow", Tokens.StateOffTargetHud.Rgb.ToHex(), 3), true);
+                .WithProbe(PixelProbe.DominantIn("flecha de Split state.offTarget.hud", "hud-split-value", PixelProbe.PrefixOf, Tokens.StateOffTargetHud.Rgb.ToHex(), 3), true);
             all.Add(cap20);
 
             var cap21 = Wk("CAP-21", "CAP-21-proximo", DeviceProfile.TV, HostRoutines.Seeded(RoutineSeeds.F4A), "Prueba 4a a los 78 s",
@@ -330,11 +371,11 @@ namespace RowMate.Snapshots
             cap24.Checks = h => Concat(BoatZoneFree(h), Expect(
                 ("SPM fuera (▲, obj. 24)", () => Off(h, Hud(h).Spm, HudCard.Arrow) && h.TextOf("hud-target-spm") == "obj. 24"),
                 ("Watts fuera (▲, obj. 160)", () => Off(h, Hud(h).Watts, HudCard.Arrow) && h.TextOf("hud-target-watts") == "obj. 160"),
-                // 0,962 en 04-design-notes §3.7 con las cifras de RowMate Numeric SC (WP-D0); acá, la que calculó HudGeometry (T2), < 1.
-                ("SPM achicado por la zona del bote (T2), con la escala de HudGeometry", () => Hud(h).Spm.Fit < 0.99f && Near(Hud(h).Spm.Fit, (float)Zones(h).ValueScale(HudValue.Spm), 0.001f)),
+                // 0,962 en 04-design-notes §3.7, con las cifras de RowMate Numeric SC (WP-B0, QA-V4a-06), y la que calculó HudGeometry (T2).
+                ("SPM a escala 0,962 (± 0,005) por la zona del bote (T2), la de HudGeometry", () => Near(Hud(h).Spm.Fit, 0.962f, 0.005f) && Near(Hud(h).Spm.Fit, (float)Zones(h).ValueScale(HudValue.Spm), 0.001f)),
                 ("la llave sobre Pausa", () => h.BoundsOf("sim-open").yMax <= h.BoundsOf("hud-pause").yMin - 8 + 1
                                                && Near(h.BoundsOf("sim-open").xMax, h.BoundsOf("hud-pause").xMax, 1))));
-            cap24.WithProbe(PixelProbe.Dominant("flecha de SPM state.offTarget.hud", "hud-spm-arrow", Tokens.StateOffTargetHud.Rgb.ToHex(), 3), true);
+            cap24.WithProbe(PixelProbe.DominantIn("flecha de SPM state.offTarget.hud", "hud-spm-value", PixelProbe.PrefixOf, Tokens.StateOffTargetHud.Rgb.ToHex(), 3), true);
             all.Add(cap24);
 
             all.Add(Cap19Like("CAP-25", "CAP-25-trabajo-w1280", DeviceProfile.W1280, "Como CAP-19 en el escritorio", true));
@@ -371,7 +412,7 @@ namespace RowMate.Snapshots
                     ("Watts en state.offTarget.hud", () => ColorIs(h.Find("hud-watts-value")!.resolvedStyle.color, Tokens.StateOffTargetHud)),
                     ("obj. 160 debajo de las cifras", () => h.TextOf("hud-target-watts") == "obj. 160"
                                                             && h.BoundsOf("hud-target-watts").yMin >= h.BoundsOf("hud-watts-value").yMax - 1),
-                    ("SPM cumple, con el hueco vacío y obj. 22", () => Hud(h).SpmHasTarget && !Hud(h).Spm.IsOff && !h.IsShown("hud-spm-arrow")
+                    ("SPM cumple, con el hueco vacío y obj. 22", () => Hud(h).SpmHasTarget && !Hud(h).Spm.IsOff && !Hud(h).Spm.ArrowShown
                                                                        && h.TextOf("hud-target-spm") == "obj. 22"),
                     ("Split sin objetivo", () => !Hud(h).SplitHasTarget),
                 };
@@ -386,7 +427,7 @@ namespace RowMate.Snapshots
             // se mide un punto del trazo de la flecha de trending_up (el mismo en TV, TH y W1280 con este texto; se vuelve a
             // ubicar si cambia el ancho del texto, por ejemplo con las tablas K2: WP-D).
             scenario.WithProbe(PixelProbe.Dominant("Watts state.offTarget.hud", "hud-watts-value", Tokens.StateOffTargetHud.Rgb.ToHex(), 2), true)
-                .WithProbe(PixelProbe.Dominant("flecha de Watts", "hud-watts-arrow", Tokens.StateOffTargetHud.Rgb.ToHex(), 3), true)
+                .WithProbe(PixelProbe.DominantIn("flecha de Watts", "hud-watts-value", PixelProbe.PrefixOf, Tokens.StateOffTargetHud.Rgb.ToHex(), 3), true)
                 .WithProbe(PixelProbe.Point("tendencia metric.distance", "hud-step-target", new Vector2(0.5936f, 0.40f), Tokens.MetricDistance.Rgb.ToHex(), 3), true);
             if (full)
             {
@@ -543,7 +584,7 @@ namespace RowMate.Snapshots
             yield return s.TapInView("sim-watts-plus");
             yield return s.Tap("sim-close");
             yield return s.Advance(1);
-            yield return s.Shot("DEMO-10", h => Expect(("Watts cumple (blanco, hueco vacío)", () => !Hud(h).Watts.IsOff && !h.IsShown("hud-watts-arrow"))));
+            yield return s.Shot("DEMO-10", h => Expect(("Watts cumple (blanco, hueco vacío)", () => !Hud(h).Watts.IsOff && !Hud(h).Watts.ArrowShown)));
 
             yield return s.AdvanceTo(120);
             yield return s.Tap("sim-open");
@@ -736,7 +777,7 @@ namespace RowMate.Snapshots
         // Fuera de objetivo con la flecha pedida a la vista en su hueco.
         private static bool Off(UiTestHost h, HudCard card, string arrow)
         {
-            return card.HasTarget && card.IsOff && card.ArrowLabel != null && UiQuery.IsShown(card.ArrowLabel) && card.ArrowLabel.text == arrow;
+            return card.HasTarget && card.IsOff && card.ArrowShown && card.ArrowGlyph == arrow;
         }
 
         // El chevron, a 28 dp del borde derecho de la tarjeta (el centro de la columna del ⋮ de Rutinas).
@@ -859,6 +900,14 @@ namespace RowMate.Snapshots
 
         // ── Sondas de aspecto compartidas (04-design-notes §8.2) ──
 
+        // QA-V4a-03 (DD4b-01 de 04b/00-deuda-diseno §1.3): el divisor de la banda se ve, blanco al 12 % sobre el vidrio y el agua
+        // (#263241), en el medio de su columna. Con el divisor en 0 la toma falla.
+        private static PixelProbe DividerProbe()
+        {
+            var glassWater = PixelProbe.Composite(Tokens.GlassFallback, Tokens.BackdropWater);
+            return PixelProbe.Point("divisor de la banda blanco @12 %", "hud-band-divider", new Vector2(0.5f, 0.5f), Over(Tokens.TextPrimary, HudBand.DividerAlpha, glassWater), 2);
+        }
+
         private static void RestProbes(SnapshotScenario scenario)
         {
             scenario.WithProbe(PixelProbe.Point("botón accent.primary", "workout-free", new Vector2(0.03f, 0.5f), Tokens.AccentPrimary.Rgb.ToHex(), 1), true)
@@ -888,7 +937,7 @@ namespace RowMate.Snapshots
                 .WithProbe(PixelProbe.Dominant("tiempo metric.time.hud", "hud-time-value", Tokens.MetricTimeHud.Rgb.ToHex(), 2), aspectOnly)
                 .WithProbe(PixelProbe.Dominant("distancia metric.distance.hud", "hud-distance-value", Tokens.MetricDistanceHud.Rgb.ToHex(), 2), aspectOnly)
                 .WithProbe(PixelProbe.Dominant("kcal metric.kcal.hud", "hud-kcal-value", Tokens.MetricKcalHud.Rgb.ToHex(), 2), aspectOnly)
-                .WithProbe(PixelProbe.Dominant("W metric.watts.hud @80 %", "hud-watts-unit", Over(Tokens.MetricWattsHud, 0.8, glassSky), 3), true)
+                .WithProbe(PixelProbe.DominantIn("W metric.watts.hud @80 %", "hud-watts-value", PixelProbe.SuffixOf, Over(Tokens.MetricWattsHud, 0.8, glassSky), 3), true)
                 .WithProbe(PixelProbe.Dominant("Terminar state.dangerText", "hud-finish .rm-button__label", Tokens.StateDangerText.Rgb.ToHex(), 3), true);
         }
 

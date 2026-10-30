@@ -30,6 +30,18 @@ namespace RowMate.Tests.Support
             return k => R4(k).CopyWith(strokeRate: spm);
         }
 
+        // It. 4b (spec §0.4): R-4(s; w), R-4 con SPM s y vatios w (por ejemplo R-4(23; 170)).
+        public static Func<int, RowingData> R4With(double spm, int watts)
+        {
+            return k => R4(k).CopyWith(strokeRate: spm, powerWatts: watts);
+        }
+
+        // It. 4b: R-4X, los extremos FTMS de AC-WKT-17-10 de la 4a (= Extremes).
+        public static RowingData R4X(int k)
+        {
+            return Extremes(k);
+        }
+
         // R-4R, reinicio del monitor: desde L(10) la distancia es 4 (k − 10).
         public static RowingData R4R(int k)
         {

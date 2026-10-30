@@ -225,9 +225,190 @@ namespace RowMate.Tests.EditMode.Design
             var th = HudGeometry.Layout(HudGeometryCases.Input(914, 411, insets, false, HudGeometryCases.FreeWithBpm));
             Assert.That(th.BandZone.AnchorY, Is.EqualTo(411 - 48 - 16 * th.Scale).Within(1e-9), "horizontal: margen + 16·s");
             Assert.That(th.VitalsZone.AnchorY, Is.EqualTo(411 - 48 - 16 * th.Scale).Within(1e-9));
-            Assert.That(th.PanelCeiling.HasValue, Is.False);
-            Assert.That(tv.PanelCeiling, Is.EqualTo(tv.WattsWithTargetBottom + 8).Within(1e-9));
+            // It. 4b (DN4b-23; AC-BLE-16-03): el techo vale en las dos orientaciones: 8 debajo de la barra de 74·s en horizontal y
+            // 8 debajo del disco del lugar centro alto en vertical (que está debajo de Watts con su objetivo).
+            Assert.That(th.PanelCeiling, Is.EqualTo(th.TopBarMax.Bottom + 8).Within(1e-9));
+            Assert.That(tv.PanelCeiling, Is.EqualTo(tv.BigCount.Bottom + 8).Within(1e-9));
+            Assert.That(tv.BigCount.Bottom, Is.GreaterThan(tv.WattsWithTargetBottom));
             Assert.That(tv.WattsWithTargetBottom, Is.EqualTo(24 + (90 + 80.856 + 8 + 97.712) * s).Within(1e-6));
+        }
+
+        // ── It. 4b (02-tech-design §3.4 a §3.7, §5.7; 04-design-notes §3.1, §3.6, §3.9; DN4b-14, -22, -23) ──
+
+        [Test, Category("AC-WKT-14-01"), Category("AC-WKT-09-08")]
+        public void StepBarHeights()
+        {
+            // La barra de pasos de dos filas (píldoras 20 + información 22 + 8) = 52; con el sello, 74 (17 + 5); la libre, 40. Las
+            // tarjetas siguen a margen + 90·s: la barra crece hacia abajo dentro de ese lugar y queda a 8·s de ellas (TV: 86,4 y 94,8).
+            Assert.That(HudGeometry.TopBarHeightSteps, Is.EqualTo(2 * PillRowGeometry.BarBorder + PillRowGeometry.RowHeight + HudGeometry.TopBarRowHeight + HudGeometry.InfoRowPadBottom),
+                "el borde de 1 arriba y abajo, 20 de píldoras, 22 de información y 8 abajo (04-design-notes §3.1)");
+            Assert.That(HudGeometry.TopBarHeightSeal, Is.EqualTo(HudGeometry.TopBarHeightSteps + HudGeometry.SealRowHeight + HudGeometry.SealRowGap));
+            Assert.That(HudGeometry.TopBarHeightFree, Is.EqualTo(40));
+            Assert.That(HudGeometry.TopBarHeightFor(true, false), Is.EqualTo(52));
+            Assert.That(HudGeometry.TopBarHeightFor(true, true), Is.EqualTo(74));
+            Assert.That(HudGeometry.TopBarHeightFor(false, true), Is.EqualTo(40));
+            var expected = new[] { ("TV", 8.4, 86.4), ("TH", 8.4, 86.4), ("P360", 7.4, 75.7), ("L640", 7.4, 75.7), ("W1280", 12.8, 131.2) };
+            foreach (var e in expected)
+            {
+                var p = HudGeometryCases.Profile(e.Item1);
+                var layout = HudGeometry.Layout(HudGeometryCases.Input(p[0], p[1], SafeInsets.None, false, HudGeometryCases.RoutineWithBpm));
+                Assert.That(layout.TopBarMax.Top, Is.EqualTo(e.Item2).Within(0.1), e.Item1);
+                Assert.That(layout.TopBarMax.Bottom, Is.EqualTo(e.Item3).Within(0.1), e.Item1);
+                Assert.That(layout.Spm.Top - layout.TopBarMax.Bottom, Is.EqualTo(8 * layout.Scale).Within(1e-6), e.Item1 + ": a 8·s de las tarjetas");
+                Assert.That(layout.Spm.Top, Is.EqualTo(90 * layout.Scale).Within(1e-6), "las tarjetas no se mueven");
+            }
+        }
+
+        [TestCase("TV", 167.6, 234.0, 243.4, 309.9)]
+        [TestCase("P360", 146.8, 204.9, 213.2, 271.4)]
+        [TestCase("TH", 419.1, 108.3, 494.9, 184.2)]
+        [TestCase("L640", 286.8, 94.9, 353.2, 161.4)]
+        [TestCase("W1280", 582.4, 188.6, 697.6, 303.8)]
+        public void BigCountPlace(string profile, double x0, double y0, double x1, double y1)
+        {
+            // §3.5 (04-design-notes §3.6): el disco de 72·s centrado en x; en y, entre lo de arriba + 8·s y la zona del bote − 8·s.
+            var p = HudGeometryCases.Profile(profile);
+            foreach (var values in HudGeometryCases.All)
+            {
+                if (values == HudGeometryCases.Extremes)
+                {
+                    continue;
+                }
+
+                var layout = HudGeometry.Layout(HudGeometryCases.Input(p[0], p[1], SafeInsets.None, true, values));
+                var disc = layout.BigCount;
+                Assert.That(layout.BigCountFits, Is.True, profile + " " + values);
+                Assert.That(disc.Left, Is.EqualTo(x0).Within(0.1), profile + " " + values);
+                Assert.That(disc.Top, Is.EqualTo(y0).Within(0.1), profile + " " + values);
+                Assert.That(disc.Right, Is.EqualTo(x1).Within(0.1));
+                Assert.That(disc.Bottom, Is.EqualTo(y1).Within(0.1));
+                Assert.That(disc.Width, Is.EqualTo(HudGeometry.BigCountDiameter * layout.Scale).Within(1e-9));
+                Assert.That(disc.Intersects(layout.BoatZone), Is.False, "fuera de la zona del bote");
+                Assert.That(layout.BoatZone.Top - disc.Bottom, Is.GreaterThanOrEqualTo(8 * layout.Scale - 1e-6));
+            }
+        }
+
+        [Test, Category("AC-WKT-14-18")]
+        public void BigCountKeepsItsDistances()
+        {
+            // TV: a 10,7 de Watts (pide 8·s); en ningún perfil toca una pieza agrandada 8·s, con y sin simulador.
+            var tv = HudGeometry.Layout(HudGeometryCases.Input(411, 914, SafeInsets.None, true, HudGeometryCases.RoutineWithBpm));
+            Assert.That(tv.Watts.Left - tv.BigCount.Right, Is.EqualTo(10.7).Within(0.1));
+            foreach (var profile in HudGeometryCases.Profiles)
+            {
+                foreach (var simulator in new[] { false, true })
+                {
+                    foreach (var values in HudGeometryCases.All)
+                    {
+                        var layout = HudGeometry.Layout(HudGeometryCases.Input(profile.Value[0], profile.Value[1], SafeInsets.None, simulator, values));
+                        if (!layout.BigCountFits)
+                        {
+                            Assert.That(values, Is.EqualTo(HudGeometryCases.Extremes), "solo con los extremos de FTMS no entra: no se muestra");
+                            continue;
+                        }
+
+                        foreach (var piece in Pieces(layout))
+                        {
+                            if (piece.Key == "TopBar")
+                            {
+                                continue;
+                            }
+
+                            Assert.That(layout.BigCount.Intersects(piece.Value, 8 * layout.Scale - 1e-6), Is.False,
+                                profile.Key + " " + values + ": el disco toca " + piece.Key);
+                        }
+
+                        Assert.That(layout.BigCount.Intersects(layout.TopBarMax, 8 * layout.Scale - 1e-6), Is.False, "la barra en su alto máximo");
+                    }
+                }
+            }
+        }
+
+        [Test, Category("AC-WKT-13-12")]
+        public void PausedInTheDisc()
+        {
+            // DN4b-14: PAUSA va en el mismo disco (HudLayout.BigCount; sale HudLayout.Callout): un disco por vez. Su bloque (el glifo
+            // de 28, 4 de aire y la etiqueta de 12) entra en el interior del aro.
+            var tv = HudGeometry.Layout(HudGeometryCases.Input(411, 914, SafeInsets.None, false, HudGeometryCases.FreeWithBpm));
+            var routine = HudGeometry.Layout(HudGeometryCases.Input(411, 914, SafeInsets.None, false, HudGeometryCases.RoutineWithBpm));
+            Assert.That(tv.BigCount, Is.EqualTo(routine.BigCount), "el mismo lugar en libre y con rutina");
+            Assert.That(HudGeometry.PausedGlyphDp + HudGeometry.PausedGlyphGap + HudGeometry.PausedLabelSize, Is.LessThan(HudGeometry.BigCountDiameter - 2 * HudGeometry.BigCountRingStroke));
+            Assert.That(HudGeometry.BigCountDigit, Is.EqualTo(HudGeometry.LargeValue), "al menos el tamaño del valor de SPM");
+        }
+
+        [Test, Category("AC-WKT-13-13"), Category("AC-WKT-17-08")]
+        public void NoOverlapWithTheNewPieces()
+        {
+            // Ninguna pieza nueva se cruza: la barra en su alto máximo (con el sello) y el disco, en los cinco perfiles, con los casos
+            // de valores y con y sin simulador; nada entra en la zona del bote.
+            foreach (var profile in HudGeometryCases.Profiles)
+            {
+                foreach (var simulator in new[] { false, true })
+                {
+                    foreach (var values in HudGeometryCases.All)
+                    {
+                        var layout = HudGeometry.Layout(HudGeometryCases.Input(profile.Value[0], profile.Value[1], SafeInsets.None, simulator, values));
+                        var name = profile.Key + (simulator ? "+sim " : " ") + values;
+                        Assert.That(layout.TopBarMax.Intersects(layout.BoatZone), Is.False, name);
+                        foreach (var piece in Pieces(layout))
+                        {
+                            if (piece.Key != "TopBar")
+                            {
+                                Assert.That(layout.TopBarMax.Intersects(piece.Value), Is.False, name + ": la barra de 74·s toca " + piece.Key);
+                            }
+                        }
+
+                        if (layout.BigCountFits)
+                        {
+                            Assert.That(layout.BigCount.Intersects(layout.BoatZone), Is.False, name);
+                        }
+                    }
+                }
+            }
+        }
+
+        [TestCase("TV", 317.9)]
+        [TestCase("P360", 279.4)]
+        [TestCase("TH", 94.4)]
+        [TestCase("L640", 83.7)]
+        [TestCase("W1280", 139.2)]
+        public void PanelCeiling(string profile, double ceiling)
+        {
+            // DN4b-23 (AC-BLE-16-03): 8 dp debajo del disco en vertical y de la barra de 74·s en horizontal; no cambia con el paso.
+            var p = HudGeometryCases.Profile(profile);
+            var free = HudGeometry.Layout(HudGeometryCases.Input(p[0], p[1], SafeInsets.None, true, HudGeometryCases.Free));
+            var routine = HudGeometry.Layout(HudGeometryCases.Input(p[0], p[1], SafeInsets.None, true, HudGeometryCases.RoutineWithBpm));
+            Assert.That(routine.PanelCeiling!.Value, Is.EqualTo(ceiling).Within(0.1));
+            Assert.That(free.PanelCeiling!.Value, Is.EqualTo(routine.PanelCeiling.Value).Within(1e-9), "no cambia con los objetivos");
+            Assert.That(HudGeometry.PanelCeilingGap, Is.EqualTo(8));
+        }
+
+        [Test, Category("AC-BLE-16-03")]
+        public void PanelCeilingInBothOrientations()
+        {
+            var tv = HudGeometry.Layout(HudGeometryCases.Input(411, 914, SafeInsets.None, true, HudGeometryCases.RoutineWithBpm));
+            var th = HudGeometry.Layout(HudGeometryCases.Input(914, 411, SafeInsets.None, true, HudGeometryCases.RoutineWithBpm));
+            Assert.That(tv.PanelCeiling, Is.EqualTo(tv.BigCount.Bottom + 8).Within(1e-9));
+            Assert.That(th.PanelCeiling, Is.EqualTo(th.TopBarMax.Bottom + 8).Within(1e-9));
+        }
+
+        [Test, Category("AC-BLE-16-02")]
+        public void LeftLaneObstacles()
+        {
+            // R10 (DN4b-22): las piezas del HUD que se cruzan con el carril izquierdo (x 16-56, agrandado 8). TV: la barra, las
+            // tarjetas de la izquierda, la banda y los controles; nunca kcal y BPM (van a la derecha).
+            var tv = HudGeometry.Layout(HudGeometryCases.Input(411, 914, SafeInsets.None, true, HudGeometryCases.RoutineWithBpm));
+            Assert.That(tv.LeftLaneObstacles, Has.Member(tv.Band));
+            Assert.That(tv.LeftLaneObstacles, Has.Member(tv.Controls));
+            Assert.That(tv.LeftLaneObstacles, Has.No.Member(tv.Kcal));
+            foreach (var piece in tv.LeftLaneObstacles)
+            {
+                Assert.That(piece.Left, Is.LessThan(56 + 8));
+            }
+
+            var w = HudGeometry.Layout(HudGeometryCases.Input(1280, 720, SafeInsets.None, true, HudGeometryCases.RoutineWithBpm));
+            Assert.That(w.LeftLaneObstacles, Has.Member(w.Band));
+            Assert.That(HudGeometry.LeftLaneLeft(new SafeInsets(24, 0, 0, 0)), Is.EqualTo(40));
         }
 
         [Test]

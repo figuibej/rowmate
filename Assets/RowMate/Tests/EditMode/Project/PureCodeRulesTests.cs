@@ -287,6 +287,41 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(code.Split('\n').Length, Is.EqualTo(source.Split('\n').Length));
         }
 
+        // It. 4b (02-tech-design §1.2): ningún reloj del sistema en las reglas nuevas de Core/Workout, Core/Design y App/Workout
+        // (el tiempo llega por argumento o por el IScheduler), y el reloj despierto (SuspendAccounting, FrameClock, SystemWake)
+        // recibe todo por argumento: ni Stopwatch ni la hora del sistema.
+        [Test, Category("AC-WKT-02-11"), Category("AC-APP-19-03")]
+        public void NoSystemClockInTheFourBRules()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\bDateTime(Offset)?\s*\.\s*(Now|UtcNow|Today)\b"),
+                new Regex(@"\bStopwatch\b"),
+                new Regex(@"\bEnvironment\s*\.\s*TickCount(64)?\b"),
+                new Regex(@"\bTimeProvider\b"),
+                new Regex(@"\bTask\s*\.\s*Delay\s*\("),
+                new Regex(@"\bnew\s+Timer\s*\("),
+            };
+            var files = new[]
+            {
+                "Core/Workout/StepPills.cs", "Core/Workout/StepOutcome.cs", "Core/Workout/StepSeal.cs", "Core/Workout/BigCountdown.cs",
+                "Core/Workout/PhaseChip.cs", "Core/Workout/CompletionSummary.cs", "Core/Workout/CloseStatus.cs",
+                "Core/Design/PillRowGeometry.cs", "Core/Design/PillShapes.cs", "Core/Design/PillProgress.cs", "Core/Design/InfoRowFit.cs",
+                "Core/Design/CountUp.cs", "Core/Design/HudTimelines.cs", "Core/Design/CheckGlyph.cs",
+                "Core/Common/SuspendAccounting.cs", "Core/Common/FrameClock.cs", "Core/Common/SystemWake.cs",
+                "App/Workout/WallClockTicker.cs", "App/Workout/CompletionDialogRule.cs", "App/Workout/ImmersiveSystemBars.cs",
+            };
+            var offenders = new List<string>();
+            foreach (var relative in files)
+            {
+                var path = RepoPaths.Combine("Assets/RowMate/" + relative);
+                Assert.That(File.Exists(path), Is.True, relative);
+                offenders.AddRange(SourceScan.Matches(path, patterns, true));
+            }
+
+            Assert.That(offenders, Is.Empty, "reloj del sistema en una regla pura de la It. 4b:\n" + string.Join("\n", offenders));
+        }
+
         private static void AssertNoMatches(string[] folders, Regex[] patterns, bool blankLiterals, string what)
         {
             var offenders = new List<string>();

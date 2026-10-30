@@ -17,7 +17,12 @@ namespace RowMate.Platform
         {
             return new PlatformServices(new SystemLocaleProvider(), new AccessibilitySettingsProvider(logger), new DisplayMetricsProvider(),
                 BackButtonPolicy.ForCurrentPlatform(), CurrentKind(), IsDesktop(), new WindowsTitleBar(logger), new AppDataLocation(),
-                new SystemClipboard(), new SoftKeyboard(Application.isMobilePlatform), WakeLockFactory.Create(logger));
+                new SystemClipboard(), new SoftKeyboard(Application.isMobilePlatform), WakeLockFactory.Create(logger))
+            {
+                // It. 4b: las barras del sistema (F-APP-15) y la fuente de sueño del equipo (P-17).
+                SystemUi = RowMate.Platform.SystemUi.SystemUiFactory.Create(logger),
+                SleepSource = RowMate.Platform.Power.SleepSourceFactory.Create(logger),
+            };
         }
 
         public static PlatformKind CurrentKind()

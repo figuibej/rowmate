@@ -20,6 +20,10 @@ namespace RowMate.App.Workout
     // - Avisos del motor (WorkoutToast.For). Sin el usuario delante (segundo plano, ventana minimizada o sin foco) no emite:
     //   guarda solo el último y lo emite UNA vez cuando el usuario vuelve a estar delante (AC-WKT-02-06, -08, -09;
     //   QA-G4a-P08; spec §12 punto 13).
+    // - It. 4b (AC-APP-03-11, AC-WKT-02-08; 02-tech-design §2.11): con el diálogo de completado abierto (la foto del motor en
+    //   Finished con EndedBy == Completed) tampoco emite: retiene el último y lo emite al volver a reposo, una vez. El
+    //   workoutSaveError del final sale en ese momento. Cuándo se VE es de la presentación (WorkoutScreenView, con el
+    //   RevealStarted del inmersivo que sale, DN4b-24).
     public sealed class WorkoutStore : IDisposable
     {
         public const string Tag = WorkoutEngine.Tag;
@@ -38,6 +42,7 @@ namespace RowMate.App.Workout
         private readonly IDisposable _focusSubscription;
         private bool _rowerConnected;
         private string? _held;
+        private bool _completionOpen;
         private bool _disposed;
 
         public WorkoutStore(WorkoutEngine engine, DeviceStore device, RoutinesStore routines, IAppLifecycle lifecycle, IAppLogger logger)
@@ -65,8 +70,11 @@ namespace RowMate.App.Workout
 
         public IReadOnlyObservable<WorkoutRestState> State { get; }
 
-        // La clave del catálogo de cada aviso (workoutRoutineCannotStart, workoutSaveError, workoutCompleted).
+        // La clave del catálogo de cada aviso (workoutRoutineCannotStart, workoutSaveError).
         public IEventSource<string> Toasts => _toasts;
+
+        // It. 4b: el motor espera al diálogo de completado (Finished con EndedBy == Completed): los avisos se retienen.
+        public bool CompletionDialogOpen => _completionOpen;
 
         // El aviso retenido mientras el usuario no está delante (null si no hay).
         public string? HeldToast => _held;
@@ -171,9 +179,17 @@ namespace RowMate.App.Workout
 
         private void OnEngine(WorkoutSnapshot snapshot)
         {
+            var completionOpen = snapshot.Phase == WorkoutPhase.Finished && snapshot.EndedBy == WorkoutEndKind.Completed;
+            var closed = _completionOpen && !completionOpen;
+            _completionOpen = completionOpen;
             if (snapshot.Phase != _state.Value.SessionPhase)
             {
                 Refresh();
+            }
+
+            if (closed)
+            {
+                ReleaseHeld();
             }
         }
 
@@ -193,9 +209,10 @@ namespace RowMate.App.Workout
                 return;
             }
 
-            if (!_lifecycle.IsUserFacing)
+            if (!_lifecycle.IsUserFacing || _completionOpen)
             {
-                // Sin el usuario delante: solo el último, una vez al volver (AC-WKT-02-08).
+                // Sin el usuario delante, o con el diálogo de completado abierto: solo el último, una vez al volver
+                // (AC-WKT-02-08, AC-APP-03-11).
                 _held = key;
                 _logger.Log(LogLevel.Debug, Tag, "aviso retenido: " + key);
                 return;
@@ -206,7 +223,7 @@ namespace RowMate.App.Workout
 
         private void ReleaseHeld()
         {
-            if (_disposed || _held == null || !_lifecycle.IsUserFacing)
+            if (_disposed || _held == null || !_lifecycle.IsUserFacing || _completionOpen)
             {
                 return;
             }

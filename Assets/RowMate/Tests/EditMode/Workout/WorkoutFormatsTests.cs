@@ -194,5 +194,49 @@ namespace RowMate.Tests.EditMode.Workout
             Assert.That(WorkoutFormats.SplitTargetValue(0), Is.EqualTo("00:00"));
             Assert.That(WorkoutFormats.SplitTargetValue(-5), Is.EqualTo("00:55"), "sin piso, como AC-RUT-04-04");
         }
+
+        // QA-V4b-MOT-01: el conteo del diálogo de completado escribe los totales en un búfer propio, sin cadena nueva por cuadro.
+        // Los caracteres tienen que ser los mismos que los de SessionClock y Count (Fmt.Integer), también en los bordes.
+        [Test, Category("AC-WKT-21-05")]
+        public void WrittenTotalsMatchTheStringsWithoutAllocating()
+        {
+            var buffer = new char[RowMate.Core.Text.TimeFormats.ElapsedMaxChars + 2];
+            var clocks = new long[] { 0, 1, 9, 59, 60, 61, 599, 600, 3599, 3600, 3601, 3725, 35999, 36000, 359999, 360000, -1, -5, -65, -3600, -3601, long.MaxValue, long.MinValue + 1 };
+            foreach (var seconds in clocks)
+            {
+                var length = WorkoutFormats.WriteSessionClock(seconds, buffer, 1);
+                Assert.That(new string(buffer, 1, length), Is.EqualTo(WorkoutFormats.SessionClock(seconds)), "el reloj de " + seconds);
+            }
+
+            var counts = new long[] { 0, 7, 10, 99, 100, 1120, 65535, 16777215, int.MaxValue, -1, -10, -2147483648L, long.MaxValue, long.MinValue };
+            var integer = new char[RowMate.Core.Text.Fmt.IntegerMaxChars];
+            foreach (var value in counts)
+            {
+                var length = RowMate.Core.Text.Fmt.WriteInteger(value, integer, 0);
+                Assert.That(new string(integer, 0, length), Is.EqualTo(RowMate.Core.Text.Fmt.Integer(value)), "la cuenta " + value);
+            }
+
+            for (long seconds = 0; seconds < 7300; seconds += 7)
+            {
+                var length = WorkoutFormats.WriteSessionClock(seconds, buffer, 0);
+                Assert.That(new string(buffer, 0, length), Is.EqualTo(WorkoutFormats.SessionClock(seconds)));
+            }
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => RowMate.Core.Text.Fmt.WriteInteger(12345, new char[4], 0), "no entra");
+            WorkoutFormats.WriteSessionClock(3725, buffer, 0); // JIT
+            RowMate.Core.Text.Fmt.WriteInteger(1120, integer, 0);
+            var before = AllocatedBytes.Now();
+            for (var i = 0; i < 70; i++)
+            {
+                WorkoutFormats.WriteSessionClock(i * 3, buffer, 0);
+                RowMate.Core.Text.Fmt.WriteInteger(i * 16, integer, 0);
+            }
+
+            var allocated = AllocatedBytes.Since(before);
+            if (allocated.HasValue)
+            {
+                Assert.That(allocated.Value, Is.EqualTo(0), "sin asignar: " + allocated.Value + " B en 70 cuadros");
+            }
+        }
     }
 }

@@ -137,21 +137,61 @@ namespace RowMate.Presentation.Shell
         // Se cierra (con resultado o sin él): en el cuadro 0 de la salida.
         public event Action<ModalDialog>? Closed;
 
-        // Cancelar, el velo, Escape y "Atrás" (AC-APP-03-03, AC-RUT-13-14).
+        // El cierre del DUEÑO (el botón Cancelar, la página que se va): nunca se bloquea, aunque el diálogo no sea descartable
+        // (It. 4b, QA-G4bT-09 (c); la lección de QA-G4aT-04).
         public void Cancel()
         {
             Close(false);
         }
 
-        internal void Open(DialogLayer layer, Focusable? focusBefore)
+        // It. 4b (F-WKT-21; AC-WKT-21-02, AC-WKT-13-03; 02-tech-design §3.9): si los caminos DEL USUARIO (el velo, Escape y
+        // "Atrás") lo cierran. El de rutina completada no es descartable: tocar el velo no hace nada y Escape o "Atrás" se
+        // consumen sin cerrarlo (DialogLayer.CancelTop devuelve true), así no llegan al HUD.
+        protected virtual bool Dismissible => true;
+
+        public bool IsDismissible => Dismissible;
+
+        // El velo, Escape y "Atrás": cierran como Cancelar solo si el diálogo es descartable. true = el pedido se consumió.
+        public bool Dismiss()
+        {
+            if (!IsOpen)
+            {
+                return false;
+            }
+
+            if (Dismissible)
+            {
+                Cancel();
+            }
+
+            return true;
+        }
+
+        // Se abrió sin transición (el de rutina completada al volver del segundo plano, AC-WKT-21-09).
+        public bool OpenedInstantly { get; private set; }
+
+        internal void Open(DialogLayer layer, Focusable? focusBefore, bool instantly)
         {
             _layer = layer;
             _focusBefore = focusBefore;
             _opened = true;
+            OpenedInstantly = instantly;
             _trap = new FocusTrap(Box);
             Relayout(layer.WindowWidthDp, layer.WindowHeightDp, layer.SafeVerticalDp, layer.KeyboardDp);
-            Box.style.opacity = 0;
-            _transition.PlayIn(Scrim, Box);
+            if (instantly)
+            {
+                // Todo en su estado final en el acto: el velo a su opacidad y el diálogo entero.
+                _transition.Finish();
+                Scrim.style.opacity = (float)MotionSpecs.DialogScrimOpacity;
+                Box.style.opacity = StyleKeyword.Null;
+                Box.style.scale = StyleKeyword.Null;
+            }
+            else
+            {
+                Box.style.opacity = 0;
+                _transition.PlayIn(Scrim, Box);
+            }
+
             OnOpened();
         }
 
@@ -245,7 +285,7 @@ namespace RowMate.Presentation.Shell
             evt.StopPropagation();
             if (!_closing)
             {
-                Cancel();
+                Dismiss();
             }
         }
 
@@ -254,7 +294,7 @@ namespace RowMate.Presentation.Shell
             evt.StopPropagation();
             if (!_closing)
             {
-                Cancel();
+                Dismiss();
             }
         }
 
