@@ -15,12 +15,14 @@ namespace RowMate.Presentation.Diagnostics
     // Exentos por diseño: .rm-focus-ring y __halo (inset −4), .rm-sim-ribbon (rotada; la ventana la corta como a la Banner)
     // y las barras de desplazamiento de Unity. Además: ningún texto de una línea más ancho que su caja sin "…", ningún texto
     // multilínea más alto que su caja, ningún TabularNumber más ancho que su caja y ningún FitBox sin entrar.
+    // It. 5: también .rm-hud-series-panel--masked, un panel de series con la máscara de la columna (ColumnScroll): lo que queda
+    // fuera de la ventana de la columna tiene alfa 0 y no responde; HudOverlap (arnés) mide su rectángulo recortado.
     public static class LayoutAudit
     {
         public const float Tolerance = 0.5f;
 
         private static readonly string[] ContainerClasses = { "rm-screen", "rm-appbar", "rm-card", "rm-tab-bar", "rm-sim-panel" };
-        private static readonly string[] ExemptClasses = { "rm-focus-ring", "rm-focus-ring__halo", "rm-sim-ribbon", "unity-scroller" };
+        private static readonly string[] ExemptClasses = { "rm-focus-ring", "rm-focus-ring__halo", "rm-sim-ribbon", "unity-scroller", "rm-hud-series-panel--masked" };
 
         public static LayoutAuditResult Run(VisualElement window)
         {

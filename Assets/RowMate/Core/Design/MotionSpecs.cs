@@ -364,5 +364,84 @@ namespace RowMate.Core.Design
         public const double PhaseChipColorMs = HudColorMs;
         public const double LiveDotHalfMs = 800;
         public const double LiveDotMinOpacity = 0.35;
+
+        // ════ It. 5 — Los paneles de series (05-series-parciales/02-tech-design §4.1; 00-deuda-diseno §4.7 con 04-design-notes
+        // §6.9). Las líneas de tiempo que los usan son puras (SeriesTimelines, WP-A); los IMotion de WP-D1 solo las evalúan. Dos
+        // clases de movimiento (SD-12): lo que hace el usuario (abrir, cerrar y su inversión) con spring.smooth; lo que cambia
+        // el dato, con curvas de duración fija que terminan antes del segundo siguiente. Las de geometría y de alfa por la
+        // tinta están en SeriesPanelGeometry. ════
+
+        // ── Abrir y cerrar (§6.1): el alto con spring.smooth, SOLO para abrir, cerrar y su inversión; al cerrar el alto
+        // empieza a bajar a los 80. El contenido entra en 80-240 (ease.enter) y se va en 0-120 (ease.exit); el rótulo corto
+        // sale en 0-80 (ease.exit) y el título entra en 80-200 (ease.enter), y al revés al cerrar; la flecha gira 180° en 240
+        // (ease.move). ──
+        public const double SeriesHeightOmega = CriticalSpring.SmoothOmega;
+        public const double SeriesShrinkDelayMs = 80;
+        public const double SeriesContentInStartMs = 80;
+        public const double SeriesContentInEndMs = 240;
+        public const double SeriesContentOutMs = 120;
+        public const double SeriesLabelOutMs = 80;
+        public const double SeriesLabelInStartMs = 80;
+        public const double SeriesLabelInEndMs = 200;
+        public const double SeriesChevronMs = 240;
+
+        // ── El alto que cambia por un dato (§6.2, §6.3; DD5-16): con el empuje de la lista, crece en 0-160 y se achica en
+        // 80-240 (ease.move); la cola y la ventana de filas lo siguen. ──
+        public const double SeriesDataGrowMs = 160;
+        public const double SeriesDataShrinkStartMs = 80;
+        public const double SeriesDataShrinkEndMs = 240;
+
+        // ── La vuelta nueva (§6.2; DD5-17): la lista baja en 0-160 (ease.move); la fila nueva entra en 80-240 (ease.enter) desde
+        // −8 (shift.s, en base del panel: −8·sp dp); la que se va funde en 0-120 (ease.exit); la marca entra con su fila, queda en
+        // 1 hasta los 600 y se apaga en 600-1400 (ease.move). ──
+        public const double SeriesRowsPushMs = 160;
+        public const double SeriesRowInStartMs = 80;
+        public const double SeriesRowInEndMs = 240;
+        public const double SeriesRowOutMs = 120;
+        public const double SeriesMarkerOutStartMs = 600;
+        public const double SeriesMarkerOutEndMs = 1400;
+
+        // shift.s (8): de dónde entra la fila nueva.
+        public static double SeriesRowInShiftBase => Tokens.ShiftS.Value;
+
+        // ── El cambio de contenido, por pieza (§6.3; DD5-18): lo viejo sale en 0-120 (ease.exit), lo nuevo entra en 120-280
+        // (ease.enter) subiendo +4 → 0; solo lo que cambia de clase. ──
+        public const double SeriesSwapOutMs = 120;
+        public const double SeriesSwapInStartMs = 120;
+        public const double SeriesSwapInEndMs = 280;
+        public const double SeriesSwapRiseBase = 4;
+
+        // ── La serie que empieza (120-400, ease.enter, +8·s → 0) y la que termina (0-120, ease.exit) (§6.4). ──
+        public const double SeriesRepsAppearStartMs = 120;
+        public const double SeriesRepsAppearEndMs = 400;
+        public const double SeriesRepsAppearRise = 8;
+        public const double SeriesRepsLeaveMs = 120;
+
+        // ── La columna que sigue a SPM (§6.5; 00-deuda-diseno §4.4): gana el objetivo en 0-240 y lo pierde en 80-280
+        // (ease.move), como Watts debajo de Split (los tiempos de la 4a). ──
+        public const double SeriesFollowGainMs = 240;
+        public const double SeriesFollowLoseStartMs = 80;
+        public const double SeriesFollowLoseEndMs = 280;
+
+        // ── La capa de hover y presionado (§6.10; DN5-07): hacia 0,04 / 0,08 en 90 (dur.micro, ease.enter); hacia 0 en 160
+        // (dur.fast, ease.exit), siempre desde el alfa que tiene. Con reducir movimiento, igual (es opacidad). ──
+        public const double SeriesHoverInMs = 90;
+        public const double SeriesHoverOutMs = 160;
+        public const double SeriesHoverAlpha = 0.04;
+        public const double SeriesPressedAlpha = 0.08;
+
+        // ── Reducir movimiento (§6.8): el contenido entra en 0-160 y se va en 0-120, lineales; la flecha no gira: el trazo que
+        // se va funde en 0-80 y el que llega en 80-160, lineales. ──
+        public const double SeriesReducedInMs = 160;
+        public const double SeriesReducedOutMs = 120;
+        public const double SeriesReducedChevronOutMs = 80;
+        public const double SeriesReducedChevronInStartMs = 80;
+        public const double SeriesReducedChevronInEndMs = 160;
+
+        // ── La rueda (§6.6): de a una fila con spring.snappy (en el acto con reducir movimiento). ──
+        public const double SeriesWheelOmega = CriticalSpring.SnappyOmega;
+
+        // La regla de toma (§5.1; SD-11): un panel recién abierto o cerrado se toma al menos 820 ms después del toque.
+        public const double SeriesSettleTapMs = 820;
     }
 }

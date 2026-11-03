@@ -2002,6 +2002,27 @@
     flex-shrink: 0;
 }
 
+/* It. 5 (05-series-parciales/02-tech-design §3.1, §7.5): los paneles de series. UN elemento por panel que dibuja todo por código
+   (el vidrio, el borde, los textos, la marca y el anillo, con los tokens): sin fondo, borde, relleno, overflow ni transición en
+   USS. Posición, tamaño, escala sp, transform-origin, pickingMode, focusable y display (el de repeticiones), por código. */
+.rm-hud-series-panel {
+    position: absolute;
+}
+
+/* Los holders de las fuentes (DrawnFont): 0 × 0, ocultos, con su clase de tipo; el tamaño en línea por código. */
+.rm-hud-series-panel__font {
+    position: absolute;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+}
+
+/* El hijo de toque (DT5-15): agranda la caja del panel hasta el área de toque; oculto y sin eventos (pickingMode por código). */
+.rm-hud-series-panel__hit {
+    position: absolute;
+    visibility: hidden;
+}
+
 .rm-hud-free-title {
     flex-direction: row;
     align-items: center;

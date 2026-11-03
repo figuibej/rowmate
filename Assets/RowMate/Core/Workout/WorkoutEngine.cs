@@ -18,7 +18,8 @@ namespace RowMate.Core.Workout
     //   segundos vencidos, cada uno con el instante de su vencimiento (AC-WKT-02-04). Arranca cuando vuelve el alta, o a los
     //   100 ms del toque, lo que llegue primero (AC-WKT-01-02; DT4a-02).
     // - El segundo, en el orden del legacy (:151-190; AC-WKT-02-02): relojes y muestreo; un punto cada 5 s (también con el
-    //   alta en vuelo: el grabador lo escribe cuando vuelve, o lo descarta si falló); con rutina, los metros saneados (Q-55),
+    //   alta en vuelo: el grabador lo escribe cuando vuelve, o lo descarta si falló); con rutina, el SeriesTracker (It. 5: los
+    //   parciales, las repeticiones y los metros saneados de Q-55, que lee el paso por distancia),
     //   los objetivos y el fin del paso; el aviso.
     // - Al terminar (a mano o sola): punto final, estadísticas y cierre en una transacción (SessionRecorder); vuelve a reposo
     //   SOLO cuando el cierre volvió, o a los 15 s de primer plano (ForegroundTimeout; DT4a-13, DT4a-15).
@@ -46,7 +47,9 @@ namespace RowMate.Core.Workout
         private readonly EventStream<WorkoutNotice> _notices;
         private readonly HeartRateFusion _fusion = new HeartRateFusion();
         private readonly ActiveClock _clock = new ActiveClock();
-        private readonly SanitizedDistance _meter = new SanitizedDistance();
+        // It. 5 (02-tech-design §2.3; :58): el tracker de parciales y repeticiones, dueño del ÚNICO saneamiento de la distancia de
+        // la sesión (DV-26): el paso por distancia lee _series.Meters.
+        private readonly SeriesTracker _series = new SeriesTracker();
         private readonly List<DataPoint> _points = new List<DataPoint>();
         private readonly IDisposable _dataSubscription;
         private readonly IDisposable _bpmSubscription;
@@ -134,6 +137,10 @@ namespace RowMate.Core.Workout
         // :60, :92: el cumplimiento de objetivos por paso (para las píldoras de la 4b). No se guarda (AC-WKT-06-14).
         public StepTargetTracker Targets { get; } = new StepTargetTracker();
 
+        // It. 5 (:58, :91): los parciales de 500 m y las repeticiones de la serie (lectura: las pruebas y el oráculo). Solo en
+        // memoria (AC-WKT-07-11). La foto lleva su estado en WorkoutSnapshot.Series.
+        public SeriesTracker Series => _series;
+
         public WorkoutPhase Phase => _phase;
 
         // La tarea del cierre en curso (o la del último): FinishAsync la devuelve. Con la rutina terminada sola se completa cuando
@@ -182,7 +189,7 @@ namespace RowMate.Core.Workout
             _positions = RoutineExpansion.Positions(template.Steps);
             _stepIndex = 0;
             _stepElapsed = 0;
-            _meter.Begin(_fusion.Data.DistanceMeters, 0);
+            _series.Begin(_fusion.Data.DistanceMeters, 0);
             _stepStartMeters = 0;
             Targets.Reset();
             Begin(template);
@@ -218,7 +225,8 @@ namespace RowMate.Core.Workout
             _graceTimer = null;
             _clock.Start(NowTicks());
             Arm();
-            _meter.Rebase(_fusion.Data.DistanceMeters);
+            // La misma referencia para los parciales y el paso por distancia (AC-WKT-01-05, AC-WKT-07-07; :248).
+            _series.Rebase(_fusion.Data.DistanceMeters);
             Notify();
         }
 
@@ -440,10 +448,11 @@ namespace RowMate.Core.Workout
                 recorder.Add(point);
             }
 
-            // 3 · :176-187: con rutina, los metros saneados (Q-55), los objetivos y el fin del paso.
+            // 3 · :176-187: con rutina, los parciales y repeticiones con la lectura del segundo ANTES del fin del paso (esta lectura
+            // es del paso actual; AC-WKT-07-03), los objetivos y el fin del paso (los metros saneados del tracker, Q-55).
             if (_steps != null)
             {
-                _meter.Update(_fusion.Data.DistanceMeters, _totalElapsed);
+                _series.Update(_stepIndex, _steps[_stepIndex], PositionOf(_stepIndex), _fusion.Data.DistanceMeters, _totalElapsed);
                 Targets.Update(_stepIndex, _fusion.Data);
                 CheckStepCompletion(at);
             }
@@ -464,7 +473,7 @@ namespace RowMate.Core.Workout
             }
             else if (step.DistanceMeters.HasValue)
             {
-                completed = _meter.Meters - _stepStartMeters >= step.DistanceMeters.Value;
+                completed = _series.Meters - _stepStartMeters >= step.DistanceMeters.Value;
             }
             else
             {
@@ -490,7 +499,7 @@ namespace RowMate.Core.Workout
 
                 _stepIndex++;
                 _stepElapsed = 0;
-                _stepStartMeters = _meter.Meters;
+                _stepStartMeters = _series.Meters;
                 return;
             }
 
@@ -650,7 +659,7 @@ namespace RowMate.Core.Workout
             _session = null;
             _points.Clear();
             _recorder = null;
-            _meter.Begin(0, 0);
+            _series.Begin(0, 0);
             Targets.Reset();
             _endedBy = null;
             _completion = null;
@@ -795,7 +804,17 @@ namespace RowMate.Core.Workout
                 Close = _phase == WorkoutPhase.Finished ? _close : CloseStatus.None,
                 LastOutcome = _lastOutcome,
                 LastOutcomeAt = _lastOutcome.HasValue ? _lastOutcomeAt : double.NaN,
+                // It. 5 (§2.3): la foto vigente del tracker, sin copiarla (entre dos segundos es la misma instancia).
+                Series = _steps != null && _phase != WorkoutPhase.Idle ? _series.State : null,
             };
+        }
+
+        // La posición del paso en su serie (las dos listas salen de la misma plantilla y tienen el mismo largo; por las dudas,
+        // un paso suelto).
+        private StepPosition PositionOf(int index)
+        {
+            var positions = _positions;
+            return positions != null && index >= 0 && index < positions.Count ? positions[index] : StepPosition.Loose;
         }
 
         private IntervalStep? CurrentStep()

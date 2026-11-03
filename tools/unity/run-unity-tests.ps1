@@ -98,11 +98,54 @@ function Invoke-Unity([string[]]$UnityArgs) {
     return $process.ExitCode
 }
 
+# QA-V4b-R2-03 (It. 5; docs/migration/iterations/05-series-parciales/00-deuda-4b.md Sec. 3): Unity a veces revienta al cerrar
+# (0xC0000005) un -batchmode -quit que cambio los defines, con la compilacion que pidio ese cambio todavia en curso. El paso del
+# define cuenta como bien si quedo como se pidio (ROWMATE_SIMULATOR en ProjectSettings.asset y la marca de Library/RowMate); si
+# no, se repite UNA vez. Cualquier otro codigo distinto de 0 sigue siendo un error.
+$crashCodes = @(-1073741819, 3221225477)
+$markerFile = Join-Path $repo 'Library\RowMate\simulator-tests.txt'
+$script:definesBefore = $null
+
+function Test-DefineAsAsked([string]$Method) {
+    if ($Method -eq $enableMethod) { return ((Test-SimulatorInSettings) -and (Test-Path $markerFile)) }
+    if (Test-Path $markerFile) { return $false }
+    if ($null -ne $script:definesBefore) { return ((Test-SimulatorInSettings) -eq $script:definesBefore) }
+    return $true
+}
+
 function Invoke-Method([string]$Method, [string]$LogName) {
     $log = Join-Path $script:artifacts $LogName
     $code = Invoke-Unity @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $Method, '-logFile', $log)
     Write-Host ('[unity-tests] ' + $Method + ' -> ' + $code + ' (log: ' + $log + ')')
+    if ($crashCodes -contains $code) {
+        if (Test-DefineAsAsked $Method) {
+            Write-Host '[unity-tests] Unity revento al cerrar despues de cambiar el define, pero quedo como se pidio: se sigue (QA-V4b-R2-03).'
+            return 0
+        }
+        $retryLog = Join-Path $script:artifacts ($LogName -replace '\.log$', '-retry.log')
+        Write-Host '[unity-tests] Unity revento al cerrar y el define no quedo como se pidio: se repite una vez (QA-V4b-R2-03).'
+        $code = Invoke-Unity @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $Method, '-logFile', $retryLog)
+        Write-Host ('[unity-tests] ' + $Method + ' (otra vez) -> ' + $code + ' (log: ' + $retryLog + ')')
+        if (($crashCodes -contains $code) -and (Test-DefineAsAsked $Method)) { return 0 }
+    }
     return $code
+}
+
+# O-R2-01 de la 4b: el Unity Test Framework deja un TestResults.xml en la carpeta de datos de la app del Editor
+# (Application.persistentDataPath: LocalLow/<companyName>/<productName>) en cada PlayMode. No es una base; se borra si lo
+# escribio esta corrida (ninguna otra cosa de esa carpeta se toca).
+function Remove-EditorTestResults([datetime]$Since) {
+    $settings = Join-Path $repo 'ProjectSettings\ProjectSettings.asset'
+    if (-not (Test-Path $settings) -or $null -eq $env:USERPROFILE) { return }
+    $text = [System.IO.File]::ReadAllText($settings)
+    $company = [regex]::Match($text, '(?m)^\s*companyName:\s*(.+?)\s*$')
+    $product = [regex]::Match($text, '(?m)^\s*productName:\s*(.+?)\s*$')
+    if (-not $company.Success -or -not $product.Success) { return }
+    $file = Join-Path $env:USERPROFILE ('AppData\LocalLow\' + $company.Groups[1].Value + '\' + $product.Groups[1].Value + '\TestResults.xml')
+    if ((Test-Path $file) -and ((Get-Item $file).LastWriteTime -ge $Since)) {
+        Remove-Item -Force -Path $file -ErrorAction SilentlyContinue
+        Write-Host '[unity-tests] se borro el TestResults.xml que el Test Framework dejo en la carpeta de datos del Editor (O-R2-01).'
+    }
 }
 
 function Restore-Simulator([bool]$Check, [bool]$WasInSettings) {
@@ -149,6 +192,8 @@ if ($RestoreOnly) {
 }
 
 $wasInSettings = Test-SimulatorInSettings
+$script:definesBefore = $wasInSettings
+$runStarted = Get-Date
 $name = $Platform.ToLowerInvariant()
 if ($Simulator) { $name = $name + '-simulator' }
 $xml = Join-Path $script:artifacts ($name + '-results.xml')
@@ -197,5 +242,6 @@ finally {
 }
 
 Write-Host ('[unity-tests] -runTests -> ' + $exitCode + ' (log: ' + $log + ')')
+if ($Platform -eq 'PlayMode') { Remove-EditorTestResults $runStarted }
 Show-Results $xml $log
 exit $exitCode

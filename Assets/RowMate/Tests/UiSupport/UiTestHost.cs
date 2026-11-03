@@ -270,7 +270,7 @@ namespace RowMate.Tests.UiSupport
             Sessions = options.Sessions(Scheduler, _logger, Routines);
             var texts = LocalizationSet.Load(UiAssetsLocator.StringsEs(), UiAssetsLocator.StringsEn());
             App = AppComposer.Compose(new AppServices(Backend, repository, Sessions, Scheduler, _logger, texts, Locale, Accessibility,
-                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock, Lifecycle = Lifecycle, SystemUi = SystemUi });
+                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock, Lifecycle = Lifecycle, SystemUi = SystemUi, Preferences = PreferencesFor(options) });
             Handle = ShellHost.Build(App, Root, new ShellHostOptions(Scheduler, options.IsDesktop, _backButton, Display,
                 TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard) { Pipeline = options.Pipeline, BoatZoneOutline = options.BoatZoneOutline });
             Handle.Shell.Ui.TextMenuTouchMode = options.TextMenuTouchMode;
@@ -281,6 +281,74 @@ namespace RowMate.Tests.UiSupport
 
             Handle.Tick();
         }
+
+        // ── It. 5: las preferencias (05-series-parciales/02-tech-design §2.7, §6.2; AC-HIS-20-04) ──
+
+        // Las preferencias de la app de este anfitrión (las de UiHostOptions, una MemoryPreferences propia o el archivo temporal).
+        public IPreferences Preferences { get; private set; } = null!;
+
+        // El archivo temporal de las preferencias (con UiHostOptions.PreferencesFile), o null.
+        public string? PreferencesPath { get; private set; }
+
+        private MemoryPreferences? _memoryPreferences;
+        private RowMate.Infrastructure.Preferences.JsonFilePreferences? _filePreferences;
+        private string? _preferencesFolder;
+
+        private IPreferences PreferencesFor(UiHostOptions options)
+        {
+            if (options.Preferences != null)
+            {
+                Preferences = options.Preferences;
+                return Preferences;
+            }
+
+            if (options.PreferencesFile)
+            {
+                // Reopen = el reinicio: lo pendiente se termina de guardar y el archivo se vuelve a leer.
+                ClosePreferencesFile();
+                _preferencesFolder ??= System.IO.Path.Combine(System.IO.Path.GetTempPath(), "RowMate.Tests", "prefs-" + Guid.NewGuid().ToString("N"));
+                System.IO.Directory.CreateDirectory(_preferencesFolder);
+                PreferencesPath = System.IO.Path.Combine(_preferencesFolder, RowMate.Infrastructure.Preferences.PreferencesFiles.Name);
+                _filePreferences = new RowMate.Infrastructure.Preferences.JsonFilePreferences(PreferencesPath, _logger);
+                Preferences = _filePreferences;
+                return Preferences;
+            }
+
+            _memoryPreferences ??= new MemoryPreferences();
+            Preferences = _memoryPreferences;
+            return Preferences;
+        }
+
+        // Espera lo pendiente del archivo temporal (no hace nada en memoria).
+        public void FlushPreferences()
+        {
+            _filePreferences?.FlushAsync().Wait(TimeSpan.FromSeconds(5));
+        }
+
+        private void ClosePreferencesFile()
+        {
+            if (_filePreferences == null)
+            {
+                return;
+            }
+
+            _filePreferences.FlushAsync().Wait(TimeSpan.FromSeconds(5));
+            _filePreferences.Dispose();
+            _filePreferences = null;
+        }
+
+        // It. 5 (S-LARGO, LT-59 a LT-61; 05 §5.1 punto 9, §6.4): el contenido de los paneles armado a mano o con ComposeSeries, en el
+        // acto, hasta OverrideSeries(null) (como la fila de 1998 píldoras de la 4b). instant = false: con la animación de un dato
+        // del motor (el empuje, la fila nueva; LM5-01 de la verificación de la 5).
+        public void OverrideSeries(RowMate.App.Workout.HudSeries? series, bool instant = true)
+        {
+            var column = SeriesColumn ?? throw new InvalidOperationException("OverrideSeries: no hay paneles de series (sin inmersivo con rutina).");
+            column.OverrideSeries(series, instant);
+            Handle.Tick();
+        }
+
+        // La columna de los paneles del inmersivo de arriba (null sin rutina o sin HUD).
+        public SeriesColumn? SeriesColumn => Immersive != null && Immersive.HasView ? Immersive.View.Series : null;
 
         // ── Tiempo ────────────────────────────────────────────────────────────
 
@@ -423,9 +491,84 @@ namespace RowMate.Tests.UiSupport
 
         public void TapText(string text)
         {
-            var element = UiQuery.FindByText(Root, text) ?? throw new InvalidOperationException("Tap: no hay ningún elemento con el texto \"" + text + "\".");
+            var element = UiQuery.FindByText(Root, text);
+            if (element == null)
+            {
+                // It. 5 (05-series-parciales/02-tech-design §3.1; QA-G5T-04): una ranura de texto dibujado (los paneles de series): el
+                // centro de la ranura, por la selección real; tiene que llegar al elemento que la dibuja.
+                var slot = UiQuery.FindSlotByText(Root, text) ?? throw new InvalidOperationException("Tap: no hay ningún elemento ni ranura con el texto \"" + text + "\".");
+                var center = slot.Slot.WorldRect.center;
+                var picked = Root.panel.Pick(center);
+                if (picked == null || (picked != slot.Owner && !slot.Owner.Contains(picked)))
+                {
+                    throw new InvalidOperationException("Tap \"" + text + "\": la ranura de " + UiQuery.Describe(slot.Owner) + " está tapada por " + UiQuery.Describe(picked));
+                }
+
+                Submit(picked);
+                return;
+            }
+
             var target = ActionableOf(element);
             TapElement(target, "\"" + text + "\"");
+        }
+
+        // It. 5 (QA-G5T-04): un arrastre por la selección real: PointerDown en from al elemento que da Pick, PointerMove en frames
+        // pasos (con un cuadro del reloj de prueba cada uno) y PointerUp en to, al mismo elemento (como la captura del puntero).
+        // Devuelve el elemento que lo recibió.
+        public VisualElement? DragAt(Vector2 from, Vector2 to, int frames = 6)
+        {
+            var target = Root.panel.Pick(from);
+            if (target == null)
+            {
+                return null;
+            }
+
+            SendPointer(PointerDownEvent.GetPooled(new Event { type = EventType.MouseDown, button = 0, mousePosition = from, clickCount = 1 }), target);
+            var steps = Math.Max(1, frames);
+            for (var i = 1; i <= steps; i++)
+            {
+                var point = Vector2.Lerp(from, to, i / (float)steps);
+                SendPointer(PointerMoveEvent.GetPooled(new Event { type = EventType.MouseDrag, button = 0, mousePosition = point }), target);
+                Step();
+            }
+
+            SendPointer(PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, button = 0, mousePosition = to, clickCount = 1 }), target);
+            Handle.Tick();
+            return target;
+        }
+
+        // Un toque con el puntero (PointerDown y PointerUp en el mismo punto) por la selección real.
+        public VisualElement? PointerTapAt(Vector2 point)
+        {
+            return DragAt(point, point, 1);
+        }
+
+        // La rueda del mouse en un punto (delta.y > 0: hacia abajo), al elemento que da Pick.
+        public VisualElement? Wheel(Vector2 point, float deltaY)
+        {
+            var target = Root.panel.Pick(point);
+            if (target == null)
+            {
+                return null;
+            }
+
+            using (var wheel = WheelEvent.GetPooled(new Event { type = EventType.ScrollWheel, delta = new Vector2(0, deltaY), mousePosition = point }))
+            {
+                wheel.target = target;
+                target.SendEvent(wheel);
+            }
+
+            Handle.Tick();
+            return target;
+        }
+
+        private static void SendPointer(EventBase evt, VisualElement target)
+        {
+            using (evt)
+            {
+                evt.target = target;
+                target.SendEvent(evt);
+            }
         }
 
         // Sin hit-test: solo para lo que el legacy hace por API (hoy, nada).
@@ -724,9 +867,22 @@ namespace RowMate.Tests.UiSupport
             return Root.Q<T>(elementName);
         }
 
+        // It. 5 (§3.6, §6.2): por nombre, primero un elemento y, si no hay, una ranura de texto dibujado (los paneles de series).
         public string? TextOf(string elementName)
         {
-            return UiQuery.TextOf(Find(elementName));
+            var element = Find(elementName);
+            if (element != null)
+            {
+                return UiQuery.TextOf(element);
+            }
+
+            return UiQuery.FindSlot(Root, elementName)?.Slot.Text;
+        }
+
+        // La ranura de ese nombre (o null), con el elemento que la dibuja.
+        public (VisualElement Owner, DrawnSlot Slot)? SlotOf(string slotName)
+        {
+            return UiQuery.FindSlot(Root, slotName);
         }
 
         public bool IsTextVisible(string text)
@@ -742,12 +898,25 @@ namespace RowMate.Tests.UiSupport
         public bool IsShown(string elementName)
         {
             var element = Find(elementName);
-            return element != null && UiQuery.IsShown(element) && UiQuery.IsInside(element, Root.worldBound);
+            if (element == null)
+            {
+                var slot = UiQuery.FindSlot(Root, elementName);
+                return slot.HasValue && slot.Value.Slot.IsVisible && UiQuery.IsShown(slot.Value.Owner);
+            }
+
+            return UiQuery.IsShown(element) && UiQuery.IsInside(element, Root.worldBound);
         }
 
         public Rect BoundsOf(string elementName)
         {
-            return FindRequired(elementName).worldBound;
+            var element = Find(elementName);
+            if (element == null)
+            {
+                var slot = UiQuery.FindSlot(Root, elementName) ?? throw new InvalidOperationException("no existe #" + elementName + " (ni como ranura)");
+                return slot.Slot.WorldRect;
+            }
+
+            return element.worldBound;
         }
 
         public Texture2D ReadPixels(Rect? cropPx = null)
@@ -792,6 +961,18 @@ namespace RowMate.Tests.UiSupport
             App.Dispose();
             Backend.Dispose();
             Routines.Dispose();
+            ClosePreferencesFile();
+            if (_preferencesFolder != null)
+            {
+                try
+                {
+                    System.IO.Directory.Delete(_preferencesFolder, true);
+                }
+                catch (System.IO.IOException)
+                {
+                }
+            }
+
             if (_host != null)
             {
                 DestroyObject(_host);

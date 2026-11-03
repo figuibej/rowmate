@@ -4,6 +4,8 @@ namespace RowMate.Core.Design
 {
     // Las seis zonas del HUD en la cascada de la entrada (§3.2), más las piezas del centro (la cuenta grande, el sello y PAUSA:
     // van con el tramo de SPM si están al entrar, 04-design-notes §4.1).
+    // It. 5 (05-series-parciales/02-tech-design §4.1; AC-WKT-13-06, DT5-12): los dos paneles de series, con el tramo de SPM
+    // (520, 280, +8 → 0); responden desde que empieza su tramo, como los controles desde el suyo.
     public enum HudPiece
     {
         TopBar,
@@ -13,6 +15,8 @@ namespace RowMate.Core.Design
         Vitals,
         Controls,
         Center,
+        SeriesLaps,
+        SeriesReps,
     }
 
     // Una pieza de la cascada: opacidad y subida en dp base (+8 → 0, por translate; nunca layout).
@@ -291,6 +295,8 @@ namespace RowMate.Core.Design
                     return MotionSpecs.ImmersiveCascadeTopBarMs;
                 case HudPiece.Spm:
                 case HudPiece.Center:
+                case HudPiece.SeriesLaps:
+                case HudPiece.SeriesReps:
                     return MotionSpecs.ImmersiveCascadeSpmMs;
                 case HudPiece.SplitWatts:
                     return MotionSpecs.ImmersiveCascadeSplitWattsMs;
@@ -337,7 +343,7 @@ namespace RowMate.Core.Design
         }
 
         // Los controles responden desde que empieza su tramo (840; P-15), al toque y al teclado; con reducir movimiento, desde el
-        // cuadro 0. Las demás piezas no tienen interacción.
+        // cuadro 0. It. 5: los paneles de series, desde el suyo (520; AC-WKT-13-07). Las demás piezas no tienen interacción.
         public static bool EntryInteractive(HudPiece piece, long tMs, bool reduced)
         {
             return reduced || HudTimelines.Reached(tMs, CascadeStartMs(piece));

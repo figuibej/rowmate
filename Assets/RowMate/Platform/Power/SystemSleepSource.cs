@@ -19,6 +19,10 @@ namespace RowMate.Platform.Power
 
         int ResumeSignals { get; }
 
+        // It. 5 (05-series-parciales/00-deuda-4b §1): lo que duró el último ciclo completo de avisos (del último "se suspende" al
+        // "reanuda" que lo siguió), con la hora de cada aviso; NaN si no hubo ninguno. Solo para el registro.
+        double SignalAsleepSeconds { get; }
+
         // Se registró para los avisos del sistema (solo en el build de Windows).
         bool SignalsRegistered { get; }
     }
@@ -34,6 +38,8 @@ namespace RowMate.Platform.Power
         public int SuspendSignals => 0;
 
         public int ResumeSignals => 0;
+
+        public double SignalAsleepSeconds => double.NaN;
 
         public bool SignalsRegistered => false;
 
@@ -69,6 +75,9 @@ namespace RowMate.Platform.Power
 
         private static int _suspendSignals;
         private static int _resumeSignals;
+        // It. 5 (00-deuda-4b §1): la hora (GetTickCount64, en ms: cuenta el sueño) del último aviso de cada clase; −1 sin aviso.
+        private static long _suspendTickMs = -1;
+        private static long _resumeTickMs = -1;
         private static readonly DeviceNotifyCallbackRoutine Callback = OnPowerEvent;
 
         private readonly IPowerNotifyApi? _api;
@@ -86,6 +95,12 @@ namespace RowMate.Platform.Power
             if (register && _api != null)
             {
                 Register();
+            }
+
+            // It. 5 (00-deuda-4b §1): que el registro diga desde el arranque si la medida existe (si no, AsleepSeconds ya avisó).
+            if (!double.IsNaN(AsleepSeconds))
+            {
+                _logger.Log(LogLevel.Info, "TIME", "medida del sueño del núcleo disponible (GetTickCount64 − QueryUnbiasedInterruptTime)");
             }
         }
 
@@ -124,6 +139,18 @@ namespace RowMate.Platform.Power
 
         public int ResumeSignals => Volatile.Read(ref _resumeSignals);
 
+        // Del último "se suspende" al "reanuda" que lo siguió (los dos con GetTickCount64); NaN sin ciclo completo (un "se suspende"
+        // sin su "reanuda" todavía, o ningún aviso).
+        public double SignalAsleepSeconds
+        {
+            get
+            {
+                var suspend = Interlocked.Read(ref _suspendTickMs);
+                var resume = Interlocked.Read(ref _resumeTickMs);
+                return suspend >= 0 && resume >= suspend ? (resume - suspend) / 1000.0 : double.NaN;
+            }
+        }
+
         public bool SignalsRegistered => _handle != IntPtr.Zero;
 
         // El bloque de memoria de la estructura (para la prueba del orden: vive mientras dura el registro).
@@ -157,6 +184,12 @@ namespace RowMate.Platform.Power
             return OnPowerEvent(IntPtr.Zero, type, IntPtr.Zero);
         }
 
+        // Para las pruebas: el aviso con la hora del sistema que se le pase (ms de GetTickCount64).
+        public static uint SimulatePowerEvent(uint type, long tickMs)
+        {
+            return Record(type, tickMs);
+        }
+
         private void Register()
         {
             try
@@ -188,16 +221,35 @@ namespace RowMate.Platform.Power
             }
         }
 
-        // Corre en un hilo del sistema: solo sube los contadores (nunca toca la app).
+        // Corre en un hilo del sistema: solo anota la hora y sube los contadores (nunca toca la app). Una excepción acá volvería a
+        // código nativo y cerraría el proceso: no sale ninguna.
         [AOT.MonoPInvokeCallback(typeof(DeviceNotifyCallbackRoutine))]
         private static uint OnPowerEvent(IntPtr context, uint type, IntPtr setting)
         {
+            long tick;
+            try
+            {
+                tick = (long)GetTickCount64();
+            }
+            catch
+            {
+                tick = -1;
+            }
+
+            return Record(type, tick);
+        }
+
+        // Primero la hora y después el contador: quien ve el contador nuevo ya ve la hora (Interlocked hace de barrera).
+        private static uint Record(uint type, long tickMs)
+        {
             if (type == PbtApmSuspend)
             {
+                Interlocked.Exchange(ref _suspendTickMs, tickMs);
                 Interlocked.Increment(ref _suspendSignals);
             }
             else if (type == PbtApmResumeAutomatic || type == PbtApmResumeSuspend)
             {
+                Interlocked.Exchange(ref _resumeTickMs, tickMs);
                 Interlocked.Increment(ref _resumeSignals);
             }
 

@@ -6,10 +6,12 @@ namespace RowMate.Core.Common
     // al volver del segundo plano (02-tech-design §2.9.2 de la It. 4b): el monótono crudo (el Stopwatch, que puede contar la
     // suspensión del equipo o no), la hora de pared, el offset local, lo dormido según el sistema y los avisos de "se
     // suspende" y "reanuda". Sin medida ni avisos (Plain) es lo de la 4a.
+    // It. 5 (05-series-parciales/00-deuda-4b §1): también lo que durmió el equipo según los avisos (de "se suspende" a "reanuda",
+    // con la hora de cada aviso), para que el registro de cada despertar diga lo que vio cada fuente.
     public readonly struct FrameClock
     {
         public FrameClock(double rawMonotonic, DateTimeOffset utc, TimeSpan localOffset, double systemAsleepSeconds = double.NaN,
-                          int suspendSignals = 0, int resumeSignals = 0)
+                          int suspendSignals = 0, int resumeSignals = 0, double signalAsleepSeconds = double.NaN)
         {
             RawMonotonic = rawMonotonic;
             Utc = utc;
@@ -17,6 +19,7 @@ namespace RowMate.Core.Common
             SystemAsleepSeconds = systemAsleepSeconds;
             SuspendSignals = suspendSignals;
             ResumeSignals = resumeSignals;
+            SignalAsleepSeconds = signalAsleepSeconds;
         }
 
         // El Stopwatch, en segundos.
@@ -34,6 +37,11 @@ namespace RowMate.Core.Common
 
         // Cuántos de "reanuda" (PBT_APMRESUMEAUTOMATIC o PBT_APMRESUMESUSPEND).
         public int ResumeSignals { get; }
+
+        // Lo que duró el último ciclo completo de avisos (del último "se suspende" al "reanuda" que lo siguió), con la hora de cada
+        // aviso (Windows: GetTickCount64, que cuenta el sueño); NaN si todavía no hubo un ciclo completo. Solo va al registro: el
+        // reloj despierto no lo usa (SuspendAccounting).
+        public double SignalAsleepSeconds { get; }
 
         public bool HasMeasure => !double.IsNaN(SystemAsleepSeconds);
 

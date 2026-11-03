@@ -57,7 +57,13 @@ namespace RowMate.Core.Workout
         // §3.5). Así el reloj nunca se corre cuando cambia la fase.
         public static double FixedWidthBase(double active, double paused, double finished)
         {
-            return Math.Max(Math.Max(active + DotSlot, paused), finished) + 2 * PadH;
+            return FixedWidthBase(active, paused, finished, PadH);
+        }
+
+        // It. 5 (DD5-01): con el relleno como parámetro (6 en el modo compacto de la barra libre: 97,3 base en es, 69,5 en en).
+        public static double FixedWidthBase(double active, double paused, double finished, double padH)
+        {
+            return Math.Max(Math.Max(active + DotSlot, paused), finished) + 2 * padH;
         }
     }
 }

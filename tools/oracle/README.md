@@ -62,5 +62,6 @@ Los scripts importan solo `dart:*`, `../lib/golden.dart` y archivos del legacy q
 | `bin/rowing_data_vectors.dart`, `ftms_vectors.dart`, `heart_rate_vectors.dart`, `simulator_vectors.dart` | `rowing_data.json`, `ftms.json`, `heart_rate.json`, `simulator.json` | B |
 | `bin/routine_vectors.dart`, `session_vectors.dart`, `l10n_vectors.dart` | `routines.json`, `session.json`, `l10n_legacy.json` | C |
 | `engine/test/engine_vectors_test.dart` (`-Engine`) | `workout_engine.json`: `scenarios` (11) y `scripts` (15) | A de la It. 4a |
+| `bin/series_vectors.dart` (`-Only series_vectors`) | `series_tracker.json`: `legacyCases` (los 12 de `test/series_tracker_test.dart`), `summaries`, `routines` (F-5 y el paso de 0 s) y `scripts` (las rutinas de F-5 con los remos de la spec, las pausas y el paso de 0 s; las entradas del tracker con el modelo de tiempo de la spec y la regla de pasos de la app, DV-26; las compara `SeriesGoldenTests`) | A de la It. 5 |
 
 `run-oracle.ps1` es solo ASCII a propósito (Windows PowerShell 5.1 lee un `.ps1` sin BOM como ANSI).

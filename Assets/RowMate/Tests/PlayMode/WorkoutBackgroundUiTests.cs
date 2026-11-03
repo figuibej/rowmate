@@ -40,6 +40,29 @@ namespace RowMate.Tests.PlayMode
             Assert.That(Phase, Is.EqualTo(WorkoutPhase.Active));
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §4.2; AC-WKT-02-08, AC-WKT-18-19): las vueltas y las repeticiones del segundo plano
+        // están en el primer cuadro, sin empuje, sin marca y sin rodillos.
+        [UnityTest, Category("AC-WKT-02-08"), Category("AC-WKT-18-19")]
+        public IEnumerator ThePanelsShowThePresentInTheFirstFrame()
+        {
+            var prefs = new RowMate.Core.Common.MemoryPreferences();
+            prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.LapsKey, true);
+            prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.RepsKey, true);
+            CreateWorkout(RoutineSeeds.F5, o => o.Preferences = prefs);
+            yield return StartRoutine("Series 600");
+            yield return AdvanceTo(150.2);
+            H.SendToBackground();
+            H.BringToForeground(220);
+            var column = Hud.Series!;
+            Assert.That(H.TextOf("hud-reps-row-0"), Is.EqualTo("Rep 1 2:05 680 m"), "la repetición del segundo plano, ya en el primer cuadro");
+            Assert.That(H.TextOf("hud-reps-row-1"), Is.Null.Or.Empty, "una sola");
+            Assert.That(column.Laps.Motion.IsRunning || column.Reps.Motion.IsRunning, Is.False, "sin empuje, sin marca, sin piezas");
+            Assert.That(column.Laps.RollProgress, Is.EqualTo(1), "sin rodillos");
+            Assert.That(column.Reps.Visual.MarkerAlpha0, Is.EqualTo(0), "sin marca");
+            yield return Frames();
+            Assert.That(column.Laps.Motion.IsRunning || column.Reps.Motion.IsRunning, Is.False, "nada anima lo que ya pasó");
+        }
+
         // It. 4b (AC-WKT-02-06, AC-WKT-21-09; DT4a-15): Corta termina sola en segundo plano; al volver, el diálogo de completado ya
         // está, SIN su entrada y con los totales finales, la sesión cerrada con sus 7 puntos y sin el aviso workoutCompleted
         // (AC-WKT-03-05: es el título del diálogo). Su Terminar vuelve a reposo y la página sale.

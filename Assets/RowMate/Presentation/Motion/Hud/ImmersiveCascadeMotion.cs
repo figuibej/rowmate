@@ -15,11 +15,16 @@ namespace RowMate.Presentation.Motion.Hud
     // - Sin armar o con Instant: todo en su lugar y los avisos en el acto.
     // - Stop: la cascada se detiene donde está (si la sesión vuelve a reposo durante la entrada, la salida arranca desde las
     //   opacidades de PieceOpacity y BackdropOpacity, sin saltos: AC-WKT-13-07). Finish: salta al final con sus avisos.
+    // - It. 5 (05-series-parciales/02-tech-design §3.3, §4.1; AC-WKT-13-06, -07; DT5-12): los dos paneles de series (SeriesLaps,
+    //   SeriesReps) entran con el tramo de SPM (520, 280, +8 → 0) y avisan interactive al empezarlo (responden desde los 520). El
+    //   contrato no cambia: un PieceVisual por pieza, que la página le pasa a SeriesColumn (el único que escribe sus estilos).
     public sealed class ImmersiveCascadeMotion : HudMotion
     {
+        // En el orden de HudPiece (PieceOpacity y PieceShiftDp indexan por el valor de la pieza).
         private static readonly HudPiece[] Pieces =
         {
             HudPiece.TopBar, HudPiece.Spm, HudPiece.SplitWatts, HudPiece.Band, HudPiece.Vitals, HudPiece.Controls, HudPiece.Center,
+            HudPiece.SeriesLaps, HudPiece.SeriesReps,
         };
 
         private readonly Action<HudPiece, PieceVisual> _piece;

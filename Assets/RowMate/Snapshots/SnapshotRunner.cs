@@ -401,7 +401,8 @@ namespace RowMate.Snapshots
         // El estado del pulso de la fila del paso (para el registro de la regla de toma).
         private static string PulseState(UiTestHost host)
         {
-            var pulse = host.Immersive?.View.Steps?.Pulse;
+            var page = host.Immersive;
+            var pulse = page != null && page.HasView ? page.View.Steps?.Pulse : null;
             if (pulse == null)
             {
                 return "";
@@ -465,6 +466,14 @@ namespace RowMate.Snapshots
             // HudOverlap en toda toma del inmersivo. Lo que encuentran hace fallar la toma (no son sondas de aspecto).
             record.Problems.AddRange(WrenchAudit.Run(host));
             record.Problems.AddRange(WrenchAudit.HudOverlap(host));
+            // It. 5 (05-series-parciales/02-tech-design §5.2, §5.6): las áreas de toque y la zona del bote con los paneles, y en el
+            // manifest los rectángulos de los paneles (los visuales y las áreas de toque), sp, la regla de la columna y las ranuras.
+            record.Problems.AddRange(WrenchAudit.SeriesProblems(host));
+            var series = SeriesCatalog.Describe(host);
+            if (series.Count > 0)
+            {
+                (record.Values ??= new List<string>()).AddRange(series);
+            }
 
             if (host.HasErrors())
             {

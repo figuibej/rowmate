@@ -42,7 +42,7 @@ namespace RowMate.Bootstrap
             root.pickingMode = PickingMode.Ignore;
 
             var pacing = new FramePacingPolicy();
-            var motion = new MotionDriver(options.Clock, pacing, new MotionSettings());
+            var motion = new MotionDriver(options.Clock, pacing, new MotionSettings(), app.Logger);
             var fade = VerticalFadeTexture.Create();
             var ui = new UiContext(app, motion, fade, options.Display, options.IsDesktop, options.Clipboard, options.Keyboard)
             {

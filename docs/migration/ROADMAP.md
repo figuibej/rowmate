@@ -269,9 +269,11 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Incluye.** WKT: F-WKT-07, F-WKT-08, F-WKT-18.
 
+**También toca.** F-WKT-13, F-WKT-14, F-WKT-16 y F-WKT-17 (la cascada y la salida con los paneles, la cuenta grande y `PAUSA` junto a los paneles abiertos, la zona del bote y la deuda de la 4b: el HUD armado en el negro, el modo compacto de la barra libre); F-WKT-01, F-WKT-02, F-WKT-03 y F-WKT-11 (la pausa, el segundo plano, el equipo suspendido, el paso por distancia con el mismo saneamiento y los formatos, que los paneles usan); F-APP-05 (teclado y reducir movimiento en los paneles); F-APP-10 y F-APP-11 (9 claves nuevas: los textos fijos de los paneles pasan al catálogo, 223 por idioma); F-BLE-15 y F-BLE-16 (`Simular desconexión`, la llave y el panel del simulador con los paneles); F-HIS-20 (los datos del usuario, ahora también su archivo de preferencias) ([spec de la It. 5 §5](iterations/05-series-parciales/01-po-spec.md)).
+
 **Tests legacy a portar (15 casos).** `series_tracker_test` (12), `series_panels_test` (los 3 casos restantes: colapsados por defecto, preferencia guardada, sin serie no hay panel de repeticiones).
 
-**Demo.** Con el simulador, una rutina con serie ×3 de trabajo 1 000 m: panel "Parciales 500 m" con la vuelta en curso (`0:55.0 207 m`) y las anteriores (la más reciente primero); al pasar a la repetición 2, "Series anteriores" muestra `Rep 1 2:13 452 m`. Colapsar los paneles, cerrar la app y verlos colapsados al volver (`immersive.lapsExpanded`, `immersive.repsExpanded`). "Simular desconexión" no rompe los parciales (saneamiento de saltos).
+**Demo.** Con el simulador a 150 W, la rutina `Series 600` (calentamiento de 30 s; serie ×3 [trabajo de 600 m; descanso de 20 s]; enfriamiento de 30 s): el chip `500 m` debajo de SPM; al abrirlo, "Parciales 500 m" con la vuelta en curso contando y, en la serie, `Rep 1/3 · …` y el chip `Reps`; a los ≈ 2:43 entra `#1` con ≈ `2:12.6`; al pasar a la repetición 2, "Series anteriores" muestra `Rep 1` con ≈ `2:13` y ≈ `676 m`. "Simular desconexión" no rompe los parciales (saneamiento de saltos). Abrir o cerrar los paneles, cerrar la app y verlos igual al volver (`immersive.lapsExpanded`, `immersive.repsExpanded`). (Los valores que decía este plan, `0:55.0 207 m` y `Rep 1 2:13 452 m`, son los de `docs/image-03.png` del legacy, una serie de trabajos de 2 min: con 1 000 m de trabajo una repetición no puede sumar 452 m; spec de la It. 5 §15.)
 
 **Verificación.** [dotnet] trackers de parciales y repeticiones. [Editor] paneles en vertical y horizontal.
 
@@ -279,7 +281,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Mejoras EXR.** Paneles de vidrio que se despliegan con suavidad, ancho acotado para no tapar el bote; cada vuelta nueva entra con una animación breve.
 
-**Decisiones aplicadas.** Q-01 (textos de los paneles en es/en, español idéntico), Q-06.
+**Decisiones aplicadas.** Q-01 (textos de los paneles en es/en, español idéntico), Q-06, Q-11 (no se importan las preferencias del legacy), Q-55 / DV-26 (un solo saneamiento para los parciales y el paso por distancia). Al gate de la It. 5: DV-48 a DV-51 (los paneles desde el primer cuadro; nada se corta, se achica; 137 base fijos a 8·s de SPM, con la cuenta grande y `PAUSA` siempre a la vista; los tamaños de adentro) y P-08 ([REPORT de la It. 5 §8](iterations/05-series-parciales/REPORT.md)).
 
 ---
 
@@ -567,7 +569,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 ## 3. Backlog post-paridad
 
-Las mejoras que no existen en el legacy (botes fantasma, cámaras extra, sonido, clima, minimapa, personalización, zonas de FC, mejoras del editor, borrado de sesiones, etc.) están en [FEATURE_INVENTORY §6.2](product/FEATURE_INVENTORY.md) (BKL-01 a BKL-25). No entran en estas iteraciones; se priorizan con el usuario al terminar la paridad. Las que más acercan la app a EXR son BKL-01 (otros botes), BKL-02 (cámaras, con D-ART-07 y D-ANI-07 ya especificadas por el Designer), BKL-03 (sonido) y BKL-05 (minimapa).
+Las mejoras que no existen en el legacy (botes fantasma, cámaras extra, sonido, clima, minimapa, personalización, zonas de FC, mejoras del editor, borrado de sesiones, etc.) están en [FEATURE_INVENTORY §6.2](product/FEATURE_INVENTORY.md) (BKL-01 a BKL-26). No entran en estas iteraciones; se priorizan con el usuario al terminar la paridad. Las que más acercan la app a EXR son BKL-01 (otros botes), BKL-02 (cámaras, con D-ART-07 y D-ANI-07 ya especificadas por el Designer), BKL-03 (sonido) y BKL-05 (minimapa).
 
 ---
 
@@ -591,8 +593,8 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-BLE-12 | C | 10a | 10b |
 | F-BLE-13 | C | 2 | 3, 12 |
 | F-BLE-14 | C | 1 | 2 |
-| F-BLE-15 | C | 2 | — |
-| F-BLE-16 | C | 2 | 4b, 6a |
+| F-BLE-15 | C | 2 | 5 |
+| F-BLE-16 | C | 2 | 4b, 5, 6a |
 | F-HRM-01 | C | 1 | S-1, 11 |
 | F-HRM-02 | C | 11 | 2, 10b |
 | F-HRM-03 | C | 11 | 2, 10b |
@@ -629,9 +631,9 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-RUT-18 | C | 1 | 4a, 9 |
 | F-RUT-19 | → F-APP-08 | 2 | — |
 | F-RUT-20 | C | 9 | 12 |
-| F-WKT-01 | C | 4a | 4b |
-| F-WKT-02 | C | 4a | 4b |
-| F-WKT-03 | C | 4a | 4b |
+| F-WKT-01 | C | 4a | 4b, 5 |
+| F-WKT-02 | C | 4a | 4b, 5 |
+| F-WKT-03 | C | 4a | 4b, 5 |
 | F-WKT-04 | C | 4a | 4b |
 | F-WKT-05 | C | 4a | 11 |
 | F-WKT-06 | C | 4a | 4b, 9 |
@@ -641,11 +643,11 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-WKT-10 | C | 4a | — |
 | F-WKT-11 | C | 4a | 5 |
 | F-WKT-12 | C | 4a | 8 |
-| F-WKT-13 | C | 4b | 4a, 6a, 6b |
-| F-WKT-14 | C | 4b | 4a |
+| F-WKT-13 | C | 4b | 4a, 5, 6a, 6b |
+| F-WKT-14 | C | 4b | 4a, 5 |
 | F-WKT-15 | C | 4b | — |
-| F-WKT-16 | C | 4b | 4a |
-| F-WKT-17 | C | 4b | 4a, 6b |
+| F-WKT-16 | C | 4b | 4a, 5 |
+| F-WKT-17 | C | 4b | 4a, 5, 6b |
 | F-WKT-18 | C | 5 | — |
 | F-WKT-19 | C | 4b | — |
 | F-WKT-20 | C | 4a | 4b, 12 |
@@ -694,7 +696,7 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-HIS-17 | C | 3 | 4a, 13 |
 | F-HIS-18 | → F-RUT-08 | 3 | — |
 | F-HIS-19 | C | 9 | 4a, 12, 13 |
-| F-HIS-20 | C | 3 | — |
+| F-HIS-20 | C | 3 | 5 |
 | F-HIS-21 | C | 13 | — |
 | F-HIS-22 | → F-STR-15 | 13 | — |
 | F-HIS-23 | → F-STR-13 | 13 | — |
@@ -720,7 +722,7 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-APP-02 | C | 2 | 9, 12 |
 | F-APP-03 | C | 3 | 4a, 4b, 9 |
 | F-APP-04 | → F-STR-01 | 12 | — |
-| F-APP-05 | C | 2 | 4b, 14 |
+| F-APP-05 | C | 2 | 4b, 5, 14 |
 | F-APP-06 | C | 2 | 4a, 9 |
 | F-APP-07 | → F-RUT-01 | 1 | — |
 | F-APP-08 | C | 2 | — |
@@ -875,3 +877,4 @@ Correcciones por el gate de armonía del plan ([QA_PLAN_REVIEW.md](QA_PLAN_REVIE
 | It. 3 (cierre, PO) | Pendientes de la [spec de la It. 3 §15](iterations/03-rutinas/01-po-spec.md): en la It. 3, repeticiones `-2` con guion (sin cambio) y `−2` con el signo menos tipográfico (×1), como AC-RUT-14-05; en la It. 14, criterio nuevo de lectores de pantalla (DT-05). Además, en la It. 4a, criterio nuevo para una rutina fuera de los topes de Q-92 cargada a mano (R3-08) |
 | It. 4a (cierre, PO) | Pendientes de la [spec de la It. 4a §15](iterations/04a-motor-hud-funcional/01-po-spec.md): F-WKT-14 (la fila de información) en "También toca" de la 4a y en la matriz §4; el rojo fuera de objetivo es `#FF625B` en la demo de la 4a y en D-ART-01 (§6); D-ART-10 en §6, con su gate. Por la verificación: P-17 (la suspensión del equipo no cuenta como tiempo de sesión) en §6 y como criterio de la 4b (QA-V4a-ROB-05), y en la 10a el paso por distancia que nunca queda trabado (QA-V4a-L01) |
 | It. 4b (cierre, PO) | Pendientes de la [spec de la It. 4b §15](iterations/04b-hud-exr/01-po-spec.md): P-17 aceptada por el usuario en el gate de la 4a (§2, It. 4b, y §6); "También toca" de la 4b con F-WKT-01, -02, -03, -06 y -20, F-APP-03, -05 y -10 y F-BLE-16 (§2 y la matriz §4). Para la It. 5 quedan, como insumo de su spec, dos decisiones de la 4b: los paneles de series expandidos contra el lugar de la cuenta grande en vertical (04b/00-deuda-diseno §4.8) y el presupuesto de elementos del HUD, que la 4b deja en su tope ([REPORT de la 4b §9](iterations/04b-hud-exr/REPORT.md)) |
+| It. 5 (cierre, PO) | Pendientes de la [spec de la It. 5 §15](iterations/05-series-parciales/01-po-spec.md): la demo de la It. 5 con `Series 600` (los valores que decía el plan eran los de `docs/image-03.png` del legacy, imposibles con 1 000 m de trabajo); "También toca" de la 5 con F-WKT-01, -02, -03, -13, -14, -16 y -17, F-APP-05, F-BLE-15 y -16 y F-HIS-20 (§2 y la matriz §4; F-WKT-11, F-APP-10 y F-APP-11 ya la tenían); las decisiones aplicadas y las que van al gate de la 5 (DV-48 a DV-51, P-08); BKL-26 en §3 (el aviso de cada vuelta con la diferencia, P-09) |

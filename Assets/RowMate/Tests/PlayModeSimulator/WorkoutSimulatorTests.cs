@@ -141,6 +141,76 @@ namespace RowMate.Tests.PlayMode.Simulator
             return H.App.Workout.State.Value.Phase;
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §6.3 WSM; AC-BLE-15-09; DEMO-08, -09, VID-05): Series 600 con el simulador sin ruido y
+        // parciales abierto; "Simular desconexión" en el trabajo de la repetición 2: durante el corte la vuelta en curso no suma metros y
+        // su tiempo sí; después sigue desde los mismos metros; ninguna vuelta inventada; nada negativo.
+        [UnityTest, Category("AC-BLE-15-09")]
+        public IEnumerator SimulateDisconnectInTheCurrentLap()
+        {
+            var prefs = new RowMate.Core.Common.MemoryPreferences();
+            prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.LapsKey, true);
+            Create(new UiHostOptions
+            {
+                Profile = DeviceProfile.W1280,
+                IsDesktop = true,
+                Backend = HostBackends.Simulator(false),
+                SimulatorLayer = SimulatorLayerMode.Full,
+                Routines = HostRoutines.Seeded(RoutineSeeds.F5),
+                StartUtc = UiHostOptions.WorkoutStartUtc,
+                Preferences = prefs,
+            });
+            yield return StartRoutine("Series 600");
+            yield return AdvanceTo(236.05);
+            var laps = Hud.Series!.Laps.Series!.LapCount;
+            // El panel abierto y el botón a la vista antes (los asentamientos de los toques mueven el reloj); el corte, sin
+            // asentar, a los 238,6: vuelve a los 241,6 (SimulatedRowerService.DefaultReconnectAfter, 3 s) y la primera lectura
+            // llega un segundo después. El segundo 239 del motor todavía toma lo que llegó antes del corte.
+            yield return Tap("sim-open");
+            yield return Frames();
+            if (H.WhyNotTappable("sim-drop-rower") != null)
+            {
+                H.ScrollTo("sim-drop-rower");
+                yield return Frames();
+            }
+
+            yield return AdvanceTo(238.6);
+            H.Tap("sim-drop-rower");
+            yield return Frames();
+            Assert.That(H.App.Device.State.Value.IsConnected, Is.False, "el corte");
+            yield return AdvanceTo(239.05);
+            var meters = Meters();
+            var time = H.TextOf("hud-laps-current");
+            foreach (var second in new[] { 240.05, 241.05, 242.05 })
+            {
+                yield return AdvanceTo(second);
+                if (second < 241.6)
+                {
+                    Assert.That(H.App.Device.State.Value.IsConnected, Is.False, "durante el corte (" + second + ")");
+                }
+
+                Assert.That(Meters(), Is.EqualTo(meters), "los metros de la vuelta en curso quietos (" + second + ")");
+            }
+
+            Assert.That(H.TextOf("hud-laps-current"), Is.Not.EqualTo(time), "el tiempo de la vuelta avanza");
+            // Vuelve a los 241,6; las lecturas de los 242,6 y 243,6 (3,77 m/s sin ruido) suman ≈ 7,5 m en los segundos 243 y 244
+            // del motor. Un salto con lo del corte (3 s más) pasaría de 18.
+            yield return AdvanceTo(244.05);
+            Assert.That(H.App.Device.State.Value.IsConnected, Is.True, "el remo vuelve");
+            Assert.That(Meters(), Is.GreaterThanOrEqualTo(meters), "sigue desde los mismos metros, sin negativos");
+            Assert.That(Meters() - meters, Is.LessThan(12), "sin un salto: solo las dos lecturas de después del corte");
+            yield return Tap("sim-close");
+            yield return AdvanceTo(252.05);
+            Assert.That(Meters(), Is.GreaterThan(meters), "sigue remando");
+            Assert.That(Hud.Series!.Laps.Series!.LapCount, Is.EqualTo(laps), "ninguna vuelta inventada");
+        }
+
+        private int Meters()
+        {
+            var text = H.TextOf("hud-laps-current-meters") ?? "";
+            var digits = text.Replace(" m", "").Replace(".", "");
+            return int.Parse(digits, System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         [UnityTest, Category("AC-BLE-10-05")]
         public IEnumerator NoRowerBannerFollowsTheRowerLive()
         {

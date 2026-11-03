@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using RowMate.Tests.UiSupport;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -104,6 +106,16 @@ namespace RowMate.Snapshots
             // En el entrenamiento: ninguna pieza del HUD.
             if (host.Immersive != null)
             {
+                // It. 5 (AC-BLE-16-02): tampoco un panel de series, cerrado o abierto (salvo el caso sin hueco de R10 con los
+                // paneles: WrenchSpot.OverSeries, L640 con el diálogo de completado).
+                foreach (var (name, panel) in SeriesRects(host))
+                {
+                    if (Overlap(panel, box) && !WrenchOverSeriesAccepted(host))
+                    {
+                        problems.Add("la llave tapa #" + name + " (" + Fmt(panel) + "; llave " + Fmt(box) + ")");
+                    }
+                }
+
                 foreach (var name in HudPieces)
                 {
                     var piece = host.Find(name);
@@ -122,7 +134,8 @@ namespace RowMate.Snapshots
         public static IEnumerable<string> HudOverlap(UiTestHost host)
         {
             var problems = new List<string>();
-            if (host.Immersive == null)
+            // It. 5 (QA-V4b-06): antes de que el fondo empiece a aparecer el HUD todavía no existe (la página está negra).
+            if (host.Immersive == null || !host.Immersive.HasView)
             {
                 return problems;
             }
@@ -138,6 +151,9 @@ namespace RowMate.Snapshots
                 }
             }
 
+            // It. 5 (05-series-parciales/02-tech-design §5.6; DD5-10; AC-WKT-18-16): los paneles de series con su rectángulo VISUAL (el
+            // alto G; en ColumnScroll, lo que se ve hasta el piso de la columna), además de las piezas de la 4b.
+            rects.AddRange(SeriesRects(host));
             var controls = host.Immersive.View.Controls;
             rects.Add(("hud-finish", controls.Finish.worldBound));
             var pause = controls.ShowsResume ? controls.Resume : controls.Pause;
@@ -160,10 +176,118 @@ namespace RowMate.Snapshots
             {
                 for (var j = i + 1; j < rects.Count; j++)
                 {
-                    if (Overlap(rects[i].Box, rects[j].Box))
+                    if (Overlap(rects[i].Box, rects[j].Box) && !(IsWrenchAndPanel(rects[i].Name, rects[j].Name) && WrenchOverSeriesAccepted(host)))
                     {
                         problems.Add("#" + rects[i].Name + " se encima con #" + rects[j].Name + " (" + Fmt(rects[i].Box) + " / " + Fmt(rects[j].Box) + ")");
                     }
+                }
+            }
+
+            return problems;
+        }
+
+        // It. 5 (R10 con los paneles; WrenchPlacement): con el diálogo de completado y sin ningún hueco libre (L640), la llave queda
+        // en su lugar de la 4b sobre un panel inerte debajo del velo y lo dice su lugar (OverSeries). Solo así se acepta.
+        private static bool WrenchOverSeriesAccepted(UiTestHost host)
+        {
+#if ROWMATE_SIMULATOR
+            return host.TopDialog != null && host.SimulatorLayer?.Spot is { OverSeries: true };
+#else
+            return false;
+#endif
+        }
+
+        private static bool IsWrenchAndPanel(string a, string b)
+        {
+            return a == "sim-open" && IsPanel(b) || b == "sim-open" && IsPanel(a);
+        }
+
+        private static bool IsPanel(string name)
+        {
+            return name == "hud-laps-panel" || name == "hud-reps-panel";
+        }
+
+        // Los rectángulos visuales de los paneles de series a la vista (dp de ventana): la caja con el translate de la columna y el
+        // alto visual G; en ColumnScroll, recortados a la ventana de la columna (lo que queda bajo la máscara no se ve ni responde).
+        public static List<(string Name, Rect Box)> SeriesRects(UiTestHost host)
+        {
+            var rects = new List<(string Name, Rect Box)>();
+            var column = host.SeriesColumn;
+            if (column == null || !column.HasLayout)
+            {
+                return rects;
+            }
+
+            foreach (var panel in new[] { column.Laps, column.Reps })
+            {
+                if (!UiQuery.IsShown(panel) || panel.resolvedStyle.opacity < 0.01f)
+                {
+                    continue;
+                }
+
+                var box = panel.worldBound;
+                var visual = new Rect(box.x, box.y, box.width, (float)(panel.VisualHeightBase * panel.Scale));
+                if (column.Column.Rule == RowMate.Core.Design.SeriesFitRule.ColumnScroll)
+                {
+                    var top = (float)column.Column.Top(column.SpmHasTarget);
+                    var floor = (float)column.Column.Floor;
+                    var yMin = Mathf.Max(visual.yMin, top);
+                    var yMax = Mathf.Min(visual.yMax, floor);
+                    if (yMax - yMin <= 0.5f)
+                    {
+                        continue;
+                    }
+
+                    visual = new Rect(visual.x, yMin, visual.width, yMax - yMin);
+                }
+
+                rects.Add((panel.name, visual));
+            }
+
+            return rects;
+        }
+
+        // It. 5 (§5.6; AC-WKT-18-09, -14): las áreas de toque de los dos paneles no se superponen y, en vertical, un panel abierto
+        // entra en la zona del bote solo por su franja de afuera (cerrados, nunca; en horizontal, nunca).
+        public static IEnumerable<string> SeriesProblems(UiTestHost host)
+        {
+            var problems = new List<string>();
+            var column = host.SeriesColumn;
+            var layout = host.Immersive?.Layout;
+            if (column == null || !column.HasLayout || layout == null)
+            {
+                return problems;
+            }
+
+            if (column.RepsShown)
+            {
+                var laps = column.LapsPlacement.HitRect;
+                var reps = column.RepsPlacement.HitRect;
+                if (laps.Bottom > reps.Top + 0.01 && laps.Top < reps.Bottom - 0.01)
+                {
+                    problems.Add("las áreas de toque de los paneles se superponen");
+                }
+            }
+
+            foreach (var (name, box) in SeriesRects(host))
+            {
+                // El chip Reps cerrado debajo de parciales abierto baja con él (el FLIP y el lugar de CAP-02, CAP-14 y CAP-20 del
+                // diseño, 339,4-375,3 en TV): cuenta como la columna abierta, solo por la franja de afuera (WP-B, precisión de
+                // AC-WKT-17-09 para PO y QA).
+                var expanded = name == column.Laps.name ? column.Expanded.Laps : column.Expanded.Reps || column.Expanded.Laps;
+                // En x, los bordes de la geometría (la caja del mundo va ajustada a los píxeles: en P360 termina en 139,53 y la franja,
+                // en 139,52); la caja tiene que coincidir con ellos a ± 0,5 dp.
+                var left = column.Column.Left;
+                var width = column.Column.Width;
+                if (Math.Abs(box.xMin - left) > 0.5 || Math.Abs(box.xMax - (left + width)) > 0.5)
+                {
+                    problems.Add("#" + name + " fuera de su columna (" + Fmt(box) + "; la geometría dice x " + left.ToString("0.0", CultureInfo.InvariantCulture)
+                                 + "-" + (left + width).ToString("0.0", CultureInfo.InvariantCulture) + ")");
+                }
+
+                if (!RowMate.Core.Design.SeriesPanelGeometry.RespectsBoatZone(new RowMate.Core.Design.DpRect(left, box.y, width, box.height), expanded, layout))
+                {
+                    problems.Add("#" + name + " entra en la zona del bote (" + Fmt(box) + ")");
                 }
             }
 

@@ -16,7 +16,8 @@ namespace RowMate.Tests.Support
     public sealed class ScriptedRower : IRowerService
     {
         private readonly IScheduler _scheduler;
-        private readonly Func<int, RowingData> _reading;
+        private readonly Func<int, RowingData?> _reading;
+        private readonly Func<int>? _index;
         private readonly ObservableValue<BleStatus> _status;
         private readonly ObservableValue<BleAdapterState> _adapter;
         private readonly EventStream<RowingData> _data;
@@ -26,10 +27,14 @@ namespace RowMate.Tests.Support
         private bool _connected = true;
         private bool _disposed;
 
-        public ScriptedRower(IScheduler scheduler, Func<int, RowingData> reading, IAppLogger logger)
+        // It. 5 (02-tech-design §6.2): reading puede devolver null (esa lectura no llega: R-4D). index, si está, da el número de
+        // cada lectura en lugar de Next++ (R-4S: el del tiempo real de LifecycleHarness.RealReadingIndex, que sigue contando con el
+        // equipo dormido).
+        public ScriptedRower(IScheduler scheduler, Func<int, RowingData?> reading, IAppLogger logger, Func<int>? index = null)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
             _reading = reading ?? throw new ArgumentNullException(nameof(reading));
+            _index = index;
             if (logger == null)
             {
                 throw new ArgumentNullException(nameof(logger));
@@ -92,6 +97,21 @@ namespace RowMate.Tests.Support
             _status.Value = status;
         }
 
+        // It. 5: la lectura L(k) del guion, ya (sin mover Next). Nada si está desconectado o el guion no la manda.
+        public void EmitIndex(int k)
+        {
+            if (!_connected || _disposed)
+            {
+                return;
+            }
+
+            var reading = _reading(k);
+            if (reading != null)
+            {
+                Emit(reading);
+            }
+        }
+
         // Una lectura a mano (además del guion).
         public void Emit(RowingData reading)
         {
@@ -131,12 +151,21 @@ namespace RowMate.Tests.Support
         private void EmitNext()
         {
             var k = Next++;
+            if (_index != null)
+            {
+                k = _index();
+            }
+
             if (!_connected || _disposed)
             {
                 return;
             }
 
-            Emit(_reading(k));
+            var reading = _reading(k);
+            if (reading != null)
+            {
+                Emit(reading);
+            }
         }
     }
 }

@@ -15,10 +15,14 @@ namespace RowMate.Simulator.Presentation
     // PlayerSettings.enableFrameTimingStats (BuildCli las prende solo en el build de desarrollo con simulador). Sin
     // FrameTimingManager, anota "[PERF] sin FrameTimingManager: NO VERIFICABLE" y el intervalo entre cuadros solo como información.
     // En el Editor no mide (el cuadro del Editor no es la métrica).
+    // It. 5 (QA-V4b-06; 05-series-parciales/00-deuda-4b §2): además, la ENTRADA de cada inmersivo, una línea con el máximo de los
+    // primeros 30 cuadros medidos (las medidas llegan con unos cuadros de atraso, así que incluyen el cuadro del toque):
+    // "[PERF] entrada del inmersivo: máx X ms en los primeros 30 cuadros (n.º k)".
     public sealed class FrameTimeProbe
     {
         public const string Tag = "PERF";
         public const double WindowSeconds = 10;
+        public const int EntryFrames = 30;
         // Hasta 4096 muestras por ventana para el p99 (10 s a 400 fps); el máximo y la cuenta miran TODOS los cuadros.
         private const int Capacity = 4096;
 
@@ -32,6 +36,10 @@ namespace RowMate.Simulator.Presentation
         private double _max;
         private double _windowStart = double.NaN;
         private bool _warned;
+        private int _entrySamples;
+        private double _entryMax;
+        private int _entries;
+        private bool _panelsInWindow;
 
         public FrameTimeProbe(UiContext ui, VisualElement host)
         {
@@ -58,6 +66,8 @@ namespace RowMate.Simulator.Presentation
                 _max = 0;
                 _windowStart = double.NaN;
                 _interval.Reset();
+                _entrySamples = -1;
+                _panelsInWindow = false;
                 return;
             }
 
@@ -65,6 +75,9 @@ namespace RowMate.Simulator.Presentation
             if (double.IsNaN(_windowStart))
             {
                 _windowStart = now;
+                _entrySamples = 0;
+                _entryMax = 0;
+                _entries++;
             }
 
             double sample;
@@ -85,6 +98,15 @@ namespace RowMate.Simulator.Presentation
                 _interval.Restart();
             }
 
+            // It. 5 (05-series-parciales/02-tech-design §3.7): la ventana en la que un panel de series estuvo abierto o se movió se
+            // anota como "paneles" (la medida de AC-WKT-18-21 en el build, -rowmate-perf-series).
+            var page = (ImmersiveWorkoutPage)_ui.Pages.Top;
+            var series = page.HasView ? page.View.Series : null;
+            if (series != null && (series.Expanded.Laps || series.Expanded.Reps || series.IsAnimating))
+            {
+                _panelsInWindow = true;
+            }
+
             if (!double.IsNaN(sample))
             {
                 _total++;
@@ -92,6 +114,17 @@ namespace RowMate.Simulator.Presentation
                 if (_count < Capacity)
                 {
                     _samples[_count++] = sample;
+                }
+
+                if (_entrySamples >= 0 && _entrySamples < EntryFrames)
+                {
+                    _entryMax = Math.Max(_entryMax, sample);
+                    if (++_entrySamples == EntryFrames)
+                    {
+                        _ui.Logger.Log(LogLevel.Info, Tag, "entrada del inmersivo: máx " + _entryMax.ToString("0.0", CultureInfo.InvariantCulture)
+                            + " ms en los primeros " + EntryFrames.ToString(CultureInfo.InvariantCulture) + " cuadros (n.º "
+                            + _entries.ToString(CultureInfo.InvariantCulture) + ")");
+                    }
                 }
             }
 
@@ -104,12 +137,13 @@ namespace RowMate.Simulator.Presentation
             Array.Sort(_sorted, 0, _count);
             var max = _max;
             var p99 = _sorted[Math.Min(_count - 1, (int)Math.Ceiling(0.99 * _count) - 1)];
-            _ui.Logger.Log(LogLevel.Info, Tag, "cpu del hilo principal: máx " + max.ToString("0.0", CultureInfo.InvariantCulture) + " ms, p99 "
+            _ui.Logger.Log(LogLevel.Info, Tag, (_panelsInWindow ? "paneles: máx " : "cpu del hilo principal: máx ") + max.ToString("0.0", CultureInfo.InvariantCulture) + " ms, p99 "
                 + p99.ToString("0.0", CultureInfo.InvariantCulture) + " ms, " + _total.ToString(CultureInfo.InvariantCulture) + " cuadros");
             _count = 0;
             _total = 0;
             _max = 0;
             _windowStart = now;
+            _panelsInWindow = false;
         }
     }
 }

@@ -444,5 +444,41 @@
   },
   "workoutCompletedTime": "Time",
   "workoutCompletedDistance": "Distance",
-  "workoutCompletedCalories": "Calories"
+  "workoutCompletedCalories": "Calories",
+  "hudLapsChip": "500 m",
+  "hudLapsTitle": "500 m splits",
+  "hudLapsEmpty": "No splits in this step",
+  "hudLapNumber": "#{number}",
+  "@hudLapNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "hudRepProgress": "Rep {rep}/{count} · {meters}",
+  "@hudRepProgress": {
+    "placeholders": {
+      "rep": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "meters": {
+        "type": "String"
+      }
+    }
+  },
+  "hudRepsChip": "Reps",
+  "hudRepsTitle": "Previous reps",
+  "hudRepsEmpty": "No completed reps",
+  "hudRepLabel": "Rep {rep}",
+  "@hudRepLabel": {
+    "placeholders": {
+      "rep": {
+        "type": "String"
+      }
+    }
+  }
 }

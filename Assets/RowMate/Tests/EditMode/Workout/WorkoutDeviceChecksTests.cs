@@ -106,5 +106,70 @@ namespace RowMate.Tests.EditMode.Workout
             // …)" o, sin señal, "[TIME] cuadro de N s sin aviso de suspensión: cuenta". La regla la prueban SUS y WSU.
             Assert.Fail("solo en el equipo");
         }
+
+        // ── It. 5 (05-series-parciales/02-tech-design §6.3, §6.7) ──
+
+        [Test, Category("AC-WKT-18-13")]
+        [Ignore("NO VERIFICABLE: [Device-And] sin el módulo de Android ni un teléfono (el desplazamiento de los paneles con el dedo)")]
+        public void AndroidFingerScrollOfThePanels()
+        {
+            // Android, TH y L640: con los dos paneles abiertos, arrastrar la columna con el dedo la desplaza 1:1, sin inercia y dentro
+            // de sus topes; un toque que se mueve menos de 8 dp abre o cierra. La regla la prueba SPG y la selección real, SCT.
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-18-09")]
+        [Ignore("NO VERIFICABLE: [Device-And] sin el módulo de Android ni un teléfono (el área táctil de los chips)")]
+        public void AndroidTouchAreaOfTheChips()
+        {
+            // Android: los chips 500 m y Reps responden en todo su área de 48 a 56 dp y uno nunca activa el otro. Las áreas las prueba
+            // SPG (SeriesPanelGeometry.Place) y la selección, SCT.
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-02-08")]
+        [Ignore("NO VERIFICABLE: [Device-And] sin el módulo de Android ni un teléfono (los paneles en el primer cuadro al volver)")]
+        public void AndroidPanelsOnTheFirstFrameAfterBackground()
+        {
+            // Android: al volver del segundo plano, las vueltas y repeticiones de ese lapso ya están en el primer cuadro, sin empuje,
+            // sin marcas y sin rodillos. La lógica la prueba SEN (segundo plano) y la pantalla, WBU (PlayMode).
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-18-10")]
+        [Ignore("NO VERIFICABLE: [Device-Win] cerrar y abrir el build de simulador (la preferencia de los paneles sobrevive)")]
+        public void WindowsPanelsSurviveARestart()
+        {
+            // Windows: abrir 500 m, cerrar la app y volver a abrirla: al iniciar otra vez una rutina, 500 m ya está abierto. La regla
+            // la prueban SPP y JFP (con un archivo temporal) y el arranque, BST.
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-18-12")]
+        [Ignore("NO VERIFICABLE: [Device-Win] el teclado real en la ventana (Tab, Enter y Espacio sobre los paneles)")]
+        public void WindowsKeyboardOnThePanels()
+        {
+            // Windows: Tab recorre Terminar, Pausa, 500 m, Reps y la llave con el anillo de foco; Enter y Espacio abren y cierran.
+            // La pantalla la prueba SKT (PlayMode).
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-18-21")]
+        [Ignore("NO VERIFICABLE: [Device-Win] la ventana [PERF] del build de simulador con los paneles abriéndose y cerrándose")]
+        public void WindowsPanelsPerf()
+        {
+            // Windows (build de simulador, -rowmate-perf-series): con Fondo 3000 y Series 600 y los paneles abriéndose y cerrándose
+            // cada 2 s, ningún cuadro de más de 33 ms y p99 ≤ 16,7 ms. El presupuesto y los 0 B, HBT y FAT (PlayMode).
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-WKT-13-15")]
+        [Ignore("NO VERIFICABLE: [Device-Win] la ventana [PERF] de las tres entradas en el build de simulador")]
+        public void WindowsEntryWithoutJank()
+        {
+            // Windows (build de simulador): tres entradas seguidas (libre, Prueba 4a y Cinco reps con los dos paneles abiertos):
+            // ningún cuadro de más de 16,7 ms mientras algo se mueve. El orden de la entrada lo prueba ITT (PlayMode).
+            Assert.Fail("solo en el equipo");
+        }
     }
 }

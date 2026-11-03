@@ -276,6 +276,152 @@ namespace RowMate.Tests.EditMode.Common
             Assert.That(logger.Contains("cuadro de 40.0 s sin aviso de suspensión: cuenta (AC-WKT-02-04)"), Is.True);
         }
 
+        // ── It. 5 (05-series-parciales/00-deuda-4b §1): el registro de cada despertar, con lo que vio cada fuente ──
+        // La demo (c) de la 4b no fue concluyente (el equipo nunca se suspendió). Desde la 5, cada despertar deja una línea [TIME]
+        // propia (no la del motor: también en reposo), con la duración según la medida del núcleo y según el aviso del sistema.
+
+        [Test, Category("AC-WKT-02-11")]
+        public void EveryWakeIsLoggedWithBothSources()
+        {
+            var logger = new RecordingLogger();
+            var clock = new Clock();
+            var accounting = new SuspendAccounting(clock.Now(), logger);
+            clock.Run(accounting, 10);
+            clock.Suspend();
+            clock.Run(accounting, 1);
+            clock.Sleep(60, rawCounts: true, measured: true);
+            clock.Resume(60.4);
+            accounting.Awake(clock.Now(), out var woke);
+            Assert.That(woke.HasValue, Is.True);
+            Assert.That(logger.Lines, Has.Some.EqualTo("[TIME] Info: aviso del sistema: se suspende (1)"));
+            Assert.That(logger.Lines, Has.Some.EqualTo("[TIME] Info: aviso del sistema: reanuda (1): durmió 60.4 s según el aviso"));
+            Assert.That(logger.Lines, Has.Some.EqualTo("[TIME] Info: despertar: durmió 60.0 s según la medida del núcleo y 60.4 s según el aviso "
+                                                       + "del sistema; el reloj crudo avanzó 60.0 s y se descuentan 60.0 s (aviso, medida)"));
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void AWakeWithOnlyTheMeasureSaysTheSignalDidNotCome()
+        {
+            // El caso de un equipo que duerme sin que llegue el aviso: la medida alcanza, y el registro dice que el aviso faltó.
+            var logger = new RecordingLogger();
+            var clock = new Clock();
+            var accounting = new SuspendAccounting(clock.Now(), logger);
+            clock.Run(accounting, 10);
+            clock.Sleep(90, rawCounts: false, measured: true);
+            accounting.Awake(clock.Now(), out var woke);
+            Assert.That(woke!.Value.Evidence, Is.EqualTo(SleepEvidence.Measure));
+            Assert.That(logger.Lines, Has.Some.EqualTo("[TIME] Info: despertar: durmió 90.0 s según la medida del núcleo y sin aviso del sistema; "
+                                                       + "el reloj crudo avanzó 0.0 s y se descuentan 0.0 s (medida)"));
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void AWakeWithOnlyTheSignalSaysThereIsNoMeasure()
+        {
+            var logger = new RecordingLogger();
+            var clock = new Clock { Measures = false };
+            var accounting = new SuspendAccounting(clock.Now(), logger);
+            clock.Run(accounting, 10);
+            clock.Suspend();
+            clock.Run(accounting, 1);
+            clock.Sleep(60, rawCounts: true, measured: false);
+            clock.Resume(61);
+            accounting.Awake(clock.Now(), out _);
+            Assert.That(logger.Contains("despertar: durmió sin medida del núcleo y 61.0 s según el aviso del sistema; el reloj crudo avanzó 60.0 s "
+                                        + "y se descuentan 60.0 s (aviso)"), Is.True, string.Join("\n", logger.Lines));
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void AResumeAfterTheWakeBringsItsDurationOnItsOwnLine()
+        {
+            // El "reanuda" llega después del primer cuadro despierto (los avisos corren en un hilo del sistema).
+            var logger = new RecordingLogger();
+            var clock = new Clock();
+            var accounting = new SuspendAccounting(clock.Now(), logger);
+            clock.Run(accounting, 10);
+            clock.Suspend();
+            clock.Run(accounting, 1);
+            clock.Sleep(60, rawCounts: true, measured: true);
+            accounting.Awake(clock.Now(), out _);
+            Assert.That(logger.Contains("despertar: durmió 60.0 s según la medida del núcleo y el aviso de reanudación todavía no llegó"), Is.True,
+                string.Join("\n", logger.Lines));
+            clock.Resume(60.2);
+            clock.Tick();
+            accounting.Awake(clock.Now(), out var second);
+            Assert.That(second.HasValue, Is.False, "no es otro despertar");
+            Assert.That(logger.Lines, Has.Some.EqualTo("[TIME] Info: aviso del sistema: reanuda (1): durmió 60.2 s según el aviso"));
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void ManyWakesEachGetTheirLine()
+        {
+            // Dos suspensiones seguidas: dos líneas, cada una con su ciclo de avisos.
+            var logger = new RecordingLogger();
+            var clock = new Clock();
+            var accounting = new SuspendAccounting(clock.Now(), logger);
+            for (var i = 1; i <= 2; i++)
+            {
+                clock.Run(accounting, 5);
+                clock.Suspend();
+                clock.Run(accounting, 1);
+                clock.Sleep(30 * i, rawCounts: true, measured: true);
+                clock.Resume(30 * i);
+                accounting.Awake(clock.Now(), out _);
+            }
+
+            var wakes = 0;
+            foreach (var line in logger.Lines)
+            {
+                if (line.Contains("despertar: durmió"))
+                {
+                    wakes++;
+                }
+            }
+
+            Assert.That(wakes, Is.EqualTo(2));
+            Assert.That(logger.Contains("despertar: durmió 60.0 s según la medida del núcleo y 60.0 s según el aviso del sistema"), Is.True);
+            Assert.That(logger.Lines, Has.Some.EqualTo("[TIME] Info: aviso del sistema: se suspende (2)"));
+        }
+
+        [Test, Category("AC-WKT-02-04"), Category("AC-WKT-19-04")]
+        public void AWallJumpWithoutEvidenceIsLoggedButNotDiscounted()
+        {
+            // Un cambio de hora (o un sueño que ninguna señal vio) queda anotado; no se descuenta nada.
+            var logger = new RecordingLogger();
+            var clock = new Clock();
+            var accounting = new SuspendAccounting(clock.Now(), logger);
+            clock.Run(accounting, 2);
+            clock.ShiftWall(3 * 3600);
+            clock.Tick();
+            accounting.Awake(clock.Now(), out var woke);
+            Assert.That(woke.HasValue, Is.False);
+            Assert.That(accounting.Bias, Is.EqualTo(0));
+            Assert.That(logger.Contains("la hora de pared se movió 10800.0 s respecto del reloj crudo, sin aviso ni medida de sueño: no se descuenta"),
+                Is.True, string.Join("\n", logger.Lines));
+        }
+
+        [Test, Category("AC-WKT-02-04")]
+        public void NothingIsLoggedWithoutEvents()
+        {
+            // El registro solo se escribe con un evento: 60 s de cuadros normales (con medida) no dejan ninguna línea.
+            var logger = new RecordingLogger();
+            var clock = new Clock();
+            var accounting = new SuspendAccounting(clock.Now(), logger);
+            clock.Run(accounting, 60);
+            Assert.That(logger.Lines, Is.Empty);
+        }
+
+        [Test, Category("AC-WKT-02-11")]
+        public void AWakeAtRestIsLoggedThroughTheHarness()
+        {
+            // Sin motor ni sesión (reposo): el camino de la app (FrameScheduler con el FrameClock de cada cuadro) igual lo anota.
+            var logger = new RecordingLogger();
+            var harness = new LifecycleHarness(Start, 60, logger);
+            harness.Suspend(10);
+            harness.Wake(60, monotonicCounts: true);
+            Assert.That(logger.Contains("[TIME] Info: despertar: durmió 60.0 s según la medida del núcleo y 60.0 s según el aviso del sistema"), Is.True,
+                string.Join("\n", logger.Lines));
+        }
+
         // El reloj crudo y la hora de pared de la prueba, con la medida del sueño y los contadores de avisos.
         private sealed class Clock
         {
@@ -284,10 +430,21 @@ namespace RowMate.Tests.EditMode.Common
             private double _asleep;
             private int _suspends;
             private int _resumes;
+            private double _signalAsleep = double.NaN;
+
+            // Sin medida del sistema (Android, iOS, o Windows sin los contadores del núcleo): NaN.
+            public bool Measures { get; set; } = true;
 
             public FrameClock Now()
             {
-                return new FrameClock(_raw, Start.AddSeconds(_wall), TimeSpan.FromHours(-3), _asleep, _suspends, _resumes);
+                return new FrameClock(_raw, Start.AddSeconds(_wall), TimeSpan.FromHours(-3), Measures ? _asleep : double.NaN, _suspends, _resumes,
+                    _signalAsleep);
+            }
+
+            public void Resume(double signalSeconds)
+            {
+                _signalAsleep = signalSeconds;
+                _resumes++;
             }
 
             public void Tick()

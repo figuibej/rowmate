@@ -22,6 +22,14 @@ namespace RowMate.Core.Common
     //   3. Sin medida ni aviso: nada. Un cuadro tarde es un cuadro tarde (AC-WKT-02-04, la conducta de la 4a) y se anota desde
     //      30 s; un salto de la hora de pared sin aviso es un cambio de hora (AC-WKT-19-04), no una suspensión.
     // El monótono despierto nunca baja.
+    // It. 5 (05-series-parciales/00-deuda-4b §1; la demo (c) de la 4b no fue concluyente): el registro dice lo que vio cada fuente,
+    // con la sesión en marcha o en reposo (esto corre en cada cuadro, haya sesión o no):
+    //   - cada aviso que llega: "[TIME] aviso del sistema: se suspende (n)" y "… reanuda (n): durmió X s según el aviso";
+    //   - CADA despertar: "[TIME] despertar: durmió A s según la medida del núcleo y B s según el aviso del sistema; el reloj
+    //     crudo avanzó C s y se descuentan D s (evidencia)", con "sin medida del núcleo" o "sin aviso del sistema" si falta una;
+    //   - un salto de la hora de pared de 30 s o más sin aviso ni medida de sueño (un cambio de hora, o un sueño que ninguna
+    //     señal vio): no se descuenta y queda anotado.
+    // Solo se escribe con un evento (sin asignaciones por cuadro).
     public sealed class SuspendAccounting
     {
         public const string Tag = "TIME";
@@ -55,6 +63,8 @@ namespace RowMate.Core.Common
         private bool _pending;
         private bool _pendingReported;
         private double _pendingSince;
+        private int _suspendAtWake;
+        private int _resumeAtWake;
 
         public SuspendAccounting(in FrameClock first, IAppLogger? logger = null)
         {
@@ -64,6 +74,8 @@ namespace RowMate.Core.Common
             _lastAsleep = first.SystemAsleepSeconds;
             _lastSuspend = first.SuspendSignals;
             _lastResume = first.ResumeSignals;
+            _suspendAtWake = first.SuspendSignals;
+            _resumeAtWake = first.ResumeSignals;
             _awake = first.RawMonotonic;
         }
 
@@ -187,6 +199,31 @@ namespace RowMate.Core.Common
                 _logger.Log(LogLevel.Info, Tag, "cuadro de " + Fmt.Fixed(dRaw, 3) + " s con aviso de suspensión: se descuentan " + Fmt.Fixed(discount, 3) + " s");
             }
 
+            // It. 5 (00-deuda-4b §1): lo que vio cada fuente, en el registro.
+            if (newSuspend)
+            {
+                _logger.Log(LogLevel.Info, Tag, "aviso del sistema: se suspende (" + Count(clock.SuspendSignals) + ")");
+            }
+
+            if (newResume)
+            {
+                _logger.Log(LogLevel.Info, Tag, "aviso del sistema: reanuda (" + Count(clock.ResumeSignals) + ")"
+                    + (double.IsNaN(clock.SignalAsleepSeconds) ? "" : ": durmió " + Fmt.Fixed(clock.SignalAsleepSeconds, 1) + " s según el aviso"));
+            }
+
+            if (wake)
+            {
+                _logger.Log(LogLevel.Info, Tag, WakeLine(clock, dAsleep, dRaw, discount, evidence));
+                _suspendAtWake = Math.Max(_suspendAtWake, clock.SuspendSignals);
+                _resumeAtWake = Math.Max(_resumeAtWake, clock.ResumeSignals);
+            }
+            else if (!_pending && Math.Abs(dUtc - dRaw) >= LateFrameLogSeconds)
+            {
+                // Sin aviso ni medida: un cambio de hora (AC-WKT-19-04) o un sueño que ninguna señal vio. No se descuenta.
+                _logger.Log(LogLevel.Info, Tag, "la hora de pared se movió " + Fmt.Fixed(dUtc - dRaw, 1)
+                    + " s respecto del reloj crudo, sin aviso ni medida de sueño: no se descuenta (AC-WKT-19-04)");
+            }
+
             _lastRaw = raw > _lastRaw ? raw : _lastRaw;
             _lastUtc = clock.Utc;
             if (clock.HasMeasure)
@@ -202,6 +239,37 @@ namespace RowMate.Core.Common
             }
 
             return _awake;
+        }
+
+        // "[TIME] despertar: durmió 60.0 s según la medida del núcleo y 60.2 s según el aviso del sistema; el reloj crudo avanzó
+        // 60.1 s y se descuentan 60.0 s (aviso, medida)". La medida es la de este cuadro (NaN: sin medida); el aviso, el del ciclo de
+        // este despertar (si su "reanuda" todavía no llegó, lo dice y la línea del "reanuda" trae la duración).
+        private string WakeLine(in FrameClock clock, double dAsleep, double dRaw, double discount, SleepEvidence evidence)
+        {
+            var measure = double.IsNaN(dAsleep)
+                ? "sin medida del núcleo"
+                : Fmt.Fixed(Math.Max(0, dAsleep), 1) + " s según la medida del núcleo";
+            string signal;
+            if (clock.ResumeSignals > _resumeAtWake && !double.IsNaN(clock.SignalAsleepSeconds))
+            {
+                signal = Fmt.Fixed(clock.SignalAsleepSeconds, 1) + " s según el aviso del sistema";
+            }
+            else if (clock.SuspendSignals > _suspendAtWake)
+            {
+                signal = "el aviso de reanudación todavía no llegó";
+            }
+            else
+            {
+                signal = "sin aviso del sistema";
+            }
+
+            return "despertar: durmió " + measure + " y " + signal + "; el reloj crudo avanzó " + Fmt.Fixed(dRaw, 1) + " s y se descuentan "
+                   + Fmt.Fixed(discount, 1) + " s (" + new SystemWake(0, 0, evidence).EvidenceText + ")";
+        }
+
+        private static string Count(int value)
+        {
+            return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 }

@@ -27,12 +27,13 @@ namespace RowMate.Presentation.Workout
     //   │   ├── #hud-step-type                stepType* 13/700, tracking 0,04 em, step.<tipo>.hud
     //   │   ├── #hud-step-target (.rm-hud-pill)  la pastilla, en un slot que recorta (flex-shrink 1, sin text-overflow): el texto lo
     //   │   │                                  arma el código con los fragmentos ENTEROS del plan y el "…" en text.primary
-    //   │   ├── .rm-flex-spacer
-    //   │   ├── #hud-up-next                  slot que recorta (0 → N con ω 12): relleno 7 o 4 (el plan) × 3, radio 8
+    //   │   ├── #hud-up-next                  slot que recorta (0 → N con ω 12): relleno 7 o 4 (el plan) × 3, radio 8; margin-left auto
+    //   │   │                                 mientras está en el árbol (M5)
     //   │   │   ├── .rm-hud-up-next__bg       absoluto: fondo step.<siguiente> @20 % y borde 1 @50 %; ES LO QUE LATE
     //   │   │   ├── hudUpNext                 10 Inter 400 en text.secondary
     //   │   │   └── tipo siguiente            " " + stepType* 10/700 en text.primary
-    //   │   ├── #hud-countdown                TabularNumber num.s 20, blanco, flex-shrink 0; su aire a la izquierda, 8 o 6 (el plan)
+    //   │   ├── #hud-countdown                TabularNumber num.s 20, blanco, flex-shrink 0; su aire a la izquierda, 8 o 6 (el plan);
+    //   │   │                                 sin Próximo en el árbol, margin-left auto (M5: pegada a la derecha, como con el espaciador)
     //   │   └── #hud-wall-clock               el reloj de pared (WallClockView): margin-left 10 o 6 (el plan); flex-shrink 0
     //   └── #hud-seal .rm-hud-seal            la tercera fila (SealRow): 0 sin sello, 22 con él
     // La fila de información (DN4b-16; InfoRowFit): el modo (normal 6 · 8 · 10 con Próximo 7 × 3; compacto 1 con los dos aires en
@@ -79,6 +80,7 @@ namespace RowMate.Presentation.Workout
         private int _fragmentsShown = -1;
         private bool _targetHidden;
         private float _upNextPad = UpNextPadHDp;
+        private float _countdownGap = CountdownGapDp;
         private double _barHeight = HudGeometry.TopBarHeightSteps;
         private WorkoutHudState? _state;
         private bool _disposed;
@@ -128,11 +130,6 @@ namespace RowMate.Presentation.Workout
             Pill.style.display = DisplayStyle.None;
             _row.Add(Pill);
 
-            var spacer = new VisualElement();
-            spacer.AddToClassList("rm-flex-spacer");
-            spacer.pickingMode = PickingMode.Ignore;
-            _row.Add(spacer);
-
             UpNext = new VisualElement { name = "hud-up-next" };
             UpNext.AddToClassList("rm-hud-up-next");
             UpNext.pickingMode = PickingMode.Ignore;
@@ -163,6 +160,7 @@ namespace RowMate.Presentation.Workout
             Countdown.style.marginLeft = CountdownGapDp;
             Countdown.style.color = TokenColors.ToColor(Tokens.TextPrimary);
             _row.Add(Countdown);
+            ApplyRightGroupMargin();
 
             Clock = new WallClockView(ui, clock);
             Clock.Number.style.marginLeft = (float)HudGeometry.WallClockGap;
@@ -295,6 +293,12 @@ namespace RowMate.Presentation.Workout
             _infoRow.Stop();
             PillRow.Motion.Stop();
             Seal.Motion.Stop();
+            // It. 5 (O-1 de la lente de motion de la 4b): los finitos de la 4a tampoco siguen después de salir. El cambio de paso y la
+            // entrada o salida de Próximo terminan en su estado final (los textos de la última foto) y el ancho de Próximo queda
+            // donde está (la vista se va).
+            _swap.Finish();
+            _upNextExit?.Finish();
+            _upNextWidth.Stop();
         }
 
         private void SetBarHeight(double height)
@@ -430,9 +434,21 @@ namespace RowMate.Presentation.Workout
 
         private void ApplyGaps(InfoRowVisual visual)
         {
-            Countdown.style.marginLeft = (float)visual.CountdownGap;
+            _countdownGap = (float)visual.CountdownGap;
+            ApplyRightGroupMargin();
             Clock.Number.style.marginLeft = (float)visual.ClockGap;
             ApplyUpNextPad((float)visual.UpNextPadH);
+        }
+
+        // It. 5 (M5; 05-series-parciales/02-tech-design §3.6, §7.5): sin el espaciador de la fila, el primero del grupo de la derecha que
+        // está en el árbol lleva margin-left auto: Próximo mientras está (la cuenta conserva su aire de 8 o 6 del plan), o la cuenta
+        // sin Próximo (pegada a la derecha, como con el espaciador). Cambia cuando Próximo entra o sale del árbol, no por cuadro: lo
+        // que se ve no cambia (it4b igual byte a byte) y la fila tiene un elemento menos (el presupuesto, R4a-03).
+        private void ApplyRightGroupMargin()
+        {
+            var upNextInTree = UpNext.style.display != DisplayStyle.None;
+            UpNext.style.marginLeft = upNextInTree ? new StyleLength(StyleKeyword.Auto) : new StyleLength(StyleKeyword.Null);
+            Countdown.style.marginLeft = upNextInTree ? new StyleLength(_countdownGap) : new StyleLength(StyleKeyword.Auto);
         }
 
         private void ApplyUpNextPad(float pad)
@@ -617,6 +633,7 @@ namespace RowMate.Presentation.Workout
             if (shown)
             {
                 UpNext.style.display = DisplayStyle.Flex;
+                ApplyRightGroupMargin();
                 if (animate && !_ui.Motion.Settings.ReduceMotion)
                 {
                     // Entra con su ancho de 0 a N (ω 12) y funde 0 → 1 en 200 (ease.enter); el latido del fondo es de StepPulse.
@@ -649,6 +666,7 @@ namespace RowMate.Presentation.Workout
                     if (!_upNextShown)
                     {
                         UpNext.style.display = DisplayStyle.None;
+                        ApplyRightGroupMargin();
                         UpNext.style.width = StyleKeyword.Null;
                         UpNext.style.opacity = StyleKeyword.Null;
                     }
@@ -659,6 +677,7 @@ namespace RowMate.Presentation.Workout
 
             _upNextWidth.Stop();
             UpNext.style.display = DisplayStyle.None;
+            ApplyRightGroupMargin();
             UpNext.style.width = StyleKeyword.Null;
             UpNext.style.opacity = StyleKeyword.Null;
         }

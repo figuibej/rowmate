@@ -106,6 +106,150 @@ namespace RowMate.Tests.PlayMode
 
             Assert.That(keepAwake.IsHeld, Is.False, "al cerrar la suelta");
         }
+
+        // It. 5 (QA-V4b-06; 05-series-parciales/00-deuda-4b §2): el arranque precalienta el HUD en su primer cuadro y lo desarma en
+        // el siguiente, sin avisos y sin dejar nada en el árbol; el motor sigue en reposo.
+        [UnityTest, Category("QA-V4b-06"), Category("AC-APP-01-03")]
+        public IEnumerator TheBootWarmsUpTheHudAndLeavesNothing()
+        {
+            var messages = new System.Collections.Generic.List<string>();
+            Application.LogCallback collect = (message, stack, type) => messages.Add(type + ": " + message);
+            Application.logMessageReceived += collect;
+            try
+            {
+                var load = SceneManager.LoadSceneAsync(SceneName, LoadSceneMode.Additive);
+                while (!load.isDone)
+                {
+                    yield return null;
+                }
+
+                for (var i = 0; i < 5; i++)
+                {
+                    yield return null;
+                }
+
+                var appRoot = UnityEngine.Object.FindAnyObjectByType<AppRoot>();
+                Assert.That(appRoot, Is.Not.Null);
+                Assert.That(appRoot!.HudWarmedUp, Is.True, "precalentado y desarmado");
+                var root = appRoot.GetComponent<UIDocument>().rootVisualElement;
+                Assert.That(root.Q(RowMate.Presentation.Workout.HudWarmup.HolderName), Is.Null, "nada en el árbol");
+                Assert.That(appRoot.App!.Workout.State.Value.Phase, Is.EqualTo(RowMate.Core.Workout.WorkoutPhase.Idle));
+                Assert.That(messages.Exists(m => m.Contains("[UI] HUD precalentado (QA-V4b-06)")), Is.True, string.Join("\n", messages));
+                Assert.That(messages.Exists(m => m.Contains("no se pudo precalentar") || m.Contains("al desarmar el HUD precalentado")), Is.False,
+                    string.Join("\n", messages));
+                var unload = SceneManager.UnloadSceneAsync(SceneName);
+                while (unload != null && !unload.isDone)
+                {
+                    yield return null;
+                }
+            }
+            finally
+            {
+                Application.logMessageReceived -= collect;
+            }
+        }
+    }
+
+    // It. 5 (05-series-parciales/02-tech-design §2.7, §6.3 BST; AC-WKT-18-10, -11; QA-G5T-05): las preferencias del arranque real, en
+    // la carpeta temporal de ROWMATE_DATA_DIR (nunca la del usuario).
+    public sealed class BootScenePreferencesTests
+    {
+        private string? _previousDataDir;
+        private string _dataDir = "";
+
+        [SetUp]
+        public void UseATestDataFolder()
+        {
+            _previousDataDir = Environment.GetEnvironmentVariable(DataLocation.Variable);
+            _dataDir = Path.Combine(Path.GetTempPath(), "RowMate.Tests", "boot-prefs-" + Guid.NewGuid().ToString("N"));
+            Environment.SetEnvironmentVariable(DataLocation.Variable, _dataDir);
+        }
+
+        [TearDown]
+        public void RestoreTheDataFolder()
+        {
+            Environment.SetEnvironmentVariable(DataLocation.Variable, _previousDataDir);
+            try
+            {
+                if (Directory.Exists(_dataDir))
+                {
+                    Directory.Delete(_dataDir, true);
+                }
+            }
+            catch (IOException)
+            {
+            }
+        }
+
+        private string PrefsFile => Path.Combine(_dataDir, RowMate.Infrastructure.Preferences.PreferencesFiles.Name);
+
+        private static IEnumerator Load()
+        {
+            var load = SceneManager.LoadSceneAsync(BootSceneTests.SceneName, LoadSceneMode.Additive);
+            while (!load.isDone)
+            {
+                yield return null;
+            }
+
+            for (var i = 0; i < 5; i++)
+            {
+                yield return null;
+            }
+        }
+
+        private static IEnumerator Unload()
+        {
+            var unload = SceneManager.UnloadSceneAsync(BootSceneTests.SceneName);
+            while (unload != null && !unload.isDone)
+            {
+                yield return null;
+            }
+        }
+
+        [UnityTest, Category("AC-WKT-18-11"), Category("AC-HIS-20-04")]
+        public IEnumerator TheBootReadsThePreferencesFromTheDataFolderAndWritesNothingWithoutTouches()
+        {
+            yield return Load();
+            var appRoot = UnityEngine.Object.FindAnyObjectByType<AppRoot>();
+            Assert.That(appRoot, Is.Not.Null);
+            Assert.That(appRoot!.App!.Preferences, Is.InstanceOf<RowMate.Infrastructure.Preferences.JsonFilePreferences>(), "el almacén real");
+            Assert.That(appRoot.App.SeriesPanels.State.Value.Laps || appRoot.App.SeriesPanels.State.Value.Reps, Is.False, "cerrados por defecto");
+            yield return Unload();
+            Assert.That(File.Exists(PrefsFile), Is.False, "sin toques, prefs.json no existe al terminar (el precalentado no escribe)");
+        }
+
+        [UnityTest, Category("AC-WKT-18-10"), Category("AC-WKT-18-11")]
+        public IEnumerator PreferencesSurviveARestart()
+        {
+            yield return Load();
+            var appRoot = UnityEngine.Object.FindAnyObjectByType<AppRoot>();
+            appRoot!.App!.SeriesPanels.Toggle(RowMate.Core.Workout.SeriesPanelKind.Laps);
+            yield return Unload();
+            Assert.That(File.Exists(PrefsFile), Is.True, "guardado al tocar (y terminado al cerrar)");
+            StringAssert.Contains("\"immersive.lapsExpanded\":true", File.ReadAllText(PrefsFile).Replace(" ", ""));
+
+            yield return Load();
+            appRoot = UnityEngine.Object.FindAnyObjectByType<AppRoot>();
+            Assert.That(appRoot!.App!.SeriesPanels.State.Value.Laps, Is.True, "el segundo arranque lo encuentra abierto");
+            Assert.That(appRoot.App.SeriesPanels.State.Value.Reps, Is.False);
+            yield return Unload();
+        }
+
+        [UnityTest, Category("AC-WKT-18-11")]
+        public IEnumerator ASeededFileStaysByteForByte()
+        {
+            Directory.CreateDirectory(_dataDir);
+            var bytes = System.Text.Encoding.UTF8.GetBytes("{\"immersive.repsExpanded\":true,\"hrm.lastDevice\":\"x\"}");
+            File.WriteAllBytes(PrefsFile, bytes);
+            var stamp = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+            File.SetLastWriteTimeUtc(PrefsFile, stamp);
+            yield return Load();
+            var appRoot = UnityEngine.Object.FindAnyObjectByType<AppRoot>();
+            Assert.That(appRoot!.App!.SeriesPanels.State.Value.Reps, Is.True, "lo leyó");
+            yield return Unload();
+            Assert.That(File.ReadAllBytes(PrefsFile), Is.EqualTo(bytes), "los mismos bytes (el precalentado no escribe)");
+            Assert.That(File.GetLastWriteTimeUtc(PrefsFile), Is.EqualTo(stamp), "y la misma fecha");
+        }
     }
 
     public static class BootSceneProbe

@@ -3,6 +3,7 @@ using System.Collections;
 using NUnit.Framework;
 using RowMate.Tests.Support;
 using RowMate.Tests.UiSupport;
+using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
@@ -155,6 +156,255 @@ namespace RowMate.Tests.PlayMode
             Assert.That(worstDraw, Is.LessThanOrEqualTo(16), "la fila de 1998: " + worstDraw.ToString("0.00") + " ms");
             yield return MeasureAllocations("1998 pasos");
             Assert.That(row.Count, Is.EqualTo(1998), "siguió la fila de 1998 mientras se medía");
+        }
+
+        // It. 5 (WP-B0; 05-series-parciales/02-tech-design §3.6; R4a-03): el peor caso de la 4b medido con M5 (sin el espaciador de la
+        // fila de información): 54 en TV y P360 y 55 en TH, L640 y W1280 (antes de M5, 55 y 56: el informe de B0). Lista lo que se ve.
+        [UnityTest, Category("AC-WKT-17-01"), Category("AC-WKT-14-04")]
+        public IEnumerator TheFourBWorstCaseWithMFive()
+        {
+            foreach (var profile in new[] { DeviceProfile.TV, DeviceProfile.P360, DeviceProfile.TH, DeviceProfile.L640, DeviceProfile.W1280 })
+            {
+                CreateWorkout(RoutineSeeds.Budget, o =>
+                {
+                    o.Profile = profile;
+                    o.IsDesktop = profile.Code == DeviceProfile.W1280.Code;
+                }, k => RowerScripts.R4(k).CopyWith(heartRate: 140));
+                yield return StartRoutine("Presupuesto 4b");
+                yield return AdvanceTo(5.5);
+                yield return Settle();
+                Assert.That(Immersive.Root.Q(className: "rm-flex-spacer"), Is.Null, profile.Code + ": M5, sin el espaciador");
+                // Sin el chip de parciales (la 5 lo suma: Presupuesto 4b es una rutina): lo de la 4b solo.
+                var count = CountVisible(Immersive.Root) - (H.IsShown("hud-laps-panel") ? 1 : 0);
+                Debug.Log("[HBT] peor caso de la 4b con M5 en " + profile.Code + ": " + count + " elementos (sin el chip de parciales): " + DescribeVisible(Immersive.Root));
+                Assert.That(count, Is.LessThanOrEqualTo(profile.Code == DeviceProfile.TV.Code || profile.Code == DeviceProfile.P360.Code ? 54 : 55), profile.Code + ": " + count + " elementos: " + DescribeVisible(Immersive.Root));
+            }
+        }
+
+        // It. 5 (AC-WKT-18-21; §3.6): el peor caso de la 5: Presupuesto 5 (la rutina del presupuesto de la 4b dentro de una serie ×2: a
+        // los 5,5 s los tres objetivos fuera, BPM, Próximo, la cuenta grande, el sello y el panel de repeticiones) con los dos paneles
+        // abiertos, en los cinco perfiles: a lo sumo 60 (cada panel es un elemento en cualquier estado; sus hijos ocultos no cuentan).
+        [UnityTest, Category("AC-WKT-18-21"), Category("AC-WKT-17-01")]
+        public IEnumerator AtMostSixtyVisibleElementsInTheFiveWorstCase()
+        {
+            foreach (var profile in new[] { DeviceProfile.TV, DeviceProfile.P360, DeviceProfile.TH, DeviceProfile.L640, DeviceProfile.W1280 })
+            {
+                CreateWorkout(RoutineSeeds.Budget5, o =>
+                {
+                    o.Profile = profile;
+                    o.IsDesktop = profile.Code == DeviceProfile.W1280.Code;
+                    o.Preferences = BothOpen();
+                }, k => RowerScripts.R4(k).CopyWith(heartRate: 140));
+                yield return StartRoutine("Presupuesto 5");
+                yield return AdvanceTo(5.5);
+                yield return Settle();
+                var series = Hud.Series!;
+                Assert.That(H.IsShown("hud-laps-panel") && H.IsShown("hud-reps-panel"), Is.True, profile.Code + ": los dos paneles");
+                Assert.That(series.Expanded.Laps && series.Expanded.Reps, Is.True, profile.Code + ": abiertos");
+                Assert.That(H.IsShown("hud-bpm") && H.IsShown("hud-up-next") && H.IsShown("hud-big-countdown"), Is.True,
+                    profile.Code + ": BPM, Próximo y la cuenta grande");
+                Assert.That(Hud.Steps!.Seal.IsShowing, Is.True, profile.Code + ": el sello");
+                var count = CountVisible(Immersive.Root);
+                Debug.Log("[HBT] peor caso de la 5 en " + profile.Code + ": " + count + " elementos");
+                Assert.That(count, Is.LessThanOrEqualTo(MaxVisibleElements), profile.Code + ": " + count + " elementos: " + DescribeVisible(Immersive.Root));
+            }
+        }
+
+        private static RowMate.Core.Common.MemoryPreferences BothOpen(bool laps = true)
+        {
+            var prefs = new RowMate.Core.Common.MemoryPreferences();
+            prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.LapsKey, laps);
+            prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.RepsKey, true);
+            return prefs;
+        }
+
+        // It. 5 (AC-WKT-18-21; §3.6; QA-G5T-03; DT5-18): 0 B por cuadro EN CUADROS REALES, con el repintado adentro (FrameAllocations),
+        // 30 cuadros de cada animación (0,5 s): abrir, la vuelta nueva con su marca, el cambio de contenido por pieza, la repetición
+        // nueva y cerrar. Se afirma 0 sin restar ninguna línea de base (medido solo adentro del dibujo y del paso, lo limpio da 0). El
+        // control positivo, en FrameAllocationsTests. Las demás escenas del diseño, en SeriesNoAllocationsPerFrameInMoreScenes (LM5-04).
+        [UnityTest, Category("AC-WKT-18-21")]
+        public IEnumerator SeriesNoAllocationsPerFrame()
+        {
+            CreateWorkout(RoutineSeeds.F5, o => o.Preferences = BothOpen(false));
+            yield return StartRoutine("Series 600");
+            // Calentamiento de los caminos: abrir y cerrar una vez antes de medir.
+            yield return AdvanceTo(30.2);
+            H.TapText("500 m");
+            yield return Settle();
+            H.TapText("Parciales 500 m");
+            yield return Settle();
+            // Cada ventana: 30 cuadros (0,5 s) desde justo después de un segundo. El reloj de prueba (el segundo del motor y la lectura
+            // del remo, lo que se arma a 1 Hz, que §20.2 permite) avanza fuera de la medida: lo que queda es el cuadro a cuadro de las
+            // animaciones, el paso y el repintado.
+            // Abrir (el resorte, los fundidos, la flecha, el revelar) con el FLIP de repeticiones.
+            yield return AdvanceTo(150.02);
+            H.TapText("500 m");
+            yield return MeasureSeries("abrir");
+            // La vuelta nueva (#1 a los 155) con su marca.
+            yield return AdvanceTo(155.02);
+            yield return MeasureSeries("la vuelta nueva");
+            // El cambio de contenido por pieza (a los 181: la vuelta en curso sale, el vacío entra).
+            yield return AdvanceTo(181.02);
+            yield return MeasureSeries("el cambio por pieza");
+            // La repetición nueva (a los 201) y el cambio de pieza de repeticiones.
+            yield return AdvanceTo(201.02);
+            yield return MeasureSeries("la repetición nueva");
+            // Cerrar.
+            yield return AdvanceTo(210.02);
+            H.TapText("Parciales 500 m");
+            yield return MeasureSeries("cerrar");
+        }
+
+        // LM5-04 (verificación de la 5, ronda 1): las escenas de §4.5 que faltaban, 30 cuadros cada una: la serie que empieza (el
+        // panel de repeticiones aparece y entra la línea Rep), la marca que se apaga (600-1400 ms de la vuelta nueva), el anillo de
+        // foco en modo teclado con el resorte, la rueda de las filas en W1280 y la máscara de ColumnScroll en TH (DrawMaskedGlass y
+        // la regla 3 en cada cuadro). Antes de medir, cada camino corre una vez (los glifos y las cachés de la primera vez).
+        [UnityTest, Category("AC-WKT-18-21")]
+        public IEnumerator SeriesNoAllocationsPerFrameInMoreScenes()
+        {
+            CreateWorkout(RoutineSeeds.F5, o => o.Preferences = BothOpen());
+            yield return StartRoutine("Series 600");
+            // Calentamiento: los dos paneles en serie (con el vacío de repeticiones y la línea Rep) y la salida de repeticiones.
+            yield return AdvanceTo(12.2);
+            var texts = H.App.Texts.Value;
+            var inSeries = SeriesSeeds.Largo(texts, H.HudState!.Session) with { Reps = Array.Empty<RowMate.App.Workout.HudRepRow>() };
+            H.OverrideSeries(inSeries);
+            yield return Settle();
+            H.OverrideSeries(null);
+            yield return AdvanceTo(14.2);
+            yield return Settle();
+            Assert.That(Hud.Series!.RepsShown, Is.False, "el calentamiento no está en serie");
+            // La serie que empieza (a los 31: P-01), desde antes del segundo para que el dato entre en la ventana.
+            yield return AdvanceTo(30.9);
+            yield return MeasureSeries("la serie que empieza", 36);
+            Assert.That(Hud.Series!.RepsShown, Is.True, "apareció repeticiones");
+            yield return Settle();
+            // La marca de #1 (a los 155) que se apaga: de los 620 a los 1420 ms.
+            yield return AdvanceTo(155.62);
+            Assert.That(Hud.Series!.Laps.Visual.MarkerAlpha0, Is.GreaterThan(0.5), "la marca encendida");
+            yield return MeasureSeries("la marca que se apaga", 48);
+            Assert.That(Hud.Series!.Laps.Visual.MarkerAlpha0, Is.LessThan(0.05), "y apagada");
+            // El anillo de foco en modo teclado, con el resorte de cerrar y abrir.
+            yield return AdvanceTo(160.02);
+            H.PressTab();
+            H.PressTab();
+            H.PressTab();
+            Assert.That(H.Focused, Is.SameAs(Hud.Series!.Laps));
+            H.PressEnter();
+            yield return Settle();
+            H.PressEnter();
+            yield return MeasureSeries("el anillo de foco", 30);
+            Assert.That(Hud.Series!.Laps.HasFocusRing, Is.True, "con el anillo");
+
+            // La rueda de las filas en W1280 (S-LARGO: 4 vueltas y 3 repeticiones).
+            CreateWorkout(RoutineSeeds.F5, o =>
+            {
+                o.Profile = DeviceProfile.W1280;
+                o.IsDesktop = true;
+                o.Preferences = BothOpen();
+            });
+            yield return StartRoutine("Series 600");
+            yield return AdvanceTo(340.2);
+            H.OverrideSeries(SeriesSeeds.Largo(H.App.Texts.Value, H.HudState!.Session));
+            yield return Settle();
+            H.Wheel(Hud.Series!.Laps.worldBound.center, 1);
+            yield return Settle();
+            H.Wheel(Hud.Series!.Laps.worldBound.center, -1);
+            yield return Settle();
+            H.Wheel(Hud.Series!.Laps.worldBound.center, 1);
+            yield return MeasureSeries("la rueda (W1280)", 30);
+            Assert.That(Hud.Series!.Laps.RowsScrollBase, Is.GreaterThan(1), "las filas se desplazaron");
+
+            // La máscara de ColumnScroll en TH (los dos abiertos, CAP-16): la columna con la rueda.
+            CreateWorkout(RoutineSeeds.F5, o =>
+            {
+                o.Profile = DeviceProfile.TH;
+                o.Preferences = BothOpen();
+            });
+            yield return StartRoutine("Series 600");
+            yield return AdvanceTo(380.2);
+            H.Wheel(Hud.Series!.Laps.worldBound.center, 1);
+            yield return Settle();
+            H.Wheel(Hud.Series!.Laps.worldBound.center, -1);
+            yield return Settle();
+            H.Wheel(Hud.Series!.Laps.worldBound.center, 1);
+            yield return MeasureSeries("la máscara (TH)", 30);
+            Assert.That(Hud.Series!.ScrollBase, Is.GreaterThan(1), "la columna se desplazó");
+        }
+
+        private const int FramesPerScene = 30;
+
+        private IEnumerator MeasureSeries(string label, int frames = FramesPerScene)
+        {
+            var measured = FrameAllocations.Watch(Hud.Series!.Laps, Hud.Series.Reps);
+            var dt = TimeSpan.FromTicks((long)Math.Round(UiTestHost.FrameSeconds * TimeSpan.TicksPerSecond));
+            for (var i = 0; i < frames; i++)
+            {
+                // El reloj de prueba (las lecturas del remo y el segundo del motor, con su Apply: lo que se arma a 1 Hz, que §20.2 permite)
+                // fuera de la medida; adentro, el cuadro de la UI (el MotionDriver con las motions de los paneles y sus callbacks) y el
+                // repintado de los paneles. La sonda de WP-B1 vio que lo único que asignaba en una ventana era la lectura del remo.
+                H.Scheduler.Advance(dt);
+                measured.Step(H.Handle.Tick);
+                yield return null;
+                measured.Sample();
+            }
+
+            measured.Stop();
+            Debug.Log("[HBT] " + label + ": " + measured);
+            Assert.That(measured.Draws, Is.GreaterThan(5), label + ": los paneles se repintaron en los cuadros medidos");
+            Assert.That(measured.Total, Is.EqualTo(0), label + ": " + measured);
+            measured.Dispose();
+        }
+
+        // It. 5 (§3.6; ARCHITECTURE §20.2): el trabajo de los paneles por cuadro en el peor caso animando (S-LARGO con 4 vueltas, la
+        // línea y 3 repeticiones; abrir y una vuelta entrando): la mediana ≤ 1,0 ms (el tope de UI, en el Editor como indicador) y el
+        // peor cuadro ≤ 16 ms (el de la 4b), con el Apply del HUD y el generateVisualContent de los dos paneles.
+        [UnityTest, Category("AC-WKT-18-21")]
+        public IEnumerator SeriesWorstCaseWork()
+        {
+            CreateWorkout(RoutineSeeds.F5, o => o.Preferences = BothOpen(false));
+            yield return StartRoutine("Series 600");
+            yield return AdvanceTo(170.2);
+            var largo = SeriesSeeds.Largo(H.App.Texts.Value, H.HudState!.Session);
+            H.OverrideSeries(largo);
+            yield return Settle();
+            var samples = new System.Collections.Generic.List<double>();
+            var worst = 0.0;
+            // Abrir con todo adentro.
+            H.TapText("500 m");
+            for (var i = 0; i < 40; i++)
+            {
+                H.Step();
+                yield return null;
+                var work = Hud.LastApplyMs + Hud.Series!.Laps.LastDrawMs + Hud.Series.Reps.LastDrawMs;
+                samples.Add(work);
+                worst = Math.Max(worst, work);
+            }
+
+            // Una vuelta entrando (la 2000) con su marca.
+            var newer = new RowMate.App.Workout.HudLapRow[4];
+            newer[0] = SeriesSeeds.Lap(H.App.Texts.Value, 2000, SeriesSeeds.LongLapSeconds);
+            for (var i = 1; i < 4; i++)
+            {
+                newer[i] = largo.Laps[i - 1];
+            }
+
+            H.OverrideSeries(largo with { Laps = newer, LapCount = 2000 });
+            for (var i = 0; i < 20; i++)
+            {
+                H.Step();
+                yield return null;
+                var work = Hud.LastApplyMs + Hud.Series!.Laps.LastDrawMs + Hud.Series.Reps.LastDrawMs;
+                samples.Add(work);
+                worst = Math.Max(worst, work);
+            }
+
+            samples.Sort();
+            var median = samples[samples.Count / 2];
+            Debug.Log("[HBT] trabajo de los paneles: mediana " + median.ToString("0.000") + " ms, peor " + worst.ToString("0.000") + " ms en "
+                      + samples.Count + " cuadros");
+            Assert.That(median, Is.LessThanOrEqualTo(1.0), "la mediana (§20.2): " + median.ToString("0.000") + " ms");
+            Assert.That(worst, Is.LessThanOrEqualTo(16), "el peor cuadro: " + worst.ToString("0.000") + " ms");
         }
 
         private IEnumerator MeasureAllocations(string label)

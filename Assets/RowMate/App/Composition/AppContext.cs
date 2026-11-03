@@ -33,10 +33,13 @@ namespace RowMate.App.Composition
         internal AppContext(DeviceBackend devices, DeviceStore device, HeartRateStore heartRate, ShellStore shell, SceneSettings scene,
                             RoutinesStore routines, WorkoutEngine workout, WorkoutStore workoutRest, LanguageState language,
                             DerivedObservable<AppLanguage, Localizer> texts, IReadOnlyObservable<AccessibilitySnapshot> accessibility,
-                            IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, ImmersiveSystemBars systemBars)
+                            IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, ImmersiveSystemBars systemBars,
+                            IPreferences preferences, SeriesPanelPrefs seriesPanels)
         {
             _devices = devices;
             SystemBars = systemBars;
+            Preferences = preferences;
+            SeriesPanels = seriesPanels;
             Device = device;
             HeartRate = heartRate;
             Shell = shell;
@@ -75,6 +78,14 @@ namespace RowMate.App.Composition
 
         // It. 4b (F-APP-15; §4.1): la regla de las barras del sistema, una por app; la usa cada inmersivo.
         public ImmersiveSystemBars SystemBars { get; }
+
+        // It. 5 (§2.8): las preferencias de la app (las de AppServices, o en memoria). AppContext no las dispone: las dispone quien
+        // las creó (AppRoot, con su FlushAsync al salir).
+        public IPreferences Preferences { get; }
+
+        // It. 5 (F-WKT-18; §2.7): los dos paneles de series, abiertos o cerrados, con sus preferencias; uno por app, lo comparten
+        // todos los inmersivos. Dispose lo dispone.
+        public SeriesPanelPrefs SeriesPanels { get; }
 
         public LanguageState Language { get; }
 
@@ -174,6 +185,7 @@ namespace RowMate.App.Composition
             _disposed = true;
             // It. 4b: si quedaron ocultas, las barras del sistema se muestran.
             SystemBars.Dispose();
+            SeriesPanels.Dispose();
             WorkoutRest.Dispose();
             Workout.Dispose();
             Routines.Dispose();

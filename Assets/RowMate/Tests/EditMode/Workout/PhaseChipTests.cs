@@ -92,6 +92,9 @@ namespace RowMate.Tests.EditMode.Workout
             Assert.That(PhaseChip.FixedWidthBase(80, 10, 10), Is.EqualTo(80 + 10 + 16), "el punto solo suma en EN MARCHA");
             Assert.That(PhaseChip.DotSlot, Is.EqualTo(HudGeometry.LiveDotSize + HudGeometry.LiveDotGap));
             Assert.That(PhaseChip.PadH, Is.EqualTo(HudGeometry.PhaseChipPadH));
+            // It. 5 (DD5-01): con el relleno del modo compacto (6), 4 base menos: 97,8 y 70,1 con los anchos de las notas.
+            Assert.That(PhaseChip.FixedWidthBase(75.8, 60.1, 76.2, InfoRowFit.FreeCompactChipPadH), Is.EqualTo(97.8).Within(0.1));
+            Assert.That(PhaseChip.FixedWidthBase(46.5, 49.4, 58.1, InfoRowFit.FreeCompactChipPadH), Is.EqualTo(70.1).Within(0.1));
         }
 
         private static double OverItsTint(ColorToken text, string baseHex)

@@ -35,6 +35,12 @@ namespace RowMate.EditorTools
             "-rowmate-db-smoke",
             "-rowmate-db-roundtrip",
             "ROWMATE_DATA_DIR",
+            // It. 5 (QA-V4b-06): la medida de la entrada al inmersivo, solo en desarrollo.
+            "-rowmate-perf-entries",
+            "-rowmate-no-hud-warmup",
+            // It. 5 (05-series-parciales/02-tech-design §3.7): las rutinas de las entradas y la medida de los paneles de series.
+            "-rowmate-perf-routines",
+            "-rowmate-perf-series",
         };
 
         public static readonly string[] TestNeedles =

@@ -83,6 +83,16 @@ namespace RowMate.Tests.UiSupport
                 }
             }
 
+            // It. 5 (05-series-parciales/02-tech-design §3.1; QA-G5P-05): las ranuras de lo que se dibuja sin Label (los paneles de
+            // series), con coincidencia exacta y su alfa efectivo (≤ 0,01 no se ve).
+            foreach (var (owner, slot) in Slots(root))
+            {
+                if (slot.Text == text && slot.IsVisible && IsShown(owner) && Overlaps(slot.WorldRect, window))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 
@@ -92,6 +102,14 @@ namespace RowMate.Tests.UiSupport
             foreach (var element in TextElements(root))
             {
                 if (TextOf(element) == text)
+                {
+                    return true;
+                }
+            }
+
+            foreach (var (_, slot) in Slots(root))
+            {
+                if (slot.Text == text)
                 {
                     return true;
                 }
@@ -136,6 +154,14 @@ namespace RowMate.Tests.UiSupport
                 }
             }
 
+            foreach (var (owner, slot) in Slots(root))
+            {
+                if (!string.IsNullOrEmpty(slot.Text) && slot.IsVisible && IsShown(owner) && Overlaps(slot.WorldRect, window))
+                {
+                    texts.Add(slot.Text);
+                }
+            }
+
             return texts;
         }
 
@@ -156,6 +182,63 @@ namespace RowMate.Tests.UiSupport
                     stack.Push(element.hierarchy[i]);
                 }
             }
+        }
+
+        // It. 5: los elementos que dibujan sus textos (IDrawnTextSource) y sus ranuras.
+        public static IEnumerable<(VisualElement Owner, DrawnSlot Slot)> Slots(VisualElement root)
+        {
+            var sources = new List<VisualElement>();
+            foreach (var element in root.Query<VisualElement>().Build())
+            {
+                if (element is IDrawnTextSource)
+                {
+                    sources.Add(element);
+                }
+            }
+
+            foreach (var owner in sources)
+            {
+                var source = (IDrawnTextSource)owner;
+                var count = source.SlotCount;
+                for (var i = 0; i < count; i++)
+                {
+                    yield return (owner, source.SlotAt(i));
+                }
+            }
+        }
+
+        // La ranura con ese nombre (la junta de nombres de §3.6: primero un elemento, después una ranura), o null.
+        public static (VisualElement Owner, DrawnSlot Slot)? FindSlot(VisualElement root, string slotName)
+        {
+            foreach (var pair in Slots(root))
+            {
+                if (pair.Slot.Name == slotName)
+                {
+                    return pair;
+                }
+            }
+
+            return null;
+        }
+
+        // La ranura visible con ese texto exacto (la de TapText), o null.
+        public static (VisualElement Owner, DrawnSlot Slot)? FindSlotByText(VisualElement root, string text)
+        {
+            var window = root.worldBound;
+            foreach (var pair in Slots(root))
+            {
+                if (pair.Slot.Text == text && pair.Slot.IsVisible && IsShown(pair.Owner) && Overlaps(pair.Slot.WorldRect, window))
+                {
+                    return pair;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool Overlaps(Rect a, Rect window)
+        {
+            return a.width > 0 && a.height > 0 && a.xMax > window.xMin && a.xMin < window.xMax && a.yMax > window.yMin && a.yMin < window.yMax;
         }
 
         // El ancestro que es un ScrollView (para ScrollTo), o null.

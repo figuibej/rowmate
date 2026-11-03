@@ -53,7 +53,21 @@ namespace RowMate.Presentation.Motion.Hud
             }
 
             var generation = _generation;
-            var keep = Advance(nowSeconds);
+            bool keep;
+            try
+            {
+                keep = Advance(nowSeconds);
+            }
+            catch
+            {
+                // LM5-03 (O-4 de la 4b): el MotionDriver la saca del cuadro y la registra; acá deja de creerse adentro, así la
+                // llamada siguiente (Run) la vuelve a agregar e IsRunning no miente (SeriesColumn.IsAnimating y la regla de toma no
+                // esperan sin fin). Lo que se ve queda en el último cuadro aplicado.
+                _generation++;
+                _inDriver = false;
+                throw;
+            }
+
             if (generation != _generation)
             {
                 // Un aviso de este cuadro volvió a arrancarlo (Run otra vez): sigue si quedó en el MotionDriver.

@@ -177,9 +177,10 @@ namespace RowMate.Core.Design
         public static readonly TypeScaleToken NumL = TypeScaleToken.Of("num.l", FontFamilyRole.Numeric, 44, 44, 700);        // Split y Watts del HUD
         public static readonly TypeScaleToken NumM = TypeScaleToken.Of("num.m", FontFamilyRole.Numeric, 32, 34, 700);        // kcal y BPM del HUD, resumen final
         public static readonly TypeScaleToken NumBand = TypeScaleToken.Of("num.band", FontFamilyRole.Numeric, 34, 34, 700);  // banda tiempo │ distancia (antes "num.m 34")
-        public static readonly TypeScaleToken NumLap = TypeScaleToken.Of("num.lap", FontFamilyRole.Numeric, 34, 36, 700);    // vuelta en curso
-        public static readonly TypeScaleToken NumRow = TypeScaleToken.Of("num.row", FontFamilyRole.Numeric, 24, 28, 700);    // filas de vueltas y repeticiones
+        public static readonly TypeScaleToken NumLap = TypeScaleToken.Of("num.lap", FontFamilyRole.Numeric, 28, 28, 700);    // vuelta en curso (It. 5, DD5-08: 34/36 → 28/28; SD-03)
+        public static readonly TypeScaleToken NumRow = TypeScaleToken.Of("num.row", FontFamilyRole.Numeric, 20, 22, 700);    // filas de vueltas y repeticiones (It. 5, DD5-08: 24/28 → 20/22; SD-03)
         public static readonly TypeScaleToken NumS = TypeScaleToken.Of("num.s", FontFamilyRole.Numeric, 20, 22, 700);        // cuenta regresiva, reloj
         public static readonly TypeScaleToken NumStat = TypeScaleToken.Of("num.stat", FontFamilyRole.Numeric, 16, 20, 700);  // stats de historial, chips numéricos
+        public static readonly TypeScaleToken NumXs = TypeScaleToken.Of("num.xs", FontFamilyRole.Numeric, 13, 16, 700);      // metros de la vuelta en curso y de las repeticiones (It. 5, DD5-08; SD-03, SD-04)
     }
 }

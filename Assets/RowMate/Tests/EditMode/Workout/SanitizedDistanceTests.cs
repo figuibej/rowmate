@@ -140,6 +140,52 @@ namespace RowMate.Tests.EditMode.Workout
             Assert.That(r.Meter.Meters, Is.EqualTo(24));
         }
 
+        // ── It. 5 (02-tech-design §2.1): Update devuelve la DistanceSample (lo que había antes, lo que sumó y el Δt) ──
+
+        [Test, Category("AC-WKT-07-06"), Category("Q-55")]
+        public void UpdateReturnsTheSampleTheTrackerInterpolatesWith()
+        {
+            // :120-127: dt = t − último (cuenta aunque el salto no sume); dd = el salto si cuenta; d = antes + dd.
+            var meter = new SanitizedDistance();
+            meter.Begin(1000, 0);
+            var a = meter.Update(1004, 1);
+            Assert.That(a.MetersBefore, Is.EqualTo(0));
+            Assert.That(a.TimeBefore, Is.EqualTo(0));
+            Assert.That(a.Delta, Is.EqualTo(4));
+            Assert.That(a.Dt, Is.EqualTo(1));
+            Assert.That(a.Time, Is.EqualTo(1));
+            Assert.That(a.MetersAfter, Is.EqualTo(4));
+            Assert.That(meter.Meters, Is.EqualTo(a.MetersAfter));
+            Assert.That(meter.LastTime, Is.EqualTo(1));
+            var zero = meter.Update(0, 2);
+            Assert.That(zero.Delta, Is.EqualTo(0), "LT-55: la lectura de 0 no suma");
+            Assert.That(zero.Dt, Is.EqualTo(1), "el tiempo sí");
+            Assert.That(zero.MetersBefore, Is.EqualTo(4));
+            Assert.That(zero.MetersAfter, Is.EqualTo(4));
+            var back = meter.Update(1012, 3);
+            Assert.That(back.Delta, Is.EqualTo(0), "el salto de vuelta desde 0 tampoco (R-4Z: se pierden dos lecturas)");
+            var late = meter.Update(1030, 5);
+            Assert.That(late.Dt, Is.EqualTo(2));
+            Assert.That(late.Delta, Is.EqualTo(18), "18 m en 2 s: entra (10 · max(dt; 1))");
+            Assert.That(late.TimeBefore, Is.EqualTo(3));
+            Assert.That(meter.LastRaw, Is.EqualTo(1030));
+        }
+
+        [Test, Category("AC-WKT-07-06"), Category("AC-WKT-07-07")]
+        public void TheSampleOfTheLegacyHardeningCases()
+        {
+            // LT-56: el primer salto desde 0 no suma, pero su Δt cuenta; LT-58: después de Rebase, el salto no cuenta.
+            var meter = new SanitizedDistance();
+            meter.Begin(0, 0);
+            var jump = meter.Update(5000, 1);
+            Assert.That(jump.Delta, Is.EqualTo(0));
+            Assert.That(jump.Dt, Is.EqualTo(1));
+            meter.Rebase(9000);
+            var resumed = meter.Update(9004, 2);
+            Assert.That(resumed.Delta, Is.EqualTo(4));
+            Assert.That(resumed.MetersBefore, Is.EqualTo(0));
+        }
+
         // El _Raw del legacy (test/series_tracker_test.dart:133-152): begin(startRaw) y una lectura por segundo.
         private sealed class Raw
         {

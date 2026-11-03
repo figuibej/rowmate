@@ -277,6 +277,13 @@ namespace RowMate.Snapshots
         // AlignSession (las tomas de it4b, ExactInstant).
         public bool AlignSession { get; set; }
 
+        // It. 5 (01-po-spec §0.4: "L(0) llega antes de iniciar, así que la rutina arranca con el monitor en 1000 m y en el segundo
+        // k los metros de la rutina son 4k"): con AlignSession, L(0) llega justo antes del toque, así la distancia de referencia
+        // del motor (SeriesTracker.Begin) es la de L(0) y no la de la última lectura del reposo. Lo pide SeriesCatalog: en una
+        // rutina que empieza con un paso de trabajo (Fondo 3000, Trabajo 1000, Cinco reps) cambia la vuelta en curso. it4b sigue
+        // sin esto (su regeneración es byte a byte en las tomas libres).
+        public bool ReadingZeroAtStart { get; set; }
+
         private void AlignWallClock()
         {
             if (!AlignSession)
@@ -301,6 +308,10 @@ namespace RowMate.Snapshots
             if (Host.ScriptedRower != null)
             {
                 Host.ScriptedRower.Next = 1;
+                if (ReadingZeroAtStart)
+                {
+                    Host.ScriptedRower.EmitIndex(0);
+                }
             }
 
             var shift = UiHostOptions.WorkoutStartUtc - Host.Scheduler.UtcNow;

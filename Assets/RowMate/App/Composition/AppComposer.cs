@@ -48,8 +48,11 @@ namespace RowMate.App.Composition
             var workoutRest = new WorkoutStore(workout, device, routines, lifecycle, logger);
             // It. 4b (F-APP-15): una regla de barras del sistema por app; sin puerto, sin efecto.
             var systemBars = new ImmersiveSystemBars(services.SystemUi ?? NoSystemUi.Instance, lifecycle, logger);
+            // It. 5 (§2.8): las preferencias (en memoria si AppServices no trajo unas) y los dos paneles de series, uno por app.
+            var preferences = services.Preferences ?? new MemoryPreferences();
+            var seriesPanels = new SeriesPanelPrefs(preferences, logger);
             return new AppContext(services.Devices, device, heartRate, shell, scene, routines, workout, workoutRest, language, texts,
-                services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars);
+                services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars, preferences, seriesPanels);
         }
 
         // Las barras del sistema sin efecto (AppServices.SystemUi = null).

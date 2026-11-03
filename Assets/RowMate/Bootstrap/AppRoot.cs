@@ -15,6 +15,7 @@ using RowMate.Platform.Time;
 using RowMate.Presentation.Motion;
 using RowMate.Presentation.Shell;
 using RowMate.Presentation.Surface;
+using RowMate.Presentation.Workout;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -49,6 +50,20 @@ namespace RowMate.Bootstrap
         public const string DbSmokeArgument = "-rowmate-db-smoke";
         public const string DbRoundTripArgument = "-rowmate-db-roundtrip";
         public const string RoundTripName = "Ida y vuelta";
+
+        // It. 5 (QA-V4b-06; 05-series-parciales/00-deuda-4b §2): la medida de la entrada al inmersivo en el build. Sin
+        // precalentado del HUD (para comparar en el mismo build) y N entradas automáticas (libre y rutina alternados, 12 s cada
+        // una) con FrameTimeProbe, solo con la carpeta de datos de desarrollo (ROWMATE_DATA_DIR): nunca en la base del usuario.
+        public const string NoHudWarmupArgument = "-rowmate-no-hud-warmup";
+        public const string PerfEntriesArgument = "-rowmate-perf-entries";
+        public const string PerfRoutineName = "Medición de la entrada";
+
+        // It. 5 (05-series-parciales/02-tech-design §3.7; AC-WKT-18-21, AC-WKT-13-15): las rutinas de las entradas (por nombre,
+        // separadas por ";": la primera entrada es libre y las siguientes, estas en orden) y la medida de los paneles de series
+        // (Fondo 3000 y después Series 600 con el simulador, abriendo y cerrando los paneles cada 2 s por la API de las
+        // preferencias; FrameTimeProbe escribe "[PERF] paneles: …"). Las rutinas las siembra SnapshotCli.SeedDatabase -seed F5.
+        public const string PerfRoutinesArgument = "-rowmate-perf-routines";
+        public const string PerfSeriesArgument = "-rowmate-perf-series";
 #endif
 
         [SerializeField] private UiAssets? _assets;
@@ -65,6 +80,8 @@ namespace RowMate.Bootstrap
         private UiSurface? _surface;
         private UIDocument? _document;
         private FramePacer? _pacer;
+        private HudWarmup? _warmup;
+        private RowMate.Infrastructure.Preferences.JsonFilePreferences? _preferences;
         private BackSource _backSource;
 
         public UiAssets? Assets => _assets;
@@ -82,6 +99,9 @@ namespace RowMate.Bootstrap
 
         // La base local de la app (rutinas y sesiones en un archivo, It. 4a; BootSceneTests).
         public LocalStore? Store => _store;
+
+        // It. 5 (QA-V4b-06): el HUD ya se precalentó y se desarmó (BootSceneTests).
+        public bool HudWarmedUp { get; private set; }
 
         // Pasos 1 a 6 (sin tocar rootVisualElement).
         private void Awake()
@@ -135,10 +155,15 @@ namespace RowMate.Bootstrap
             _store = new LocalStore(new RowMateDatabase(dbPath, new SerialExecutor("RowMate.Db", logger), logger), logger);
             logger.Log(LogLevel.Info, Tag, "base " + file + (DataLocation.IsOverridden ? " (carpeta de desarrollo)" : ""));
 
+            // 4c. It. 5 (05-series-parciales/02-tech-design §2.7, §2.8; ADR 021): las preferencias (prefs.json, en la carpeta de la
+            //     base; en desarrollo, ROWMATE_DATA_DIR), leídas acá, en el arranque; se guardan fuera del hilo principal. Ninguna
+            //     ruta va al registro.
+            _preferences = new RowMate.Infrastructure.Preferences.JsonFilePreferences(DataLocation.PreferencesFile(_platform), logger);
+
             // 5. La app pura. Perfil apagado (su regla real es de la It. 12, D-20).
             var texts = LocalizationSet.Load(_assets.StringsEs!.text, _assets.StringsEn!.text);
             _app = AppComposer.Compose(new AppServices(_backend, _store.Routines, _store.Sessions, _scheduler, logger, texts, _platform.Locale,
-                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle, SystemUi = _platform.SystemUi });
+                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle, SystemUi = _platform.SystemUi, Preferences = _preferences });
 
             // 6. Superficie: copia del panel con sus respaldos de fuente (RuntimePanelFactory: el asset no se toca, R2-05;
             //    QA-G3-12), RT limpia a bg.app y presentador (S-B1). El documento de la escena no tiene panel: se engancha a la
@@ -204,6 +229,30 @@ namespace RowMate.Bootstrap
             //    pulsómetro intenta su reconexión (main.dart:68-83). Corre antes del primer Update: el scheduler no avanza antes
             //    de que la UI esté suscripta.
             _app.Start();
+
+            // 9. It. 5 (QA-V4b-06; 05-series-parciales/00-deuda-4b §2): la primera vez del HUD (el JIT, los estilos y el texto) en
+            //    este cuadro, el del arranque, y no en el del toque que abre el primer inmersivo. Lo desarma Update en el cuadro
+            //    siguiente; no se ve ni toca el motor.
+            var warmUp = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            warmUp = !HasArgument(NoHudWarmupArgument);
+            var perfEntries = ArgumentValue(PerfEntriesArgument);
+            if (perfEntries != null)
+            {
+                _ = RunPerfEntries(perfEntries, warmUp, ArgumentValue(PerfRoutinesArgument));
+            }
+
+            var perfSeries = ArgumentValue(PerfSeriesArgument);
+            if (perfSeries != null && perfEntries == null)
+            {
+                _ = RunPerfSeries(perfSeries);
+            }
+#endif
+            if (warmUp)
+            {
+                _warmup = new HudWarmup(_shell.Shell.Ui, root);
+                _warmup.Start();
+            }
         }
 
         private void Update()
@@ -216,6 +265,12 @@ namespace RowMate.Bootstrap
             }
 
             _shell.Tick();
+            if (_warmup != null && _warmup.Tick())
+            {
+                _warmup = null;
+                HudWarmedUp = true;
+            }
+
             _pacer?.Apply(_scheduler!.MonotonicSeconds);
 
             // Tema de la barra de título de Windows cambiado con la app enfocada (AC-APP-05-10): una lectura cada 2 s.
@@ -286,10 +341,28 @@ namespace RowMate.Bootstrap
         // (AC-APP-14-03). Un guardado que ya cerró el editor ya hizo commit (el editor espera el commit, AC-RUT-08-07).
         private void OnDestroy()
         {
+            _warmup?.Dispose();
+            _warmup = null;
             _shell?.Dispose();
             _shell = null;
             _app?.Dispose();
             _app = null;
+            // It. 5: lo último que se tocó se termina de guardar (hasta 1 s, como la base).
+            if (_preferences != null)
+            {
+                try
+                {
+                    _preferences.FlushAsync().Wait(TimeSpan.FromSeconds(1));
+                }
+                catch (Exception error)
+                {
+                    _logger?.Log(LogLevel.Warning, Tag, "no se terminaron de guardar las preferencias", error);
+                }
+
+                _preferences.Dispose();
+                _preferences = null;
+            }
+
             _backend?.Dispose();
             _backend = null;
             _store?.Dispose();
@@ -340,6 +413,192 @@ namespace RowMate.Bootstrap
             var created = await store.CreateAsync(RoundTripName, "", steps);
             _logger!.Log(created != null ? LogLevel.Info : LogLevel.Error, "DB", created != null ? "ida y vuelta: guardada" : "ida y vuelta: falla (no guardó)");
             Application.Quit(created != null ? 0 : 1);
+        }
+
+        // QA-V4b-06 (05-series-parciales/00-deuda-4b §2): N entradas al inmersivo, una libre y una rutina alternadas, de 12 s cada
+        // una (FrameTimeProbe escribe su ventana [PERF] de 10 s y la línea de la entrada), terminadas como con Terminar → Terminar;
+        // después sale con 0. Solo en la carpeta de desarrollo (ROWMATE_DATA_DIR): crea ahí una rutina de prueba si no hay ninguna.
+        private async System.Threading.Tasks.Task RunPerfEntries(string countText, bool warmUp, string? routineNames)
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            if (!DataLocation.IsOverridden || !int.TryParse(countText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) || count < 1)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de la entrada: hace falta ROWMATE_DATA_DIR y un número de entradas");
+                Application.Quit(1);
+                return;
+            }
+
+            try
+            {
+                logger.Log(LogLevel.Info, "PERF", "medición de la entrada (QA-V4b-06): " + count.ToString(CultureInfo.InvariantCulture) + " entradas, "
+                    + (warmUp ? "con" : "sin") + " precalentado del HUD");
+                app.Shell.Select(1);
+                await app.Routines.LoadAsync();
+                RowMate.Core.Models.Routine? routine = null;
+                foreach (var candidate in app.Routines.State.Value.Routines)
+                {
+                    if (candidate.Name == PerfRoutineName)
+                    {
+                        routine = candidate;
+                    }
+                }
+
+                if (routine == null)
+                {
+                    var steps = new[]
+                    {
+                        new RowMate.Core.Models.IntervalStep(0, 0, RowMate.Core.Models.StepType.Warmup) { DurationSeconds = 30 },
+                        new RowMate.Core.Models.IntervalStep(0, 1, RowMate.Core.Models.StepType.Work) { DurationSeconds = 60, TargetWattsMin = 160, TargetSpm = 22 },
+                        new RowMate.Core.Models.IntervalStep(0, 2, RowMate.Core.Models.StepType.Rest) { DurationSeconds = 30 },
+                    };
+                    routine = await app.Routines.CreateAsync(PerfRoutineName, "", steps);
+                }
+
+                // It. 5: con -rowmate-perf-routines, la primera libre y después esas rutinas en orden (las siembra SnapshotCli -seed F5).
+                var named = NamedRoutines(app, routineNames);
+                if (named == null)
+                {
+                    logger.Log(LogLevel.Error, "PERF", "medición de la entrada: falta una de las rutinas de " + PerfRoutinesArgument);
+                    Application.Quit(1);
+                    return;
+                }
+
+                for (var wait = 0; wait < 100 && !app.WorkoutRest.State.Value.CanStart; wait++)
+                {
+                    await scheduler.Delay(TimeSpan.FromMilliseconds(100));
+                }
+
+                await scheduler.Delay(TimeSpan.FromSeconds(2));
+                for (var i = 0; i < count; i++)
+                {
+                    var entryRoutine = named.Count > 0 ? (i == 0 ? null : named[(i - 1) % named.Count]) : (i % 2 == 0 ? null : routine);
+                    var free = entryRoutine == null;
+                    logger.Log(LogLevel.Info, "PERF", "entrada " + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + (free ? "libre" : "rutina " + entryRoutine!.Name));
+                    var started = free ? app.WorkoutRest.StartFree() : app.WorkoutRest.StartRoutine(entryRoutine!);
+                    if (!started)
+                    {
+                        logger.Log(LogLevel.Error, "PERF", "no arrancó la entrada " + (i + 1).ToString(CultureInfo.InvariantCulture));
+                        Application.Quit(1);
+                        return;
+                    }
+
+                    await scheduler.Delay(TimeSpan.FromSeconds(12));
+                    await app.Workout.FinishAsync();
+                    await scheduler.Delay(TimeSpan.FromSeconds(3));
+                }
+
+                logger.Log(LogLevel.Info, "PERF", "medición de la entrada: terminada");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de la entrada: falla", error);
+                Application.Quit(1);
+            }
+        }
+
+        // Las rutinas de -rowmate-perf-routines, por nombre y en orden (vacío sin el argumento; null si falta alguna).
+        private static System.Collections.Generic.List<RowMate.Core.Models.Routine>? NamedRoutines(AppContext app, string? names)
+        {
+            var result = new System.Collections.Generic.List<RowMate.Core.Models.Routine>();
+            if (string.IsNullOrWhiteSpace(names))
+            {
+                return result;
+            }
+
+            foreach (var raw in names!.Split(';'))
+            {
+                var name = raw.Trim();
+                if (name.Length == 0)
+                {
+                    continue;
+                }
+
+                RowMate.Core.Models.Routine? found = null;
+                foreach (var candidate in app.Routines.State.Value.Routines)
+                {
+                    if (candidate.Name == name)
+                    {
+                        found = candidate;
+                    }
+                }
+
+                if (found == null)
+                {
+                    return null;
+                }
+
+                result.Add(found);
+            }
+
+            return result;
+        }
+
+        // It. 5 (05-series-parciales/02-tech-design §3.7; AC-WKT-18-21 [PERF]): Fondo 3000 y después Series 600, cada una la mitad
+        // de los segundos pedidos, abriendo y cerrando los paneles cada 2 s por la API de las preferencias (sin el toque de verdad);
+        // FrameTimeProbe escribe sus ventanas "[PERF] paneles: …" (objetivo: ningún cuadro de más de 33 ms y p99 ≤ 16,7 ms). Solo en
+        // la carpeta de desarrollo (ROWMATE_DATA_DIR), con las rutinas de F-5 sembradas (SnapshotCli -seed F5). Sale con 0.
+        private async System.Threading.Tasks.Task RunPerfSeries(string secondsText)
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            if (!DataLocation.IsOverridden || !int.TryParse(secondsText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) || seconds < 4)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de los paneles: hace falta ROWMATE_DATA_DIR y los segundos (4 o más)");
+                Application.Quit(1);
+                return;
+            }
+
+            try
+            {
+                app.Shell.Select(1);
+                await app.Routines.LoadAsync();
+                var routines = NamedRoutines(app, "Fondo 3000;Series 600");
+                if (routines == null || routines.Count != 2)
+                {
+                    logger.Log(LogLevel.Error, "PERF", "medición de los paneles: faltan Fondo 3000 o Series 600 (sembrar con -seed F5)");
+                    Application.Quit(1);
+                    return;
+                }
+
+                for (var wait = 0; wait < 100 && !app.WorkoutRest.State.Value.CanStart; wait++)
+                {
+                    await scheduler.Delay(TimeSpan.FromMilliseconds(100));
+                }
+
+                await scheduler.Delay(TimeSpan.FromSeconds(2));
+                logger.Log(LogLevel.Info, "PERF", "medición de los paneles: " + seconds.ToString(CultureInfo.InvariantCulture) + " s");
+                foreach (var routine in routines)
+                {
+                    if (!app.WorkoutRest.StartRoutine(routine))
+                    {
+                        logger.Log(LogLevel.Error, "PERF", "no arrancó " + routine.Name);
+                        Application.Quit(1);
+                        return;
+                    }
+
+                    var toggles = Math.Max(1, seconds / 2 / 2);
+                    for (var t = 0; t < toggles; t++)
+                    {
+                        await scheduler.Delay(TimeSpan.FromSeconds(2));
+                        app.SeriesPanels.Toggle(t % 2 == 0 ? RowMate.Core.Workout.SeriesPanelKind.Laps : RowMate.Core.Workout.SeriesPanelKind.Reps);
+                    }
+
+                    await app.Workout.FinishAsync();
+                    await scheduler.Delay(TimeSpan.FromSeconds(3));
+                }
+
+                logger.Log(LogLevel.Info, "PERF", "medición de los paneles: terminada");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de los paneles: falla", error);
+                Application.Quit(1);
+            }
         }
 #endif
 

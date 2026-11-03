@@ -68,6 +68,13 @@ namespace RowMate.Tests.UiSupport
         // false: no llama a AppContext.Start() al crear (para probar el arranque a mano).
         public bool StartApp = true;
 
+        // It. 5 (05-series-parciales/02-tech-design §2.7, §6.2; AC-HIS-20-04): las preferencias de la app (los paneles de series). Por
+        // defecto, una MemoryPreferences nueva por anfitrión; con PreferencesFile = true, el almacén real (JsonFilePreferences) en una
+        // carpeta temporal propia que el anfitrión borra al terminar (y que Reopen vuelve a leer: el reinicio). Nunca el archivo del
+        // usuario.
+        public IPreferences? Preferences;
+        public bool PreferencesFile;
+
         public UiHostOptions Clone()
         {
             return (UiHostOptions)MemberwiseClone();

@@ -40,13 +40,32 @@ namespace RowMate.Presentation.Workout
             Number.style.color = TokenColors.ToColor(Tokens.TextPrimary);
             Number.style.flexShrink = 0;
             Number.focusable = false;
-            Number.SetPrefix(Icons.Schedule, "rm-icon", (float)HudGeometry.WallClockIcon,
-                HudText.WithAlpha(TokenColors.ToColor(Tokens.TextPrimary), (float)HudGeometry.WallClockIconAlpha), (float)HudGeometry.WallClockIconGap,
-                AffixAlign.CapCenter);
+            ApplyPrefix((float)HudGeometry.WallClockIconGap);
             Number.Bind(clock, Apply);
         }
 
         public TabularNumber Number { get; }
+
+        // It. 5 (DD5-01): el aire del ícono a sus cifras (5; 3 en el modo compacto de la barra libre).
+        public float IconGapDp { get; private set; } = (float)HudGeometry.WallClockIconGap;
+
+        // El modo compacto de la barra libre (InfoRowFit.FreeCompact): el ícono a 3 de sus cifras. Solo lo pide FreeTopBar; el
+        // reloj de la barra de pasos sigue a 5 (AC-WKT-19-01).
+        public void SetCompact(bool compact)
+        {
+            var gap = (float)(compact ? InfoRowFit.FreeCompactClockIconGap : HudGeometry.WallClockIconGap);
+            if (Math.Abs(gap - IconGapDp) > 0.001f)
+            {
+                ApplyPrefix(gap);
+            }
+        }
+
+        private void ApplyPrefix(float gap)
+        {
+            IconGapDp = gap;
+            Number.SetPrefix(Icons.Schedule, "rm-icon", (float)HudGeometry.WallClockIcon,
+                HudText.WithAlpha(TokenColors.ToColor(Tokens.TextPrimary), (float)HudGeometry.WallClockIconAlpha), gap, AffixAlign.CapCenter);
+        }
 
         public string Text => Number.Text;
 

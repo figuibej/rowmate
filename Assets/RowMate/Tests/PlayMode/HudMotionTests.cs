@@ -40,10 +40,10 @@ namespace RowMate.Tests.PlayMode
         {
             var rig = new Rig();
             var start = rig.Now;
-            var opacity = new double[7];
-            var shift = new double[7];
+            var opacity = new double[PieceCount];
+            var shift = new double[PieceCount];
             var backdrop = -1.0;
-            var respondedAt = new long[7];
+            var respondedAt = new long[PieceCount];
             for (var i = 0; i < respondedAt.Length; i++)
             {
                 respondedAt[i] = -1;
@@ -105,7 +105,7 @@ namespace RowMate.Tests.PlayMode
         {
             var rig = new Rig(reduceMotion: true);
             var start = rig.Now;
-            var opacity = new double[7];
+            var opacity = new double[PieceCount];
             var responded = 0;
             var doneAt = -1L;
             var motion = new ImmersiveCascadeMotion(rig.Driver, (p, v) => opacity[(int)p] = v.Opacity, _ => { }, _ => responded++,
@@ -118,7 +118,7 @@ namespace RowMate.Tests.PlayMode
             }
 
             Assert.That(motion.BackdropOpacity, Is.EqualTo(1));
-            Assert.That(responded, Is.EqualTo(7), "los controles responden desde el cuadro 0");
+            Assert.That(responded, Is.EqualTo(PieceCount), "los controles (y los paneles de la It. 5) responden desde el cuadro 0");
             Assert.That(motion.IsFinite, Is.True, "el fundido de la página dura 120");
             rig.RunFor(200);
             Assert.That(doneAt, Is.InRange(120L, 137L), "la llave entra a los 120");
@@ -132,7 +132,7 @@ namespace RowMate.Tests.PlayMode
             {
                 var rig = new Rig(armed: armed);
                 var done = 0;
-                var opacity = new double[7];
+                var opacity = new double[PieceCount];
                 var motion = new ImmersiveCascadeMotion(rig.Driver, (p, v) => opacity[(int)p] = v.Opacity, _ => { }, _ => { }, () => done++);
                 motion.Play(instant: armed);
                 Assert.That(done, Is.EqualTo(1), "estado final en el acto (armado: " + armed + ")");
@@ -1513,6 +1513,10 @@ namespace RowMate.Tests.PlayMode
         }
 
         // ── Soporte ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+        // Las piezas de la cascada: las siete de la 4b y, desde la It. 5, los dos paneles de series (con el tramo de SPM; los mira
+        // SeriesMotionTests).
+        private static readonly int PieceCount = Enum.GetValues(typeof(HudPiece)).Length;
 
         private static readonly HudPiece[] Pieces =
         {

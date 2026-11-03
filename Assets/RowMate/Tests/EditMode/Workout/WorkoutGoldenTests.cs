@@ -251,6 +251,13 @@ namespace RowMate.Tests.EditMode.Workout
             Assert.That(string.Join(" ", run.Events), Is.EqualTo("0/routine/0/active 32000/bpm/30/finished 34000/reset/0/idle"));
             Assert.That(run.Points.Count, Is.EqualTo(7), "ningún punto entre el fin y el reset");
             Assert.That(string.Join(",", run.Targets), Is.EqualTo("1:0:met,1:2:met"));
+            // It. 5 (O-P02): durante la espera (de los 30 a los 34 s) el reloj sigue en 30 y los objetivos siguen ahí, segundo a
+            // segundo; el motor los borra recién al volver a reposo (WorkoutEngine.ReturnToIdle).
+            Assert.That(string.Join(" ", run.Hold), Does.Contain("33000/30/0:met,2:met"), string.Join(" ", run.Hold));
+            foreach (var second in run.Hold)
+            {
+                Assert.That(second, Does.EndWith("/30/0:met,2:met"), "la espera conserva el reloj y los objetivos: " + second);
+            }
         }
 
         [Test, Category("AC-WKT-03-07"), Category("AC-WKT-06-07")]
@@ -456,6 +463,21 @@ namespace RowMate.Tests.EditMode.Workout
                             afterAutoFinish = false;
                         }
 
+                        if (h.State.Phase == WorkoutPhase.Finished && tMs % 1000 == 0)
+                        {
+                            var met = new List<string>();
+                            for (var i = 0; i < 64; i++)
+                            {
+                                var r = h.Engine.Targets.ResultOf(i);
+                                if (r.HasValue)
+                                {
+                                    met.Add(Fmt.Integer(i) + ":" + (r.Value == StepResult.Met ? "met" : "missed"));
+                                }
+                            }
+
+                            run.Hold.Add(tMs + "/" + h.State.TotalElapsedSeconds + "/" + string.Join(",", met));
+                        }
+
                         DoActions(tMs);
                     }
                 }
@@ -651,6 +673,10 @@ namespace RowMate.Tests.EditMode.Workout
 
             public List<string> Targets { get; } = new List<string>();
 
+            // It. 5 (O-P02 de la lente de paridad de la 4b): en cada grilla de 100 ms con la fase Finished (la espera del diálogo),
+            // "ms/reloj/objetivos" con los resultados de los objetivos de ese instante.
+            public List<string> Hold { get; } = new List<string>();
+
             public List<string> Events { get; } = new List<string>();
 
             public IReadOnlyList<DataPoint> Points { get; set; } = new DataPoint[0];
@@ -678,7 +704,9 @@ namespace RowMate.Tests.EditMode.Workout
             using (var h = new WorkoutHarness(Reading(scenario["reading"].AsString())))
             {
                 // El reloj y los objetivos en la foto "terminada": el legacy los lee ahí (sigue en finished hasta reset(),
-                // :305-318); el motor nuevo, al volver solo a reposo, los borra como ese reset.
+                // :305-318). El motor nuevo también: con la rutina terminada sola espera en Finished hasta AcknowledgeCompletion
+                // (It. 4b, como los guiones); terminada a mano vuelve a reposo cuando vuelve el cierre (AC-WKT-01-06). En los dos
+                // casos los borra recién al volver a reposo, como ese reset. (O-P01 de la lente de paridad de la 4b.)
                 var finishedTotal = -1;
                 using (h.Engine.State.Subscribe(s =>
                        {
@@ -746,7 +774,8 @@ namespace RowMate.Tests.EditMode.Workout
                             }
                         }
 
-                        // El legacy se queda en "terminada" con el paso; el motor nuevo vuelve solo a reposo: se corta antes.
+                        // El legacy se queda en "terminada" con el paso hasta su reset(), y el motor nuevo también (It. 4b: hasta
+                        // AcknowledgeCompletion): la corrida se corta en el fin (Ended), el mismo instante en los dos. (O-P01.)
                         if (Ended(h.Engine))
                         {
                             result.FinishedAtMs = tMs;

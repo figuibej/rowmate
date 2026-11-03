@@ -8,12 +8,13 @@ namespace RowMate.Simulator.Panel
     // Bottom en dp desde ABAJO (como BottomObstacle); la caja mide Size × Size y no escala con hudScale (R1).
     public readonly struct WrenchSpot
     {
-        public WrenchSpot(bool rightLane, double left, double bottom, bool clear)
+        public WrenchSpot(bool rightLane, double left, double bottom, bool clear, bool overSeries = false)
         {
             RightLane = rightLane;
             Left = left;
             Bottom = bottom;
             Clear = clear;
+            OverSeries = overSeries;
         }
 
         // Carril derecho = el entrenamiento (con el lugar del HUD); izquierdo = el resto de la app.
@@ -26,6 +27,10 @@ namespace RowMate.Simulator.Panel
         // false: ninguna altura cumple (la llave subida por los obstáculos ya no entra en la ventana, o el lugar del HUD
         // cae afuera). Con el lugar del HUD, nunca en los 5 perfiles (04-design-notes §3.8, también con s = 0,9).
         public bool Clear { get; }
+
+        // It. 5 (R10 con los paneles): con el diálogo de completado no hubo hueco que no tocara la columna de los paneles de series
+        // (L640: el diálogo llega hasta la columna) y la llave quedó en su lugar de la 4b, sobre un panel inerte debajo del velo.
+        public bool OverSeries { get; }
 
         public double Right => Left + WrenchPlacement.Size;
 
@@ -109,8 +114,8 @@ namespace RowMate.Simulator.Panel
                 if (surface.Dialog.HasValue && slot.Intersects(surface.Dialog.Value, ObstacleGap))
                 {
                     // It. 4b (R10; DN4b-22): con el diálogo de completado encima de su lugar, el hueco libre más bajo del carril
-                    // izquierdo.
-                    return LeftLaneAvoiding(windowHeight, insets, surface);
+                    // izquierdo. It. 5: sin tocar la columna de los paneles de series.
+                    return LeftLaneAvoiding(windowWidth, windowHeight, insets, surface);
                 }
 
                 var bottom = windowHeight - slot.Bottom;
@@ -182,20 +187,62 @@ namespace RowMate.Simulator.Panel
         // donde la caja de 40, agrandada 8, no toca ninguna pieza del HUD que se cruza con el carril (siguen a la vista debajo
         // del velo) ni el diálogo, dentro del área segura. Desde 16 + margen inferior, sube hasta 8 dp sobre cada pieza que
         // toca. Si no hay hueco (no pasa en los cinco perfiles), "16 + margen inferior" con Clear = false (la vista lo anota).
-        private static WrenchSpot LeftLaneAvoiding(double windowHeight, SafeInsets insets, OverlaySurface surface)
+        // It. 5 (AC-BLE-16-02, "tampoco tapa los paneles"; 05-series-parciales/02-tech-design, cambios de WP-B): con la columna
+        // de los paneles de series (OverlaySurface.Series), primero el carril de siempre sin tocarla (TV y P360: debajo del
+        // diálogo, como en la 4b); si no hay hueco (TH: la columna, SPM y la barra llenan el carril), el carril pegado a la derecha
+        // de la columna, a 8 dp (redondeado hacia arriba a 0,1 dp); si tampoco (L640: el diálogo llega hasta la columna, no hay
+        // ningún hueco libre en la ventana), el lugar de la 4b, sobre un panel inerte debajo del velo (OverSeries).
+        private static WrenchSpot LeftLaneAvoiding(double windowWidth, double windowHeight, SafeInsets insets, OverlaySurface surface)
         {
             var left = EdgeMargin + insets.Left;
             var lowest = EdgeMargin + insets.Bottom;
-            var bottomFromTop = windowHeight - lowest;
+            var series = surface.Series;
+            if (series.HasValue)
+            {
+                var first = Lowest(left, windowWidth, windowHeight, insets, surface, series);
+                if (first.HasValue)
+                {
+                    return first.Value;
+                }
+
+                var beside = Math.Ceiling((series.Value.Right + ObstacleGap) * 10) / 10;
+                var second = Lowest(beside, windowWidth, windowHeight, insets, surface, series);
+                if (second.HasValue)
+                {
+                    return second.Value;
+                }
+            }
+
+            var spot = Lowest(left, windowWidth, windowHeight, insets, surface, null);
+            if (!spot.HasValue)
+            {
+                return new WrenchSpot(false, left, lowest, false);
+            }
+
+            var over = series.HasValue && spot.Value.RectIn(windowHeight).Intersects(series.Value, ObstacleGap);
+            return new WrenchSpot(false, spot.Value.Left, spot.Value.Bottom, true, over);
+        }
+
+        // El hueco más bajo de un carril de x left: desde 16 + margen inferior, sube hasta 8 dp sobre cada pieza del carril, el
+        // diálogo y la columna (si se pasa) que toca la caja agrandada 8. null si no hay (la caja pasa el margen de arriba o sale
+        // por la derecha).
+        private static WrenchSpot? Lowest(double left, double windowWidth, double windowHeight, SafeInsets insets, OverlaySurface surface, DpRect? series)
+        {
+            if (left + Size > windowWidth - insets.Right + 1e-6)
+            {
+                return null;
+            }
+
+            var bottomFromTop = windowHeight - (EdgeMargin + insets.Bottom);
             var obstacles = surface.LeftLane;
             var dialog = surface.Dialog;
-            var limit = (obstacles?.Count ?? 0) + 2;
+            var limit = (obstacles?.Count ?? 0) + 3;
             for (var guard = 0; guard <= limit; guard++)
             {
                 var box = DpRect.FromEdges(left, bottomFromTop - Size, left + Size, bottomFromTop);
                 if (box.Top < insets.Top - 1e-6)
                 {
-                    break;
+                    return null;
                 }
 
                 var moved = false;
@@ -218,6 +265,12 @@ namespace RowMate.Simulator.Panel
                     moved = true;
                 }
 
+                if (series.HasValue && box.Intersects(series.Value, ObstacleGap) && series.Value.Top - ObstacleGap < next)
+                {
+                    next = series.Value.Top - ObstacleGap;
+                    moved = true;
+                }
+
                 if (!moved)
                 {
                     return new WrenchSpot(false, left, windowHeight - bottomFromTop, true);
@@ -226,7 +279,7 @@ namespace RowMate.Simulator.Panel
                 bottomFromTop = next;
             }
 
-            return new WrenchSpot(false, left, lowest, false);
+            return null;
         }
 
         private static WrenchSpot Lifted(bool rightLane, double left, double bottom, double windowHeight, SafeInsets insets, OverlaySurface surface)

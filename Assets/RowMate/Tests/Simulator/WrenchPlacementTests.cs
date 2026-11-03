@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 using RowMate.Core.Design;
 using RowMate.Core.Ports;
@@ -139,6 +140,52 @@ namespace RowMate.Tests.Simulator
             Assert.That(panel.GrowsRight, Is.True, "desde el carril izquierdo el panel crece hacia la derecha");
         }
 
+        // It. 5 (AC-BLE-16-02, "tampoco tapa los paneles"; A5-13, R10 con los paneles): con la columna de los paneles de series
+        // (cerrados, o abiertos hasta el piso de la columna; con y sin objetivo en SPM), en TV y P360 la llave queda donde en la 4b
+        // (debajo del diálogo); en TH la columna, SPM y la barra llenan el carril y va pegada a la derecha de la columna, a 8 dp; en
+        // L640 no hay ningún hueco libre (el diálogo llega hasta la columna) y queda en su lugar de la 4b, con OverSeries.
+        [TestCase("TV", 40.0, 298.0, 371.0, 616.0, 16.0, 790.1, Category = "AC-BLE-16-02")]
+        [TestCase("P360", 40.0, 231.7, 320.0, 568.3, 16.0, 685.5, Category = "AC-BLE-16-02")]
+        [TestCase("TH", 257.0, 63.2, 657.0, 347.8, 167.2, 270.3, Category = "AC-BLE-16-02")]
+        [TestCase("L640", 120.0, 37.7, 520.0, 322.3, 16.0, 230.8, Category = "AC-BLE-16-02")]
+        public void WithTheDialogTheWrenchAvoidsTheSeriesColumn(string profile, double dx0, double dy0, double dx1, double dy1, double x0, double y0)
+        {
+            var p = HudGeometryCases.Profile(profile);
+            var dialog = DpRect.FromEdges(dx0, dy0, dx1, dy1);
+            var layout = HudGeometry.Layout(HudGeometryCases.Input(p[0], p[1], SafeInsets.None, true, HudGeometryCases.RoutineWithBpm));
+            var column = SeriesPanelGeometry.Column(layout);
+            foreach (var target in new[] { true, false })
+            {
+                var top = column.Top(target);
+                var closed = DpRect.FromEdges(column.Left, top, column.Right, top + (2 * SeriesPanelGeometry.ChipHeight + SeriesPanelGeometry.ColumnGap) * column.Scale);
+                var open = DpRect.FromEdges(column.Left, top, column.Right, Math.Min(top + SeriesPanelGeometry.WorstCaseHeight * column.Scale, column.Floor));
+                foreach (var series in new[] { closed, open })
+                {
+                    var what = profile + (target ? " con" : " sin") + " objetivo, " + (series.Equals(closed) ? "cerrados" : "abiertos");
+                    var surface = OverlaySurface.Workout(layout.Wrench!.Value, layout.PanelCeiling, layout.LeftLaneObstacles, dialog, series);
+                    var spot = WrenchPlacement.For(p[0], p[1], SafeInsets.None, surface);
+                    Assert.That(spot.Clear, Is.True, what);
+                    Assert.That(spot.RightLane, Is.False, what);
+                    AssertRect(spot.RectIn(p[1]), x0, y0, x0 + 40, y0 + 40, what);
+                    var box = spot.RectIn(p[1]);
+                    Assert.That(box.Intersects(dialog, 8 - 1e-6), Is.False, what + ": a 8 dp del diálogo");
+                    foreach (var piece in layout.LeftLaneObstacles)
+                    {
+                        Assert.That(box.Intersects(piece, 8 - 1e-6), Is.False, what + ": a 8 dp de toda pieza del HUD");
+                    }
+
+                    var over = box.Intersects(series, 8 - 1e-6);
+                    Assert.That(spot.OverSeries, Is.EqualTo(profile == "L640"), what + ": OverSeries");
+                    Assert.That(over, Is.EqualTo(profile == "L640"), what + ": la columna " + series + " y la llave " + box);
+                }
+            }
+
+            // Sin la columna (libre), lo de la 4b.
+            var plain = WrenchPlacement.For(p[0], p[1], SafeInsets.None, OverlaySurface.Workout(layout.Wrench!.Value, layout.PanelCeiling, layout.LeftLaneObstacles, dialog));
+            Assert.That(plain.OverSeries, Is.False);
+            Assert.That(plain.Left, Is.EqualTo(16).Within(Tolerance), profile + ": sin columna, el carril de siempre");
+        }
+
         [Test, Category("AC-BLE-16-02")]
         public void WrenchStaysWhenTheDialogDoesNotCross()
         {
@@ -184,6 +231,34 @@ namespace RowMate.Tests.Simulator
             Assert.That(spot.Clear, Is.False);
             Assert.That(spot.Left, Is.EqualTo(16));
             Assert.That(spot.Bottom, Is.EqualTo(16));
+        }
+
+        // It. 5 (AC-BLE-16-02, la regla; 05-series-parciales/02-tech-design §3.2, §6.3): en el inmersivo la llave queda en su lugar
+        // del HUD (a la derecha, o arriba de Pausa en L640) y no tapa los paneles de series, cerrados ni abiertos, en los cinco
+        // perfiles, con SPM con y sin objetivo: lo que se ve de la columna (desde su techo hasta su piso, o lo más alto que mide)
+        // queda a más de 8 dp del lugar de la llave.
+        [TestCase("TV", Category = "AC-BLE-16-02")]
+        [TestCase("P360", Category = "AC-BLE-16-02")]
+        [TestCase("TH", Category = "AC-BLE-16-02")]
+        [TestCase("L640", Category = "AC-BLE-16-02")]
+        [TestCase("W1280", Category = "AC-BLE-16-02")]
+        public void TheWrenchNeverCoversTheSeriesPanels(string profile)
+        {
+            var p = HudGeometryCases.Profile(profile);
+            foreach (var target in new[] { true, false })
+            {
+                var layout = HudGeometry.Layout(HudGeometryCases.Input(p[0], p[1], SafeInsets.None, true,
+                    target ? HudGeometryCases.RoutineWithBpm : HudGeometryCases.FreeWithBpm));
+                var column = SeriesPanelGeometry.Column(layout);
+                var top = column.Top(target);
+                var closed = DpRect.FromEdges(column.Left, top, column.Right, top + (2 * SeriesPanelGeometry.ChipHeight + SeriesPanelGeometry.ColumnGap) * column.Scale);
+                var open = DpRect.FromEdges(column.Left, top, column.Right, Math.Min(top + SeriesPanelGeometry.WorstCaseHeight * column.Scale, column.Floor));
+                var spot = WrenchPlacement.For(p[0], p[1], SafeInsets.None, OverlaySurface.Workout(layout.Wrench!.Value, layout.PanelCeiling));
+                Assert.That(spot.Clear, Is.True, profile);
+                var wrench = spot.RectIn(p[1]);
+                Assert.That(wrench.Intersects(closed, WrenchPlacement.ObstacleGap), Is.False, profile + (target ? " con" : " sin") + " objetivo: cerrados");
+                Assert.That(wrench.Intersects(open, WrenchPlacement.ObstacleGap), Is.False, profile + (target ? " con" : " sin") + " objetivo: abiertos");
+            }
         }
 
         private static void AssertRect(DpRect rect, double x0, double y0, double x1, double y1, string what)

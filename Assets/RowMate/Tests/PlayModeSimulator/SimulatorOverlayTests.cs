@@ -235,6 +235,149 @@ namespace RowMate.Tests.PlayMode.Simulator
             Assert.That(H.Immersive, Is.Not.Null, "el inmersivo arriba");
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §3.2, §5.6; AC-BLE-16-02, -16-03; A5-13): la llave nunca tapa un panel de series,
+        // cerrado o abierto, en los cinco perfiles; el panel del simulador sí puede taparlos en parte, y lo que se ve de ellos responde.
+        [UnityTest, Category("AC-BLE-16-02"), Category("AC-BLE-16-03")]
+        public IEnumerator TheWrenchNeverCoversTheSeriesPanels()
+        {
+            foreach (var profile in new[] { DeviceProfile.TV, DeviceProfile.P360, DeviceProfile.TH, DeviceProfile.L640, DeviceProfile.W1280 })
+            {
+                foreach (var open in new[] { false, true })
+                {
+                    var prefs = new RowMate.Core.Common.MemoryPreferences();
+                    prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.LapsKey, open);
+                    prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.RepsKey, open);
+                    Create(new UiHostOptions
+                    {
+                        Profile = profile,
+                        IsDesktop = profile.Code == DeviceProfile.W1280.Code,
+                        Backend = HostBackends.Simulator(false),
+                        SimulatorLayer = SimulatorLayerMode.Full,
+                        Routines = HostRoutines.Seeded(RoutineSeeds.F5),
+                        StartUtc = UiHostOptions.WorkoutStartUtc,
+                        Preferences = prefs,
+                    });
+                    yield return Settle();
+                    yield return Tap("tab-workout");
+                    yield return Frames();
+                    H.TapRoutineNamed("Series 600");
+                    yield return Settle();
+                    yield return Frames();
+                    H.Tap("dialog-confirm");
+                    yield return Settle();
+                    H.Advance(250);
+                    yield return Settle();
+                    var column = H.SeriesColumn!;
+                    var wrench = InWindow("sim-open");
+                    foreach (var panel in new[] { column.Laps, column.Reps })
+                    {
+                        if (panel.resolvedStyle.display == DisplayStyle.None)
+                        {
+                            continue;
+                        }
+
+                        var box = panel.worldBound;
+                        var visual = new Rect(box.x, box.y, box.width, (float)(panel.VisualHeightBase * panel.Scale));
+                        Assert.That(Overlap(wrench, visual), Is.False, profile.Code + (open ? " abiertos: " : " cerrados: ") + panel.name + " " + visual + " y la llave " + wrench);
+                    }
+                }
+            }
+
+            // AC-BLE-16-03 (W1280, DEMO-08): el panel del simulador abierto no tapa parciales; lo que se ve responde.
+            yield return Tap("sim-open");
+            var simPanel = InWindow("sim-panel");
+            var laps = H.SeriesColumn!.Laps;
+            var lapsBox = laps.worldBound;
+            Assert.That(Overlap(simPanel, lapsBox), Is.False, "en W1280 el panel del simulador no toca los paneles");
+            var picked = H.TapAt(new Vector2(lapsBox.center.x, lapsBox.yMin + 10));
+            Assert.That(picked, Is.SameAs(laps), "lo que se ve de parciales responde (no " + UiQuery.Describe(picked) + ")");
+        }
+
+        // It. 5 (AC-BLE-16-02; A5-13, R10 con los paneles): con el diálogo de completado abierto (Corta, una serie ×2, a los 32 s),
+        // la llave queda por encima del velo, fuera del diálogo y sin tapar la columna de los paneles: en TV y P360 debajo del
+        // diálogo (lo de la 4b), en TH a la derecha de la columna. En L640 no hay ningún hueco libre en la ventana: queda en su lugar
+        // de la 4b, sobre un chip inerte debajo del velo, y lo dice (OverSeries).
+        [UnityTest, Category("AC-BLE-16-02")]
+        public IEnumerator WithTheCompletionDialogTheWrenchAvoidsThePanels()
+        {
+            foreach (var profile in new[] { DeviceProfile.TV, DeviceProfile.P360, DeviceProfile.TH, DeviceProfile.L640 })
+            {
+                Create(new UiHostOptions
+                {
+                    Profile = profile,
+                    Backend = HostBackends.Simulator(false),
+                    SimulatorLayer = SimulatorLayerMode.Full,
+                    // F-4A, como las tomas del diálogo de it4b (Corta queda a la vista en la lista, sin desplazar).
+                    Routines = HostRoutines.Seeded(RoutineSeeds.F4A),
+                    StartUtc = UiHostOptions.WorkoutStartUtc,
+                    Preferences = new RowMate.Core.Common.MemoryPreferences(),
+                });
+                yield return Settle();
+                yield return Tap("tab-workout");
+                yield return Frames();
+                yield return RoutineCardInView("Corta");
+                H.TapRoutineNamed("Corta");
+                yield return Settle();
+                yield return Frames();
+                H.Tap("dialog-confirm");
+                yield return Settle();
+                H.Advance(32);
+                yield return Settle();
+                Assert.That(H.Completion, Is.Not.Null, profile.Code + ": el diálogo de completado");
+                var spot = H.SimulatorLayer!.Spot!.Value;
+                var wrench = InWindow("sim-open");
+                var bounds = H.SeriesColumn!.VisibleBounds()!.Value;
+                var column = new Rect((float)bounds.Left, (float)bounds.Top, (float)bounds.Width, (float)bounds.Height);
+                Assert.That(Overlap(wrench, InWindow("completion-dialog")), Is.False, profile.Code + ": fuera del diálogo");
+                if (profile.Code == DeviceProfile.L640.Code)
+                {
+                    Assert.That(spot.OverSeries, Is.True, "L640: sin hueco, sobre el chip inerte (y lo dice)");
+                    Assert.That(spot.RightLane, Is.False);
+                    continue;
+                }
+
+                Assert.That(spot.OverSeries, Is.False, profile.Code);
+                Assert.That(Overlap(wrench, column), Is.False, profile.Code + ": la columna " + column + " y la llave " + wrench);
+                foreach (var panel in new[] { H.SeriesColumn.Laps, H.SeriesColumn.Reps })
+                {
+                    if (panel.resolvedStyle.display != DisplayStyle.None)
+                    {
+                        Assert.That(Overlap(wrench, InWindowOf(panel.worldBound)), Is.False, profile.Code + ": " + panel.name);
+                    }
+                }
+
+                if (profile.Code == DeviceProfile.TH.Code)
+                {
+                    Assert.That(wrench.xMin, Is.GreaterThanOrEqualTo(column.xMax + 8 - 0.6f), "TH: a la derecha de la columna, a 8 dp");
+                }
+            }
+        }
+
+        // La tarjeta de la rutina arriba de su ScrollView (en horizontal, con la barra de pestañas, puede quedar tapada).
+        private IEnumerator RoutineCardInView(string name)
+        {
+            var list = H.WorkoutScreen!.List;
+            for (var i = 0; i < list.Count; i++)
+            {
+                var card = list.CardAt(i);
+                var scroll = card != null && card.Routine.Name == name ? UiQuery.ScrollViewOf(card) : null;
+                if (scroll != null)
+                {
+                    var offset = scroll.scrollOffset;
+                    offset.y = Mathf.Max(0, offset.y + card!.worldBound.yMin - scroll.contentViewport.worldBound.yMin - 8);
+                    scroll.scrollOffset = offset;
+                    yield return Frames();
+                    yield break;
+                }
+            }
+        }
+
+        private Rect InWindowOf(Rect b)
+        {
+            var w = H.Root.worldBound;
+            return new Rect(b.xMin - w.xMin, b.yMin - w.yMin, b.width, b.height);
+        }
+
         [UnityTest, Category("AC-BLE-16-02"), Category("AC-RUT-10-04")]
         public IEnumerator WrenchLeftLaneOutsideTheWorkout()
         {

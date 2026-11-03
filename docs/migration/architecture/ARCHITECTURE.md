@@ -143,7 +143,7 @@ rowmate/
 │   │   │   ├── Ble/                    # BleUuid, BleScanResult, IBleAdapter, FtmsParser, HeartRateParser, ScanFilter, RowerService, HeartRateService, ReconnectLoop
 │   │   │   ├── Workout/                # WorkoutEngine (fases, ActiveClock, StepProgress, TargetLight, HeartRateFusion, SanitizedDistance,
 │   │   │   │                           #   WorkoutSnapshot), SessionRecorder (guardado incremental), StepTargetTracker, WorkoutStartRule,
-│   │   │   │                           #   WorkoutFormats (It. 4a); SeriesTracker y StrokeCounterEvents llegan con la 4b
+│   │   │   │                           #   WorkoutFormats (It. 4a); SeriesTracker y SeriesPanels (It. 5: el único saneamiento de la sesión);
 │   │   │   ├── History/                # ChartGeometry, StepPerformance, StepBands
 │   │   │   ├── Scene/                  # SceneCamera, SceneState, StrokeCycle, SceneTimeOfDay, HourLighting, CelestialPlacement, MoonPhase,
 │   │   │   │   │                       #   Environments, DartRandom, WaterParams, SkyModel, SlotIds
@@ -506,6 +506,7 @@ El Designer pide celdas de ancho fijo por dígito con rodillo (ART_BIBLE §4.2, 
 - La animación (dígitos que cambian, `DigitRoll` de Core) mueve cada glifo con un desplazamiento vertical y un alfa por celda; mientras dura (180 ms) el elemento pide `MarkDirtyRepaint()` por cuadro, y solo se regenera la malla de ese elemento (sin *layout*: su tamaño no cambia). El recorte lo da el contenedor con `overflow: hidden`.
 - Si `DrawText` no sirve en 6000.3 (API no verificada sin Editor, RA-18), el respaldo es el mismo elemento dibujando *quads* del atlas SDF del `FontAsset` con `MeshGenerationContext.Allocate` y el material de texto.
 - Verificación: test PlayMode del HUD completo que cuenta elementos visibles (≤ 60) y mide 0 B/cuadro con el `Profiler` (`GC.Alloc`) durante 10 s de valores cambiando a 1 Hz con rodillos (It. 2 para el tablero, It. 4a para el HUD).
+- It. 5 (DT5-13): los números de los paneles de series (la vuelta en curso, las filas, la línea `Rep`) no son `TabularNumber`: los dibuja `TabularCells` (`Presentation/Controls`), la misma lógica de celdas y rodillo para dibujar **adentro de otro elemento** (cada panel es un elemento que dibuja todo; R4a-03). `TabularNumber` no se tocó; unificarlos queda como deuda para cuando se toque por otro motivo. `MeshGenerationContext.DrawText` no asigna: medido en cuadros reales con `FrameAllocations` (0 asignaciones en el dibujo de los paneles, con un control positivo que ve un `byte[64]` por repintado).
 
 ---
 
@@ -567,7 +568,7 @@ Por defecto **no** se importa (Q-11, "Confirmar = Sí" en la It. 3). La arquitec
 | `strava_upload_pref` | string (`auto`/`ask`/`manual`) | `auto` | PRF (It. 12) |
 | `app.installId` (nueva) | string (8 hex) | se genera | Strava `external_id` (It. 12) |
 
-- Implementación: `JsonFilePreferences : IPreferences` (Infrastructure) sobre `persistentDataPath/prefs.json`, con escritura atómica (archivo temporal + reemplazo) y escritura inmediata en cada `Set`/`Remove` (como `SharedPreferences`). Se descartó `PlayerPrefs` porque guarda en el registro en Windows, no se puede testear en `dotnet` y difiere los guardados.
+- Implementación (It. 5, ADR 021): `JsonFilePreferences : IPreferences` (Infrastructure) sobre `prefs.json` en **la carpeta de la base** (`DataLocation.PreferencesFile`: en Windows `LocalLow/iguisoft/RowMate`, en Android la interna; no `persistentDataPath`, que en Android es la externa; DT5-05), leído en el arranque, con el texto armado en el hilo principal en cada `Set`/`Remove` y escrito fuera de él (un ejecutor serie; temporal + reemplazo, la última escritura gana). Lee con el lector JSON del Core (`JsonParser`), sin Newtonsoft (A5-01). En el Editor y en desarrollo `ROWMATE_DATA_DIR` lo reemplaza, como a la base; las pruebas y el arnés usan `MemoryPreferences` o un archivo temporal (AC-HIS-20-04). Se descartó `PlayerPrefs` porque guarda en el registro en Windows, no se puede testear en `dotnet` y difiere los guardados.
 - La interfaz distingue "no existe" de "vacío" (`TryGetString`), como `prefs.getString(...) ?? default`.
 - El simulador comparte el archivo de preferencias con el build normal (igual que el legacy: misma app, base distinta).
 
@@ -1030,8 +1031,8 @@ Objetivo R-12: **60 fps sostenidos durante 30 min** durante el entrenamiento en 
 | Recurso | Tope |
 |---|---|
 | CPU de escena / Animation Rigging / UI | ≤ 1,5 ms / ≤ 0,3 ms / ≤ 1,0 ms (sin *relayout* por cuadro: los números animan con transformaciones, §7.8) |
-| UI Toolkit | HUD ≤ 60 elementos visibles; sin máscaras anidadas; un `TabularNumber` por número |
-| GC | **0 B/cuadro** en régimen durante el entrenamiento (verificado con el Profiler); los eventos de 1 Hz pueden reservar poco |
+| UI Toolkit | HUD ≤ 60 elementos visibles (It. 5: el peor caso con los dos paneles de series abiertos es 56-57, medido; M5 sacó el espaciador de la fila de información); sin máscaras anidadas; un `TabularNumber` por número del HUD, y los números de los paneles de series dibujados con `TabularCells` adentro de su panel (DT5-13) |
+| GC | **0 B/cuadro** en régimen durante el entrenamiento; los eventos de 1 Hz pueden reservar poco. Desde la It. 5 se mide en **cuadros reales** con `FrameAllocations` (`Tests/UiSupport`): el `generateVisualContent` observado y el cuadro de la UI (`MotionDriver` y sus *callbacks*), con un control positivo permanente (`FrameAllocationsTests`); `GcAllocations.During` solo ve el C# sincrónico. Un contador por cuadro entero no sirve en *batchmode* (el corredor de pruebas asigna miles de veces por cuadro) |
 | Partículas | ≤ 400 vivas; VFX ≤ 0,4 ms |
 | Memoria total | ≤ 600 MB en móvil, ≤ 1,5 GB en escritorio |
 | Arranque | ≤ 3 s hasta la primera pantalla en el teléfono de referencia (≤ 2 s en escritorio) |
@@ -1263,3 +1264,15 @@ Detalle en [04b-hud-exr/02-tech-design](../iterations/04b-hud-exr/02-tech-design
 | §7.8 | El HUD sigue en ≤ 60 elementos en el peor caso de la 4b (tres objetivos fuera, BPM, `Próximo`, la cuenta grande y el sello): la flecha y las unidades son afijos de `TabularNumber` (M1, M2), el halo lo dibuja la tarjeta (M4) y el corazón de BPM va sin fila (M6). La fila de píldoras es un solo elemento que dibuja todo con `Painter2D` y `Allocate` |
 | §13 | El puerto `ISystemUi` (barras del sistema: Android inmersivo persistente; escritorio y iOS hasta la 10b, sin efecto) y `IAppLifecycle.Woke` |
 | §15 | El arnés: el conjunto `it4b` (por defecto) con la regla de toma de la 4b (en el instante exacto, con la lista de bloqueos y `inFlight` en el *manifest*; nunca espera), la sesión a los 13:00:00Z con las lecturas del remo en los `k − 0,5`, los últimos 2 s cuadro a cuadro y los valores por cuadro de los videos; las tomas del HUD de `it4a` quedan reemplazadas (`superseded`). PlayMode suma `FakeSystemUi` por host y `UiTestHost.OpenCompletion` |
+
+## Cambios de la It. 5 (WP-B, implementación)
+
+Detalle en [05-series-parciales/02-tech-design](../iterations/05-series-parciales/02-tech-design.md) §2-§7 (con "Cambios por gate QA" y "Cambios por implementación de WP-A, WP-D1 y WP-B") y ADR 021.
+
+| Sección | Qué cambió |
+|---|---|
+| §2 | Core suma `Workout/{SeriesTracker,SeriesPanels}`, `Ports/IPreferences`, `Common/MemoryPreferences` y `Design/{SeriesPanelGeometry,SeriesTimelines}`; App suma `Workout/{SeriesPanelPrefs,SeriesPanelsExpansion,HudSeriesChange}`; Infrastructure suma `Preferences/` (`JsonFilePreferences`); Presentation suma `Controls/{DrawnText,TabularCells}`, `Workout/{SeriesPanelView,SeriesColumn}` y `Motion/Hud/{SeriesPanelMotion,SeriesColumnMotion}`; el arnés suma `SeriesCatalog` (`it5`, por defecto) |
+| §7.8 | Los números de los paneles de series los dibuja `TabularCells` adentro de su panel (DT5-13). Cada panel es **un** elemento que dibuja todo (el vidrio, los textos con `DrawText` y cuatro `FontAsset`, la flecha, la marca y el anillo con `Painter2D`, la máscara con `Allocate` y color por vértice) sin recortes: el alfa de cada renglón sale de su tinta (DT5-02). El toque fuera de la caja de *layout* va por un hijo oculto que agranda la caja y `ContainsPoint` (DT5-15); `style.translate` y `style.opacity` de los paneles tienen un solo escritor, `SeriesColumn` (DT5-14) |
+| §9.4 | `prefs.json` en la carpeta de la base, compartido por los dos builds; lectura en el arranque, escritura fuera del hilo principal (ADR 021) |
+| §20.2 | El tope de 60 sigue: el peor caso de la 5 da 56-57 (M5 sacó el espaciador de la fila de información; no hizo falta una junta más). 0 B por cuadro medido en cuadros reales con `FrameAllocations` (el dibujo observado y el cuadro de la UI), con su control positivo |
+| §7 (arnés) / simulador | La llave con el diálogo de completado (R10 de la 4b) tampoco tapa la columna de los paneles: `OverlaySurface.Series` lleva lo que se ve de la columna (`SeriesColumn.VisibleBounds`) y `WrenchPlacement` prueba el carril de siempre, después el carril pegado a la derecha de la columna (TH) y, si no hay ningún hueco (L640), deja el lugar de la 4b con `WrenchSpot.OverSeries` (la auditoría lo acepta solo así). `LayoutAudit` no cuenta un panel con la máscara de la columna (`.rm-hud-series-panel--masked`) |

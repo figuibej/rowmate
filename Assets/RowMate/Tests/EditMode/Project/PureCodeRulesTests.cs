@@ -322,6 +322,70 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(offenders, Is.Empty, "reloj del sistema en una regla pura de la It. 4b:\n" + string.Join("\n", offenders));
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §1.2): ningún reloj del sistema en las reglas nuevas (el tiempo llega por
+        // argumento: el reloj activo del motor).
+        [Test, Category("AC-WKT-07-10"), Category("AC-APP-19-03")]
+        public void NoSystemClockInTheFiveRules()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\bDateTime(Offset)?\s*\.\s*(Now|UtcNow|Today)\b"),
+                new Regex(@"\bStopwatch\b"),
+                new Regex(@"\bEnvironment\s*\.\s*TickCount(64)?\b"),
+                new Regex(@"\bTimeProvider\b"),
+                new Regex(@"\bTask\s*\.\s*Delay\s*\("),
+                new Regex(@"\bnew\s+Timer\s*\("),
+                new Regex(@"\bUnityEngine\b"),
+            };
+            var files = new[]
+            {
+                "Core/Workout/SeriesTracker.cs", "Core/Workout/SeriesPanels.cs", "Core/Workout/SanitizedDistance.cs", "Core/Design/SeriesPanelGeometry.cs",
+                "Core/Design/SeriesTimelines.cs", "Core/Common/MemoryPreferences.cs", "Core/Ports/IPreferences.cs", "App/Workout/SeriesPanelPrefs.cs",
+                "App/Workout/SeriesPanelsExpansion.cs", "App/Workout/HudSeriesChange.cs",
+            };
+            var offenders = new List<string>();
+            foreach (var relative in files)
+            {
+                var path = RepoPaths.Combine("Assets/RowMate/" + relative);
+                Assert.That(File.Exists(path), Is.True, relative);
+                offenders.AddRange(SourceScan.Matches(path, patterns, true));
+            }
+
+            Assert.That(offenders, Is.Empty, "reloj del sistema en una regla pura de la It. 5:\n" + string.Join("\n", offenders));
+        }
+
+        // It. 5 (spec §12 punto 2; DV-26, DT5-06; AC-WKT-07-09): UN solo saneamiento de la distancia por sesión, el del
+        // SeriesTracker. El motor no tiene otro (ni un SanitizedDistance propio ni la fórmula del salto) y lo alimenta una sola vez
+        // por segundo; en todo el código de producción, el único que crea un SanitizedDistance es el tracker.
+        [Test, Category("AC-WKT-07-09"), Category("AC-WKT-03-03")]
+        public void OneDistanceSanitizerOnly()
+        {
+            var engine = SourceScan.StripComments(File.ReadAllText(RepoPaths.Combine("Assets/RowMate/Core/Workout/WorkoutEngine.cs")));
+            Assert.That(engine, Does.Not.Contain("new SanitizedDistance"), "el motor no tiene su propio saneamiento");
+            Assert.That(engine, Does.Not.Contain("MaxSpeedMetersPerSecond"), "ni la fórmula del salto");
+            Assert.That(engine, Does.Not.Contain("SanitizedDistance"));
+            Assert.That(Regex.Matches(engine, @"_series\s*\.\s*Update\s*\(").Count, Is.EqualTo(1), "una sola alimentación por segundo");
+            Assert.That(Regex.Matches(engine, @"_series\s*\.\s*Meters\b").Count, Is.GreaterThanOrEqualTo(2), "el paso por distancia lee los metros del tracker");
+            var creators = new List<string>();
+            var formula = new List<string>();
+            foreach (var file in SourceScan.CsFiles(PureProduction))
+            {
+                var code = SourceScan.StripComments(File.ReadAllText(file));
+                if (Regex.IsMatch(code, @"\bnew\s+SanitizedDistance\s*\("))
+                {
+                    creators.Add(RepoPaths.Relative(file));
+                }
+
+                if (Regex.IsMatch(code, @"MaxSpeedMetersPerSecond\s*\*"))
+                {
+                    formula.Add(RepoPaths.Relative(file));
+                }
+            }
+
+            Assert.That(creators, Is.EqualTo(new[] { "Assets/RowMate/Core/Workout/SeriesTracker.cs" }));
+            Assert.That(formula, Is.EqualTo(new[] { "Assets/RowMate/Core/Workout/SanitizedDistance.cs" }), "la regla del salto, en un solo lugar");
+        }
+
         private static void AssertNoMatches(string[] folders, Regex[] patterns, bool blankLiterals, string what)
         {
             var offenders = new List<string>();

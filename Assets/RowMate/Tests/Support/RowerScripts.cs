@@ -54,6 +54,53 @@ namespace RowMate.Tests.Support
             return k == 10 ? R4(k).CopyWith(distanceMeters: 0) : R4(k);
         }
 
+        // It. 5 (spec §0.4): R-3, R-4 con la distancia 1000 + 3k (3 m/s) y split 167.
+        public static RowingData R3(int k)
+        {
+            return R4(k).CopyWith(distanceMeters: 1000 + 3 * k, pace500mSeconds: 167);
+        }
+
+        // It. 5: R-4A (acelera), R-4 hasta L(250); desde L(251), distancia 2000 + 5 (k − 250) (5 m/s) y split 100.
+        public static RowingData R4A(int k)
+        {
+            return k <= 250 ? R4(k) : R4(k).CopyWith(distanceMeters: 2000 + 5 * (k - 250), pace500mSeconds: 100);
+        }
+
+        // It. 5: R-4D (corte), R-4 sin L(101), L(102) ni L(103): esas lecturas no llegan (null; ScriptedRower no manda nada) y
+        // el motor sigue con L(100).
+        public static RowingData? R4D(int k)
+        {
+            return k >= 101 && k <= 103 ? null : R4(k);
+        }
+
+        // It. 5: el remo de prueba por nombre (los guiones del oráculo de series, Tests/Golden/oracle/series_tracker.json).
+        // R-4S es R-4 con el índice de la lectura del tiempo real (ScriptedRower con LifecycleHarness.RealReadingIndex).
+        public static Func<int, RowingData?> ByName(string name)
+        {
+            switch (name)
+            {
+                case "R-4":
+                case "R-4S":
+                    return k => R4(k);
+                case "R-3":
+                    return k => R3(k);
+                case "R-4A":
+                    return k => R4A(k);
+                case "R-4R":
+                    return k => R4R(k);
+                case "R-4Z":
+                    return k => R4Z(k);
+                case "R-4D":
+                    return R4D;
+                case "R-4P":
+                    return k => R4P(k);
+                case "R-4X":
+                    return k => R4X(k);
+                default:
+                    throw new ArgumentException("remo de prueba desconocido: " + name, nameof(name));
+            }
+        }
+
         // R-4P, parado: SPM 0, 0 W, split 0; la distancia, el tiempo y las kcal quietos (los de L(0)).
         public static RowingData R4P(int k)
         {

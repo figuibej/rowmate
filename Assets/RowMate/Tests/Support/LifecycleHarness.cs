@@ -24,6 +24,7 @@ namespace RowMate.Tests.Support
         private double _asleep;
         private int _suspends;
         private int _resumes;
+        private double _signalAsleep = double.NaN;
         private TimeSpan _offset;
 
         // sessionStartUtc: la hora de pared del instante 0 (2026-10-28T13:00:00.000Z en la spec).
@@ -57,6 +58,12 @@ namespace RowMate.Tests.Support
 
         // El monótono crudo (el Stopwatch) del último cuadro.
         public double RawMonotonic => _raw;
+
+        // It. 5 (02-tech-design §2.3, §6.2; QA-G5T-06): el número de la lectura que mandaría un monitor que siguió contando con el
+        // tiempo REAL, también con el equipo dormido: ⌊crudo + hora de pared extra + 10⁻⁶⌋ (el instante −0,5 es el 0). Con
+        // Wake(…, monotonicCounts: false) el sueño va a la hora de pared, así vale en los dos casos del crudo. Es el índice de
+        // R-4S (ScriptedRower con index). No cambia nada de lo que ya hace el arnés.
+        public int RealReadingIndex => (int)Math.Floor(_raw + _wallExtra + 1e-6);
 
         // Monótono del instante k de la spec.
         public static double Instant(double k)
@@ -174,6 +181,12 @@ namespace RowMate.Tests.Support
                 _asleep += seconds;
             }
 
+            if (resumeSignal)
+            {
+                // It. 5 (00-deuda-4b §1): la duración según los avisos (la hora de cada uno), solo para el registro.
+                _signalAsleep = seconds;
+            }
+
             if (resumeSignal && resumeBeforeFirstFrame)
             {
                 _resumes++;
@@ -217,7 +230,7 @@ namespace RowMate.Tests.Support
 
         private FrameClock Clock()
         {
-            return new FrameClock(_raw, Utc(), _offset, _asleep, _suspends, _resumes);
+            return new FrameClock(_raw, Utc(), _offset, _asleep, _suspends, _resumes, _signalAsleep);
         }
 
         private void Tick()

@@ -35,8 +35,8 @@
 | F-WKT-04 | Estado del paso en curso (progreso, restante, "por terminar", "a continuación") | sí | — |
 | F-WKT-05 | Fusión del pulso (pulsómetro por encima de FTMS) | sí | `workout_provider_hr_test` (4) |
 | F-WKT-06 | Telemetría y guardado de la sesión | sí | `session_stats_test` (relacionado) |
-| F-WKT-07 | Parciales de 500 m | sí | `series_tracker_test` (8) |
-| F-WKT-08 | Repeticiones de la serie y comparación | sí | `series_tracker_test` (6), `routine_positions_test` |
+| F-WKT-07 | Parciales de 500 m | sí | `series_tracker_test` (8 de sus 12 casos) |
+| F-WKT-08 | Repeticiones de la serie y comparación | sí | `series_tracker_test` (6 de sus 12 casos), `routine_positions_test` |
 | F-WKT-09 | Cumplimiento de objetivos por paso | sí | `step_target_tracker_test` (6) |
 | F-WKT-10 | Semáforo de objetivos en vivo | sí | — |
 | F-WKT-11 | Formatos de display | sí | `series_panels_test` ("formatos") |
@@ -398,6 +398,7 @@ Ningún test cubre las progresiones ni el fin de paso.
 **Casos borde y errores**
 
 - Durante el primer segundo de un paso nuevo, hasta la primera lectura, el "es paso de trabajo" todavía refleja el paso anterior.
+- **Al iniciar la rutina**, durante el primer segundo el tracker todavía no entró a ningún paso: el panel de parciales dice "Sin parciales en este paso" aunque el primer paso sea de trabajo, y no hay panel de repeticiones aunque la rutina empiece con una serie. Al primer segundo, el chip "Reps" aparece de golpe (`series_tracker.dart:54-56`, `:80`; `series_panels.dart:178`, `:286`). En la app, los paneles muestran el primer paso desde el primer cuadro (DV-48 de la It. 5).
 - Los metros de una lectura descartada se pierden. Por ejemplo, después de un 0 espurio, el salto 0 → 1004 se ignora entero.
 - La distancia del monitor viene en metros enteros, pero el cálculo interno conserva fracciones gracias a la interpolación.
 
@@ -424,7 +425,7 @@ Ningún test cubre las progresiones ni el fin de paso.
 
 **Dependencias:** F-WKT-01, F-WKT-02, F-WKT-03; BLE (distancia); RUT (tipo de paso).
 
-**Mejora EXR:** al cerrar cada vuelta aparece por 2 o 3 s un aviso breve con el tiempo de la vuelta y la diferencia contra la anterior: verde si fue más rápida, ámbar si fue más lenta. En el agua pasa una boya o marca de 500 m justo cuando se cruza, como en una cancha de regata.
+**Mejora EXR:** al cerrar cada vuelta aparece por 2 o 3 s un aviso breve con el tiempo de la vuelta y la diferencia contra la anterior: verde si fue más rápida, ámbar si fue más lenta. En el agua pasa una boya o marca de 500 m justo cuando se cruza, como en una cancha de regata. (It. 5: el aviso quedó en el backlog post-paridad como BKL-26, P-09 de su spec; la boya, para la 6a o la 7. Lo que sí llegó en la 5 es la entrada de la vuelta nueva con su marca ámbar.)
 
 ---
 
@@ -888,19 +889,21 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
 6. **Contenido de parciales:**
    - **En un paso que no es de trabajo:** el texto "Sin parciales en este paso", en blanco 54 % de 15.
    - **En un paso de trabajo:**
-     1. la vuelta en curso, con el tiempo de la vuelta (`M:SS.d`, de 30, peso 800, en `#FF9F1C`, en una sola línea) y al lado sus metros como `"{n} m"` (14 al 55 %);
-     2. debajo, a 4 px, las **últimas 4 vueltas, de la más reciente a la más vieja**, una fila por vuelta: etiqueta `#n` (blanco 60 %, 15, peso 600, en una columna de 52 px) y el tiempo `M:SS.d` (22, peso 800, ámbar).
-   - **Si está en serie**, a 6 px y aunque el paso no sea de trabajo: `"Rep {r}/{R} · {metros de la repetición}"` con metros al estilo español (por ejemplo `Rep 2/3 · 207 m`), de 16, peso 800, en `#4CC9F0`.
+     1. la vuelta en curso, con el tiempo de la vuelta (`M:SS.d`, de 30, peso 800, en `#FF9F1C`, en una sola línea, que se corta con "…" si no entra) y a 6 px sus metros como `"{n} m"` (14 al 55 %);
+     2. debajo, a 4 px (también sin vueltas), las **últimas 4 vueltas, de la más reciente a la más vieja**, una fila por vuelta, con 2 px arriba y 2 abajo: etiqueta `#n` (blanco 60 %, 15, peso 600, en una columna de 52 px, sin límite de líneas) y el tiempo `M:SS.d` (22, peso 800, ámbar, en una línea que se corta con "…").
+   - **Si está en serie**, a 6 px y aunque el paso no sea de trabajo: `"Rep {r}/{R} · {metros de la repetición}"` con metros al estilo español (por ejemplo `Rep 2/3 · 207 m`), de 16, peso 800, en `#4CC9F0`, sin límite de líneas: con números largos se parte en dos.
 7. **Contenido de repeticiones:**
    - Sin repeticiones completas: "Sin repeticiones completas", en blanco 54 % de 15.
-   - Con repeticiones: una fila por cada una (hasta 3, la más reciente primero) con la etiqueta `"Rep {n}"`, el split de trabajo `M:SS` o `—` (22, ámbar) y, a la derecha, los metros totales al estilo español (16, celeste). Por ejemplo: `Rep 1 · 2:13 · 452 m`, en columnas y sin los puntos medios.
-8. **Preferencias:** `immersive.lapsExpanded` e `immersive.repsExpanded`, booleanas. Por defecto (sin clave) los dos paneles arrancan **colapsados**. Si el usuario toca un panel antes de que termine de leerse la preferencia, gana lo que eligió.
+   - Con repeticiones: una fila por cada una (hasta 3, la más reciente primero) con la etiqueta `"Rep {n}"`, el split de trabajo `M:SS` o `—` (22, ámbar, cortado con "…" si no entra) y, a la derecha, los metros totales al estilo español (16, celeste). Por ejemplo: `Rep 1 · 2:13 · 452 m`, en columnas y sin los puntos medios. La etiqueta va en la misma caja de 52 sin límite de líneas: desde `Rep 100` se parte en dos (`series_panels.dart:294-299`, `:315-316`, `:372-385`).
+8. **Preferencias:** `immersive.lapsExpanded` e `immersive.repsExpanded`, booleanas. Por defecto (sin clave) los dos paneles arrancan **colapsados**. Si el usuario toca un panel antes de que termine de leerse la preferencia, gana lo que eligió. La preferencia se lee **después del primer dibujo**: con la clave en verdadero, el panel puede verse cerrado un instante y abrirse de golpe (`series_panels.dart:134-151`).
 9. Todos los textos de los paneles están fijos en español ("500 m", "Reps", "Parciales 500 m", "Series anteriores", "Sin parciales en este paso", "Sin repeticiones completas", "Rep").
 
 **Casos borde y errores**
 
 - Con poco alto disponible, el contenido se desplaza dentro de la columna izquierda (F-WKT-17, punto 3).
 - Al pasar de un paso de trabajo a uno de descanso, la lista de vueltas desaparece y se ve el texto "Sin parciales en este paso".
+- **Una clave de otro tipo** (el archivo editado a mano): `getBool` lanza dentro de la lectura de las dos claves (`shared_preferences` 2.5.4, `lib/src/shared_preferences_legacy.dart:117`; `series_panels.dart:140-151`). Con `immersive.lapsExpanded` de otro tipo, **ninguno** lee su clave y los dos arrancan cerrados; con `immersive.repsExpanded` de otro tipo, parciales toma la suya y se ve en el redibujo siguiente, y repeticiones queda cerrado. En los dos casos queda un error sin atrapar en el registro. En la app, solo el panel de la clave de otro tipo arranca cerrado (AC-WKT-18-11 de la It. 5).
+- Si guardar falla, el panel cambia igual y no hay aviso: `setBool` cambia la copia en memoria antes de escribir (`shared_preferences_legacy.dart:177-187`), así que el resto de la ejecución lo recuerda.
 
 **UI:** colapsado y expandido por panel; vacío ("Sin parciales…" / "Sin repeticiones…") y con datos.
 
@@ -919,7 +922,7 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
 
 **Dependencias:** F-WKT-07, F-WKT-08, F-WKT-11, F-WKT-17.
 
-**Mejora EXR:** la apertura y el cierre son una animación suave de altura y opacidad, sin saltos. Cada vuelta nueva entra arriba con un deslizamiento corto y un realce que se apaga. En una mejora futura, cada fila podría colorear la diferencia contra la anterior (más rápida o más lenta), sin cambiar los datos que se muestran.
+**Mejora EXR:** la apertura y el cierre son una animación suave de altura y opacidad, sin saltos. Cada vuelta nueva entra arriba con un deslizamiento corto y un realce que se apaga. En una mejora futura, cada fila podría colorear la diferencia contra la anterior (más rápida o más lenta), sin cambiar los datos que se muestran (BKL-26).
 
 ---
 
@@ -1197,7 +1200,7 @@ Para cada pregunta, la opción por defecto es hacer lo que hace el legacy hoy, s
 
 | Test | Casos | Funcionalidad |
 |---|---|---|
-| `test/series_tracker_test.dart` | 12 | F-WKT-07, F-WKT-08 |
+| `test/series_tracker_test.dart` | 12 | F-WKT-07 (8), F-WKT-08 (6): dos casos tocan las dos fichas ("el enfriamiento no genera vueltas…" y "una lectura de 0 dentro del paso…") |
 | `test/series_panels_test.dart` | 4 | F-WKT-11, F-WKT-18 |
 | `test/step_pill_test.dart` | 1 | F-WKT-15 |
 | `test/step_target_tracker_test.dart` | 6 | F-WKT-09 |
@@ -1237,3 +1240,16 @@ Pendientes del PO de la [spec de la It. 4b §15](../../iterations/04b-hud-exr/01
 | F-WKT-21, punto 2 | Tampoco se cierra con Escape en escritorio (AC-WKT-21-02) |
 | F-WKT-21, punto 5 | Los íconos de cada fila del resumen, y los totales leídos una sola vez al armar el diálogo (DV-43) |
 | F-WKT-21, casos borde | Un `Terminar` antes de que termine el guardado deja la sesión sin hora de fin ni totales (DV-42) |
+
+## Cambios al cerrar la It. 5
+
+Pendientes del PO de la [spec de la It. 5 §15](../../iterations/05-series-parciales/01-po-spec.md), releídos en el legacy (`3ae0f3a`: `lib/features/workout/series_panels.dart:115-160`, `:286-320`, `:368-392`; `lib/features/workout/series_tracker.dart:54-56`, `:80`; `shared_preferences` 2.5.4, `lib/src/shared_preferences_legacy.dart:117`, `:177-187`, del caché de paquetes), 2026-10-30. Describen el legacy; lo que la app hace distinto lleva su DV de la It. 5.
+
+| Dónde | Qué cambió |
+|---|---|
+| Mapa y "Cobertura de tests legacy" | `series_tracker_test` tiene 12 casos: 8 de F-WKT-07 y 6 de F-WKT-08, porque dos tocan las dos fichas (la It. 5 los portó como LT-47 a LT-58) |
+| F-WKT-07, casos borde | Al iniciar la rutina, el primer segundo dice "Sin parciales en este paso" y no muestra el panel de repeticiones (DV-48) |
+| F-WKT-07 y F-WKT-18, mejora EXR | El aviso de cada vuelta con la diferencia y las filas coloreadas pasan al backlog como BKL-26 |
+| F-WKT-18, puntos 6 y 7 | La vuelta en curso y los valores de las filas se cortan con "…"; `#n` y `Rep n` van en una caja de 52 sin límite de líneas (desde `Rep 100` se parte en dos), y la línea `Rep r/R · N m` tampoco tiene límite (DV-49). El aire de 4 debajo de la vuelta en curso está también sin vueltas, y cada fila lleva 2 arriba y 2 abajo (DV-51) |
+| F-WKT-18, punto 8 | La preferencia se lee después del primer dibujo: con la clave en verdadero, el panel puede verse cerrado un instante (§11.1.1 de la spec de la 5) |
+| F-WKT-18, casos borde | Una clave de otro tipo y un guardado que falla (AC-WKT-18-11) |

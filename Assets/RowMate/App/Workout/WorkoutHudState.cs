@@ -77,6 +77,23 @@ namespace RowMate.App.Workout
     // en MM:SS o H:MM:SS, la distancia "{n} m" sin miles y las kcal; con sus valores para el conteo (CountUp).
     public sealed record HudCompletion(string Time, int TimeValue, string Distance, int DistanceValue, string Calories, int CaloriesValue);
 
+    // It. 5 (02-tech-design §2.5): una fila de vuelta. Number para la animación (la vista sabe cuál es nueva); Label =
+    // hudLapNumber ("#3"); Time = WorkoutFormats.LapTime ("2:05.0"), con su valor para el rodillo.
+    public sealed record HudLapRow(int Number, string Label, string Time, double TimeValue);
+
+    // It. 5: una fila de repetición. Label = hudRepLabel ("Rep 2"); Split = WorkoutFormats.RepSplit ("2:05" o "—"); Meters =
+    // WorkoutFormats.PanelMeters ("1.112 m"), con sus valores.
+    public sealed record HudRepRow(int Rep, string Label, string Split, double SplitValue, string Meters, int MetersValue);
+
+    // It. 5: lo que dibujan los dos paneles, con los textos hechos (una vez por segundo, o al cambiar el idioma). Los rótulos
+    // fijos (hudLapsChip, hudLapsTitle, hudLapsEmpty, hudRepsChip, hudRepsTitle, hudRepsEmpty) los pone la vista desde el
+    // Localizer. StepIndex: el paso que muestran (el del tracker, o 0 con DV-48). Laps: las 4 últimas, la más reciente primero;
+    // LapCount: todas las del paso. RepProgress: hudRepProgress ("Rep 2/3 · 200 m") solo en serie. Reps: hasta 3, la más
+    // reciente primero.
+    public sealed record HudSeries(long Session, int StepIndex, bool IsWork, string CurrentTime, double CurrentTimeValue,
+                                   string CurrentMeters, int CurrentMetersValue, IReadOnlyList<HudLapRow> Laps, int LapCount,
+                                   bool InSeries, int Rep, string? RepProgress, int RepMeters, IReadOnlyList<HudRepRow> Reps);
+
     // El HUD con todo ya formateado (F-WKT-10, -13, -14, -16, -17, -20). Instant: copia de WorkoutSnapshot.Instant, true en el
     // primer estado después del segundo plano (la vista lo aplica sin animar: AC-WKT-02-08). Los rótulos fijos (hudSpm,
     // hudFreeTitle…) los pone la vista desde el Localizer.
@@ -102,5 +119,10 @@ namespace RowMate.App.Workout
         public HudCompletion? Completion { get; init; }
 
         public bool CloseReturned { get; init; }
+
+        // It. 5 (§2.5): los paneles de parciales y repeticiones. null en el libre y en reposo (AC-WKT-18-01). Entre dos segundos
+        // es la misma instancia (la caché del store por revisión del tracker): los paneles cambian solo en el segundo
+        // (AC-WKT-18-08).
+        public HudSeries? Series { get; init; }
     }
 }

@@ -16,6 +16,8 @@ namespace RowMate.Snapshots
     //   - un rodillo de TabularNumber antes de su mitad (RollProgress < 0,5);
     //   - un resorte de la 4a a más de 0,15 dp de su destino (ISettlingMotion.RemainingDp).
     // Lo continuo (el halo, el pulso de la fila, el punto en vivo, el corazón) no bloquea y va en la fase fija de su instante.
+    // It. 5 (05-series-parciales/02-tech-design §5.1): las cifras de los paneles (TabularCells) como un TabularNumber, y los IMotion de
+    // la 5 por fase (SeriesPanelMotion: el resorte del alto a 0,15 dp, lo demás siempre; SeriesColumnMotion, como toda HudMotion).
     // InFlight deja en el manifest lo que corría, con su progreso.
     public static class SnapshotTakeRule
     {
@@ -50,6 +52,40 @@ namespace RowMate.Snapshots
                     if (progress < RollHalf)
                     {
                         blockers.Add(name + ": rodillo antes de su mitad (" + progress.ToString("0.000", CultureInfo.InvariantCulture) + ")");
+                    }
+
+                    continue;
+                }
+
+                if (motion is TabularCells cells)
+                {
+                    // It. 5: las cifras de los paneles de series (dibujadas adentro del panel): como un TabularNumber.
+                    var progress = cells.RollProgress;
+                    inFlight.Add(name + " (rodillo " + progress.ToString("0.000", CultureInfo.InvariantCulture) + ")");
+                    if (progress < RollHalf)
+                    {
+                        blockers.Add(name + ": rodillo antes de su mitad (" + progress.ToString("0.000", CultureInfo.InvariantCulture) + ")");
+                    }
+
+                    continue;
+                }
+
+                if (motion is SeriesPanelMotion panel)
+                {
+                    // It. 5 (05-series-parciales/02-tech-design §5.1; D1-02): el resorte del alto bloquea a más de 0,15 dp; cualquier fase
+                    // de duración fija (el alto por un dato, un fundido, la flecha, el empuje, una fila que entra o sale, una pieza que
+                    // cambia, la línea Rep, la marca hasta los 1400 ms o la capa de hover) bloquea siempre.
+                    var remaining = panel.HeightRemainingDp;
+                    var timed = panel.IsTimedPhaseRunning;
+                    inFlight.Add(name + " (" + panel.Kind + ": resorte a " + remaining.ToString("0.000", CultureInfo.InvariantCulture) + " dp"
+                                 + (timed ? ", fase de duración fija" : "") + ")");
+                    if (timed)
+                    {
+                        blockers.Add(name + ": fase finita de la 5 (" + panel.Kind + ")");
+                    }
+                    else if (remaining > SpringRemainingDp)
+                    {
+                        blockers.Add(name + ": resorte del alto a " + remaining.ToString("0.000", CultureInfo.InvariantCulture) + " dp de su destino");
                     }
 
                     continue;

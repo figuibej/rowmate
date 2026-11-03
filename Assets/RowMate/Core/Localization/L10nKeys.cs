@@ -247,5 +247,18 @@ namespace RowMate.Core.Localization
         public const string WorkoutCompletedTime = "workoutCompletedTime";
         public const string WorkoutCompletedDistance = "workoutCompletedDistance";
         public const string WorkoutCompletedCalories = "workoutCompletedCalories";
+
+        // ── Nuevas de la It. 5 (Q-01; 05-series-parciales/01-po-spec §11.2): 214 → 223 ──
+        // Los paneles de parciales y repeticiones (series_panels.dart:168-169, :183-184, :287, :315, :332, :338, con el español del
+        // legacy). Los formatos (M:SS.d, M:SS, —, 1.112 m) no son claves; los metros de la vuelta en curso reusan hudUnitMeters.
+        public const string HudLapsChip = "hudLapsChip";
+        public const string HudLapsTitle = "hudLapsTitle";
+        public const string HudLapsEmpty = "hudLapsEmpty";
+        public const string HudLapNumber = "hudLapNumber";
+        public const string HudRepProgress = "hudRepProgress";
+        public const string HudRepsChip = "hudRepsChip";
+        public const string HudRepsTitle = "hudRepsTitle";
+        public const string HudRepsEmpty = "hudRepsEmpty";
+        public const string HudRepLabel = "hudRepLabel";
     }
 }

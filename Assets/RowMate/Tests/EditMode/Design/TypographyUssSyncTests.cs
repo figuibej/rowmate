@@ -41,6 +41,18 @@ namespace RowMate.Tests.EditMode.Design
             }
         }
 
+        // It. 5 (DD5-08): las clases de los números de los paneles de series, con sus tamaños nuevos.
+        [Test, Category("AC-BASE-04"), Category("AC-WKT-18-04")]
+        public void TheSeriesNumberClassesHaveTheirSizes()
+        {
+            var css = File.ReadAllText(RepoPaths.Combine("Assets", "RowMate", "Presentation", "Styles", "Typography.uss")).Replace("\r\n", "\n");
+            Assert.That(css, Does.Contain(".rm-type-num-lap {\n    font-size: 28px;"));
+            Assert.That(css, Does.Contain(".rm-type-num-row {\n    font-size: 20px;"));
+            Assert.That(css, Does.Contain(".rm-type-num-xs {\n    font-size: 13px;"));
+            var tokens = File.ReadAllText(RepoPaths.Combine("Assets", "RowMate", "Presentation", "Styles", "Tokens.uss"));
+            Assert.That(tokens, Does.Contain("--rm-num-xs-size: 13px;"));
+        }
+
         [Test, Category("AC-APP-05-05")]
         public void LabelTrackingIsEightPx()
         {

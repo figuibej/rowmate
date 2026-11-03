@@ -68,6 +68,21 @@ namespace RowMate.Core.Design
         // de la última letra suman ≈ 3).
         public const double FreeTitleClockGap = 2;
 
+        // It. 5 (QA-V4b-R2-01, AC-WKT-16-07; 05-series-parciales/00-deuda-diseno §1.3, DD5-01): el MODO COMPACTO de la barra libre.
+        // Con el aire de 2 el título achicado quedaba a ≈ 4 dp del ícono del reloj (menos que el espacio entre sus palabras) y el
+        // ícono se leía con el título. Cuando el título no entra a su tamaño (hoy, TV y P360 en español), el chip pasa a 6 de
+        // relleno, el ícono del reloj a 3 de sus cifras (solo en la barra libre) y el reloj a 8 del chip; los 8 que se liberan van
+        // al aire entre el título y el reloj, que pasa de 2 a 10. Lo demás ocupa lo mismo (210,8 base), así que el título queda en la
+        // misma escala (≈ 0,805, entero). En inglés y en horizontal no cambia nada.
+        public const double FreeCompactTitleClockGap = 10, FreeCompactClockIconGap = 3, FreeCompactChipGap = 8, FreeCompactChipPadH = 6;
+
+        // Compacto si y solo si, con las medidas NORMALES (othersNormalWidth: el ícono, su aire, el aire de 2, el reloj con su
+        // ícono a 5, el aire de 10 y el chip con relleno 8), el título no entra a 1. Se decide con la ventana y el idioma, en el acto.
+        public static bool FreeCompact(double available, double titleWidth, double othersNormalWidth)
+        {
+            return FreeTitleScale(available, titleWidth, othersNormalWidth) < 1;
+        }
+
         // Se decide al empezar el paso y cuando cambian la ventana, el idioma o la letra (nunca dentro del paso).
         // available: el ancho útil de la fila (la barra − el borde − 12 de cada lado: TV 339,9). typeWidth: el tipo del paso.
         // upNextWidth: Próximo con su tipo y el relleno normal (0 si el paso no lo va a tener: sin paso siguiente o sin restante

@@ -39,11 +39,25 @@ namespace RowMate.Presentation.Workout
     //   rectángulo del diálogo (R10). Al empezar su salida retira las dos cosas en el cuadro 0.
     // - Tab (DN4a-10): Terminar → Pausa / Reanudar → la llave (con el simulador) → Terminar, y Mayús+Tab al revés; el primer Tab
     //   sin foco no entra al anillo hasta que los controles responden (840).
+    // - It. 5 (05-series-parciales/02-tech-design §3.3, §3.5; AC-WKT-18-12, AC-WKT-13-06, -07): el anillo pasa a Terminar → Pausa /
+    //   Reanudar → parciales → repeticiones (si se ve) → la llave → Terminar. La cascada y la salida de los paneles de series van por
+    //   SeriesColumn (el único que escribe su translate y su opacidad, DT5-14); responden desde su tramo (520), nunca durante la salida
+    //   ni con la rutina terminada; el de repeticiones que se va con el foco lo pierde antes (Blur).
+    // - It. 5 (QA-V4b-06, AC-WKT-13-15; 05-series-parciales/00-deuda-4b §2): el HUD (HudView y HudZones) se arma en el cuadro en que
+    //   el fondo empieza a aparecer, el primero después de los 220, con la pantalla entera negra y quieta; no en el del toque, en
+    //   el que Workout empieza a fundirse. En ese cuadro recibe las opacidades que ya tiene la cascada (todo en 0) y el estado del
+    //   store. Con reducir movimiento (el fondo está en 1 desde el cuadro 0) o sin animar, se arma en el acto. Si la sesión vuelve
+    //   a reposo antes, no se arma: la salida funde la página negra. La página, el store, la cascada, las barras del sistema, la
+    //   llave, la superficie y "Atrás" siguen desde el toque (AC-WKT-13-01, -07). HasView dice si ya está.
     public sealed class ImmersiveWorkoutPage : IPage
     {
         private readonly UiContext _ui;
         private readonly ShellLayout _layout;
-        private readonly HudZones _zones;
+        private HudView? _view;
+        private HudZones? _zones;
+        private bool _controlsResponding;
+        // La hora del toque en el reloj del motion: el HUD que se arma en el negro arranca lo suyo desde ahí (QA-V4b-06).
+        private readonly double _openedAt;
         private readonly ImmersiveCascadeMotion _cascade;
         private readonly ImmersiveExitMotion _exit;
         private FinishWorkoutDialog? _finishDialog;
@@ -64,22 +78,18 @@ namespace RowMate.Presentation.Workout
         {
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             _layout = layout ?? throw new ArgumentNullException(nameof(layout));
+            _openedAt = ui.Motion.Now;
             Hud = ui.App.CreateHud();
             Session = Hud.State.Value.Session;
 
             Root = new VisualElement { name = "immersive" };
             Root.AddToClassList("rm-immersive");
-            View = new HudView(ui, Hud.State.Value.IsRoutine, Hud.WallClock, OnFinishTapped, () => Hud.Pause(), () => Hud.Resume());
-            Root.Add(View);
-            _zones = new HudZones(View, () => _layout.ImmersiveInsets, ui.ReserveWrench);
-            _zones.Changed += OnZonesChanged;
-            Root.RegisterCallback<GeometryChangedEvent>(_ => _zones.Update());
-            View.NaturalChanged += OnNaturalChanged;
+            Root.RegisterCallback<GeometryChangedEvent>(_ => _zones?.Update());
             Root.RegisterCallback<NavigationMoveEvent>(OnNavigationMove, TrickleDown.TrickleDown);
             // Sin foco (abre así), el primer Tab llega a la raíz del panel: también entra al anillo (Terminar primero).
             Root.RegisterCallback<AttachToPanelEvent>(_ => HookPanelRoot());
 
-            _cascade = new ImmersiveCascadeMotion(ui.Motion, ApplyPiece, o => SetOpacity(View.Backdrop, o), OnPieceInteractive, OnCascadeDone);
+            _cascade = new ImmersiveCascadeMotion(ui.Motion, ApplyPiece, OnBackdrop, OnPieceInteractive, OnCascadeDone);
             _exit = new ImmersiveExitMotion(ui.Motion, ApplyExit, OnRevealStarted, () => { });
 
             // F-APP-15 (AC-APP-15-04): las barras del sistema, ocultas desde el cuadro del toque.
@@ -94,8 +104,8 @@ namespace RowMate.Presentation.Workout
             DeclareInitialSurface();
             _layout.Changed += OnShellLayoutChanged;
 
-            // La entrada (§3.2): los controles responden desde su tramo (con reducir movimiento, desde el cuadro 0).
-            View.Controls.SetInteractive(false);
+            // La entrada (§3.2): los controles responden desde su tramo (con reducir movimiento, desde el cuadro 0). El HUD se arma
+            // cuando el fondo empieza a aparecer (OnBackdrop): con reducir movimiento, ya en este Play.
             _cascade.Play();
 
             // Abre sin foco (DN4a-10): el toque que la abrió no deja el foco en Workout.
@@ -113,11 +123,14 @@ namespace RowMate.Presentation.Workout
         // La sesión que muestra este inmersivo (la generación del motor al abrir).
         public long Session { get; private set; }
 
-        public HudView View { get; }
+        // El HUD, desde el cuadro en que el fondo empieza a aparecer (QA-V4b-06): antes no existe (HasView).
+        public HudView View => _view ?? throw new InvalidOperationException("el HUD todavía no se armó: se arma cuando el fondo empieza a aparecer (QA-V4b-06)");
 
-        public HudZones Zones => _zones;
+        public bool HasView => _view != null;
 
-        public HudLayout? Layout => _zones.Layout;
+        public HudZones Zones => _zones ?? throw new InvalidOperationException("el HUD todavía no se armó (QA-V4b-06)");
+
+        public HudLayout? Layout => _zones?.Layout;
 
         public ImmersiveCascadeMotion Cascade => _cascade;
 
@@ -136,7 +149,7 @@ namespace RowMate.Presentation.Workout
 
         public void OnPushed()
         {
-            _zones.Update();
+            _zones?.Update();
         }
 
         public void OnPopped()
@@ -153,10 +166,14 @@ namespace RowMate.Presentation.Workout
             CancelDialogs(true);
             ReleaseShell();
             _layout.Changed -= OnShellLayoutChanged;
-            _zones.Changed -= OnZonesChanged;
+            if (_zones != null)
+            {
+                _zones.Changed -= OnZonesChanged;
+            }
+
             UnhookWrench();
             UnhookPanelRoot();
-            View.Dispose();
+            _view?.Dispose();
             Hud.Dispose();
             if (!_revealed)
             {
@@ -212,13 +229,18 @@ namespace RowMate.Presentation.Workout
             if (state.Phase == WorkoutPhase.Idle)
             {
                 // La última foto (O-01): el HUD no aplica el reposo.
-                View.Freeze();
+                _view?.Freeze();
             }
             else if (!_exiting)
             {
-                var engineStep = _ui.App.Workout.State.Value.Step;
-                View.Apply(state, engineStep?.StepIndex);
-                _zones.Update();
+                // Sin HUD todavía (QA-V4b-06), el estado lo toma BuildView del store cuando se arma.
+                if (_view != null)
+                {
+                    var engineStep = _ui.App.Workout.State.Value.Step;
+                    _view.Apply(state, engineStep?.StepIndex);
+                    _zones?.Update();
+                }
+
                 if (state.Session != 0)
                 {
                     Session = state.Session;
@@ -233,6 +255,7 @@ namespace RowMate.Presentation.Workout
 
             if (state.Phase == WorkoutPhase.Finished)
             {
+                _view?.Series?.SetInteractive(false);
                 MaybeScheduleCompletion(state);
                 return;
             }
@@ -278,6 +301,9 @@ namespace RowMate.Presentation.Workout
             });
         }
 
+        // Para las pruebas (O-5): cómo se arma el diálogo de completado (null = el de verdad).
+        internal Func<HudCompletion, CompletionDialog>? CompletionFactoryForTest { get; set; }
+
         private void OpenCompletion(WorkoutHudState state, bool instantly)
         {
             if (_exiting || _popped || state.Completion == null || _completion != null)
@@ -286,11 +312,31 @@ namespace RowMate.Presentation.Workout
             }
 
             CancelFinishDialog();
-            var dialog = new CompletionDialog(_ui, state.Completion, () => Hud.AcknowledgeCompletionAsync());
-            _completion = dialog;
-            dialog.Box.RegisterCallback<GeometryChangedEvent>(_ => RepublishSurface());
-            _ui.Dialogs.Open(dialog, instantly);
-            RepublishSurface();
+            try
+            {
+                var factory = CompletionFactoryForTest;
+                var dialog = factory != null ? factory(state.Completion) : new CompletionDialog(_ui, state.Completion, () => Hud.AcknowledgeCompletionAsync());
+                _completion = dialog;
+                dialog.Box.RegisterCallback<GeometryChangedEvent>(_ => RepublishSurface());
+                _ui.Dialogs.Open(dialog, instantly);
+                RepublishSurface();
+            }
+            catch (Exception error)
+            {
+                // It. 5 (O-5 de la lente de motion de la 4b; 05-series-parciales/00-deuda-4b §4): solo el Terminar del diálogo saca
+                // al motor de Finished (como el legacy, immersive_workout_screen.dart:261-289). Si el diálogo no se pudo armar, la
+                // sesión no puede quedar terminada para siempre (la app, ocupada hasta reiniciarse): se anota y se hace lo que haría
+                // su Terminar. El guardado ya empezó en el segundo del fin; la página sale como siempre, sin diálogo.
+                _ui.Logger.Log(LogLevel.Error, WorkoutEngine.Tag, "no se pudo abrir el diálogo de completado: vuelve a reposo sin él (O-5)", error);
+                var broken = _completion;
+                _completion = null;
+                if (broken != null && broken.IsOpen)
+                {
+                    broken.Cancel();
+                }
+
+                Hud.AcknowledgeCompletionAsync().Forget(_ui.Logger, WorkoutEngine.Tag);
+            }
         }
 
         // Para el arnés y las pruebas (QA-G4bT-11 (d)): el diálogo con los totales de un caso, sin correr la rutina.
@@ -318,11 +364,12 @@ namespace RowMate.Presentation.Workout
             }
 
             _exiting = true;
-            View.Freeze();
+            _view?.Freeze();
             CancelCompletionTimer();
             CancelDialogs(false);
             ReleaseShell();
-            View.Controls.SetInteractive(false);
+            _view?.Series?.SetInteractive(false);
+            _view?.Controls.SetInteractive(false);
             // La salida arranca desde las opacidades que tenga la entrada (si se cortó a mitad: AC-WKT-13-07).
             var from = new ExitStart(_cascade.IsRunning ? _cascade.BackdropOpacity : 1, 1);
             for (var i = 0; i < Pieces.Length; i++)
@@ -358,27 +405,120 @@ namespace RowMate.Presentation.Workout
 
         private readonly double[] _exitFrom = { 1, 1, 1, 1, 1, 1 };
 
+        // It. 5: los paneles de series (la cascada y la salida van por SeriesColumn, DT5-14).
+        private static readonly HudPiece[] SeriesPieces = { HudPiece.SeriesLaps, HudPiece.SeriesReps };
+
+        private bool _seriesResponding;
+
+        // Los paneles responden: desde su tramo de la cascada, no durante la salida ni con la rutina terminada (detrás del diálogo de
+        // completado; AC-WKT-18-20). Con un diálogo abierto el panel mismo no responde (el velo ya captura el puntero).
+        private bool SeriesInteractive => _seriesResponding && !_exiting && !_popped && Hud.State.Value.Phase != WorkoutPhase.Finished;
+
         // ── La entrada y la salida (§3.2, §3.3) ──
 
         private void ApplyPiece(HudPiece piece, PieceVisual visual)
         {
-            var element = View.PieceOf(piece);
+            if (piece == HudPiece.SeriesLaps || piece == HudPiece.SeriesReps)
+            {
+                // It. 5 (DT5-14): los paneles de series los compone SeriesColumn (el único que escribe sus estilos), con su escala sp.
+                if (!_exiting)
+                {
+                    _view?.Series?.SetPiece(piece, visual.Opacity, visual.ShiftDp);
+                }
+
+                return;
+            }
+
+            var element = _view?.PieceOf(piece);
             if (element == null || _exiting)
             {
                 return;
             }
 
             SetOpacity(element, visual.Opacity);
-            var s = _zones.Layout?.Scale ?? 1;
+            var s = _zones?.Layout?.Scale ?? 1;
             var shift = visual.ShiftDp * s;
             element.style.translate = Math.Abs(shift) < 1e-4 ? (StyleTranslate)StyleKeyword.Null : new Translate(0, (float)shift);
         }
 
+        // El fondo de la cascada (QA-V4b-06): la primera vez que deja el 0 (el primer cuadro después de los 220, con la pantalla
+        // entera negra y quieta; con reducir movimiento o sin animar, en el Play del toque) se arma el HUD.
+        private void OnBackdrop(double opacity)
+        {
+            if (_view == null && opacity > 0 && !_exiting && !_popped)
+            {
+                BuildView();
+            }
+
+            if (_view != null)
+            {
+                SetOpacity(_view.Backdrop, opacity);
+            }
+        }
+
+        // El HUD con lo que ya pasó: el estado del store (sin animar: es su primer estado), las opacidades y subidas de la cascada en
+        // este instante y si los controles ya responden. Lo de la llave, el obstáculo y las barras ya estaba desde el toque.
+        private void BuildView()
+        {
+            // Lo continuo que arranca con el primer estado (el punto en vivo, el pulso de Próximo, el corazón) toma la hora del
+            // toque como comienzo, como cuando el HUD se armaba ahí: sus fases son las de la 4b (CAP-13: 0,444 a los 42,2 s).
+            using (_ui.Motion.StartingAt(_openedAt))
+            {
+                BuildViewNow();
+            }
+        }
+
+        private void BuildViewNow()
+        {
+            var state = Hud.State.Value;
+            var view = new HudView(_ui, state.IsRoutine, Hud.WallClock, OnFinishTapped, () => Hud.Pause(), () => Hud.Resume());
+            _view = view;
+            Root.Add(view);
+            // El fondo con su textura desde este cuadro, el primero en que se ve: el horizonte depende solo de la ventana (la
+            // disposición inicial de DeclareInitialSurface); HudZones lo vuelve a poner igual cuando el HUD tenga layout.
+            if (_lastLayout != null)
+            {
+                view.Backdrop.SetHorizon(_lastLayout.Horizon);
+            }
+
+            var zones = new HudZones(view, () => _layout.ImmersiveInsets, _ui.ReserveWrench);
+            _zones = zones;
+            zones.Changed += OnZonesChanged;
+            view.NaturalChanged += OnNaturalChanged;
+            view.Controls.SetInteractive(_controlsResponding && !_exiting);
+            for (var i = 0; i < Pieces.Length; i++)
+            {
+                ApplyPiece(Pieces[i], new PieceVisual(_cascade.PieceOpacity(Pieces[i]), _cascade.PieceShiftDp(Pieces[i])));
+            }
+
+            foreach (var piece in SeriesPieces)
+            {
+                ApplyPiece(piece, new PieceVisual(_cascade.PieceOpacity(piece), _cascade.PieceShiftDp(piece)));
+            }
+
+            view.Series?.SetInteractive(SeriesInteractive);
+
+            if (state.Phase != WorkoutPhase.Idle)
+            {
+                view.Apply(state, _ui.App.Workout.State.Value.Step?.StepIndex);
+            }
+
+            zones.Update();
+        }
+
         private void OnPieceInteractive(HudPiece piece)
         {
+            if (piece == HudPiece.SeriesLaps && !_exiting)
+            {
+                // It. 5 (AC-WKT-13-07; DT5-12): los paneles responden desde su tramo de la cascada (520), como los controles desde el suyo.
+                _seriesResponding = true;
+                _view?.Series?.SetInteractive(SeriesInteractive);
+            }
+
             if (piece == HudPiece.Controls && !_exiting)
             {
-                View.Controls.SetInteractive(true);
+                _controlsResponding = true;
+                _view?.Controls.SetInteractive(true);
             }
         }
 
@@ -387,7 +527,16 @@ namespace RowMate.Presentation.Workout
         {
             if (!_exiting)
             {
-                View.Controls.SetInteractive(true);
+                _controlsResponding = true;
+                if (_view == null && !_popped)
+                {
+                    // Una entrada que terminó sin que el fondo se moviera (no debería pasar): el HUD igual.
+                    BuildView();
+                }
+
+                _seriesResponding = true;
+                _view?.Series?.SetInteractive(SeriesInteractive);
+                _view?.Controls.SetInteractive(true);
             }
 
             HoldWrench(false);
@@ -395,23 +544,25 @@ namespace RowMate.Presentation.Workout
 
         private void ApplyExit(ExitVisual visual)
         {
-            if (_popped)
+            var view = _view;
+            if (_popped || view == null)
             {
                 return;
             }
 
             for (var i = 0; i < Pieces.Length; i++)
             {
-                var element = View.PieceOf(Pieces[i]);
+                var element = view.PieceOf(Pieces[i]);
                 if (element != null)
                 {
                     SetOpacity(element, _exitFrom[i] * visual.Hud);
                 }
             }
 
-            SetOpacity(View.Callouts.Count, visual.Hud);
-            SetOpacity(View.Callouts.Paused, visual.Hud);
-            SetOpacity(View.Backdrop, visual.Backdrop);
+            view.Series?.SetExit(visual.Hud);
+            SetOpacity(view.Callouts.Count, visual.Hud);
+            SetOpacity(view.Callouts.Paused, visual.Hud);
+            SetOpacity(view.Backdrop, visual.Backdrop);
         }
 
         private void OnRevealStarted()
@@ -509,7 +660,7 @@ namespace RowMate.Presentation.Workout
 
         private void RepublishSurface()
         {
-            var layout = _zones.Layout ?? _lastLayout;
+            var layout = _zones?.Layout ?? _lastLayout;
             if (layout != null && !_exiting && !_popped)
             {
                 Publish(layout);
@@ -527,8 +678,9 @@ namespace RowMate.Presentation.Workout
             if (layout.Wrench.HasValue)
             {
                 var dialog = DialogRect();
+                // It. 5: con el diálogo, también lo que se ve de la columna de los paneles de series (AC-BLE-16-02).
                 _layout.SetSurface(this, dialog.HasValue
-                    ? OverlaySurface.Workout(layout.Wrench.Value, layout.PanelCeiling, layout.LeftLaneObstacles, dialog.Value)
+                    ? OverlaySurface.Workout(layout.Wrench.Value, layout.PanelCeiling, layout.LeftLaneObstacles, dialog.Value, _view?.Series?.VisibleBounds())
                     : OverlaySurface.Workout(layout.Wrench.Value, layout.PanelCeiling));
             }
 
@@ -556,7 +708,7 @@ namespace RowMate.Presentation.Workout
 
         private void OnShellLayoutChanged()
         {
-            if (!_exiting && !_popped)
+            if (!_exiting && !_popped && _zones != null)
             {
                 _zones.Invalidate();
                 _zones.Update();
@@ -568,9 +720,12 @@ namespace RowMate.Presentation.Workout
             // Un ancho natural cambió (un número más largo, otro idioma): HudZones decide si hay que rehacer la disposición.
             if (!_exiting && !_popped)
             {
-                _zones.Update();
+                _zones?.Update();
             }
         }
+
+        // Los controles del HUD responden (sin HUD todavía, no: QA-V4b-06).
+        private bool ControlsInteractive => _view != null && _view.Controls.IsInteractive;
 
         // ── El anillo de Tab ──
 
@@ -587,7 +742,7 @@ namespace RowMate.Presentation.Workout
                 return;
             }
 
-            if (View.Controls.IsInteractive)
+            if (ControlsInteractive)
             {
                 MoveFocus(evt.target as VisualElement, evt.direction == NavigationMoveEvent.Direction.Next);
             }
@@ -616,14 +771,43 @@ namespace RowMate.Presentation.Workout
 
         private void MoveFocus(VisualElement? from, bool forward)
         {
-            var controls = View.Controls;
+            if (_view == null)
+            {
+                return;
+            }
+
+            var controls = _view.Controls;
             var pause = controls.ShowsResume ? (VisualElement)controls.Resume : controls.Pause;
             var wrench = _layout.Wrench;
-            var ring = wrench != null && wrench.resolvedStyle.display != DisplayStyle.None
-                ? new VisualElement[] { controls.Finish, pause, wrench }
-                : new VisualElement[] { controls.Finish, pause };
+            // It. 5 (AC-WKT-18-12; P-06): Terminar → Pausa / Reanudar → parciales → repeticiones (si se ve) → la llave → Terminar.
+            var ring = _ring;
+            var count = 0;
+            ring[count++] = controls.Finish;
+            ring[count++] = pause;
+            var series = _view.Series;
+            if (series != null)
+            {
+                ring[count++] = series.Laps;
+                if (series.RepsShown)
+                {
+                    ring[count++] = series.Reps;
+                }
+            }
+
+            if (wrench != null && wrench.resolvedStyle.display != DisplayStyle.None)
+            {
+                ring[count++] = wrench;
+            }
+
+            MoveFocusIn(ring, count, from, forward);
+        }
+
+        private readonly VisualElement[] _ring = new VisualElement[5];
+
+        private static void MoveFocusIn(VisualElement[] ring, int length, VisualElement? from, bool forward)
+        {
             var index = -1;
-            for (var i = 0; i < ring.Length; i++)
+            for (var i = 0; i < length; i++)
             {
                 if (from != null && (ReferenceEquals(ring[i], from) || ring[i].Contains(from)))
                 {
@@ -632,8 +816,8 @@ namespace RowMate.Presentation.Workout
                 }
             }
 
-            var next = index < 0 ? (forward ? 0 : ring.Length - 1) : (index + (forward ? 1 : ring.Length - 1)) % ring.Length;
-            for (var tries = 0; tries < ring.Length; tries++)
+            var next = index < 0 ? (forward ? 0 : length - 1) : (index + (forward ? 1 : length - 1)) % length;
+            for (var tries = 0; tries < length; tries++)
             {
                 var candidate = ring[next];
                 if (candidate.canGrabFocus && candidate.enabledInHierarchy)
@@ -642,7 +826,7 @@ namespace RowMate.Presentation.Workout
                     return;
                 }
 
-                next = (next + (forward ? 1 : ring.Length - 1)) % ring.Length;
+                next = (next + (forward ? 1 : length - 1)) % length;
             }
         }
 
@@ -667,7 +851,7 @@ namespace RowMate.Presentation.Workout
                 return;
             }
 
-            if (View.Controls.IsInteractive)
+            if (ControlsInteractive)
             {
                 MoveFocus(null, evt.direction == NavigationMoveEvent.Direction.Next);
             }

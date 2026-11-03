@@ -146,7 +146,10 @@ namespace RowMate.Platform.Time
         {
             var monotonic = _monotonic();
             var utc = _utc();
-            return new FrameClock(monotonic, utc, Offset(monotonic, utc), _sleep.AsleepSeconds, _sleep.SuspendSignals, _sleep.ResumeSignals);
+            // Los contadores antes que la duración de los avisos: el hilo del sistema escribe la hora y después sube el contador.
+            var suspends = _sleep.SuspendSignals;
+            var resumes = _sleep.ResumeSignals;
+            return new FrameClock(monotonic, utc, Offset(monotonic, utc), _sleep.AsleepSeconds, suspends, resumes, _sleep.SignalAsleepSeconds);
         }
 
         private TimeSpan Offset(double monotonic, DateTimeOffset utc)

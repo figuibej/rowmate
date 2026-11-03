@@ -506,6 +506,282 @@ namespace RowMate.Tests.EditMode.Workout
             }
         }
 
+        // ── It. 5: los paneles de series (02-tech-design §2.5) ──
+
+        [Test, Category("AC-WKT-18-22"), Category("AC-WKT-18-04"), Category("AC-WKT-18-06"), Category("AC-WKT-18-07"), Category("AC-WKT-11-11")]
+        public void SeriesTextsInSpanishAndEnglish()
+        {
+            // Series 600 a los 250 s: 0:50.0 200 m, Rep 2/3 · 200 m y Rep 1 2:05 680 m; a los 325, #1 2:05.0. Los números con los
+            // mismos formatos en los dos idiomas (Q-06): Pirámide 500 a los 880 s, 1.112 m también en inglés (P-08).
+            foreach (var l10n in LocalizationFixture.Both)
+            {
+                using (var h = new WorkoutHarness())
+                using (var hud = Hud(h, l10n))
+                {
+                    h.Routine(RoutineSeeds.SeriesSeiscientos());
+                    h.At(250.25);
+                    var s = hud.State.Value.Series!;
+                    Assert.That(s.IsWork, Is.True, l10n.LanguageCode);
+                    Assert.That(s.CurrentTime, Is.EqualTo("0:50.0"));
+                    Assert.That(s.CurrentMeters, Is.EqualTo("200 m"));
+                    Assert.That(s.RepProgress, Is.EqualTo("Rep 2/3 · 200 m"));
+                    Assert.That(s.Reps.Count, Is.EqualTo(1));
+                    Assert.That(s.Reps[0].Label, Is.EqualTo("Rep 1"));
+                    Assert.That(s.Reps[0].Split, Is.EqualTo("2:05"));
+                    Assert.That(s.Reps[0].Meters, Is.EqualTo("680 m"));
+                    Assert.That(s.Laps, Is.Empty);
+                    h.At(325.25);
+                    s = hud.State.Value.Series!;
+                    Assert.That(s.Laps.Count, Is.EqualTo(1));
+                    Assert.That(s.Laps[0].Label, Is.EqualTo("#1"));
+                    Assert.That(s.Laps[0].Time, Is.EqualTo("2:05.0"));
+                    Assert.That(s.LapCount, Is.EqualTo(1));
+                    Assert.That(s.CurrentTime, Is.EqualTo("0:00.0"));
+                    Assert.That(s.CurrentMeters, Is.EqualTo("0 m"));
+                }
+
+                using (var h = new WorkoutHarness())
+                using (var hud = Hud(h, l10n))
+                {
+                    h.Routine(RoutineSeeds.PiramideQuinientos());
+                    h.At(880.25);
+                    var s = hud.State.Value.Series!;
+                    Assert.That(s.Reps[0].Meters, Is.EqualTo("1.112 m"), l10n.LanguageCode + ": el punto de miles también en inglés");
+                    Assert.That(s.Reps[0].Split, Is.EqualTo("2:05"));
+                    Assert.That(s.RepProgress, Does.StartWith("Rep 2/4 · "));
+                }
+            }
+
+            Assert.That(LocalizationFixture.En.Get(L10nKeys.HudLapsTitle), Is.EqualTo("500 m splits"));
+            Assert.That(LocalizationFixture.En.Get(L10nKeys.HudRepsTitle), Is.EqualTo("Previous reps"));
+            Assert.That(LocalizationFixture.En.Get(L10nKeys.HudLapsEmpty), Is.EqualTo("No splits in this step"));
+            Assert.That(LocalizationFixture.En.Get(L10nKeys.HudRepsEmpty), Is.EqualTo("No completed reps"));
+        }
+
+        [Test, Category("AC-WKT-18-01"), Category("AC-WKT-18-04")]
+        public void NoSeriesInFreeNorAtRest()
+        {
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                Assert.That(hud.State.Value.Series, Is.Null, "reposo");
+                h.Free();
+                h.At(10.25);
+                Assert.That(hud.State.Value.Series, Is.Null, "en el libre no hay paneles");
+            }
+
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                h.Routine(RoutineSeeds.CincoReps());
+                var first = hud.State.Value.Series!;
+                Assert.That(first.StepIndex, Is.EqualTo(0), "DV-48: el primer paso desde el primer cuadro");
+                Assert.That(first.IsWork, Is.True);
+                Assert.That(first.CurrentTime, Is.EqualTo("0:00.0"));
+                Assert.That(first.CurrentMeters, Is.EqualTo("0 m"));
+                Assert.That(first.RepProgress, Is.EqualTo("Rep 1/5 · 0 m"));
+            }
+        }
+
+        [Test, Category("AC-WKT-18-08")]
+        public void TheSeriesChangeOnlyOnTheSecondAndReuseTheirRows()
+        {
+            // La caché por revisión del tracker: una lectura del remo en k − 0,5 no rehace los paneles (la misma instancia); el
+            // segundo sí. Las filas que siguen a la vista son las mismas instancias.
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                h.Routine(RoutineSeeds.SeriesSeiscientos());
+                h.At(330.25);
+                var atSecond = hud.State.Value.Series!;
+                var stateAtSecond = hud.State.Value;
+                h.At(330.6);
+                Assert.That(hud.State.Value, Is.Not.SameAs(stateAtSecond), "la lectura de 330,5 rehízo el HUD");
+                Assert.That(hud.State.Value.Series, Is.SameAs(atSecond), "pero no los paneles");
+                h.At(331.25);
+                var next = hud.State.Value.Series!;
+                Assert.That(next, Is.Not.SameAs(atSecond));
+                Assert.That(next.CurrentTime, Is.Not.EqualTo(atSecond.CurrentTime));
+                Assert.That(next.Laps, Is.SameAs(atSecond.Laps), "sin vuelta nueva, la misma lista");
+                Assert.That(next.Reps, Is.SameAs(atSecond.Reps));
+                h.At(349.25);
+                Assert.That(hud.State.Value.Series!.Laps[0], Is.SameAs(atSecond.Laps[0]), "la fila del #1 es la misma mientras se ve");
+            }
+        }
+
+        [Test, Category("AC-WKT-02-08"), Category("AC-WKT-18-07")]
+        public void TheRepsOfAnotherSeriesAreRebuiltAfterTheBackground()
+        {
+            // QA-V5-P01 (verificación de la 5, ronda 1): dos series de la misma forma, A ×2 y B ×2 [trabajo 500 m; descanso 60 s].
+            // La Rep 1 suma 620 m en las dos, con el trabajo en 125 s en A (2:05) y en 100 s en B (1:40). En primer plano entre las
+            // dos series hay un segundo con la lista vacía; en segundo plano el motor no publica fotos y el store compone una sola al
+            // volver: la fila tiene que salir del tracker (el legacy la arma en cada dibujo, series_panels.dart:330-345), no de la
+            // foto de la serie anterior con el mismo Rep y los mismos metros.
+            foreach (var background in new[] { false, true })
+            {
+                using (var h = new WorkoutHarness(TwoSeriesReading))
+                using (var hud = Hud(h, LocalizationFixture.Es))
+                {
+                    h.Routine(TwoSeriesSameShape());
+                    h.At(200.25);
+                    var inA = hud.State.Value.Series!;
+                    Assert.That(inA.Reps.Count, Is.EqualTo(1));
+                    Assert.That(inA.Reps[0].Split, Is.EqualTo("2:05"), "la Rep 1 de A");
+                    Assert.That(inA.Reps[0].Meters, Is.EqualTo("620 m"));
+                    if (background)
+                    {
+                        h.Lifecycle.SetBackground(true);
+                    }
+
+                    h.At(540.25);
+                    if (background)
+                    {
+                        h.Lifecycle.SetBackground(false);
+                        h.At(540.5);
+                    }
+
+                    var truth = h.Engine.Series.State.PreviousReps;
+                    var inB = hud.State.Value.Series!;
+                    var what = background ? "al volver del segundo plano" : "en primer plano";
+                    Assert.That(truth.Count, Is.EqualTo(1), what);
+                    Assert.That(truth[0].TotalMeters, Is.EqualTo(620), what + ": los mismos metros totales que la Rep 1 de A");
+                    Assert.That(inB.Reps.Count, Is.EqualTo(1), what);
+                    Assert.That(inB.Reps[0].Split, Is.EqualTo(WorkoutFormats.RepSplit(truth[0].WorkSplitSeconds)), what + ": el split de la Rep 1 de B");
+                    Assert.That(inB.Reps[0].Split, Is.EqualTo("1:40"), what);
+                    Assert.That(inB.Reps[0].SplitValue, Is.EqualTo(truth[0].WorkSplitSeconds!.Value).Within(1e-9), what);
+                    h.At(560.25);
+                    Assert.That(hud.State.Value.Series!.Reps[0].Split, Is.EqualTo("1:40"), what + ": y no vuelve a la de A");
+                }
+            }
+        }
+
+        // QA-V5-P01: A ×2 y B ×2 [trabajo 500 m; descanso 60 s], con su propio grupo cada una.
+        private static Routine TwoSeriesSameShape()
+        {
+            var a = RoutineSeeds.SeriesId(RoutineSeeds.Day(29), 0);
+            var b = RoutineSeeds.SeriesId(RoutineSeeds.Day(29), 1);
+            return RoutineSeeds.Make("Dos series iguales", RoutineSeeds.Day(29),
+                RoutineSeeds.Step(StepType.Work, dist: 500, g: a, rep: 2),
+                RoutineSeeds.Step(StepType.Rest, dur: 60, g: a, rep: 2),
+                RoutineSeeds.Step(StepType.Work, dist: 500, g: b, rep: 2),
+                RoutineSeeds.Step(StepType.Rest, dur: 60, g: b, rep: 2));
+        }
+
+        // A: trabajo a 4 m/s (125 s) y descanso a 2 m/s (120 m): 620 m, split 2:05; A2 igual (186-370). B1: trabajo a 5 m/s
+        // (100 s) y descanso a 2 m/s: 620 m, split 1:40. B2 desde 531, a 4 m/s.
+        private static RowingData? TwoSeriesReading(int k)
+        {
+            int meters;
+            if (k <= 125)
+            {
+                meters = 1000 + 4 * k;
+            }
+            else if (k <= 185)
+            {
+                meters = 1500 + 2 * (k - 125);
+            }
+            else if (k <= 310)
+            {
+                meters = 1620 + 4 * (k - 185);
+            }
+            else if (k <= 370)
+            {
+                meters = 2120 + 2 * (k - 310);
+            }
+            else if (k <= 470)
+            {
+                meters = 2240 + 5 * (k - 370);
+            }
+            else if (k <= 530)
+            {
+                meters = 2740 + 2 * (k - 470);
+            }
+            else
+            {
+                meters = 2860 + 4 * (k - 530);
+            }
+
+            return RowerScripts.R4(k) with { DistanceMeters = meters };
+        }
+
+        [Test, Category("AC-WKT-18-08")]
+        public void BetweenTwoSecondsTheSeriesCostNothing()
+        {
+            // 0 B entre dos segundos (dotnet; en Unity la medida es de PlayMode con cuadros reales, HBT).
+            using (var h = new WorkoutHarness())
+            using (var hud = Hud(h, LocalizationFixture.Es))
+            {
+                h.Routine(RoutineSeeds.SeriesSeiscientos());
+                h.At(330.25);
+                var snapshot = h.State;
+                var first = hud.SeriesFor(snapshot, LocalizationFixture.Es);
+                var before = AllocatedBytes.Now();
+                HudSeries? again = null;
+                for (var i = 0; i < 100; i++)
+                {
+                    again = hud.SeriesFor(snapshot, LocalizationFixture.Es);
+                }
+
+                var allocated = AllocatedBytes.Since(before);
+                Assert.That(again, Is.SameAs(first));
+                if (allocated.HasValue)
+                {
+                    Assert.That(allocated.Value, Is.EqualTo(0));
+                }
+            }
+        }
+
+        [Test, Category("AC-WKT-11-09"), Category("AC-WKT-11-10"), Category("AC-WKT-11-11"), Category("AC-WKT-18-22")]
+        public void TheFormatsOnScreen()
+        {
+            // LT-45 a la vista: M:SS.d, M:SS o — y 1.245 m. Corta con R-4P a los 16 s: Rep 1 — 0 m. Al cambiar el idioma, los
+            // paneles se rehacen con los textos nuevos.
+            var texts = new ObservableValue<Localizer>(LocalizationFixture.Es, NullAppLogger.Instance);
+            using (var h = new WorkoutHarness(k => RowerScripts.R4P(k)))
+            using (var hud = new WorkoutHudStore(h.Engine, new ReadOnlyObservable<Localizer>(texts), h.Scheduler, h.Lifecycle, h.Logger))
+            {
+                h.Routine(RoutineSeeds.Corta());
+                h.At(16.25);
+                var es = hud.State.Value.Series!;
+                Assert.That(es.Reps[0].Split, Is.EqualTo("—"));
+                Assert.That(es.Reps[0].Meters, Is.EqualTo("0 m"));
+                Assert.That(es.CurrentTime, Is.EqualTo("0:01.0"));
+                texts.Value = LocalizationFixture.En;
+                var en = hud.State.Value.Series!;
+                Assert.That(en, Is.Not.SameAs(es), "otro idioma, otros textos");
+                Assert.That(en.Reps[0].Label, Is.EqualTo("Rep 1"));
+                Assert.That(en.RepProgress, Is.EqualTo("Rep 2/2 · 0 m"), "parado: sin metros");
+            }
+        }
+
+        [Test, Category("AC-WKT-18-17")]
+        public void TheLongestSeriesState()
+        {
+            // S-LARGO (spec §0.4; CAP-25), armado a mano con los formatos de la app: 5999:59.9 499 m; #1999 a #1996 con 5999:59.9;
+            // Rep 999/999 · 999.999 m; Rep 999 a 997 con 5999:59 999.999 m. ExtremeSplit: el split de un trabajo de 86 400 s y 1 m,
+            // más largo que 5999:59 (QA-G5T-16).
+            foreach (var l10n in LocalizationFixture.Both)
+            {
+                var largo = SeriesSeeds.Largo(l10n);
+                Assert.That(largo.CurrentTime, Is.EqualTo("5999:59.9"));
+                Assert.That(largo.CurrentMeters, Is.EqualTo("499 m"));
+                Assert.That(largo.Laps.Count, Is.EqualTo(4));
+                Assert.That(largo.Laps[0].Label, Is.EqualTo("#1999"));
+                Assert.That(largo.Laps[3].Label, Is.EqualTo("#1996"));
+                Assert.That(largo.Laps[3].Time, Is.EqualTo("5999:59.9"));
+                Assert.That(largo.RepProgress, Is.EqualTo("Rep 999/999 · 999.999 m"));
+                Assert.That(largo.Reps[0].Label, Is.EqualTo("Rep 999"));
+                Assert.That(largo.Reps[2].Label, Is.EqualTo("Rep 997"));
+                Assert.That(largo.Reps[1].Split, Is.EqualTo("5999:59"));
+                Assert.That(largo.Reps[1].Meters, Is.EqualTo("999.999 m"));
+                var extreme = SeriesSeeds.ExtremeSplit(l10n);
+                Assert.That(extreme.Reps[0].Split.Length, Is.GreaterThan("5999:59".Length));
+                Assert.That(extreme.Reps[0].Split, Is.EqualTo(WorkoutFormats.RepSplit(43200000)));
+                Assert.That(extreme.Reps[0].Meters, Is.EqualTo("999.999 m"));
+                Assert.That(extreme.Reps[1], Is.SameAs(largo.Reps[1]).Or.EqualTo(largo.Reps[1]));
+            }
+        }
+
         private static WorkoutHudStore Hud(WorkoutHarness h, Localizer l10n)
         {
             return new WorkoutHudStore(h.Engine, Texts(l10n), h.Scheduler, h.Lifecycle, h.Logger);

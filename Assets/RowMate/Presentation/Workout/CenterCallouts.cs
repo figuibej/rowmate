@@ -40,6 +40,9 @@ namespace RowMate.Presentation.Workout
         private bool _placed;
         private DiscVisual _visual;
         private bool _disposed;
+        private int? _count;
+        private bool _paused;
+        private bool _blocked;
 
         public CenterCallouts(UiContext ui, PillProgress progress)
         {
@@ -124,6 +127,9 @@ namespace RowMate.Presentation.Workout
                 return;
             }
 
+            _count = count;
+            _paused = paused;
+
             if (type.HasValue)
             {
                 _ringColor = TokenColors.ToColor(StepTypeInfo.Color(type.Value));
@@ -134,8 +140,25 @@ namespace RowMate.Presentation.Workout
                 Count.SetValue(count.Value.ToString(CultureInfo.InvariantCulture), count.Value, !instant);
             }
 
-            _motion.Set(count, paused, instant);
+            _motion.Set(_blocked ? null : count, !_blocked && paused, instant);
         }
+
+        // It. 5 (05-series-parciales/02-tech-design §3.4; AC-WKT-18-15; spec §12 punto 6): un panel de series abierto cuyo rectángulo
+        // FINAL (agrandado 8·s) se cruza con el disco lo tapa: la cuenta grande y PAUSA no se muestran (su salida, en el cuadro del
+        // toque o del cambio, termina antes de que el panel llegue). Con el ancho de 137 nunca pasa (SeriesPanelGeometry.BlocksCallout
+        // da false en los cinco perfiles); con los 200 de la spec pasaría en TV y P360 (P-04).
+        public void SetBlockedByPanels(bool blocked, bool instant)
+        {
+            if (_disposed || blocked == _blocked)
+            {
+                return;
+            }
+
+            _blocked = blocked;
+            _motion.Set(blocked ? null : _count, !blocked && _paused, instant);
+        }
+
+        public bool BlockedByPanels => _blocked;
 
         // El lugar (HudLayout.BigCount, dp de ventana) y la escala del HUD.
         public void Place(DpRect disc, double scale)

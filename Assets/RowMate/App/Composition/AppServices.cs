@@ -24,5 +24,10 @@ namespace RowMate.App.Composition
 
         // Las barras del sistema (It. 4b, F-APP-15; 02-tech-design §2.14). null = sin efecto (dotnet, pruebas que no lo miran).
         public ISystemUi? SystemUi { get; init; }
+
+        // Las preferencias de la app (It. 5, ARCHITECTURE §9.4; 02-tech-design §2.8): AppRoot pasa JsonFilePreferences (prefs.json en
+        // la carpeta de la base); null = MemoryPreferences (dotnet, las pruebas, el arnés: nunca el archivo del usuario,
+        // AC-HIS-20-04). Las dispone quien las creó.
+        public IPreferences? Preferences { get; init; }
     }
 }

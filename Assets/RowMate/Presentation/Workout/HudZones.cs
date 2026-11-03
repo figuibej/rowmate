@@ -145,6 +145,9 @@ namespace RowMate.Presentation.Workout
                 _view.Band.style.borderBottomRightRadius = radius;
             }
 
+            // It. 5: la columna de los paneles de series (SeriesPanelGeometry.Column y Place) con cada disposición.
+            _view.Series?.SetLayout(layout);
+
             var boat = _view.BoatZone;
             if (boat != null)
             {

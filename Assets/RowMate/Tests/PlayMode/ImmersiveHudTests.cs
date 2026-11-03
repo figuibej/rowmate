@@ -18,6 +18,107 @@ namespace RowMate.Tests.PlayMode
     // descanso 30 s]; enfriamiento 30 s.
     public sealed class ImmersiveHudTests : WorkoutUiTestBase
     {
+        // ── It. 5: los paneles de series (05-series-parciales/02-tech-design §4.0, §6.3 IHT) ──
+
+        private UiTestHost CreateSeries(bool laps, bool reps, Action<UiHostOptions>? configure = null)
+        {
+            var prefs = new RowMate.Core.Common.MemoryPreferences();
+            prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.LapsKey, laps);
+            prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.RepsKey, reps);
+            return CreateWorkout(RoutineSeeds.F5, o =>
+            {
+                o.Preferences = prefs;
+                configure?.Invoke(o);
+            });
+        }
+
+        // AC-WKT-13-14, AC-WKT-18-08, AC-WKT-17-06: abrir y cerrar los paneles no toca el motor ni la sesión (la misma distancia, el
+        // mismo reloj y las mismas vueltas que sin tocarlos), y los valores de los paneles cambian en el MISMO cuadro que el reloj de la
+        // banda (la vuelta #2 a los 280 s: 0:00.0 0 m), también en pausa nada cambia.
+        [UnityTest, Category("AC-WKT-13-14"), Category("AC-WKT-18-08"), Category("AC-WKT-17-06")]
+        public IEnumerator PresentationNeverTouchesTheDataWithThePanels()
+        {
+            var results = new string[2];
+            for (var run = 0; run < 2; run++)
+            {
+                var toggling = run == 1;
+                CreateSeries(true, true);
+                yield return StartRoutine("Series 600");
+                yield return AdvanceTo(279.6);
+                var sameFrame = false;
+                for (var i = 0; i < 40; i++)
+                {
+                    var band = H.TextOf("hud-time-value");
+                    var hero = H.TextOf("hud-laps-current");
+                    H.Step();
+                    yield return null;
+                    var bandChanged = H.TextOf("hud-time-value") != band;
+                    var heroChanged = H.TextOf("hud-laps-current") != hero;
+                    Assert.That(heroChanged, Is.EqualTo(bandChanged), "cuadro " + i + ": la vuelta en curso cambia en el cuadro del reloj de la banda");
+                    sameFrame |= bandChanged && heroChanged;
+                }
+
+                Assert.That(sameFrame, Is.True, "pasó por el segundo");
+                for (var t = 0; t < 10; t++)
+                {
+                    if (toggling)
+                    {
+                        H.TapText(t % 2 == 0 ? "Parciales 500 m" : "500 m");
+                    }
+
+                    H.Advance(0.5);
+                    yield return null;
+                }
+
+                var engine = H.App.Workout.State.Value;
+                var series = H.App.Workout.Series.State;
+                results[run] = engine.TotalElapsedSeconds + " s · " + engine.Data.DistanceMeters + " m · " + series.Laps.Count + " vueltas · "
+                               + series.StepMeters.ToString("0.###") + " · " + engine.Revision;
+            }
+
+            Assert.That(results[1], Is.EqualTo(results[0]), "abrir y cerrar no cambia el dato (AC-WKT-13-14)");
+        }
+
+        // AC-APP-05-05: el HUD no sigue la letra del sistema: los paneles miden lo mismo con 1,3.
+        // AC-APP-05-08 (reducir movimiento, VID-08): abrir pone el alto en el cuadro del toque y el contenido funde en 0-160.
+        [UnityTest, Category("AC-APP-05-05"), Category("AC-APP-05-08"), Category("AC-WKT-17-01")]
+        public IEnumerator PanelsIgnoreTheTextScaleAndReduceMotion()
+        {
+            CreateSeries(true, true);
+            yield return StartRoutine("Series 600");
+            yield return AdvanceTo(250.2);
+            yield return Settle();
+            var laps = Hud.Series!.Laps.worldBound;
+            var reps = Hud.Series.Reps.worldBound;
+            // S5-01: el vidrio sobre el cielo, como las tarjetas (sin reflejo).
+            var frame = H.ReadPixels();
+            var density = H.Profile.Density;
+            var glass = RtReader.PixelTopLeft(frame, (int)((laps.x + 5 * 1.054) * density), (int)((laps.y + 30 * 1.054) * density));
+            var top = RtReader.PixelTopLeft(frame, (int)((laps.x + 60 * 1.054) * density), (int)((laps.y + 3 * 1.054) * density));
+            UnityEngine.Object.Destroy(frame);
+            Assert.That(PixelProbe.Distance(new Rgb(glass.r, glass.g, glass.b).ToHex(), "#08162B"), Is.LessThanOrEqualTo(3), "S5-01 vidrio: #" +
+                ColorUtility.ToHtmlStringRGB(glass));
+            Assert.That(Math.Abs(glass.r - top.r) + Math.Abs(glass.g - top.g) + Math.Abs(glass.b - top.b), Is.LessThanOrEqualTo(3), "S5-03 sin reflejo");
+
+            H.SetAccessibility(1.3, false);
+            yield return Settle();
+            Assert.That(Hud.Series!.Laps.worldBound, Is.EqualTo(laps), "parciales no sigue la letra");
+            Assert.That(Hud.Series.Reps.worldBound, Is.EqualTo(reps), "repeticiones tampoco");
+
+            H.SetAccessibility(1, true);
+            yield return Settle();
+            H.TapText("Parciales 500 m");
+            yield return Settle();
+            H.TapText("500 m");
+            H.Step();
+            yield return null;
+            Assert.That(Hud.Series.Laps.VisualHeightBase, Is.EqualTo(Hud.Series.Laps.FinalHeightBase).Within(1e-6), "el alto en el acto");
+            Assert.That(Hud.Series.Laps.Visual.ContentAlpha, Is.InRange(0.0, 0.5), "el contenido funde (0-160, lineal)");
+            Assert.That(Hud.Series.Reps.resolvedStyle.translate.y, Is.EqualTo(0).Within(0.01f), "el panel de abajo, en el acto");
+            yield return Settle();
+            Assert.That(Hud.Series.Laps.Visual.ContentAlpha, Is.EqualTo(1));
+        }
+
         private static Func<int, RowMate.Core.Models.RowingData> WithPulse(int bpm)
         {
             return k => RowerScripts.R4(k).CopyWith(heartRate: bpm);

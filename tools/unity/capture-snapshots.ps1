@@ -4,10 +4,11 @@
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it4b por defecto desde la It. 4b: el HUD EXR, CAP-01..31, DEMO-01..12 y VID-01..08 en
+# -Set: el catalogo (it5 por defecto desde la It. 5: los paneles de series, CAP-01..26, DEMO-01..12 y VID-01..09 en
+# docs/migration/iterations/05-series-parciales/snapshots; it4b: el HUD EXR, CAP-01..31, DEMO-01..12 y VID-01..08 en
 # docs/migration/iterations/04b-hud-exr/snapshots; it4a: el entrenamiento de la 4a, con las tomas del HUD reemplazadas por las de
 # it4b (no se vuelven a tomar), 30 CAP (CAP-27 con a, b y c), DEMO-01..14 y VID-01..03
 # = 49 archivos en docs/migration/iterations/04a-motor-hud-funcional/snapshots; it3: Rutinas, 42 IDs = 47 archivos en
@@ -30,8 +31,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it4b',
+    [ValidateSet('it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it5',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -102,10 +103,36 @@ function Invoke-Unity([string[]]$UnityArgs) {
     return $process.ExitCode
 }
 
+# QA-V4b-R2-03 (It. 5; docs/migration/iterations/05-series-parciales/00-deuda-4b.md Sec. 3): Unity a veces revienta al cerrar
+# (0xC0000005) un -batchmode -quit que cambio los defines, con la compilacion que pidio ese cambio todavia en curso. El paso del
+# define cuenta como bien si quedo como se pidio (ROWMATE_SIMULATOR en ProjectSettings.asset y la marca de Library/RowMate); si
+# no, se repite UNA vez. Cualquier otro codigo distinto de 0 sigue siendo un error.
+$crashCodes = @(-1073741819, 3221225477)
+$markerFile = Join-Path $repo 'Library\RowMate\simulator-tests.txt'
+$script:definesBefore = $null
+
+function Test-DefineAsAsked([string]$Method) {
+    if ($Method -eq $enableMethod) { return ((Test-SimulatorInSettings) -and (Test-Path $markerFile)) }
+    if (Test-Path $markerFile) { return $false }
+    if ($null -ne $script:definesBefore) { return ((Test-SimulatorInSettings) -eq $script:definesBefore) }
+    return $true
+}
+
 function Invoke-Method([string]$Method, [string]$LogName) {
     $log = Join-Path $script:artifacts $LogName
     $code = Invoke-Unity @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $Method, '-logFile', $log)
     Write-Host ('[capturas] ' + $Method + ' -> ' + $code + ' (log: ' + $log + ')')
+    if ($crashCodes -contains $code) {
+        if (Test-DefineAsAsked $Method) {
+            Write-Host '[capturas] Unity revento al cerrar despues de cambiar el define, pero quedo como se pidio: se sigue (QA-V4b-R2-03).'
+            return 0
+        }
+        $retryLog = Join-Path $script:artifacts ($LogName -replace '\.log$', '-retry.log')
+        Write-Host '[capturas] Unity revento al cerrar y el define no quedo como se pidio: se repite una vez (QA-V4b-R2-03).'
+        $code = Invoke-Unity @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $Method, '-logFile', $retryLog)
+        Write-Host ('[capturas] ' + $Method + ' (otra vez) -> ' + $code + ' (log: ' + $retryLog + ')')
+        if (($crashCodes -contains $code) -and (Test-DefineAsAsked $Method)) { return 0 }
+    }
     return $code
 }
 
@@ -124,7 +151,8 @@ function Get-SetFolder {
     if ($Set -eq 'it2') { return 'docs/migration/iterations/02-dispositivo-simulador/snapshots' }
     if ($Set -eq 'it3') { return 'docs/migration/iterations/03-rutinas/snapshots' }
     if ($Set -eq 'it4a') { return 'docs/migration/iterations/04a-motor-hud-funcional/snapshots' }
-    return 'docs/migration/iterations/04b-hud-exr/snapshots'
+    if ($Set -eq 'it4b') { return 'docs/migration/iterations/04b-hud-exr/snapshots' }
+    return 'docs/migration/iterations/05-series-parciales/snapshots'
 }
 
 function Invoke-Harness {
@@ -163,6 +191,7 @@ $dataDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\capture-'
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 $env:ROWMATE_DATA_DIR = $dataDir
 $wasInSettings = Test-SimulatorInSettings
+$script:definesBefore = $wasInSettings
 $enabled = $false
 $exitCode = 0
 try {

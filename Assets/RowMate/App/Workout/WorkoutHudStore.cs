@@ -6,6 +6,7 @@ using RowMate.Core.Localization;
 using RowMate.Core.Models;
 using RowMate.Core.Ports;
 using RowMate.Core.Routines;
+using RowMate.Core.Text;
 using RowMate.Core.Workout;
 
 namespace RowMate.App.Workout
@@ -43,6 +44,19 @@ namespace RowMate.App.Workout
         private int _sealStep = -1;
         private Localizer? _sealTexts;
         private HudSeal? _seal;
+
+        // It. 5 (§2.5): los paneles, por (sesión, revisión del tracker o 0 con DV-48, idioma); las filas que siguen a la vista se
+        // reusan (la HudLapRow del #3 es la misma instancia mientras se ve).
+        private long _seriesSession = -1;
+        private long _seriesRevision = -1;
+        private Localizer? _seriesTexts;
+        private HudSeries? _series;
+
+        // QA-V5-P01 (verificación de la 5): la lista del tracker de la que salieron las filas de repeticiones de _series. El
+        // tracker la REEMPLAZA en cada cambio (copia al escribir, SeriesTracker.EnterStep), así que la misma instancia es el mismo
+        // contenido: las filas se reusan solo así, nunca por Rep y metros (dos series de la misma forma pueden coincidir en los
+        // dos, y en segundo plano no hay un segundo con la lista vacía entre ellas).
+        private IReadOnlyList<RepSummary>? _seriesRepsSource;
 
         public WorkoutHudStore(WorkoutEngine engine, IReadOnlyObservable<Localizer> texts, IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger)
         {
@@ -307,7 +321,145 @@ namespace RowMate.App.Workout
                 Chip = chip,
                 Completion = snapshot.EndedBy == WorkoutEndKind.Completed && snapshot.Completion.HasValue ? CompletionTexts(snapshot.Completion.Value) : null,
                 CloseReturned = snapshot.Close == CloseStatus.Saved || snapshot.Close == CloseStatus.Failed,
+                Series = SeriesFor(snapshot, l10n),
             };
+        }
+
+        // It. 5 (§2.5; AC-WKT-18-04 a -08, -22): los paneles de un estado del tracker, con los textos hechos. Pura (las pruebas
+        // de LT-59 y LT-60 arman el tracker a mano y pasan por acá: QA-G5P-05). Pasa por SeriesPanels.For (la visibilidad, las
+        // 4 últimas, DV-48). null sin rutina (el libre: sin paneles ni lugar reservado, AC-WKT-18-01).
+        // Textos: Label = hudLapNumber, Time = LapTime; la vuelta en curso con "{metros} m" (hudUnitMeters); RepProgress =
+        // hudRepProgress con PanelMeters solo en serie; las repeticiones con hudRepLabel, RepSplit y PanelMeters (el punto de
+        // miles también en inglés: Q-06, P-08).
+        public static HudSeries? ComposeSeries(SeriesState? state, IReadOnlyList<IntervalStep>? steps, IReadOnlyList<StepPosition>? positions,
+                                               Localizer localizer, long session)
+        {
+            return ComposeSeries(state, steps, positions, localizer, session, null, null);
+        }
+
+        // previous: el estado anterior con el mismo idioma (o null); previousRepsSource: la lista del tracker de la que salieron sus
+        // filas de repeticiones (QA-V5-P01).
+        private static HudSeries? ComposeSeries(SeriesState? state, IReadOnlyList<IntervalStep>? steps, IReadOnlyList<StepPosition>? positions,
+                                                Localizer localizer, long session, HudSeries? previous, IReadOnlyList<RepSummary>? previousRepsSource)
+        {
+            if (localizer == null)
+            {
+                throw new ArgumentNullException(nameof(localizer));
+            }
+
+            var content = SeriesPanels.For(state, steps, positions);
+            if (!content.Visible)
+            {
+                return null;
+            }
+
+            var reuse = previous != null && previous.Session == session && previous.StepIndex == content.StepIndex ? previous : null;
+            var laps = LapRows(content, localizer, reuse?.Laps);
+            var sameReps = previous != null && previous.Session == session && ReferenceEquals(content.PreviousReps, previousRepsSource);
+            var reps = RepRows(content.PreviousReps, localizer, sameReps ? previous!.Reps : null);
+            var meters = Fmt.Integer(content.CurrentLapMeters) + " " + localizer.Get(L10nKeys.HudUnitMeters);
+            string? progress = null;
+            if (content.InSeries)
+            {
+                progress = localizer.Format(L10nKeys.HudRepProgress, MessageArg.Text("rep", Fmt.Integer(content.Rep)),
+                    MessageArg.Text("count", Fmt.Integer(content.RepCount)), MessageArg.Text("meters", WorkoutFormats.PanelMeters(content.RepMeters)));
+            }
+
+            return new HudSeries(session, content.StepIndex, content.IsWork, WorkoutFormats.LapTime(content.CurrentLapSeconds), content.CurrentLapSeconds,
+                meters, content.CurrentLapMeters, laps, content.LapCount, content.InSeries, content.Rep, progress, content.RepMeters, reps);
+        }
+
+        // Las filas de vueltas a la vista (la más reciente primero). Reusa cada fila del estado anterior del mismo paso con el
+        // mismo número, y la lista entera si no cambió nada.
+        private static IReadOnlyList<HudLapRow> LapRows(in SeriesPanelsContent content, Localizer l10n, IReadOnlyList<HudLapRow>? previous)
+        {
+            var count = content.VisibleLaps;
+            if (count == 0)
+            {
+                return Array.Empty<HudLapRow>();
+            }
+
+            if (previous != null && previous.Count == count && previous[0].Number == content.Lap0.Number)
+            {
+                return previous;
+            }
+
+            var rows = new HudLapRow[count];
+            for (var i = 0; i < count; i++)
+            {
+                var lap = content.VisibleLap(i);
+                HudLapRow? kept = null;
+                if (previous != null)
+                {
+                    for (var j = 0; j < previous.Count; j++)
+                    {
+                        if (previous[j].Number == lap.Number)
+                        {
+                            kept = previous[j];
+                            break;
+                        }
+                    }
+                }
+
+                rows[i] = kept ?? new HudLapRow(lap.Number, l10n.Format(L10nKeys.HudLapNumber, MessageArg.Text("number", Fmt.Integer(lap.Number))),
+                    WorkoutFormats.LapTime(lap.Seconds), lap.Seconds);
+            }
+
+            return rows;
+        }
+
+        // Las filas de repeticiones anteriores (hasta 3, la más reciente primero). sameSource: las filas que salieron de ESTA
+        // misma lista del tracker (la misma instancia: el tracker reemplaza su arreglo en cada cambio), que se reusan enteras; si
+        // no, se arman de nuevo desde el tracker, como el legacy en cada dibujo (series_panels.dart:330-345). Nunca se reusan por
+        // Rep y metros: dos series de la misma forma pueden coincidir en los dos con otro split (QA-V5-P01).
+        private static IReadOnlyList<HudRepRow> RepRows(IReadOnlyList<RepSummary> reps, Localizer l10n, IReadOnlyList<HudRepRow>? sameSource)
+        {
+            if (reps == null || reps.Count == 0)
+            {
+                return Array.Empty<HudRepRow>();
+            }
+
+            if (sameSource != null && sameSource.Count == reps.Count)
+            {
+                return sameSource;
+            }
+
+            var rows = new HudRepRow[reps.Count];
+            for (var i = 0; i < rows.Length; i++)
+            {
+                var rep = reps[i];
+                var split = rep.WorkSplitSeconds;
+                rows[i] = new HudRepRow(rep.Rep, l10n.Format(L10nKeys.HudRepLabel, MessageArg.Text("rep", Fmt.Integer(rep.Rep))),
+                    WorkoutFormats.RepSplit(split), split ?? 0, WorkoutFormats.PanelMeters(rep.TotalMeters), rep.TotalMeters);
+            }
+
+            return rows;
+        }
+
+        // La caché (§2.5): entre dos segundos (una lectura del remo en k − 0,5, un pulso, el reloj de pared) devuelve la misma
+        // instancia sin armar nada; por segundo, tres cadenas (el tiempo y los metros de la vuelta en curso y la línea Rep) y el
+        // record (lo que ARCHITECTURE §20.2 permite a 1 Hz).
+        internal HudSeries? SeriesFor(WorkoutSnapshot snapshot, Localizer l10n)
+        {
+            var state = snapshot.Series;
+            if (state == null || !snapshot.IsRoutine || snapshot.Phase == WorkoutPhase.Idle)
+            {
+                return null;
+            }
+
+            var revision = state.StepIndex.HasValue ? state.Revision : 0;
+            if (_series != null && _seriesSession == snapshot.Session && _seriesRevision == revision && ReferenceEquals(_seriesTexts, l10n))
+            {
+                return _series;
+            }
+
+            var previous = _series != null && ReferenceEquals(_seriesTexts, l10n) ? _series : null;
+            _series = ComposeSeries(state, _engine.Steps, _engine.Positions, l10n, snapshot.Session, previous, previous != null ? _seriesRepsSource : null);
+            _seriesRepsSource = state.PreviousReps;
+            _seriesSession = snapshot.Session;
+            _seriesRevision = revision;
+            _seriesTexts = l10n;
+            return _series;
         }
 
         // Con rutina: los tipos de engine.Steps (una vez por sesión); Looks[i] = StepPills.LookOf(i, en curso, Targets.ResultOf(i))

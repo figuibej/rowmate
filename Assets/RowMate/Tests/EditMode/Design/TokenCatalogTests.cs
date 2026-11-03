@@ -25,6 +25,27 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(seen.Count, Is.GreaterThanOrEqualTo(38));
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §2.10; DD5-08, excepción de dueño de §7.6): num.lap 34/36 → 28/28, num.row
+        // 24/28 → 20/22 y num.xs 13/16/700 nuevo: 136 → 137 tokens.
+        [Test, Category("AC-BASE-04"), Category("AC-WKT-18-04"), Category("AC-WKT-18-07")]
+        public void ItFiveTypeTokens()
+        {
+            Assert.That(TokenCatalog.All.Count, Is.EqualTo(137));
+            AssertType(Tokens.NumLap, "num.lap", 28, 28);
+            AssertType(Tokens.NumRow, "num.row", 20, 22);
+            AssertType(Tokens.NumXs, "num.xs", 13, 16);
+            AssertType(Tokens.NumStat, "num.stat", 16, 20);
+        }
+
+        private static void AssertType(TypeScaleToken token, string name, double size, double lineHeight)
+        {
+            Assert.That(token.Name, Is.EqualTo(name));
+            Assert.That(token.Family, Is.EqualTo(FontFamilyRole.Numeric), name);
+            Assert.That(token.SizeDp, Is.EqualTo(size), name);
+            Assert.That(token.LineHeightDp, Is.EqualTo(lineHeight), name);
+            Assert.That(token.Weight, Is.EqualTo(700), name);
+        }
+
         [Test, Category("AC-BASE-04")]
         public void FieldNameIsPascalCaseOfTheTokenName()
         {

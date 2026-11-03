@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using RowMate.App.Workout;
@@ -30,22 +31,34 @@ namespace RowMate.Tests.EditMode.Workout
 
         private static List<string> Run(string name, bool withHud)
         {
-            var template = name == "Estados" ? RoutineSeeds.Estados() : name == "Corta" ? RoutineSeeds.Corta() : RoutineSeeds.PruebaCuatroA();
+            var template = name == "Estados" ? RoutineSeeds.Estados() : name == "Corta" ? RoutineSeeds.Corta()
+                : name == "Series 600" ? RoutineSeeds.SeriesSeiscientos() : RoutineSeeds.PruebaCuatroA();
+            var end = name == "Series 600" ? 600 : 250;
             var lines = new List<string>();
             using (var h = new WorkoutHarness())
             {
                 WorkoutHudStore? hud = null;
+                SeriesPanelPrefs? panels = null;
+                IDisposable? toggles = null;
                 if (withHud)
                 {
                     var texts = new ReadOnlyObservable<Localizer>(new ObservableValue<Localizer>(LocalizationFixture.Es, NullAppLogger.Instance));
                     hud = new WorkoutHudStore(h.Engine, texts, h.Scheduler, h.Lifecycle, h.Logger);
+                    // It. 5: los paneles se abren y se cierran cada 3 s (por las preferencias, como un toque).
+                    panels = new SeriesPanelPrefs(new MemoryPreferences());
+                    var p = panels;
+                    var n = 0;
+                    toggles = h.Scheduler.SchedulePeriodic(TimeSpan.FromSeconds(3), () => p.Toggle(n++ % 2 == 0 ? SeriesPanelKind.Laps : SeriesPanelKind.Reps));
                 }
 
                 using (h.Engine.State.Subscribe(s => lines.Add(Describe(h.Now, s, h.Engine)), false))
                 {
                     h.Routine(template);
-                    h.At(250);
+                    h.At(end);
                 }
+
+                toggles?.Dispose();
+                panels?.Dispose();
 
                 lines.Add("puntos " + WorkoutHarness.Describe(h.Points()));
                 var session = h.Session()!;
@@ -65,9 +78,12 @@ namespace RowMate.Tests.EditMode.Workout
         private static string Describe(double now, WorkoutSnapshot s, WorkoutEngine engine)
         {
             var step = s.Step;
+            var series = s.Series;
+            var tracker = series == null ? "-" : Fmt.Integer(series.Revision) + ":" + Fmt.Integer(series.CurrentLapMeters) + ":" + Fmt.Integer(series.Laps.Count) + ":"
+                + Fmt.Integer(series.RepMeters) + ":" + Fmt.Integer(series.PreviousReps.Count);
             return Fmt.Fixed(now, 3) + " " + s.Phase + " " + Fmt.Integer(s.TotalElapsedSeconds) + " "
                 + (step.HasValue ? Fmt.Integer(step.Value.StepIndex) + "/" + (step.Value.RemainingInStep.HasValue ? Fmt.Integer(step.Value.RemainingInStep.Value) : "-") : "-")
-                + " " + Fmt.Integer(s.Data.DistanceMeters) + " " + (s.EndedBy.HasValue ? s.EndedBy.Value.ToString() : "-") + " " + s.Close;
+                + " " + Fmt.Integer(s.Data.DistanceMeters) + " " + (s.EndedBy.HasValue ? s.EndedBy.Value.ToString() : "-") + " " + s.Close + " " + tracker;
         }
     }
 }

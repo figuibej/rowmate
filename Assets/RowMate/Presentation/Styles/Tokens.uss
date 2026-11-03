@@ -63,12 +63,13 @@
     --rm-num-band-size: 34px;
     --rm-num-hero-size: 64px;
     --rm-num-l-size: 44px;
-    --rm-num-lap-size: 34px;
+    --rm-num-lap-size: 28px;
     --rm-num-m-size: 32px;
-    --rm-num-row-size: 24px;
+    --rm-num-row-size: 20px;
     --rm-num-s-size: 20px;
     --rm-num-stat-size: 16px;
     --rm-num-xl-size: 52px;
+    --rm-num-xs-size: 13px;
     --rm-overlay-scrim: #000000;
     --rm-phase-finished: #EF476F;
     --rm-phase-finished-hud: #FF7A92;

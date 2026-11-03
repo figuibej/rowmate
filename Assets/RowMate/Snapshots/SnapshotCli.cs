@@ -29,7 +29,10 @@ namespace RowMate.Snapshots
 
         // It. 4b (04b-hud-exr/02-tech-design §5): el HUD EXR (HudExrCatalog), el conjunto por defecto desde la 4b.
         public const string It4bOutput = "docs/migration/iterations/04b-hud-exr/snapshots";
-        public const string DefaultSet = "it4b";
+
+        // It. 5 (05-series-parciales/02-tech-design §5): los paneles de series (SeriesCatalog), el conjunto por defecto desde la 5.
+        public const string It5Output = "docs/migration/iterations/05-series-parciales/snapshots";
+        public const string DefaultSet = "it5";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
@@ -44,7 +47,12 @@ namespace RowMate.Snapshots
                 return It3Output;
             }
 
-            return string.Equals(set, "it4a", StringComparison.OrdinalIgnoreCase) ? It4aOutput : It4bOutput;
+            if (string.Equals(set, "it4a", StringComparison.OrdinalIgnoreCase))
+            {
+                return It4aOutput;
+            }
+
+            return string.Equals(set, "it4b", StringComparison.OrdinalIgnoreCase) ? It4bOutput : It5Output;
         }
 
         public static void Run()
@@ -84,9 +92,13 @@ namespace RowMate.Snapshots
             var seedName = Value(args, "-seed") ?? "Cap27";
             // It. 4b: -seed F4A (Prueba 4a, Corta, Distancia 100 y Sin meta) para probar a mano el build del simulador con una
             // rutina corta, sobre una carpeta de ROWMATE_DATA_DIR temporal (nunca la del usuario).
-            if (file == null || file.Length == 0 || (seedName != "Cap27" && seedName != "F4A"))
+            // It. 5 (05-series-parciales/02-tech-design §3.7): -seed F5 (las rutinas de series) y -prefs laps,reps, que escribe prefs.json
+            // con esas claves en verdadero AL LADO de la base pedida (la misma carpeta temporal de ROWMATE_DATA_DIR; nunca la del usuario):
+            // la medida de la entrada con los dos paneles desde la cascada (AC-WKT-13-15).
+            var prefs = Value(args, "-prefs");
+            if (file == null || file.Length == 0 || (seedName != "Cap27" && seedName != "F4A" && seedName != "F5"))
             {
-                Debug.LogError("[SNAPSHOT] SeedDatabase: falta -snapshotSeedDb <archivo> (y solo existen -seed Cap27 y -seed F4A)");
+                Debug.LogError("[SNAPSHOT] SeedDatabase: falta -snapshotSeedDb <archivo> (y solo existen -seed Cap27, -seed F4A y -seed F5)");
                 EditorApplication.Exit(2);
                 return;
             }
@@ -97,9 +109,18 @@ namespace RowMate.Snapshots
                 {
                     RoutineSeeds.WriteFile(file, RoutineSeeds.Cap27);
                 }
+                else if (seedName == "F5")
+                {
+                    RoutineSeeds.WriteFile(file, RoutineSeeds.F5);
+                }
                 else
                 {
                     RoutineSeeds.WriteFile(file, RoutineSeeds.F4A);
+                }
+
+                if (!string.IsNullOrWhiteSpace(prefs))
+                {
+                    WritePreferences(file, prefs!);
                 }
 
                 Debug.Log("[SNAPSHOT] base sintética lista (" + seedName + ")");
@@ -110,6 +131,28 @@ namespace RowMate.Snapshots
                 Debug.LogError("[SNAPSHOT] SeedDatabase: " + error.GetType().Name + ": " + error.Message);
                 EditorApplication.Exit(1);
             }
+        }
+
+        // prefs.json al lado de la base sembrada (la base ya pasó TempDatabase.Guard: es una carpeta de prueba). "laps,reps".
+        private static void WritePreferences(string databaseFile, string keys)
+        {
+            var folder = Path.GetDirectoryName(Path.GetFullPath(databaseFile)) ?? throw new InvalidOperationException("sin carpeta");
+            var parts = new List<string>();
+            foreach (var raw in keys.Split(','))
+            {
+                var key = raw.Trim();
+                if (key == "laps")
+                {
+                    parts.Add("\"" + RowMate.App.Workout.SeriesPanelPrefs.LapsKey + "\":true");
+                }
+                else if (key == "reps")
+                {
+                    parts.Add("\"" + RowMate.App.Workout.SeriesPanelPrefs.RepsKey + "\":true");
+                }
+            }
+
+            File.WriteAllText(Path.Combine(folder, "prefs.json"), "{" + string.Join(",", parts) + "}");
+            Debug.Log("[SNAPSHOT] preferencias sembradas (" + keys + ")");
         }
 
         public static IReadOnlyList<SnapshotScenario> Select(string filter)

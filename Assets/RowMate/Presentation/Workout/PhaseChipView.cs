@@ -108,8 +108,32 @@ namespace RowMate.Presentation.Workout
 
         public LiveDotMotion DotMotion => _dotMotion;
 
-        // El ancho fijo en base (0 hasta que se mide con panel).
+        // El ancho fijo en base (0 hasta que se mide con panel): el del modo en que está.
         public float FixedWidth { get; private set; }
+
+        // It. 5 (DD5-01): los anchos fijos de los dos modos (relleno 8 y 6) y si está en el compacto de la barra libre.
+        public float NormalWidth { get; private set; }
+
+        public float CompactWidth { get; private set; }
+
+        public bool IsCompact { get; private set; }
+
+        // El modo compacto de la barra libre (InfoRowFit.FreeCompact; 05-series-parciales/00-deuda-diseno §1.3): relleno 6 y 8 del
+        // reloj, en lugar de 8 y 10. El vertical (3), el tracking y los colores no cambian.
+        public void SetCompact(bool compact)
+        {
+            if (compact == IsCompact)
+            {
+                return;
+            }
+
+            IsCompact = compact;
+            var pad = (float)(compact ? InfoRowFit.FreeCompactChipPadH : HudGeometry.PhaseChipPadH) - 1;
+            style.marginLeft = (float)(compact ? InfoRowFit.FreeCompactChipGap : HudGeometry.PhaseChipGap);
+            style.paddingLeft = pad;
+            style.paddingRight = pad;
+            ApplyWidth();
+        }
 
         // Los textos del catálogo (para el ancho fijo): EN MARCHA, PAUSADO y FINALIZADO en el idioma de la app.
         public void RenderTexts(Localizer texts)
@@ -212,7 +236,14 @@ namespace RowMate.Presentation.Workout
             var active = TextWidth(_texts.Get(L10nKeys.HudPhaseActive));
             var paused = TextWidth(_texts.Get(L10nKeys.HudPhasePaused));
             var finished = TextWidth(_texts.Get(L10nKeys.HudPhaseFinished));
-            var width = (float)PhaseChip.FixedWidthBase(active, paused, finished);
+            NormalWidth = (float)PhaseChip.FixedWidthBase(active, paused, finished);
+            CompactWidth = (float)PhaseChip.FixedWidthBase(active, paused, finished, InfoRowFit.FreeCompactChipPadH);
+            ApplyWidth();
+        }
+
+        private void ApplyWidth()
+        {
+            var width = IsCompact ? CompactWidth : NormalWidth;
             if (width > 0 && Math.Abs(width - FixedWidth) > 0.01f)
             {
                 FixedWidth = width;

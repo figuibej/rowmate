@@ -18,6 +18,8 @@ namespace RowMate.Presentation.Workout
     //   │                                  y solo por debajo de eso se recorta con "…" (en TV y 360 en español entra a 0,818)
     //   ├── #hud-wall-clock                margin-left: auto (al menos 2 del título); el reloj de pared (WallClockView, el mismo que en la barra de pasos)
     //   └── #hud-phase-chip                margin-left 10; ANCHO FIJO (PhaseChipView)
+    // It. 5 (QA-V4b-R2-01, AC-WKT-16-07; 05-series-parciales/00-deuda-diseno §1.3, DD5-01): si el título no entra a su tamaño, el
+    // MODO COMPACTO: al menos 10 del título al reloj, el ícono del reloj a 3 de sus cifras, el chip a 8 del reloj y con relleno 6.
     // La misma caja de 40 que la de la 4a: SPM queda a la misma distancia. Sin eventos. Nada se encima: el título es lo único que
     // cede; el reloj y el chip tienen flex-shrink 0. La escala se mide solo con panel y cambia en el acto con la ventana o el
     // idioma (nunca layout por cuadro). Es la zona: HudZones la ancla arriba a la izquierda y la escala por s.
@@ -94,6 +96,12 @@ namespace RowMate.Presentation.Workout
 
         public bool TitleTruncated { get; private set; }
 
+        // It. 5 (DD5-01): la barra en el modo compacto (el título no entra a su tamaño: TV y P360 en español).
+        public bool IsCompact { get; private set; }
+
+        // El aire mínimo entre el título y el reloj en el modo en que está (2, o 10 en el compacto).
+        public float TitleClockGapNowDp => IsCompact ? (float)InfoRowFit.FreeCompactTitleClockGap : TitleClockGapDp;
+
         public void RenderTexts(Localizer texts)
         {
             Title.text = texts.Get(L10nKeys.HudFreeTitle);
@@ -127,7 +135,22 @@ namespace RowMate.Presentation.Workout
             }
 
             var title = Title.MeasureTextSize(Title.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x;
-            var others = IconSizeDp + IconGapDp + TitleClockGapDp + Clock.Number.NaturalBoxWidth + (float)HudGeometry.PhaseChipGap + Chip.FixedWidth;
+            // It. 5 (QA-V4b-R2-01, DD5-01): el modo compacto se decide con las medidas NORMALES (así no oscila) y, si el título no
+            // entra a su tamaño, le pasa al título 8 base de aire que le saca al chip y al reloj. Lo demás ocupa lo mismo.
+            var clockNormal = Clock.Number.NaturalBoxWidth - Clock.IconGapDp + (float)HudGeometry.WallClockIconGap;
+            var othersNormal = IconSizeDp + IconGapDp + TitleClockGapDp + clockNormal + (float)HudGeometry.PhaseChipGap + Chip.NormalWidth;
+            var compact = Chip.NormalWidth > 0 && InfoRowFit.FreeCompact(available, title, othersNormal);
+            if (compact != IsCompact)
+            {
+                IsCompact = compact;
+                Clock.SetCompact(compact);
+                Chip.SetCompact(compact);
+            }
+
+            var others = compact
+                ? IconSizeDp + IconGapDp + (float)InfoRowFit.FreeCompactTitleClockGap + clockNormal - (float)(HudGeometry.WallClockIconGap - InfoRowFit.FreeCompactClockIconGap)
+                  + (float)InfoRowFit.FreeCompactChipGap + Chip.CompactWidth
+                : othersNormal;
             var scale = (float)InfoRowFit.FreeTitleScale(available, title, others);
             var truncates = InfoRowFit.FreeTitleTruncates(available, title, others);
             var width = truncates ? Math.Max(0, (available - others) / scale) : -1;

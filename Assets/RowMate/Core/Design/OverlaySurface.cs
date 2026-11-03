@@ -37,6 +37,10 @@ namespace RowMate.Core.Design
 
         public DpRect? Dialog { get; init; }
 
+        // It. 5 (AC-BLE-16-02; 05-series-parciales, WP-B): con el diálogo de completado, lo que se ve de la columna de los paneles de
+        // series (dp de ventana, y desde arriba; null sin rutina o sin diálogo). La llave del carril izquierdo no la tapa.
+        public DpRect? Series { get; init; }
+
         // Una pestaña con su barra (tabBarHeight con el margen inferior incluido).
         public static OverlaySurface Tab(double tabBarHeight, IReadOnlyList<BottomObstacle>? obstacles = null)
         {
@@ -51,10 +55,11 @@ namespace RowMate.Core.Design
 
         // El inmersivo, con el lugar de la llave y el techo del panel que calcula HudGeometry (HudLayout.Wrench y
         // HudLayout.PanelCeiling). It. 4b: con el diálogo de completado abierto, las piezas del carril izquierdo
-        // (HudLayout.LeftLaneObstacles) y el rectángulo del diálogo (R10).
-        public static OverlaySurface Workout(DpRect wrenchSlot, double? panelCeiling, IReadOnlyList<DpRect>? leftLane = null, DpRect? dialog = null)
+        // (HudLayout.LeftLaneObstacles) y el rectángulo del diálogo (R10). It. 5: y la columna de los paneles de series.
+        public static OverlaySurface Workout(DpRect wrenchSlot, double? panelCeiling, IReadOnlyList<DpRect>? leftLane = null, DpRect? dialog = null,
+                                             DpRect? series = null)
         {
-            return new OverlaySurface(OverlayContextKind.Workout, 0, None, wrenchSlot, panelCeiling) { LeftLane = leftLane, Dialog = dialog };
+            return new OverlaySurface(OverlayContextKind.Workout, 0, None, wrenchSlot, panelCeiling) { LeftLane = leftLane, Dialog = dialog, Series = series };
         }
     }
 }

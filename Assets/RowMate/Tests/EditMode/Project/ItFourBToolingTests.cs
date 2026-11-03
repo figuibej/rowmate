@@ -31,8 +31,9 @@ namespace RowMate.Tests.EditMode.Project
         public void CaptureScriptDefaultsToIt4b()
         {
             var script = File.ReadAllText(RepoPaths.Combine(CaptureScript));
-            Assert.That(script, Does.Contain("[ValidateSet('it4b', 'it4a', 'it3', 'it2')]"));
-            Assert.That(script, Does.Contain("[string]$Set = 'it4b',"), "it4b por defecto desde la 4b");
+            // It. 5: it5 se suma adelante (es el por defecto desde la 5); it4a, it3 e it2 siguen.
+            Assert.That(script, Does.Contain("[ValidateSet('it5', 'it4b', 'it4a', 'it3', 'it2')]"));
+            Assert.That(script, Does.Contain("[string]$Set = 'it5',"), "it4b fue el por defecto en la 4b; desde la 5, it5");
             Assert.That(script, Does.Contain("return '" + It4b + "'"), "su carpeta de salida");
             var bytes = File.ReadAllBytes(RepoPaths.Combine(CaptureScript));
             for (var i = 0; i < bytes.Length; i++)
@@ -46,7 +47,7 @@ namespace RowMate.Tests.EditMode.Project
         {
             var cli = File.ReadAllText(RepoPaths.Combine(Cli));
             Assert.That(cli, Does.Contain("public const string It4bOutput = \"" + It4b + "\";"));
-            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it4b\";"));
+            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it5\";"), "desde la 5, it5 por defecto (it4b sigue: It4bOutput)");
             Assert.That(File.Exists(RepoPaths.Combine(Catalog)), Is.True, "HudExrCatalog");
         }
 

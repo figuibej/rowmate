@@ -1064,17 +1064,24 @@ namespace RowMate.Snapshots
                 ("el punto en vivo", () => h.IsShown("hud-phase-dot") == dot),
                 ("el chip de su ancho fijo", () => Near(h.BoundsOf("hud-phase-chip").width / (float)Layout(h).Scale, Hud(h).Free!.Chip.FixedWidth, 0.5)),
                 // QA-V4b-02 (O-P03): el ancho fijo contra el de las notas (04-design-notes §3.5), no solo contra el que midió la vista.
-                ("el ancho fijo de las notas (" + F(ChipWidthOfTheNotes(chip)) + " ± 1)", () => Near(Hud(h).Free!.Chip.FixedWidth, ChipWidthOfTheNotes(chip), 1)),
+                // It. 5 (DD5-01): en el modo compacto, 4 base menos (relleno 6).
+                ("el ancho fijo de las notas (" + F(ChipWidthOfTheNotes(chip, false)) + ", o " + F(ChipWidthOfTheNotes(chip, true)) + " compacto, ± 1)",
+                    () => Near(Hud(h).Free!.Chip.FixedWidth, ChipWidthOfTheNotes(chip, Hud(h).Free!.IsCompact), 1)),
                 ("el reloj y el chip enteros en la barra", () => h.BoundsOf("hud-phase-chip").xMax <= h.BoundsOf("hud-topbar").xMax + 0.5f
                                                                 && h.BoundsOf("hud-wall-clock").xMin >= h.BoundsOf("hud-free-title").xMax - 0.5f),
-                ("el título a " + F(FreeTopBar.TitleClockGapDp) + " o más del reloj (B-14, QA-V4b-02)", () => h.BoundsOf("hud-wall-clock").xMin - h.BoundsOf("hud-free-title").xMax
-                                                                >= FreeTopBar.TitleClockGapDp * (float)Layout(h).Scale - 0.5f));
+                // It. 5 (QA-V4b-R2-01, AC-WKT-16-07): 2 base en el modo normal; 10 en el compacto (00-deuda-diseno de la 5 §1.3). En el
+                // compacto la caja del título que da el layout es ≈ 0,5 base más ancha que la medida (el redondeo del texto): 1 dp de margen.
+                ("el título a " + F(FreeTopBar.TitleClockGapDp) + " (" + F(InfoRowFit.FreeCompactTitleClockGap) + " compacto) o más del reloj",
+                    () => h.BoundsOf("hud-wall-clock").xMin - h.BoundsOf("hud-free-title").xMax
+                          >= Hud(h).Free!.TitleClockGapNowDp * (float)Layout(h).Scale - (Hud(h).Free!.IsCompact ? 1f : 0.5f)));
         }
 
-        // El ancho fijo del chip en base (04-design-notes §3.5): 101,8 en español y 74,1 en inglés.
-        private static double ChipWidthOfTheNotes(string chip)
+        // El ancho fijo del chip en base (04-design-notes §3.5): 101,8 en español y 74,1 en inglés; en el modo compacto de la barra
+        // libre, 4 menos (00-deuda-diseno de la 5 §1.3: 97,8 y 70,1 con los anchos de las notas).
+        private static double ChipWidthOfTheNotes(string chip, bool compact)
         {
-            return chip == "EN MARCHA" || chip == "PAUSADO" || chip == "FINALIZADO" ? 101.8 : 74.1;
+            var width = chip == "EN MARCHA" || chip == "PAUSADO" || chip == "FINALIZADO" ? 101.8 : 74.1;
+            return compact ? width - 2 * (HudGeometry.PhaseChipPadH - InfoRowFit.FreeCompactChipPadH) : width;
         }
 
         private static IEnumerable<string> Looks(UiTestHost h, params StepPillLook[] looks)

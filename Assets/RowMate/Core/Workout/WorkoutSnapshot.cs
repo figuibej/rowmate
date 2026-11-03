@@ -32,5 +32,10 @@ namespace RowMate.Core.Workout
 
         // El instante monótono (s, el reloj despierto del programador) del segundo que lo cerró; NaN sin él.
         public double LastOutcomeAt { get; init; } = double.NaN;
+
+        // It. 5 (02-tech-design §2.3): la foto vigente del SeriesTracker (la misma instancia entre dos segundos: no se copia);
+        // con rutina y fuera de reposo (workout_provider.dart:91, el getter series). null en el libre y en reposo. Nada se
+        // guarda (AC-WKT-07-11).
+        public SeriesState? Series { get; init; }
     }
 }

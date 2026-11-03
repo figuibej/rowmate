@@ -27,8 +27,12 @@ namespace RowMate.Tests.PlayMode
             Assert.That(session, Is.Not.Null, "la sesión creada en la base");
             Assert.That(session!.RoutineName, Is.Null, "sin rutina");
             Assert.That(session.IsCut, Is.True, "abierta mientras dura");
+            // It. 5 (QA-V4b-06): el HUD se arma cuando el fondo empieza a aparecer (≈ 230 ms); el reloj de la sesión ya está en 00:00.
+            Assert.That(H.HudState!.Clock, Is.EqualTo("00:00"));
+            H.Advance(0.25);
+            yield return Frames();
             Assert.That(H.TextOf("hud-time-value"), Is.EqualTo("00:00"));
-            H.Advance(1.05);
+            H.Advance(0.8);
             yield return Frames();
             Assert.That(H.TextOf("hud-time-value"), Is.EqualTo("00:01"), "el primer segundo se ve 1 s después");
         }

@@ -35,9 +35,12 @@ namespace RowMate.Tests.PlayMode
             H.Advance(0.1);
             yield return Frames();
             Assert.That(page.Root.resolvedStyle.opacity, Is.LessThan(1f), "la página negra todavía entra (220)");
-            Assert.That(Hud.Backdrop.resolvedStyle.opacity, Is.LessThan(0.01f), "el fondo, después de los 220");
+            // It. 5 (QA-V4b-06): el HUD se arma cuando el fondo empieza a aparecer; mientras Workout funde a negro, no existe.
+            Assert.That(page.HasView, Is.False, "el HUD todavía no se armó (QA-V4b-06)");
+            Assert.That(page.Cascade.BackdropOpacity, Is.LessThan(0.01), "el fondo, después de los 220");
             H.Advance(0.4);
             yield return Frames();
+            Assert.That(page.HasView, Is.True, "a los 500 ms el HUD ya está");
             Assert.That(page.Root.resolvedStyle.opacity, Is.EqualTo(1f).Within(0.001f), "la página entera");
             Assert.That(Hud.Controls.resolvedStyle.opacity, Is.LessThan(0.01f), "los controles todavía no (840)");
             Assert.That(Hud.Controls.IsInteractive, Is.False);
@@ -48,6 +51,53 @@ namespace RowMate.Tests.PlayMode
             Assert.That(page.Cascade.IsRunning, Is.False, "todo quieto a los 1120");
             Assert.That(Hud.TopBar.resolvedStyle.opacity, Is.EqualTo(1f).Within(0.001f));
             Assert.That(Hud.Backdrop.resolvedStyle.opacity, Is.EqualTo(1f).Within(0.001f));
+        }
+
+        // It. 5 (QA-V4b-06, AC-WKT-13-15 [Editor-PM]: el orden de la entrada; 05-series-parciales/00-deuda-4b §2): el HUD se arma en
+        // el primer cuadro en que el fondo deja el 0 (después de los 220, con la página entera y negra), no en el del toque; nace
+        // con las opacidades de la cascada (todo en 0, nada se ve de golpe) y con el estado del motor; los tiempos de la entrada
+        // no cambian. Con reducir movimiento, en el acto.
+        [UnityTest, Category("AC-WKT-13-15"), Category("AC-WKT-13-06"), Category("QA-V4b-06")]
+        public IEnumerator TheHudIsBuiltInTheBlack()
+        {
+            CreateWorkout(RoutineSeeds.Lista);
+            yield return TapFreeWithoutSettling();
+            var page = Immersive;
+            var tapAt = H.Scheduler.MonotonicSeconds;
+            Assert.That(page.HasView, Is.False, "no en el cuadro del toque");
+            Assert.That(Phase, Is.EqualTo(WorkoutPhase.Active), "la sesión corre desde el toque igual (AC-WKT-13-01)");
+            H.Advance(0.2);
+            yield return Frames();
+            Assert.That(page.HasView, Is.False, "ni mientras Workout funde a negro");
+            H.Advance(0.03);
+            Assert.That(page.HasView, Is.True, "en el primer cuadro con el fondo fuera del 0");
+            Assert.That(page.Cascade.BackdropOpacity, Is.GreaterThan(0).And.LessThan(0.3), "con la pantalla casi negra");
+            yield return Frames();
+            Assert.That(page.Root.resolvedStyle.opacity, Is.EqualTo(1f).Within(0.001f), "la página ya entera y negra");
+            foreach (var piece in new[] { Hud.TopBar, Hud.Spm, Hud.RightZone, Hud.Band, Hud.VitalsZone, Hud.Controls })
+            {
+                Assert.That(piece.resolvedStyle.opacity, Is.LessThan(0.01f), piece.name + " nace con la opacidad de la cascada");
+            }
+
+            Assert.That(Hud.Controls.IsInteractive, Is.False, "los controles, desde los 840");
+            yield return Settle();
+            Assert.That(page.Cascade.IsRunning, Is.False);
+            Assert.That(Hud.Band.Time.Text, Is.EqualTo(H.HudState!.Clock), "con el estado del motor");
+            Assert.That(Hud.Controls.IsInteractive, Is.True);
+            // Lo continuo nace con la hora del toque (MotionDriver.StartingAt): el punto en vivo late con la fase de la 4b.
+            H.Advance(0.37);
+            yield return Frames();
+            var since = RowMate.Core.Design.HudTimelines.Ms(H.Scheduler.MonotonicSeconds - tapAt);
+            Assert.That(Hud.Free!.Chip.DotMotion.Opacity, Is.EqualTo(RowMate.Core.Design.LiveDot.At(since, false)).Within(0.01), "la fase desde el toque");
+        }
+
+        [UnityTest, Category("AC-WKT-13-15"), Category("AC-APP-05-08"), Category("QA-V4b-06")]
+        public IEnumerator WithReducedMotionTheHudIsThereAtOnce()
+        {
+            CreateWorkout(RoutineSeeds.Lista, o => o.ReduceMotion = true);
+            yield return TapFreeWithoutSettling();
+            Assert.That(Immersive.HasView, Is.True, "sin negro: el fondo está en 1 desde el cuadro 0");
+            Assert.That(Hud.Controls.IsInteractive, Is.True, "y los controles responden desde el cuadro 0");
         }
 
         [UnityTest, Category("AC-WKT-13-07"), Category("AC-APP-05-07")]
@@ -194,6 +244,113 @@ namespace RowMate.Tests.PlayMode
             Assert.That(H.Immersive, Is.Null, exit + ": salió");
             Assert.That(H.Handle.Motion.ActiveCount, Is.EqualTo(restCount), exit + ": el MotionDriver vuelve a lo de reposo");
             Assert.That(H.Handle.Pacing.Demands, Is.EqualTo(restDemands), exit + ": ninguna demanda de 60 fps de más");
+        }
+
+        // It. 5 (05-series-parciales/02-tech-design §3.3, §4.4; AC-WKT-13-06, -13-09, -18-01; VID-06): los paneles nacen con el HUD, en su
+        // estado guardado y con el primer paso (DV-48), y entran con el tramo de SPM (520-800, opacidad y +8·sp): nada aparece de golpe
+        // después de la cascada.
+        [UnityTest, Category("AC-WKT-13-06"), Category("AC-WKT-18-01")]
+        public IEnumerator ThePanelsComeWithSpmInTheCascade()
+        {
+            CreateWorkout(RoutineSeeds.F5, o =>
+            {
+                var prefs = new RowMate.Core.Common.MemoryPreferences();
+                prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.LapsKey, true);
+                prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.RepsKey, true);
+                o.Preferences = prefs;
+            });
+            yield return OpenStartDialog("Cinco reps");
+            yield return Frames();
+            H.Tap("dialog-confirm");
+            var start = H.Scheduler.MonotonicSeconds;
+            var built = false;
+            while (H.Scheduler.MonotonicSeconds - start < 1.0)
+            {
+                H.Step();
+                yield return null;
+                if (!Immersive.HasView)
+                {
+                    continue;
+                }
+
+                var column = Hud.Series!;
+                if (!built)
+                {
+                    built = true;
+                    Assert.That(column.Laps.Motion.Expanded && column.Reps.Motion.Expanded, Is.True, "los dos abiertos desde que nacen");
+                    Assert.That(column.RepsShown, Is.True, "Cinco reps empieza con la serie (DV-48)");
+                    Assert.That(H.TextOf("hud-laps-current"), Is.EqualTo("0:00.0"), "el primer paso ya en el primer cuadro (DV-48)");
+                    Assert.That(H.TextOf("hud-rep-progress"), Is.EqualTo("Rep 1/5 · 0 m"));
+                }
+
+                var spm = Hud.Spm.resolvedStyle.opacity;
+                Assert.That(column.Laps.resolvedStyle.opacity, Is.EqualTo(spm).Within(0.002f), "parciales con el tramo de SPM");
+                Assert.That(column.Reps.resolvedStyle.opacity, Is.EqualTo(spm).Within(0.002f), "repeticiones con el tramo de SPM");
+                Assert.That(column.Laps.VisualHeightBase, Is.EqualTo(column.Laps.FinalHeightBase).Within(1e-6), "sin abrirse ni cerrarse");
+            }
+
+            Assert.That(built, Is.True);
+            Assert.That(Hud.Series!.Laps.resolvedStyle.opacity, Is.EqualTo(1).Within(1e-4));
+        }
+
+        // It. 5 (AC-WKT-13-08, -13-09; ROB-02; §4.4): la salida se lleva la última foto de los paneles y nada sigue animando: con el
+        // resorte de un panel en curso (el toque 200 ms antes de Terminar) y con la marca de una vuelta encendida.
+        [UnityTest, Category("AC-WKT-13-09"), Category("AC-WKT-13-08"), Category("AC-WKT-18-20")]
+        public IEnumerator NothingAnimatesAfterTheExitWithThePanels()
+        {
+            foreach (var marker in new[] { false, true })
+            {
+                CreateWorkout(RoutineSeeds.F5, o => o.Preferences = new RowMate.Core.Common.MemoryPreferences());
+                yield return GoToWorkout();
+                var restCount = H.Handle.Motion.ActiveCount;
+                var restDemands = H.Handle.Pacing.Demands;
+                // LM5-05: el State de la preferencia es uno por app; un HUD que quedara suscripto quedaría retenido entero.
+                var restSubscribers = H.App.SeriesPanels.SubscriberCount;
+                yield return StartRoutine("Series 600");
+                Assert.That(H.App.SeriesPanels.SubscriberCount, Is.GreaterThan(restSubscribers), "el HUD sigue la preferencia mientras está");
+                if (marker)
+                {
+                    H.TapText("500 m");
+                    yield return Settle();
+                    yield return AdvanceTo(155.3);
+                    Assert.That(Hud.Series!.Laps.Visual.MarkerAlpha0, Is.GreaterThan(0.1), "la marca de #1 encendida");
+                }
+                else
+                {
+                    yield return AdvanceTo(60.2);
+                }
+
+                if (!marker)
+                {
+                    // El toque 200 ms antes de Terminar (el resorte sigue en curso).
+                    H.TapText("500 m");
+                    H.Advance(0.2);
+                    Assert.That(Hud.Series!.Laps.Motion.IsRunning, Is.True, "el resorte en curso");
+                }
+
+                yield return Frames();
+                H.Tap("hud-finish");
+                yield return Frames(3);
+
+                var current = H.TextOf("hud-laps-chip");
+                H.Tap("dialog-confirm");
+                for (var i = 0; i < 12; i++)
+                {
+                    H.Step();
+                    yield return null;
+                    if (H.Immersive != null && H.Immersive.HasView)
+                    {
+                        Assert.That(H.TextOf("hud-laps-chip"), Is.EqualTo(current), "la última foto");
+                    }
+                }
+
+                yield return Settle();
+                yield return Advance(1);
+                Assert.That(H.Immersive, Is.Null, "salió");
+                Assert.That(H.Handle.Motion.ActiveCount, Is.EqualTo(restCount), (marker ? "con la marca" : "con el resorte") + ": el MotionDriver vuelve a lo de reposo");
+                Assert.That(H.Handle.Pacing.Demands, Is.EqualTo(restDemands), "ninguna demanda de 60 fps de más");
+                Assert.That(H.App.SeriesPanels.SubscriberCount, Is.EqualTo(restSubscribers), "y el HUD que salió ya no está suscripto (LM5-05)");
+            }
         }
 
         // QA-V4b-MOT-02: en los 400 ms en negro de la salida (el HUD se va en 0-200 y el fondo en 200-400) Workout todavía no se ve,

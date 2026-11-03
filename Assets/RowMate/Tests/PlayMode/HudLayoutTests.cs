@@ -376,6 +376,89 @@ namespace RowMate.Tests.PlayMode
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §3.2, §6.3 HLT; AC-WKT-13-13, -18-16, -17-07): los paneles de series, cerrados y
+        // abiertos, en los cinco perfiles, no se cruzan con ninguna pieza de la 4b, no salen de la ventana (en ColumnScroll cuenta lo
+        // que se ve, hasta el piso) y van a 8·s de SPM; al rotar con los dos abiertos, la geometría nueva en el acto.
+        [UnityTest, Category("AC-WKT-13-13"), Category("AC-WKT-18-16"), Category("AC-WKT-17-07"), Category("AC-WKT-18-20")]
+        public IEnumerator SeriesPanelsOverlapNothingInAnyProfile()
+        {
+            var problems = new List<string>();
+            foreach (var profile in new[] { DeviceProfile.TV, DeviceProfile.P360, DeviceProfile.TH, DeviceProfile.L640, DeviceProfile.W1280 })
+            {
+                foreach (var open in new[] { false, true })
+                {
+                    var prefs = new RowMate.Core.Common.MemoryPreferences();
+                    prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.LapsKey, open);
+                    prefs.SetBool(RowMate.App.Workout.SeriesPanelPrefs.RepsKey, open);
+                    CreateWorkout(RoutineSeeds.F5, o =>
+                    {
+                        o.Profile = profile;
+                        o.IsDesktop = profile.Code == DeviceProfile.W1280.Code;
+                        o.Preferences = prefs;
+                    }, k => RowerScripts.R4(k).CopyWith(heartRate: 140));
+                    yield return StartRoutine("Series 600");
+                    yield return AdvanceTo(380.2);
+                    yield return Settle();
+                    problems.AddRange(PanelProblems(profile.Code + (open ? " abiertos" : " cerrados")));
+                }
+            }
+
+            // Rotar con los dos abiertos: en el acto, con la geometría nueva (AC-WKT-17-07).
+            H.Resize(DeviceProfile.TV);
+            yield return Frames(3);
+            var column = Hud.Series!;
+            Assert.That(column.Laps.Motion.IsRunning || column.Reps.Motion.IsRunning, Is.False, "rotar no anima");
+            Assert.That(column.Column.Rule, Is.EqualTo(RowMate.Core.Design.SeriesFitRule.FitAll));
+            problems.AddRange(PanelProblems("rotado a TV"));
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        private IEnumerable<string> PanelProblems(string label)
+        {
+            var column = Hud.Series!;
+            var window = H.Root.worldBound;
+            var floor = (float)column.Column.Floor;
+            var s = (float)Immersive.Layout!.Scale;
+            var spm = H.BoundsOf("hud-spm");
+            foreach (var panel in new[] { column.Laps, column.Reps })
+            {
+                if (panel.resolvedStyle.display == UnityEngine.UIElements.DisplayStyle.None)
+                {
+                    continue;
+                }
+
+                var box = panel.worldBound;
+                var visual = new Rect(box.x, box.y, box.width, (float)(panel.VisualHeightBase * panel.Scale));
+                if (column.Column.Rule == RowMate.Core.Design.SeriesFitRule.ColumnScroll)
+                {
+                    visual.yMax = Math.Min(visual.yMax, floor);
+                    if (visual.height <= 0)
+                    {
+                        continue;
+                    }
+                }
+
+                if (visual.xMin < window.xMin - 0.5f || visual.xMax > window.xMax + 0.5f || visual.yMax > window.yMax + 0.5f)
+                {
+                    yield return label + ": " + panel.name + " sale de la ventana " + visual;
+                }
+
+                foreach (var piece in Pieces)
+                {
+                    if (H.IsShown(piece) && Overlap(visual, H.BoundsOf(piece)))
+                    {
+                        yield return label + ": " + panel.name + " " + visual + " se cruza con #" + piece + " " + H.BoundsOf(piece);
+                    }
+                }
+            }
+
+            var gap = column.Laps.worldBound.yMin - spm.yMax;
+            if (Math.Abs(gap - 8 * s) > 0.6f)
+            {
+                yield return label + ": el aire con SPM es " + gap.ToString("0.00") + " dp (8·s = " + (8 * s).ToString("0.00") + ")";
+            }
+        }
+
         [UnityTest, Category("AC-WKT-17-09")]
         public IEnumerator BoatZoneStaysFree()
         {

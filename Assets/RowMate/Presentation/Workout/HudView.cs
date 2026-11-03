@@ -22,6 +22,7 @@ namespace RowMate.Presentation.Workout
     //   #hud-boat-zone                      contorno de depuración de la zona del bote (solo si lo pide el anfitrión)
     //   #hud-topbar                         StepInfoBar (con rutina: píldoras, información y sello) o FreeTopBar (libre: reloj y chip)
     //   #hud-spm                            la tarjeta grande (zona arriba a la izquierda)
+    //   #hud-laps-panel, #hud-reps-panel    con rutina, los paneles de series debajo de SPM (SeriesColumn; It. 5): un elemento cada uno
     //   #hud-zone-right > #hud-split, #hud-watts      (zona arriba a la derecha)
     //   #hud-zone-vitals > #hud-kcal, #hud-bpm        (columna en vertical; fila a la altura de los controles en horizontal)
     //   #hud-band                           tiempo │ distancia (zona abajo a la izquierda)
@@ -51,7 +52,8 @@ namespace RowMate.Presentation.Workout
         private bool _frozen;
         private bool _disposed;
 
-        public HudView(UiContext ui, bool isRoutine, IReadOnlyObservable<WallClockState> clock, Action finish, Action pause, Action resume)
+        public HudView(UiContext ui, bool isRoutine, IReadOnlyObservable<WallClockState> clock, Action finish, Action pause, Action resume,
+                       ISeriesPanelsExpansion? seriesExpansion = null)
         {
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             if (clock == null)
@@ -97,6 +99,15 @@ namespace RowMate.Presentation.Workout
             Spm = new HudCard(ui, "hud-spm", MetricKind.Spm, HudCardSize.Large, true, false, false);
             Spm.SetGlowTexture(_glow);
             Add(Spm);
+
+            // It. 5 (F-WKT-18; 05-series-parciales/02-tech-design §3.3): con rutina, los dos paneles de series debajo de SPM (SeriesColumn);
+            // en el libre, nada (sin lugar reservado). Nacen con el HUD, en el cuadro negro de la entrada, con su estado guardado.
+            if (isRoutine)
+            {
+                Series = new SeriesColumn(ui, seriesExpansion ?? ui.App.SeriesPanels, (blocked, instant) => Callouts?.SetBlockedByPanels(blocked, instant));
+                Add(Series.Laps);
+                Add(Series.Reps);
+            }
 
             RightZone = new VisualElement { name = "hud-zone-right" };
             RightZone.AddToClassList("rm-hud-zone-right");
@@ -184,6 +195,9 @@ namespace RowMate.Presentation.Workout
 
         public CenterCallouts Callouts { get; }
 
+        // It. 5: los paneles de series (null en el libre).
+        public SeriesColumn? Series { get; }
+
         public HudControls Controls { get; }
 
         public WorkoutHudState? State => _state;
@@ -256,6 +270,7 @@ namespace RowMate.Presentation.Workout
             Spm.SetMetric(state.Spm, stepChanged, instant);
             Split.SetMetric(state.Split, stepChanged, instant);
             Watts.SetMetric(state.Watts, stepChanged, instant);
+            Series?.Apply(state.Series, Spm.HasTarget, instant);
             Kcal.SetValue(state.Kcal, state.KcalValue, instant);
             var hasBpm = state.Bpm != null;
             if (hasBpm)
@@ -321,6 +336,7 @@ namespace RowMate.Presentation.Workout
             Band.SetUnit(texts.Get(L10nKeys.HudUnitMeters));
             Free?.RenderTexts(texts);
             Steps?.RenderTexts(texts);
+            Series?.RenderTexts(texts);
             Callouts.RenderTexts(texts);
             Controls.RenderTexts(texts);
         }
@@ -339,6 +355,7 @@ namespace RowMate.Presentation.Workout
             Bpm.Heartbeat?.Stop();
             Steps?.Dispose();
             Free?.Dispose();
+            Series?.Dispose();
             Callouts.Dispose();
             _veil.Stop();
             _kcalSlide.Stop();

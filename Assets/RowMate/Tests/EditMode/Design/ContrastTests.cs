@@ -349,6 +349,51 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(RenderedRatio("step.cooldown", ""), Is.GreaterThanOrEqualTo(3.0));
         }
 
+        // It. 5 (05-series-parciales/00-deuda-diseno §3.7, sin cambios en 04-design-notes §7): C1 a C9, los pares de los paneles
+        // de series sobre el peor vidrio, uno por caso (los valores, en ItFiveControlValuesMatchTheDesignNotes).
+        [TestCaseSource(nameof(ItFivePairCases))]
+        public void ItFiveDesignerPairs(string front, string layers, double threshold)
+        {
+            var ratio = Contrast.RatioOver(Layer(front), Stack(layers));
+            TestContext.Out.WriteLine(front + " / " + layers + ": " + Fmt.Fixed(ratio, 3) + " (umbral " + Fmt.DartToString(threshold) + ")");
+            Assert.That(ratio, Is.GreaterThanOrEqualTo(threshold));
+        }
+
+        // Los valores de 00-deuda-diseno §3.7 a 3 decimales (el peor vidrio y el peor renderizado, #2B3038). Si cambia un token,
+        // cambia acá y en las notas (la excepción de dueño de 02-tech-design §7.6).
+        [Test, Category("AC-BASE-05")]
+        public void ItFiveControlValuesMatchTheDesignNotes()
+        {
+            const string Glass = WhiteGlass;
+            Assert.That(Ratio("metric.split", Glass), Is.EqualTo(6.572).Within(0.0006), "C1 rótulo y título de parciales; C9 la marca");
+            Assert.That(Ratio("metric.distance", Glass), Is.EqualTo(7.016).Within(0.0006), "C2 rótulo y título de repeticiones; C9 la marca");
+            Assert.That(Ratio("metric.split@80", Glass), Is.EqualTo(4.746).Within(0.0006), "C3 el ícono timer");
+            Assert.That(Ratio("metric.distance@80", Glass), Is.EqualTo(5.062).Within(0.0006), "C3 el ícono history");
+            Assert.That(Ratio("text.tertiary", Glass), Is.EqualTo(5.099).Within(0.0006), "C4 la flecha; C7 los vacíos");
+            Assert.That(Ratio("metric.split.hud", Glass), Is.EqualTo(7.127).Within(0.0006), "C5 los valores de parciales");
+            Assert.That(Ratio("metric.distance.hud", Glass), Is.EqualTo(7.163).Within(0.0006), "C5 los valores de repeticiones");
+            Assert.That(Ratio("metric.split.hud@80", Glass), Is.EqualTo(5.118).Within(0.0006), "C6 los metros de la vuelta en curso");
+            Assert.That(Ratio("text.secondary", Glass), Is.EqualTo(7.448).Within(0.0006), "C7 los rótulos #n y Rep n");
+            Assert.That(Ratio("metric.split", Glass + "|text.primary@4"), Is.EqualTo(5.817).Within(0.0006), "C8 el rótulo del chip con el hover");
+            Assert.That(Ratio("metric.split", Glass + "|text.primary@8"), Is.EqualTo(5.120).Within(0.0006), "C8 el rótulo del chip presionado");
+            Assert.That(Ratio("metric.split@20", Glass), Is.LessThan(7), "el fondo ámbar de la spec no llegaba: por eso la marca (DT5-03)");
+
+            // Margen de render: contra el peor vidrio renderizado + 1 (#2B3038).
+            Assert.That(RenderedRatio("metric.split", ""), Is.EqualTo(6.463).Within(0.0006), "C1 renderizado");
+            Assert.That(RenderedRatio("metric.distance", ""), Is.EqualTo(6.900).Within(0.0006), "C2 renderizado");
+            Assert.That(RenderedRatio("metric.split@80", ""), Is.EqualTo(4.680).Within(0.0006), "C3 timer renderizado");
+            Assert.That(RenderedRatio("metric.distance@80", ""), Is.EqualTo(4.992).Within(0.0006), "C3 history renderizado");
+            Assert.That(RenderedRatio("text.tertiary", ""), Is.EqualTo(5.048).Within(0.0006), "C4 y C7 renderizados");
+            Assert.That(RenderedRatio("metric.split.hud", ""), Is.EqualTo(7.009).Within(0.0006), "C5 renderizado");
+            Assert.That(RenderedRatio("metric.distance.hud", ""), Is.EqualTo(7.044).Within(0.0006), "C5 renderizado");
+            Assert.That(RenderedRatio("metric.split.hud@80", ""), Is.EqualTo(5.047).Within(0.0006), "C6 renderizado");
+            Assert.That(RenderedRatio("text.secondary", ""), Is.EqualTo(7.352).Within(0.0006), "C7 renderizado");
+            Assert.That(RenderedRatio("metric.split", "|text.primary@4"), Is.EqualTo(5.719).Within(0.0006), "C8 renderizado al 4 %");
+            Assert.That(RenderedRatio("metric.split", "|text.primary@8"), Is.EqualTo(5.035).Within(0.0006), "C8 renderizado al 8 %");
+            Assert.That(RenderedRatio("metric.split.hud", ""), Is.GreaterThanOrEqualTo(7.0));
+            Assert.That(RenderedRatio("metric.distance.hud", ""), Is.GreaterThanOrEqualTo(7.0));
+        }
+
         // Valores de control (02-tech-design §4.4 y 04-design-notes §4): mismos números que el Designer y QA, a 3 decimales.
         // Los del HUD, con los valores de la It. 3 (QA-V2-12; antes 7,004 · 7,016 · 7,040 · 4,508 · 4,519 · 4,512).
         [Test, Category("AC-BASE-05")]
@@ -634,6 +679,27 @@ namespace RowMate.Tests.EditMode.Design
             yield return ItTwoCase("B10", "accent.primary", "surface.overlay|text.primary@4", 3.0);
             yield return ItTwoCase("B10", "text.secondary", "surface.overlay|text.primary@4", 4.5);
             yield return ItTwoCase("B10", "text.primary", "surface.overlay|text.primary@4", 4.5);
+        }
+
+        // C1-C9 de 05-series-parciales/00-deuda-diseno §3.7, uno por caso.
+        private static IEnumerable<TestCaseData> ItFivePairCases()
+        {
+            const string Glass = WhiteGlass;
+            yield return ItTwoCase("C1", "metric.split", Glass, 4.5);
+            yield return ItTwoCase("C2", "metric.distance", Glass, 4.5);
+            yield return ItTwoCase("C3", "metric.split@80", Glass, 3.0);
+            yield return ItTwoCase("C3", "metric.distance@80", Glass, 3.0);
+            yield return ItTwoCase("C4", "text.tertiary", Glass, 3.0);
+            yield return ItTwoCase("C5", "metric.split.hud", Glass, 7.0);
+            yield return ItTwoCase("C5", "metric.distance.hud", Glass, 7.0);
+            yield return ItTwoCase("C6", "metric.split.hud@80", Glass, 4.5);
+            yield return ItTwoCase("C7", "text.secondary", Glass, 4.5);
+            yield return ItTwoCase("C7", "text.tertiary", Glass, 4.5);
+            yield return ItTwoCase("C8", "metric.split", Glass + "|text.primary@4", 4.5);
+            yield return ItTwoCase("C8", "metric.split", Glass + "|text.primary@8", 4.5);
+            yield return ItTwoCase("C8", "metric.distance", Glass + "|text.primary@8", 4.5);
+            yield return ItTwoCase("C9", "metric.split", Glass, 3.0);
+            yield return ItTwoCase("C9", "metric.distance", Glass, 3.0);
         }
 
         // El frente también puede llevar "@NN" (Layer): sin alfa propia es el token tal cual.

@@ -82,12 +82,22 @@ namespace RowMate.Tests.UiSupport
         public ProbeResult Measure(VisualElement root, Texture2D frame, double density)
         {
             var element = UiQuery.Resolve(root, Element);
+            Rect bounds;
             if (element == null)
             {
-                return new ProbeResult(this, "", 255, "no existe #" + Element);
-            }
+                // It. 5 (§3.6): si no hay un elemento con ese nombre, una ranura de texto dibujado (los paneles de series).
+                var slot = UiQuery.FindSlot(root, Element);
+                if (!slot.HasValue)
+                {
+                    return new ProbeResult(this, "", 255, "no existe #" + Element);
+                }
 
-            var bounds = Region != null ? Region(element) : element.worldBound;
+                bounds = slot.Value.Slot.WorldRect;
+            }
+            else
+            {
+                bounds = Region != null ? Region(element) : element.worldBound;
+            }
             if (!(bounds.width > 0) || !(bounds.height > 0))
             {
                 return new ProbeResult(this, "", 255, "#" + Element + " sin tamaño");

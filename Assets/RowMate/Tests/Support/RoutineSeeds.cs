@@ -145,6 +145,120 @@ namespace RowMate.Tests.Support
         // larga y Maratón (se guardan de la más vieja a la más nueva).
         public static RoutineSeed F4B => new RoutineSeed("F-4B", new[] { Maraton(), SerieLarga(), TextoLargo(), FinalPorDistancia(), Estados() }, NoRaw);
 
+        // It. 5 (05-series-parciales/01-po-spec §0.4): F-5, de la más nueva a la más vieja: Series 600, Trabajo 1000, Fondo 3000,
+        // Cinco reps, Dos series y copias de Pirámide 500, Prueba 4a y Corta (se guardan de la más vieja a la más nueva, el
+        // 2026-10-29 a las 13:01 a 13:08). Los ids de serie de las nuevas salen de su fecha; las copias conservan los de la
+        // original (los mismos que usa tools/oracle/bin/series_vectors.dart).
+        public static RoutineSeed F5 => new RoutineSeed("F-5", new[]
+        {
+            Corta() with { CreatedAt = F5Day(1) },
+            PruebaCuatroA() with { CreatedAt = F5Day(2) },
+            PiramideQuinientos() with { CreatedAt = F5Day(3) },
+            DosSeries(),
+            CincoReps(),
+            FondoTresMil(),
+            TrabajoMil(),
+            SeriesSeiscientos(),
+        }, NoRaw);
+
+        // It. 5 (§3.6 del diseño; HudBudgetTests): el peor caso del presupuesto de la 4b dentro de una serie ×2 (así a los 5,5 s
+        // están los tres objetivos fuera, BPM, Próximo, la cuenta grande, el sello y el panel de repeticiones).
+        public static RoutineSeed Budget5 => Single("F-PRESUPUESTO-5", Make("Presupuesto 5", Day(29),
+            Step(K, dur: 4, wMin: 200, spm: 30, split: 100, g: SeriesId(Day(29), 0), rep: 2),
+            Step(K, dur: 4, wMin: 200, spm: 30, split: 100, g: SeriesId(Day(29), 0), rep: 2),
+            Step(R, dur: 30, g: SeriesId(Day(29), 0), rep: 2)));
+
+        // It. 5 (LT-59 a LT-61; test/series_panels_test.dart:8-10): un trabajo de 1000 m en la serie "g" ×3 (el _work del
+        // legacy) y su versión sin grupo (LT-61). El tracker se arma con una sola lectura de 300 m a los 60 s (:12-22).
+        public static IntervalStep Lt59Work => new IntervalStep(1, 0, K) { DistanceMeters = 1000, GroupId = "g", GroupRepeatCount = 3 };
+
+        public static IntervalStep Lt59LooseWork => new IntervalStep(1, 0, K) { DistanceMeters = 1000 };
+
+        public static Routine Lt59 => Make("LT-59", Day(29), Step(K, dist: 1000, g: "g", rep: 3));
+
+        public static Routine Lt61 => Make("LT-61", Day(29), Step(K, dist: 1000));
+
+        // It. 5 (WP-B, SPV): las dos de LT-59 a LT-61 en una base (la que está en serie y la suelta).
+        public static RoutineSeed Lt59Seed => new RoutineSeed("F-LT59", new[] { Lt59, Lt61 }, NoRaw);
+
+        // 2026-10-29 13:00 + minutos: las fechas de F-5.
+        public static DateTimeOffset F5Day(int minutes)
+        {
+            return Day(29).AddMinutes(minutes);
+        }
+
+        // ── Las rutinas nuevas de F-5 (spec §0.4) ──
+
+        // Calentamiento 30 s; serie ×3 [trabajo 600 m; descanso 20 s]; enfriamiento 30 s. 8 pasos. La de la demo.
+        public static Routine SeriesSeiscientos()
+        {
+            var g = SeriesId(F5Day(8), 0);
+            return Make("Series 600", F5Day(8), Step(W, dur: 30), Step(K, dist: 600, g: g, rep: 3), Step(R, dur: 20, g: g, rep: 3), Step(C, dur: 30));
+        }
+
+        // Un trabajo de 1000 m, suelto.
+        public static Routine TrabajoMil()
+        {
+            return Make("Trabajo 1000", F5Day(7), Step(K, dist: 1000));
+        }
+
+        // Un trabajo de 3000 m, suelto.
+        public static Routine FondoTresMil()
+        {
+            return Make("Fondo 3000", F5Day(6), Step(K, dist: 3000));
+        }
+
+        // Serie ×5 [trabajo 500 m; enfriamiento 10 s]. Empieza con la serie.
+        public static Routine CincoReps()
+        {
+            var g = SeriesId(F5Day(5), 0);
+            return Make("Cinco reps", F5Day(5), Step(K, dist: 500, g: g, rep: 5), Step(C, dur: 10, g: g, rep: 5));
+        }
+
+        // Serie A ×2 [trabajo 60 s]; serie B ×2 [trabajo 60 s]; descanso 30 s, suelto.
+        public static Routine DosSeries()
+        {
+            return Make("Dos series", F5Day(4), Step(K, dur: 60, g: SeriesId(F5Day(4), 0), rep: 2), Step(K, dur: 60, g: SeriesId(F5Day(4), 1), rep: 2),
+                Step(R, dur: 30));
+        }
+
+        // El paso de 0 s del oráculo de series (spec AC-WKT-07-12): calentamiento 3 s; serie ×2 [trabajo 0 s; trabajo 100 m;
+        // descanso 0 s]; enfriamiento 3 s. No está en F-5 (solo la usan las pruebas).
+        public static Routine PasoCero()
+        {
+            var g = SeriesId(F5Day(9), 0);
+            return Make("Paso cero", F5Day(9), Step(W, dur: 3), Step(K, dur: 0, g: g, rep: 2), Step(K, dist: 100, g: g, rep: 2), Step(R, dur: 0, g: g, rep: 2),
+                Step(C, dur: 3));
+        }
+
+        // Las rutinas de los guiones del oráculo de series, por nombre (F-5 y el paso de 0 s).
+        public static Routine F5Routine(string name)
+        {
+            switch (name)
+            {
+                case "Series 600":
+                    return SeriesSeiscientos();
+                case "Trabajo 1000":
+                    return TrabajoMil();
+                case "Fondo 3000":
+                    return FondoTresMil();
+                case "Cinco reps":
+                    return CincoReps();
+                case "Dos series":
+                    return DosSeries();
+                case "Pirámide 500":
+                    return PiramideQuinientos() with { CreatedAt = F5Day(3) };
+                case "Prueba 4a":
+                    return PruebaCuatroA() with { CreatedAt = F5Day(2) };
+                case "Corta":
+                    return Corta() with { CreatedAt = F5Day(1) };
+                case "Paso cero":
+                    return PasoCero();
+                default:
+                    throw new ArgumentException("rutina de F-5 desconocida: " + name, nameof(name));
+            }
+        }
+
         // Las F-RARA con los nombres de la spec de la 4a (§0.4), cada una en su base: "Serie enorme" (una serie ×2 000 000 000
         // de trabajo 60 s), "Vatios imposibles" (un trabajo de 60 s con vatios mín. 50 000), "Serie ×0" (solo una serie ×0 de
         // trabajo 60 s) y "Sprint" (un paso de tipo sprint, cambiado en SQL: la carga falla, AC-WKT-12-06).

@@ -35,3 +35,14 @@ El legacy cuenta disparos de un `Timer.periodic(1 s)` ([rowmate-legacy](https://
 - `Tick(double, DateTimeOffset, TimeSpan)` y `ResumeFromBackground(double, …)` siguen y son las de `FrameClock` sin medida ni avisos: las pruebas de la 4a no cambian.
 - **Si no llega ninguna señal**, el lapso cuenta como un cuadro tarde (la 4a) y se anota `[TIME] cuadro de N s sin aviso de suspensión: cuenta (AC-WKT-02-04)` desde 30 s. Con el modo de espera moderno (S0) el núcleo puede no contarlo como sueño: quedan los avisos (R4b-01).
 - Las pruebas de `dotnet` lo cubren con `SuspendAccountingTests` y con `LifecycleHarness.Suspend` / `Wake` en los dos casos del monótono (`WorkoutSuspendTests`: 25 puntos en vez de 145). La suspensión real del equipo la verifica el usuario con el build (demo (c) de la 4b; `[Ignore]` en `WorkoutDeviceChecksTests`).
+
+## Addendum de la It. 5 (05-series-parciales/00-deuda-4b §1)
+
+La demo (c) de la 4b no fue concluyente: el equipo no llegó a suspenderse durante la demo, así que no había nada que detectar. La revisión de punta a punta no encontró un camino por el que un sueño S3 con la app abierta pase sin dejar rastro, y la decisión no cambia. Lo que se suma es **el registro de cada fuente, en cada despertar y también en reposo** (lo escribe `SuspendAccounting`, que corre en cada cuadro haya sesión o no):
+
+- `[TIME] medida del sueño del núcleo disponible (…)` al arrancar, junto a `[TIME] avisos de suspensión registrados (P-17)`;
+- `[TIME] aviso del sistema: se suspende (n)` y `… reanuda (n): durmió X s según el aviso`, con la hora de cada aviso tomada en el *callback* con `GetTickCount64` (`FrameClock.SignalAsleepSeconds`, `ISystemSleepSource.SignalAsleepSeconds`; solo informa);
+- `[TIME] despertar: durmió A s según la medida del núcleo y B s según el aviso del sistema; el reloj crudo avanzó C s y se descuentan D s (evidencia)`, con `sin medida del núcleo`, `sin aviso del sistema` o `el aviso de reanudación todavía no llegó` cuando falta una;
+- `[TIME] la hora de pared se movió N s respecto del reloj crudo, sin aviso ni medida de sueño: no se descuenta (AC-WKT-19-04)`, desde 30 s: un cambio de hora o un sueño que ninguna señal vio.
+
+La conducta del reloj despierto no cambia (las mismas pruebas de la 4b pasan igual). La demo tiene que suspender de verdad el equipo (Inicio → Inicio/apagado → Suspender): la app pide que el equipo no se duerma solo mientras está abierta (AC-APP-14), y bloquear la sesión o apagar el monitor no es una suspensión.

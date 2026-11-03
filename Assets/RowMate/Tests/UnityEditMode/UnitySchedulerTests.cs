@@ -96,6 +96,8 @@ namespace RowMate.Tests.UnityEditMode
 
             public int ResumeSignals { get; set; }
 
+            public double SignalAsleepSeconds { get; set; } = double.NaN;
+
             public bool SignalsRegistered => false;
 
             public void Dispose()
@@ -150,6 +152,78 @@ namespace RowMate.Tests.UnityEditMode
             var ran = scheduler.ResumeFromBackground();
             Assert.That(ran, Is.EqualTo(5), "el alcance hasta el monótono despierto: 5 s, no 305");
             Assert.That(woke, Is.EqualTo(1), "Woke después del alcance");
+        }
+
+        // It. 5 (05-series-parciales/00-deuda-4b §1): la demo (c) de la 4b no fue concluyente. Cada despertar queda en el registro
+        // con lo que vio cada fuente, también en reposo (acá no hay motor ni sesión: lo escribe el reloj despierto).
+        [Test, Category("AC-WKT-02-11")]
+        public void EveryWakeIsLoggedAtRestWithBothSources()
+        {
+            var logger = new RecordingLogger();
+            var sleep = new TestSleep { AsleepSeconds = 10 };
+            _monotonic = 100;
+            _utc = Start;
+            var scheduler = new UnityScheduler(logger, () => _monotonic, () => _utc, _ => TimeSpan.FromHours(-3), sleep);
+            Move(1);
+            scheduler.Tick();
+            sleep.SuspendSignals = 1;
+            Move(0.02);
+            scheduler.Tick();
+            sleep.AsleepSeconds += 60;
+            sleep.ResumeSignals = 1;
+            sleep.SignalAsleepSeconds = 60.4;
+            Move(60);
+            scheduler.Tick();
+            Assert.That(logger.Contains("[TIME] Info: aviso del sistema: se suspende (1)"), Is.True, string.Join("\n", logger.Lines));
+            Assert.That(logger.Contains("[TIME] Info: aviso del sistema: reanuda (1): durmió 60.4 s según el aviso"), Is.True);
+            Assert.That(logger.Contains("[TIME] Info: despertar: durmió 60.0 s según la medida del núcleo y 60.4 s según el aviso del sistema; "
+                                        + "el reloj crudo avanzó 60.0 s y se descuentan 60.0 s (aviso, medida)"), Is.True, string.Join("\n", logger.Lines));
+        }
+
+        // El P/Invoke de verdad (la medida del núcleo del Editor de Windows y la hora del aviso con GetTickCount64): un aviso de
+        // "se suspende", un cuadro de 65 s y el "reanuda" de 65 s después. Sin sueño real la medida no se mueve, así que el
+        // despertar es por el aviso, y el registro lo dice con las dos fuentes.
+        [Test, Category("AC-WKT-02-11")]
+        public void WindowsSourceThroughTheSchedulerLogsTheWake()
+        {
+            if (UnityEngine.Application.platform != UnityEngine.RuntimePlatform.WindowsEditor)
+            {
+                Assert.Ignore("NO VERIFICABLE: solo en el Editor de Windows");
+            }
+
+            var logger = new RecordingLogger();
+            using (var sleep = new WindowsSleepSource(logger, false))
+            {
+                _monotonic = 100;
+                _utc = Start;
+                var scheduler = new UnityScheduler(logger, () => _monotonic, () => _utc, _ => TimeSpan.FromHours(-3), sleep);
+                // Los contadores son del proceso (otras pruebas los movieron): el primer cuadro los absorbe y se cierra lo pendiente.
+                Move(0.02);
+                scheduler.Tick();
+                if (scheduler.Frames.SuspendPending)
+                {
+                    WindowsSleepSource.SimulatePowerEvent(WindowsSleepSource.PbtApmResumeAutomatic, 0);
+                    Move(0.02);
+                    scheduler.Tick();
+                }
+
+                Assert.That(scheduler.Frames.SuspendPending, Is.False);
+                logger.Clear();
+                var woke = new List<SystemWake>();
+                scheduler.Woke += woke.Add;
+                WindowsSleepSource.SimulatePowerEvent(WindowsSleepSource.PbtApmSuspend, 1000);
+                Move(0.02);
+                scheduler.Tick();
+                Assert.That(scheduler.Frames.SuspendPending, Is.True, "el aviso llegó al reloj");
+                Move(65);
+                WindowsSleepSource.SimulatePowerEvent(WindowsSleepSource.PbtApmResumeSuspend, 66000);
+                scheduler.Tick();
+                Assert.That(woke.Count, Is.EqualTo(1));
+                Assert.That(woke[0].Evidence, Is.EqualTo(SleepEvidence.Signal));
+                Assert.That(scheduler.Frames.SleepBias, Is.EqualTo(65 - SuspendAccounting.NominalFrameSeconds).Within(1e-6));
+                Assert.That(logger.Contains("despertar: durmió 0.0 s según la medida del núcleo y 65.0 s según el aviso del sistema; "
+                                            + "el reloj crudo avanzó 65.0 s y se descuentan 65.0 s (aviso)"), Is.True, string.Join("\n", logger.Lines));
+            }
         }
 
         [Test, Category("AC-WKT-19-04")]

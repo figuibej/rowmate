@@ -17,13 +17,13 @@ namespace RowMate.Tests.EditMode.Workout
         public static readonly DateTimeOffset SessionStart = new DateTimeOffset(2026, 10, 28, 13, 0, 0, TimeSpan.Zero);
 
         // sessionsFor: una base que necesita el programador del arnés (ScriptedSessionRepository, con sus demoras).
-        public WorkoutHarness(Func<int, RowingData>? reading = null, ISessionRepository? sessions = null, bool startRower = true,
+        public WorkoutHarness(Func<int, RowingData?>? reading = null, ISessionRepository? sessions = null, bool startRower = true,
                               Func<FakeScheduler, ISessionRepository>? sessionsFor = null)
         {
             Logger = new RecordingLogger();
             Scheduler = new FakeScheduler(SessionStart.AddSeconds(-0.5));
             Lifecycle = new FakeAppLifecycle(Logger);
-            Rower = new ScriptedRower(Scheduler, reading ?? RowerScripts.R4, Logger);
+            Rower = new ScriptedRower(Scheduler, reading ?? (k => RowerScripts.R4(k)), Logger);
             HeartRate = new ScriptedHeartRateService(Logger);
             if (sessions == null && sessionsFor != null)
             {

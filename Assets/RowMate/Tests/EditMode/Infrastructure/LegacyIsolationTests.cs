@@ -51,5 +51,32 @@ namespace RowMate.Tests.EditMode.Infrastructure
             Assert.That(SourceScan.StripComments(File.ReadAllText(RepoPaths.Combine("Assets/RowMate/Infrastructure/Database/DatabaseFiles.cs"))),
                 Does.Contain("\"rower_app.db\"").And.Contain("\"rower_app_dev.db\""));
         }
+
+        // It. 5 (Q-11; AC-WKT-18-11; 02-tech-design §1.2): las preferencias de la app son las suyas (prefs.json, en la carpeta de la
+        // base): ningún archivo de producción nombra las del legacy (shared_preferences, FlutterSharedPreferences), y el código de
+        // las preferencias no nombra ninguna carpeta del legacy.
+        [Test, Category("AC-WKT-18-11")]
+        public void ThePreferencesAreTheAppsOwn()
+        {
+            var scanned = 0;
+            var offenders = new List<string>();
+            foreach (var file in SourceScan.CsFiles("Infrastructure/Preferences", "App/Workout", "Core/Ports", "Core/Common"))
+            {
+                scanned++;
+                var code = SourceScan.StripComments(File.ReadAllText(file));
+                foreach (var name in LegacyData)
+                {
+                    if (code.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        offenders.Add(RepoPaths.Relative(file) + ": " + name);
+                    }
+                }
+            }
+
+            Assert.That(scanned, Is.GreaterThan(10));
+            Assert.That(offenders, Is.Empty, string.Join(Environment.NewLine, offenders));
+            var files = SourceScan.StripComments(File.ReadAllText(RepoPaths.Combine("Assets/RowMate/Infrastructure/Preferences/PreferencesFiles.cs")));
+            Assert.That(files, Does.Contain("\"prefs.json\""));
+        }
     }
 }

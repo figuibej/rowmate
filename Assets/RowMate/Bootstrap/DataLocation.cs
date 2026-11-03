@@ -33,6 +33,15 @@ namespace RowMate.Bootstrap
             return platform.Storage.DatabaseDirectory();
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §2.7; DT5-05; ADR 021): prefs.json en la carpeta privada de la app, LA MISMA DE LA
+        // BASE (en Android, la interna; no persistentDataPath): así lo comparten el build normal y el de simulador (las bases tienen
+        // nombres distintos, el archivo de preferencias no: P-11) y en el Editor y en desarrollo ROWMATE_DATA_DIR lo reemplaza, como a
+        // la base. Ninguna prueba abre ni escribe la ruta real (PreferencesFileTests solo compara la cadena).
+        public static string PreferencesFile(PlatformServices platform)
+        {
+            return Path.Combine(DatabaseDirectory(platform), RowMate.Infrastructure.Preferences.PreferencesFiles.Name);
+        }
+
         // true si la carpeta sale de la variable de desarrollo (para el registro, sin la ruta).
         public static bool IsOverridden
         {

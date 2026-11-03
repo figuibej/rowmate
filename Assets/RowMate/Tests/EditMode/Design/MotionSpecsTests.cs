@@ -271,6 +271,45 @@ namespace RowMate.Tests.EditMode.Design
                 Is.EqualTo(new double[] { 8, 32, 3 }));
         }
 
+        // It. 5 (05-series-parciales/02-tech-design §4.1; 00-deuda-diseno §4.7 con 04-design-notes §6.9): las constantes de los
+        // paneles de series. Si una revisión del Designer cambia un número, cambia acá y en MotionSpecs (excepción de §7.6).
+        [Test, Category("AC-WKT-18-18"), Category("AC-WKT-18-19")]
+        public void SeriesOfIterationFive()
+        {
+            Assert.That(MotionSpecs.SeriesHeightOmega, Is.EqualTo(CriticalSpring.SmoothOmega), "spring.smooth, solo para abrir, cerrar y su inversión");
+            Assert.That(MotionSpecs.SeriesShrinkDelayMs, Is.EqualTo(80));
+            Assert.That(new[] { MotionSpecs.SeriesDataGrowMs, MotionSpecs.SeriesDataShrinkStartMs, MotionSpecs.SeriesDataShrinkEndMs },
+                Is.EqualTo(new double[] { 160, 80, 240 }));
+            Assert.That(MotionSpecs.SeriesDataGrowMs, Is.EqualTo(MotionSpecs.SeriesRowsPushMs), "el alto por un dato va con el empuje");
+            Assert.That(new[] { MotionSpecs.SeriesContentInStartMs, MotionSpecs.SeriesContentInEndMs, MotionSpecs.SeriesContentOutMs },
+                Is.EqualTo(new double[] { 80, 240, 120 }));
+            Assert.That(new[] { MotionSpecs.SeriesLabelOutMs, MotionSpecs.SeriesLabelInStartMs, MotionSpecs.SeriesLabelInEndMs },
+                Is.EqualTo(new double[] { 80, 80, 200 }));
+            Assert.That(MotionSpecs.SeriesChevronMs, Is.EqualTo(240));
+            Assert.That(MotionSpecs.SeriesRowsPushMs, Is.EqualTo(160));
+            Assert.That(new[] { MotionSpecs.SeriesRowInStartMs, MotionSpecs.SeriesRowInEndMs, MotionSpecs.SeriesRowOutMs },
+                Is.EqualTo(new double[] { 80, 240, 120 }), "la fila nueva en 80-240 (R-05)");
+            Assert.That(MotionSpecs.SeriesRowInShiftBase, Is.EqualTo(Tokens.ShiftS.Value));
+            Assert.That(new[] { MotionSpecs.SeriesMarkerOutStartMs, MotionSpecs.SeriesMarkerOutEndMs }, Is.EqualTo(new double[] { 600, 1400 }));
+            Assert.That(new[] { MotionSpecs.SeriesSwapOutMs, MotionSpecs.SeriesSwapInStartMs, MotionSpecs.SeriesSwapInEndMs, MotionSpecs.SeriesSwapRiseBase },
+                Is.EqualTo(new double[] { 120, 120, 280, 4 }));
+            Assert.That(new[] { MotionSpecs.SeriesRepsAppearStartMs, MotionSpecs.SeriesRepsAppearEndMs, MotionSpecs.SeriesRepsAppearRise, MotionSpecs.SeriesRepsLeaveMs },
+                Is.EqualTo(new double[] { 120, 400, 8, 120 }));
+            Assert.That(new[] { MotionSpecs.SeriesFollowGainMs, MotionSpecs.SeriesFollowLoseStartMs, MotionSpecs.SeriesFollowLoseEndMs },
+                Is.EqualTo(new double[] { 240, 80, 280 }), "los tiempos de Watts de la 4a");
+            Assert.That(new[] { MotionSpecs.SeriesHoverInMs, MotionSpecs.SeriesHoverOutMs }, Is.EqualTo(new[] { Tokens.DurMicro.Milliseconds, Tokens.DurFast.Milliseconds }));
+            Assert.That(new[] { MotionSpecs.SeriesHoverAlpha, MotionSpecs.SeriesPressedAlpha }, Is.EqualTo(new[] { 0.04, 0.08 }));
+            Assert.That(new[] { MotionSpecs.SeriesReducedInMs, MotionSpecs.SeriesReducedOutMs }, Is.EqualTo(new double[] { 160, 120 }));
+            Assert.That(new[] { MotionSpecs.SeriesReducedChevronOutMs, MotionSpecs.SeriesReducedChevronInStartMs, MotionSpecs.SeriesReducedChevronInEndMs },
+                Is.EqualTo(new double[] { 80, 80, 160 }));
+            Assert.That(MotionSpecs.SeriesWheelOmega, Is.EqualTo(CriticalSpring.SnappyOmega));
+            Assert.That(MotionSpecs.SeriesSettleTapMs, Is.EqualTo(820), "SD-11");
+            Assert.That(new[] { SeriesPanelGeometry.SeriesRevealFade, SeriesPanelGeometry.SeriesRowsEdgeFade, SeriesPanelGeometry.SeriesScrollFade },
+                Is.EqualTo(new double[] { 4, 4, 12 }));
+            Assert.That(SeriesPanelGeometry.SeriesChevronStroke, Is.EqualTo(1.5));
+            Assert.That(new[] { SeriesPanelGeometry.HitMinDp, SeriesPanelGeometry.HitRoomyDp }, Is.EqualTo(new double[] { 48, 56 }), "56 es tope (R-14)");
+        }
+
         // snack_bar.dart:29 (4 s), tooltip.dart:392-394 (1,5 s, 0,1 s, 0) y kLongPressTimeout (0,5 s).
         [Test, Category("AC-APP-03-05")]
         public void BehaviourTimingsOfFlutter()

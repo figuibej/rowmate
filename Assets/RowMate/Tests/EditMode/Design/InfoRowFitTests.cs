@@ -154,6 +154,32 @@ namespace RowMate.Tests.EditMode.Design
                 "en inglés entra a su tamaño");
         }
 
+        // It. 5 (QA-V4b-R2-01, AC-WKT-16-07; 05-series-parciales/00-deuda-diseno §1.3, DD5-01): el modo compacto de la barra libre.
+        // Compacto si el título no entra a su tamaño con las medidas normales (TV y P360 en español); lo demás ocupa lo mismo en los
+        // dos modos (210,8 base con los anchos de Unity), así que el título queda en la misma escala, entero, y el aire con el reloj
+        // pasa de 2 a 10. En inglés y en horizontal, normal.
+        [Test, Category("AC-WKT-16-06"), Category("QA-V4b-R2-01")]
+        public void FreeCompactModeGivesTheTitleTheAir()
+        {
+            Assert.That(new[] { InfoRowFit.FreeCompactTitleClockGap, InfoRowFit.FreeCompactClockIconGap, InfoRowFit.FreeCompactChipGap, InfoRowFit.FreeCompactChipPadH },
+                Is.EqualTo(new[] { 10.0, 3, 8, 6 }));
+            const double available = 335.6, title = 155.4, english = 104.4, landscape = 817.2;
+            // Los anchos que midió Unity (QA-V4b-02): el reloj con su ícono a 5 de las cifras y el chip con relleno 8.
+            const double clock = 69.5, chip = 101.3, chipEnglish = 73.5;
+            var normal = 20 + 8 + InfoRowFit.FreeTitleClockGap + clock + HudGeometry.PhaseChipGap + chip;
+            var compact = 20 + 8 + InfoRowFit.FreeCompactTitleClockGap + clock - (HudGeometry.WallClockIconGap - InfoRowFit.FreeCompactClockIconGap)
+                          + InfoRowFit.FreeCompactChipGap + chip - 2 * (HudGeometry.PhaseChipPadH - InfoRowFit.FreeCompactChipPadH);
+            Assert.That(normal, Is.EqualTo(210.8).Within(1e-9));
+            Assert.That(compact, Is.EqualTo(normal).Within(1e-9), "lo demás ocupa lo mismo en los dos modos");
+            Assert.That(InfoRowFit.FreeCompact(available, title, normal), Is.True, "TV y P360 en español: compacto");
+            Assert.That(InfoRowFit.FreeTitleScale(available, title, compact), Is.EqualTo(0.805).Within(0.003), "el título, a ≈ 0,805 en los dos");
+            Assert.That(InfoRowFit.FreeTitleScale(available, title, compact), Is.EqualTo(InfoRowFit.FreeTitleScale(available, title, normal)));
+            Assert.That(InfoRowFit.FreeTitleTruncates(available, title, compact), Is.False, "entero");
+            var normalEnglish = 20 + 8 + InfoRowFit.FreeTitleClockGap + clock + HudGeometry.PhaseChipGap + chipEnglish;
+            Assert.That(InfoRowFit.FreeCompact(available, english, normalEnglish), Is.False, "en inglés, normal");
+            Assert.That(InfoRowFit.FreeCompact(landscape, title, normal), Is.False, "en horizontal, normal");
+        }
+
         private static string StepLabelsSeparator()
         {
             return RowMate.Core.Models.StepLabels.PartSeparator;

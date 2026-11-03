@@ -566,6 +566,7 @@ También quedan fuera: nombres fijos de `StepType.label`, "es descanso", "por ti
 | BKL-23 | Paginación de la importación de Strava | Q-76 |
 | BKL-24 | Pantalla siempre encendida solo en Dispositivo y entrenamiento | F-APP-14 |
 | BKL-25 | Revisión de la semántica P99 de "promedio" y del split del resumen | Q-14 |
+| BKL-26 | Aviso breve al cerrar cada vuelta de 500 m, con su tiempo y la diferencia contra la anterior (verde más rápida, ámbar más lenta), y filas de parciales y repeticiones coloreadas por esa diferencia. Si se hace, el lugar natural es la fila del sello de la barra de pasos (2 s, sin elementos nuevos; el sello tiene prioridad en un cambio de paso) | F-WKT-07 y F-WKT-18 ("Mejora EXR"); P-09 de la [spec de la It. 5](../iterations/05-series-parciales/01-po-spec.md) |
 
 [ble]: inventory/rower-ble-device-sim.md
 [hrm]: inventory/heart-rate.md
@@ -609,3 +610,11 @@ Al cerrar la It. 3 ([REPORT](../iterations/03-rutinas/REPORT.md), [05-qa-verific
 |---|---|
 | Q-26 | Ajustada por Q-92: repeticiones de 1 a 999 (P-01 de la spec de la It. 3), con "Confirmar = Sí" en el gate de la It. 3 |
 | Q-92 | Anotados los topes que aplicó la It. 3 (P-02 de su spec), que se le muestran al usuario en el gate de la It. 3 |
+
+## Cambios al cerrar la It. 5
+
+Al cerrar la It. 5 ([REPORT](../iterations/05-series-parciales/REPORT.md), [05-qa-verification](../iterations/05-series-parciales/05-qa-verification.md)), 2026-10-30.
+
+| ID | Qué cambió |
+|---|---|
+| BKL-26 | Nuevo en §6.2: el aviso de cada vuelta con la diferencia contra la anterior y las filas coloreadas (P-09 de la spec de la It. 5: no entra en la paridad, cambia lo que se ve y suma elementos a un HUD en su tope) |

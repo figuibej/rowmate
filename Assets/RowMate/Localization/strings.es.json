@@ -444,5 +444,41 @@
   },
   "workoutCompletedTime": "Tiempo",
   "workoutCompletedDistance": "Distancia",
-  "workoutCompletedCalories": "Calorías"
+  "workoutCompletedCalories": "Calorías",
+  "hudLapsChip": "500 m",
+  "hudLapsTitle": "Parciales 500 m",
+  "hudLapsEmpty": "Sin parciales en este paso",
+  "hudLapNumber": "#{number}",
+  "@hudLapNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "hudRepProgress": "Rep {rep}/{count} · {meters}",
+  "@hudRepProgress": {
+    "placeholders": {
+      "rep": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "meters": {
+        "type": "String"
+      }
+    }
+  },
+  "hudRepsChip": "Reps",
+  "hudRepsTitle": "Series anteriores",
+  "hudRepsEmpty": "Sin repeticiones completas",
+  "hudRepLabel": "Rep {rep}",
+  "@hudRepLabel": {
+    "placeholders": {
+      "rep": {
+        "type": "String"
+      }
+    }
+  }
 }
