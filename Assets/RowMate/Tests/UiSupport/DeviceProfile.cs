@@ -16,6 +16,10 @@ namespace RowMate.Tests.UiSupport
         // Solo para la geometría del HUD (02-tech-design §6.4 de la It. 4a): un teléfono chico vertical, 360 × 800 dp.
         public static readonly DeviceProfile P360 = new DeviceProfile("P360", 945, 2100, 2.625, true);
 
+        // It. 6a (06a-escena-lago/02-tech-design, convenciones): los tamaños del legacy (densidad 1) de las referencias LEG-01 a -07.
+        public static readonly DeviceProfile V390 = new DeviceProfile("V390", 390, 844, 1, true);
+        public static readonly DeviceProfile H844 = new DeviceProfile("H844", 844, 390, 1, true);
+
         public DeviceProfile(string code, int widthPx, int heightPx, double density, bool phone = false)
         {
             if (widthPx <= 0 || heightPx <= 0 || !(density > 0))

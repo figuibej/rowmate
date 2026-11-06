@@ -680,17 +680,23 @@ namespace RowMate.Snapshots
             var rest = Tokens.StepRest;
             var warmup = Tokens.StepWarmup;
             var cooldown = Tokens.StepCooldown;
+            // It. 6a (AC-WKT-17-13; 06a-escena-lago/02-tech-design §5.1): las píldoras van con los tokens `.hud` (PillRowView.HudColor), así que
+            // sus sondas también; la pastilla del objetivo, la cuenta grande y lo demás de la fila siguen con los de base.
+            var pillWork = PillRowView.HudColor(StepType.Work);
+            var pillRest = PillRowView.HudColor(StepType.Rest);
+            var pillWarmup = PillRowView.HudColor(StepType.Warmup);
+            var pillCooldown = PillRowView.HudColor(StepType.Cooldown);
 
             // Las píldoras, el halo y la fila (CAP-01 a CAP-06, CAP-12, CAP-21, CAP-22, CAP-24).
             Aspect(byId["CAP-01"],
-                PillPoint("0 sólida step.work @85 %", 0, 0.5f, Done(work, glass), BackgroundTolerance),
-                PillPoint("1 hueca: interior step.work @18 %", 1, 0.5f, Pending(work, glass), BackgroundTolerance),
-                PillBorder("1 hueca: borde step.work @85 %", 1, HollowBorder(work, glass)),
-                PillPoint("2 sólida step.rest @85 %", 2, 0.5f, Done(rest, glass), BackgroundTolerance),
-                PillPoint("3 relleno step.work (al 25 %)", 3, 0.25f, work.Rgb.ToHex(), BackgroundTolerance),
-                PillHighlight("3 brillo blanco @25 % sobre el relleno", 3, 0.25f, Highlight(work)),
-                PillPoint("3 pista step.work @30 % (al 80 %)", 3, 0.8f, Track(work, glass), BackgroundTolerance),
-                PillPoint("4 pendiente step.rest @18 %", 4, 0.5f, Pending(rest, glass), BackgroundTolerance),
+                PillPoint("0 sólida step.work.hud @85 %", 0, 0.5f, Done(pillWork, glass), BackgroundTolerance),
+                PillPoint("1 hueca: interior step.work.hud @18 %", 1, 0.5f, Pending(pillWork, glass), BackgroundTolerance),
+                PillBorder("1 hueca: borde step.work.hud @85 %", 1, HollowBorder(pillWork, glass)),
+                PillPoint("2 sólida step.rest.hud @85 %", 2, 0.5f, Done(pillRest, glass), BackgroundTolerance),
+                PillPoint("3 relleno step.work.hud (al 25 %)", 3, 0.25f, pillWork.Rgb.ToHex(), BackgroundTolerance),
+                PillHighlight("3 brillo blanco @25 % sobre el relleno", 3, 0.25f, Highlight(pillWork)),
+                PillPoint("3 pista step.work.hud @30 % (al 80 %)", 3, 0.8f, Track(pillWork, glass), BackgroundTolerance),
+                PillPoint("4 pendiente step.rest.hud @18 %", 4, 0.5f, Pending(pillRest, glass), BackgroundTolerance),
                 PixelProbe.Point("vidrio de la fila", "hud-topbar", new Vector2(0.5f, 0.92f), glass, BackgroundTolerance),
                 PixelProbe.Point("pastilla step.work @20 %", "hud-step-target", new Vector2(0.05f, 0.5f), Over(work, 0.20, glass), BackgroundTolerance),
                 ClockIcon(glass));
@@ -698,7 +704,7 @@ namespace RowMate.Snapshots
             foreach (var id in new[] { "CAP-02", "CAP-25", "CAP-29" })
             {
                 Aspect(byId[id],
-                    PillHalo("halo a 1·s arriba de la 3 (α 0,70)", 3, HaloAbove(work, glass)),
+                    PillHalo("halo a 1·s arriba de la 3 (α 0,70)", 3, HaloAbove(pillWork, glass)),
                     PixelProbe.PointIn("disco glass.fallback", "hud-big-countdown", CountDisc, new Vector2(0.5f, 0.12f), glass, BackgroundTolerance),
                     PixelProbe.PointIn("arco step.work (a las 6)", "hud-big-countdown", CountDisc, RingPoint(180), work.Rgb.ToHex(), StrokeTolerance),
                     PixelProbe.PointIn("pista del aro step.work @20 % (a los 36°)", "hud-big-countdown", CountDisc, RingPoint(36),
@@ -713,57 +719,57 @@ namespace RowMate.Snapshots
                 PixelProbe.Dominant("detalle text.primary", "hud-seal-text", Tokens.TextPrimary.Rgb.ToHex(), StrokeTolerance),
                 PixelProbe.Point("vidrio de la fila del sello", "hud-topbar", new Vector2(0.03f, (float)(70 / HudGeometry.TopBarHeightSeal)), glass, BackgroundTolerance),
                 PixelProbe.Point("cielo entre la barra y las tarjetas", "hud-backdrop", SkyGap, sky, BackgroundTolerance),
-                PillPoint("0 sólida step.work @85 %", 0, 0.5f, Done(work, glass), BackgroundTolerance),
-                PillPoint("1 pista step.work @30 %", 1, 0.8f, Track(work, glass), BackgroundTolerance));
+                PillPoint("0 sólida step.work.hud @85 %", 0, 0.5f, Done(pillWork, glass), BackgroundTolerance),
+                PillPoint("1 pista step.work.hud @30 %", 1, 0.8f, Track(pillWork, glass), BackgroundTolerance));
 
             foreach (var id in new[] { "CAP-04", "CAP-26", "CAP-30" })
             {
                 Aspect(byId[id],
                     PixelProbe.Dominant("título del sello phase.paused", "hud-seal-title", Tokens.PhasePaused.Rgb.ToHex(), StrokeTolerance),
                     PixelProbe.Dominant("aro del ícono phase.paused", "hud-seal-icon-missed", Tokens.PhasePaused.Rgb.ToHex(), StrokeTolerance),
-                    PillPoint("1 hueca: interior step.work @18 %", 1, 0.5f, Pending(work, glass), BackgroundTolerance));
+                    PillPoint("1 hueca: interior step.work.hud @18 %", 1, 0.5f, Pending(pillWork, glass), BackgroundTolerance));
             }
 
             // El borde de la hueca, en TV y TH (3,9 px). En L640 (1 px por dp) mide 1,4 px y ningún píxel queda entero: se mira en
             // la toma, no con una sonda (lo mismo en CAP-21).
-            Aspect(byId["CAP-04"], PillBorder("1 hueca: borde step.work @85 %", 1, HollowBorder(work, glass)));
-            Aspect(byId["CAP-26"], PillBorder("1 hueca: borde step.work @85 %", 1, HollowBorder(work, glass)));
+            Aspect(byId["CAP-04"], PillBorder("1 hueca: borde step.work.hud @85 %", 1, HollowBorder(pillWork, glass)));
+            Aspect(byId["CAP-26"], PillBorder("1 hueca: borde step.work.hud @85 %", 1, HollowBorder(pillWork, glass)));
 
             Aspect(byId["CAP-05"],
-                PillPoint("0 sólida step.warmup @85 % (a los 3/4: la cinta tapa el comienzo)", 0, 0.75f, Done(warmup, glass), BackgroundTolerance),
-                PillPoint("1 sólida step.work @85 %", 1, 0.5f, Done(work, glass), BackgroundTolerance),
-                PillPoint("2 en curso, la pista sola (Q-51)", 2, 0.5f, Track(work, glass), BackgroundTolerance),
-                PillPoint("3 descanso pendiente", 3, 0.5f, Pending(rest, glass), BackgroundTolerance));
+                PillPoint("0 sólida step.warmup.hud @85 % (a los 3/4: la cinta tapa el comienzo)", 0, 0.75f, Done(pillWarmup, glass), BackgroundTolerance),
+                PillPoint("1 sólida step.work.hud @85 %", 1, 0.5f, Done(pillWork, glass), BackgroundTolerance),
+                PillPoint("2 en curso, la pista sola (Q-51)", 2, 0.5f, Track(pillWork, glass), BackgroundTolerance),
+                PillPoint("3 descanso pendiente", 3, 0.5f, Pending(pillRest, glass), BackgroundTolerance));
 
             Aspect(byId["CAP-06"],
-                PillPoint("3 relleno step.rest al 100 %", 3, 0.5f, rest.Rgb.ToHex(), BackgroundTolerance),
-                PillHighlight("3 brillo blanco @25 % (la llena en curso no es la sólida)", 3, 0.5f, Highlight(rest)),
-                PillPoint("0 sólida step.work @85 %", 0, 0.5f, Done(work, glass), BackgroundTolerance),
-                PillPoint("2 sólida step.work @85 %", 2, 0.5f, Done(work, glass), BackgroundTolerance),
-                PillPoint("1 sólida step.rest @85 %", 1, 0.5f, Done(rest, glass), BackgroundTolerance));
+                PillPoint("3 relleno step.rest.hud al 100 %", 3, 0.5f, pillRest.Rgb.ToHex(), BackgroundTolerance),
+                PillHighlight("3 brillo blanco @25 % (la llena en curso no es la sólida)", 3, 0.5f, Highlight(pillRest)),
+                PillPoint("0 sólida step.work.hud @85 %", 0, 0.5f, Done(pillWork, glass), BackgroundTolerance),
+                PillPoint("2 sólida step.work.hud @85 %", 2, 0.5f, Done(pillWork, glass), BackgroundTolerance),
+                PillPoint("1 sólida step.rest.hud @85 %", 1, 0.5f, Done(pillRest, glass), BackgroundTolerance));
 
             Aspect(byId["CAP-12"],
-                PillPoint("1 en curso por distancia: la pista sola", 1, 0.5f, Track(work, glass), BackgroundTolerance),
-                PillPoint("0 sólida step.work @85 %", 0, 0.5f, Done(work, glass), BackgroundTolerance));
+                PillPoint("1 en curso por distancia: la pista sola", 1, 0.5f, Track(pillWork, glass), BackgroundTolerance),
+                PillPoint("0 sólida step.work.hud @85 %", 0, 0.5f, Done(pillWork, glass), BackgroundTolerance));
 
             Aspect(byId["CAP-21"],
-                PillPoint("0 sólida step.warmup @85 %", 0, 0.5f, Done(warmup, glass), BackgroundTolerance),
-                PillPoint("1 hueca: interior step.work @18 %", 1, 0.5f, Pending(work, glass), BackgroundTolerance),
-                PillPoint("2 sólida step.rest @85 %", 2, 0.5f, Done(rest, glass), BackgroundTolerance),
-                PillPoint("4 pendiente step.rest @18 %", 4, 0.5f, Pending(rest, glass), BackgroundTolerance),
-                PillPoint("5 pendiente step.cooldown @18 %", 5, 0.5f, Pending(cooldown, glass), BackgroundTolerance));
+                PillPoint("0 sólida step.warmup.hud @85 %", 0, 0.5f, Done(pillWarmup, glass), BackgroundTolerance),
+                PillPoint("1 hueca: interior step.work.hud @18 %", 1, 0.5f, Pending(pillWork, glass), BackgroundTolerance),
+                PillPoint("2 sólida step.rest.hud @85 %", 2, 0.5f, Done(pillRest, glass), BackgroundTolerance),
+                PillPoint("4 pendiente step.rest.hud @18 %", 4, 0.5f, Pending(pillRest, glass), BackgroundTolerance),
+                PillPoint("5 pendiente step.cooldown.hud @18 %", 5, 0.5f, Pending(pillCooldown, glass), BackgroundTolerance));
 
             Aspect(byId["CAP-22"],
-                PillPoint("tramo 98 sólido step.work @85 %", 98, 0.5f, Done(work, glass), BackgroundTolerance),
-                PillPoint("tramo 97 sólido step.rest @85 % (el pulgar tapa el centro de la 99)", 97, 0.5f, Done(rest, glass), BackgroundTolerance),
-                PillPoint("pulgar: relleno step.work (en su cuarto izquierdo)", 100, 0.25f, work.Rgb.ToHex(), BackgroundTolerance),
-                PillPoint("pulgar: pista step.work @30 % (en su cuarto derecho)", 100, 0.75f, Track(work, glass), BackgroundTolerance),
-                PillPoint("tramo 150 pendiente step.work @18 %", 150, 0.5f, Pending(work, glass), BackgroundTolerance),
-                PillPoint("tramo 151 pendiente step.rest @18 %", 151, 0.5f, Pending(rest, glass), BackgroundTolerance));
+                PillPoint("tramo 98 sólido step.work.hud @85 %", 98, 0.5f, Done(pillWork, glass), BackgroundTolerance),
+                PillPoint("tramo 97 sólido step.rest.hud @85 % (el pulgar tapa el centro de la 99)", 97, 0.5f, Done(pillRest, glass), BackgroundTolerance),
+                PillPoint("pulgar: relleno step.work.hud (en su cuarto izquierdo)", 100, 0.25f, pillWork.Rgb.ToHex(), BackgroundTolerance),
+                PillPoint("pulgar: pista step.work.hud @30 % (en su cuarto derecho)", 100, 0.75f, Track(pillWork, glass), BackgroundTolerance),
+                PillPoint("tramo 150 pendiente step.work.hud @18 %", 150, 0.5f, Pending(pillWork, glass), BackgroundTolerance),
+                PillPoint("tramo 151 pendiente step.rest.hud @18 %", 151, 0.5f, Pending(pillRest, glass), BackgroundTolerance));
 
             Aspect(byId["CAP-24"],
-                PillPoint("0 sólida step.warmup @85 %", 0, 0.5f, Done(warmup, glass), BackgroundTolerance),
-                PillPoint("1 pista step.work @30 % (al 80 %)", 1, 0.8f, Track(work, glass), BackgroundTolerance));
+                PillPoint("0 sólida step.warmup.hud @85 %", 0, 0.5f, Done(pillWarmup, glass), BackgroundTolerance),
+                PillPoint("1 pista step.work.hud @30 % (al 80 %)", 1, 0.8f, Track(pillWork, glass), BackgroundTolerance));
 
             // El diálogo de completado (CAP-07 a CAP-09 y CAP-11; CAP-10 solo con Audit) y el aviso del cierre que falla (CAP-28).
             var scrim = MotionSpecs.DialogScrimOpacity;
@@ -824,7 +830,7 @@ namespace RowMate.Snapshots
             Aspect(byId["CAP-15"], ChipProbes(Tokens.PhaseFinished, Tokens.PhaseFinishedHud, glass, -1, true));
 
             Aspect(byId["CAP-27"],
-                PillHalo("halo a 1·s arriba de la 3 (sobre el velo)", 3, HaloAbove(work, glassVeiled)),
+                PillHalo("halo a 1·s arriba de la 3 (sobre el velo)", 3, HaloAbove(pillWork, glassVeiled)),
                 PixelProbe.Dominant("cuenta step.work.hud", "hud-countdown", Tokens.StepWorkHud.Rgb.ToHex(), StrokeTolerance),
                 PixelProbe.Point("cielo con el velo", "hud-backdrop", SkyGap, veiledSky, BackgroundTolerance));
             Aspect(byId["CAP-27"], PausedDisc(glassVeiled));

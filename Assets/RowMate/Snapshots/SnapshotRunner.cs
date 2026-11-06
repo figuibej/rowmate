@@ -26,10 +26,11 @@ namespace RowMate.Snapshots
     // de qué se dibujó antes: dos corridas, la de un conjunto después del otro o una con -Filter dan lo mismo. En cada foto fija
     // corren además WrenchAudit (con simulador) y HudOverlap (en el inmersivo): DD4a-04, 02-tech-design §7.1 de la 4a.
     // Códigos de salida: 0 todo bien; 1 alguna toma falló (error, sonda que no es de aspecto, auditoría o comprobación);
-    // 3 venció el tope de 30 min (15 hasta la It. 4a; el conjunto it4b simula 50 min de sesiones: Serie larga y Pirámide 500).
+    // 3 venció el tope de 45 min (15 hasta la It. 4a; 30 desde la 4b, que simula 50 min de sesiones; 45 desde la 6a, que arma la escena
+    // real en cada toma y graba 11 videos con ella).
     public sealed class SnapshotRunner
     {
-        public const double TimeLimitSeconds = 30 * 60;
+        public const double TimeLimitSeconds = 45 * 60;
         private const float CropMarginDp = 8;
 
         private readonly List<SnapshotScenario> _scenarios;
@@ -77,7 +78,7 @@ namespace RowMate.Snapshots
 
             if (_clock.Elapsed.TotalSeconds > TimeLimitSeconds)
             {
-                Fail("venció el tope de 30 min");
+                Fail("venció el tope de 45 min");
                 Finish(3);
                 return;
             }
@@ -312,7 +313,7 @@ namespace RowMate.Snapshots
 
             yield return TakeRule(scenario, host);
             yield return script.Frames(3);
-            Capture(scenario, host, scenario.FileName, scenario.CropElement, scenario.Probes, scenario.Checks);
+            Capture(scenario, host, scenario.FileName, scenario.CropElement, scenario.Probes, scenario.Checks, scenario.Inspect);
         }
 
         // Regla de toma de una foto fija (DN-21; 04-design-notes §7.1): sin animaciones finitas, corazón en reposo y sin
@@ -327,9 +328,11 @@ namespace RowMate.Snapshots
                 yield return null;
                 var inFlight = new List<string>();
                 var blockers = SnapshotTakeRule.Blockers(host, inFlight);
+                // It. 6a (§5.1): con la escena real, lista y con la orilla armada (salvo la toma de la escena demorada).
+                blockers.AddRange(SnapshotTakeRule.SceneBlockers(host, scenario.SceneMayBeLoading, inFlight));
                 _record!.InFlight = inFlight;
                 _record.TakenAtSeconds = host.Scheduler.MonotonicSeconds;
-                if (blockers.Count > 0)
+                if (blockers.Count > 0 && !scenario.MotionMayRun)
                 {
                     throw new InvalidOperationException("regla de toma de la 4b: corre " + string.Join("; ", blockers));
                 }
@@ -413,13 +416,20 @@ namespace RowMate.Snapshots
         }
 
         private void Capture(SnapshotScenario scenario, UiTestHost host, string fileName, string? cropElement, List<PixelProbe> probes,
-                             Func<UiTestHost, IEnumerable<string>>? checks)
+                             Func<UiTestHost, IEnumerable<string>>? checks, Func<UiTestHost, Texture2D, List<string>, IEnumerable<string>>? inspect = null)
         {
             var record = _record!;
             var frame = host.ReadPixels();
             try
             {
                 Texture2D image = frame;
+                if (inspect != null)
+                {
+                    // It. 6a (§5.1): las sondas de la escena y las marcas, encima del cuadro entero, antes de guardarlo.
+                    var values = record.Values ??= new List<string>();
+                    record.Problems.AddRange(inspect(host, frame, values));
+                }
+
                 if (cropElement != null)
                 {
                     var element = host.Find(cropElement) ?? throw new InvalidOperationException("recorte: no existe #" + cropElement);
@@ -499,7 +509,7 @@ namespace RowMate.Snapshots
             var actions = new List<(double At, Action<UiTestHost> Action)>(spec.Actions);
             actions.Sort((a, b) => a.At.CompareTo(b.At));
             var next = 0;
-            using (var recorder = new VideoRecorder(path, host.Target.width, host.Target.height, spec.Fps, format))
+            using (var recorder = new VideoRecorder(path, host.Target.width, host.Target.height, spec.Fps, format, spec.CanvasWidth, spec.CanvasHeight))
             {
                 yield return script.Frames(2);
                 for (var i = 0; i < frames; i++)
@@ -511,6 +521,7 @@ namespace RowMate.Snapshots
                         next++;
                     }
 
+                    spec.BeforeFrame?.Invoke(host);
                     host.Advance(1.0 / spec.Fps);
                     yield return null;
                     yield return null;

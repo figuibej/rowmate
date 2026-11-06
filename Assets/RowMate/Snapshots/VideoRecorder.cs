@@ -13,22 +13,33 @@ namespace RowMate.Snapshots
     public sealed class VideoRecorder : IDisposable
     {
         private const int MaxHeight = 2160;
+        private const int MaxWidth = 4096;
 
         private readonly string _path;
         private readonly int _width;
         private readonly int _height;
         private readonly RenderTexture? _scaled;
+        private readonly bool _letterbox;
         private MediaEncoder? _encoder;
         private string? _fallbackFolder;
         private int _frames;
 
-        public VideoRecorder(string path, int sourceWidth, int sourceHeight, int fps, GraphicsFormat sourceFormat)
+        // It. 6a (VID-09): con canvasWidth y canvasHeight, el video tiene ese lienzo y cada cuadro va centrado y entero (bandas negras),
+        // aunque la ventana cambie de tamaño a mitad.
+        public VideoRecorder(string path, int sourceWidth, int sourceHeight, int fps, GraphicsFormat sourceFormat, int canvasWidth = 0, int canvasHeight = 0)
         {
             _path = path;
-            var divisor = sourceHeight > MaxHeight ? 2 : 1;
+            _letterbox = canvasWidth > 0 && canvasHeight > 0;
+            if (_letterbox)
+            {
+                sourceWidth = canvasWidth;
+                sourceHeight = canvasHeight;
+            }
+
+            var divisor = sourceHeight > MaxHeight || sourceWidth > MaxWidth ? 2 : 1;
             _width = (sourceWidth / divisor) & ~1;
             _height = (sourceHeight / divisor) & ~1;
-            if (divisor > 1 || _width != sourceWidth || _height != sourceHeight)
+            if (_letterbox || divisor > 1 || _width != sourceWidth || _height != sourceHeight)
             {
                 _scaled = new RenderTexture(_width, _height, 0, sourceFormat) { hideFlags = HideFlags.HideAndDontSave };
                 _scaled.Create();
@@ -69,7 +80,12 @@ namespace RowMate.Snapshots
         public void AddFrame(RenderTexture source)
         {
             var target = source;
-            if (_scaled != null)
+            if (_scaled != null && _letterbox)
+            {
+                Letterbox(source, _scaled);
+                target = _scaled;
+            }
+            else if (_scaled != null)
             {
                 Graphics.Blit(source, _scaled);
                 target = _scaled;
@@ -106,6 +122,22 @@ namespace RowMate.Snapshots
             }
 
             _frames++;
+        }
+
+        // El cuadro entero y centrado en el lienzo, con bandas negras (la misma escala en los dos ejes).
+        private static void Letterbox(RenderTexture source, RenderTexture canvas)
+        {
+            var scale = Math.Min(canvas.width / (float)source.width, canvas.height / (float)source.height);
+            var w = source.width * scale;
+            var h = source.height * scale;
+            var active = RenderTexture.active;
+            RenderTexture.active = canvas;
+            GL.Clear(true, true, Color.black);
+            GL.PushMatrix();
+            GL.LoadPixelMatrix(0, canvas.width, canvas.height, 0);
+            Graphics.DrawTexture(new Rect((canvas.width - w) / 2f, (canvas.height - h) / 2f, w, h), source);
+            GL.PopMatrix();
+            RenderTexture.active = active;
         }
 
         public void Dispose()

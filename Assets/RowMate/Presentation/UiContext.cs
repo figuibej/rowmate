@@ -65,6 +65,10 @@ namespace RowMate.Presentation
         // simulador: solo que arriba hay una capa con la llave.
         public bool ReserveWrench { get; set; }
 
+        // It. 6a (06a-escena-lago/02-tech-design §3.3; DT6a-03): la escena 3D del inmersivo (Bootstrap/SceneBridge sobre Scene/SceneHost).
+        // null = sin escena: el fondo provisorio de siempre (las pruebas y las tomas de las It. 2 a 5).
+        public RowMate.Presentation.Workout.IImmersiveScene? Scene { get; set; }
+
         public IAppLogger Logger => App.Logger;
 
         public Localizer Texts => App.Texts.Value;

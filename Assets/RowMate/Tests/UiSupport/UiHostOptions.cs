@@ -12,6 +12,15 @@ namespace RowMate.Tests.UiSupport
     // GammaRt (la tubería de la app), el reloj de prueba a las 13:45 hora local del 27/10/2026 (así "Hora escena" + da 14:00),
     // rutinas en memoria y vacías, la fecha de creación de un SequenceClock propio (13:00:00.000Z y un minuto más por rutina),
     // un FakeClipboard vacío y el teclado del teléfono oculto.
+    // It. 6a (06a-escena-lago/02-tech-design §1.1 B1, §5.1): sin escena (el fondo provisorio de las It. 2 a 5, por defecto) o la escena
+    // real (SceneHost con la compilación de shaders sincrónica mientras dura el anfitrión, la orilla armada en el acto y la escena
+    // avanzada en pasos de 1/60 s con el reloj de prueba).
+    public enum SceneMode
+    {
+        None,
+        Real,
+    }
+
     public enum SimulatorLayerMode
     {
         None,
@@ -74,6 +83,25 @@ namespace RowMate.Tests.UiSupport
         // usuario.
         public IPreferences? Preferences;
         public bool PreferencesFile;
+
+        // It. 6a: la escena (None por defecto), su nivel (Alto, el del escritorio), la región de la luna (null = norte) y, para las pruebas
+        // de los slots, otro mundo (una copia en memoria con el slot de prueba).
+        public SceneMode Scene = SceneMode.None;
+        public RowMate.Core.Scene.QualityTier SceneTier = RowMate.Core.Scene.QualityTier.High;
+        public string? SceneRegion;
+        public RowMate.Scene.Slots.SceneWorldDefinition? SceneWorld;
+
+        // It. 6a (B6a-19): el armado de la escena con el tramo del player (SceneWarmupPolicy) en lugar de todo en el acto.
+        public bool ScenePlayerWarmup;
+
+        // It. 6a (QA-V6a-REN-04): la orilla por tramos, como en el player (StreamingBudgetMs por cuadro), en lugar de armada en el acto.
+        public bool ScenePlayerStreaming;
+
+        // It. 6a (QA-V6a-REN-16): el nivel del asset de URP (TierScope: sombras, MSAA) mientras dura el anfitrión; null = el del proyecto.
+        public RowMate.Core.Scene.QualityTier? SceneUrpTier;
+
+        // Un puerto de escena de prueba en lugar de la real (FakeImmersiveScene; QA-G6aT-16). Gana sobre Scene.
+        public RowMate.Presentation.Workout.IImmersiveScene? FakeScene;
 
         public UiHostOptions Clone()
         {

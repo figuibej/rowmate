@@ -77,6 +77,18 @@ namespace RowMate.Snapshots
         // el manifest como fallas.
         public List<(string Id, string Stem, string State)> SequenceShots { get; } = new List<(string, string, string)>();
 
+        // It. 6a (06a-escena-lago/02-tech-design §5.1): lo que mira la imagen de la toma antes de guardarla. Recibe el cuadro entero (se
+        // puede pintar encima: las marcas de SceneMarks, con Apply) y la lista de valores del manifest; devuelve los problemas.
+        public Func<UiTestHost, UnityEngine.Texture2D, List<string>, IEnumerable<string>>? Inspect { get; set; }
+
+        // It. 6a: la toma con la escena todavía preparándose (la escena demorada: CAP-24). Sin esto, una escena abierta que no está
+        // lista o con la orilla a medio armar bloquea la toma (SnapshotTakeRule.SceneBlockers).
+        public bool SceneMayBeLoading { get; set; }
+
+        // It. 6a (CAP-24): la toma a mitad de la entrada, con la cascada del HUD corriendo: lo finito se anota en el manifest (inFlight)
+        // pero no bloquea.
+        public bool MotionMayRun { get; set; }
+
         public SnapshotScenario Shot(string id, string stem, string state)
         {
             SequenceShots.Add((id, stem, state));
@@ -115,6 +127,15 @@ namespace RowMate.Snapshots
         public Func<UiTestHost, double, string?>? FrameValues { get; set; }
 
         public Func<UiTestHost, double, string?>? FrameCheck { get; set; }
+
+        // It. 6a (VID-09, la rotación): el lienzo del video en px (0 = el de la ventana). Con lienzo, cada cuadro va centrado y entero,
+        // con bandas negras, aunque la ventana cambie de tamaño.
+        public int CanvasWidth { get; set; }
+
+        public int CanvasHeight { get; set; }
+
+        // It. 6a: lo que se hace antes de avanzar cada cuadro (la distancia forzada de la escena sola con la hora que cambia).
+        public Action<UiTestHost>? BeforeFrame { get; set; }
 
         public VideoSpec At(double seconds, Action<UiTestHost> action)
         {

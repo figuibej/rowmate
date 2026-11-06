@@ -11,6 +11,14 @@ namespace RowMate.Presentation.Motion
         bool Tick(double nowSeconds);
     }
 
+    // It. 6a (06a-escena-lago/02-tech-design §2.16, B6a-19): una finita que se repite con cada lectura del remo (los rodillos de las
+    // cifras y el destello de una tarjeta). No retiene el armado de la escena en el inmersivo (MotionDriver.HasFiniteNonRecurringMotions):
+    // con lecturas cada segundo siempre hay una corriendo y la escena demorada no llegaba nunca. Para Settle y la regla de toma del
+    // arnés siguen siendo finitas.
+    public interface IRecurringMotion
+    {
+    }
+
     // Una animación que necesita el layout del cuadro siguiente para empezar (lo nuevo que crece: hasta que UI Toolkit no le
     // da su alto natural, no hay a qué crecer). Mientras espera, su línea de tiempo no avanza; UiTestHost.Settle y el arnés
     // dejan pasar un cuadro real en lugar de gastar reloj de prueba (03-rutinas/02-tech-design §5.1, regla de toma).

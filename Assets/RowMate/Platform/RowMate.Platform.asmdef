@@ -1,7 +1,7 @@
 {
     "name": "RowMate.Platform",
     "rootNamespace": "RowMate.Platform",
-    "references": ["RowMate.Core", "Unity.InputSystem"],
+    "references": ["RowMate.Core", "Unity.InputSystem", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Universal.Runtime"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

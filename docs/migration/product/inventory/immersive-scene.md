@@ -549,7 +549,7 @@
 
 **Comportamientos observables**
 
-- [EXACTO] La carga del agua avanzada se **precarga** al mostrar la vista de reposo de Entrenamiento (antes de remar), así la escena arranca con el agua avanzada. La carga es única y queda cacheada para toda la sesión de la app (`lib/features/workout/workout_screen.dart:42-44`; `scene/water_shader.dart:12-22`).
+- [EXACTO] La carga del agua avanzada se **precarga** al mostrar la vista de reposo de Entrenamiento (antes de remar), así la escena arranca con el agua avanzada. La carga es única y queda cacheada para toda la sesión de la app (`lib/features/workout/workout_screen.dart:44`, con el comentario en `:41-43`; `scene/water_shader.dart:12-22`). En la app, la escena del lago también se precarga en Workout, sin dibujarse (P-14 de la 6a): si el usuario entra antes de que termine, la entrada sigue sobre el fondo provisorio y la escena llega con un fundido (AC-SCN-01-07)
 - [EXACTO] Si al abrir la escena el agua avanzada todavía no está lista, se usa el agua degradada y se cambia sola a la avanzada cuando termina de cargar, sin reiniciar la escena (`scene_view.dart:48-57`).
 - [EXACTO] Si la carga falla (equipo sin soporte o recurso ausente), se registra en el log de diagnóstico el mensaje "`[Scene] Shader de agua no disponible, usando fallback: <error>`" y se usa el agua degradada **por el resto de la sesión** (no se reintenta). No se muestra ningún error al usuario (`water_shader.dart:17-19`).
 - [VISUAL] **Agua degradada** (`water_painter.dart:79-104`):

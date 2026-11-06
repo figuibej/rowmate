@@ -22,7 +22,8 @@ namespace RowMate.Tests.EditMode.Project
         private static readonly string[] StepIds =
         {
             "player.identity", "player.scripting", "player.android", "player.ios", "player.rendering", "player.runtime",
-            "player.input", "urp.provisional", "urp.tidy", "player.window", "ui.fonts", "ui.panel", "scene.boot", "defines.check",
+            "player.input", "urp.tiers", "urp.tidy", "player.window", "ui.fonts", "ui.panel", "scene.assets", "scene.materials", "scene.boot",
+            "defines.check",
         };
 
         [Test, Category("AC-BASE-10")]
@@ -33,7 +34,7 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(main, Does.Contain("EditorApplication.delayCall"));
             Assert.That(main, Does.Contain("\"ProjectSettings/RowMateBootstrap.json\""));
             Assert.That(main, Does.Contain("[MenuItem(\"RowMate/Bootstrap/Reaplicar\")]"));
-            Assert.That(main, Does.Contain("CurrentVersion = 3"), "It. 2 (WP-B): bootstrapper v3, 02-tech-design §1.3");
+            Assert.That(main, Does.Contain("CurrentVersion = 4"), "It. 6a (WP-B0): bootstrapper v4, 06a-escena-lago/02-tech-design §1.1");
         }
 
         [Test, Category("AC-BASE-10")]
@@ -116,16 +117,20 @@ namespace RowMate.Tests.EditMode.Project
         }
 
         [Test, Category("AC-BASE-10")]
-        public void DoesNotFixFinalQualityLevels()
+        public void FixesTheThreeQualityLevels()
         {
-            // QA-P-10: un solo asset provisorio; no crea, borra ni renombra niveles de calidad.
+            // It. 6a (ADR 018; 06a-escena-lago/02-tech-design §4.2; QA-G6aT-05): los tres niveles definitivos, cada uno con su asset
+            // RowMate_URP_<nivel>, armados por SerializedObject (sin QualitySettings.names ni IncreaseLevel/DecreaseLevel); el asset
+            // provisorio de la It. 1 se borra.
             var all = AllCode();
-            Assert.That(all, Does.Not.Match(@"RowMate_URP_(High|Medium|Low)"));
+            var urp = Code("UrpProvisioner.cs");
+            Assert.That(urp, Does.Contain("\"/RowMate_URP_\" + tier + \".asset\""));
+            Assert.That(urp, Does.Contain("LevelNames = { \"Low\", \"Medium\", \"High\" }"));
             Assert.That(all, Does.Not.Match(@"QualitySettings\.names\s*="));
             Assert.That(all, Does.Not.Contain("IncreaseLevel"));
             Assert.That(all, Does.Not.Contain("DecreaseLevel"));
-            Assert.That(Code("UrpProvisioner.cs"), Does.Contain("/RowMate_URP_Default.asset\""));
-            Assert.That(Code("UrpProvisioner.cs"), Does.Contain("UniversalRenderPipelineAsset.Create("));
+            Assert.That(urp, Does.Contain("/RowMate_URP_Default.asset\""), "el provisorio de la It. 1, que se borra");
+            Assert.That(urp, Does.Contain("UniversalRenderPipelineAsset.Create("));
         }
 
         // It. 4a (QA-G4aT-09): runInBackground = true es la parte de configuración de AC-WKT-02-09 (en Windows, minimizada o sin

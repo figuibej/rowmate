@@ -306,7 +306,8 @@ Con una escala de ajuste `k` (§4.7), la banda sigue centrada y la tinta se achi
 - la rueda va de a una fila (22·sp), con `spring.snappy` (en el acto con reducir movimiento);
 - al soltar un arrastre no hay inercia: queda donde se soltó, dentro de sus topes;
 - al rotar vuelve a 0;
-- **cuando entra una fila con la vista desplazada** (desplazamiento > 0), la fila entra arriba, fuera de la vista, y el desplazamiento suma 22·sp·k en el mismo cuadro. Así lo que se ve no se mueve (DD5-27). Con el desplazamiento en 0, la lista baja con el empuje y lo de abajo sale por la ventana.
+- **cuando entra una fila con la vista desplazada** (desplazamiento > 0), **solo en `RowsScroll` (W1280)**: la fila entra arriba de la ventana de filas, fuera de la vista, y el desplazamiento suma 22·sp·k en el mismo cuadro, así lo que se ve no se mueve (DD5-27). Con el desplazamiento en 0, la lista baja con el empuje y lo de abajo sale por la ventana.
+- **en `ColumnScroll` (TH, L640) no hay compensación** (decidido al empezar la 6a, QA-V5-R2-01, opción a: [06a-escena-lago/00-deuda-diseno §1](../06a-escena-lago/00-deuda-diseno.md)): el desplazamiento de la columna conserva su valor, como el `SingleChildScrollView` del legacy, y lo que está debajo de la fila nueva baja con el empuje (0-160, `ease.move`), sin saltos (AC-WKT-18-13). En la columna, la fila nueva entra debajo de la cabecera y de la vuelta en curso, que se desplazan con ella: sumar 22·sp las subiría y dejaría quieto solo lo de abajo.
 
 ### 5.3 Renglones con alfa (sin recorte; DT5-02 revisado, DN5-01)
 
@@ -692,7 +693,7 @@ Ninguno cambia un dato del producto. Los que tocan un texto de la spec van tambi
 | **DD5-24** | **Las escalas comunes de las filas** (vueltas y repeticiones) y su cambio con el empuje (§4.7) | CAP-11 a 0,969; CAP-25 a 0,932 y 0,638; una fila nueva que cambia la escala no salta |
 | **DD5-25** | **Los checks de las tomas** con la geometría real: CAP-01 y todas las de `Series 600` con la columna desde 210,9 en TV (no 228,6); TH y L640 con 93,9 base; CAP-16 y CAP-17 como en §9.2; VID-08 con parciales cerrado al empezar (R-15) | el *manifest* con los rectángulos de §9.2 y §9.3 (± 0,5 dp) |
 | **DD5-26** | **El reparto de `RowsScroll`** (§5.2): repeticiones con su mínimo reservado (34; abierto, 60 o su natural); parciales `min(natural; lugar − 8 − ese mínimo)` | dotnet (`SeriesPanelGeometryTests`): los cuatro casos de la tabla de §5.2, con y sin objetivo |
-| **DD5-27** | **La fila que entra con la vista desplazada**: el desplazamiento suma 22·sp·k en el mismo cuadro | PlayMode: en W1280 con la rueda abajo, una vuelta nueva no mueve ninguna fila a la vista |
+| **DD5-27** | **La fila que entra con la vista desplazada**, **solo en `RowsScroll` (W1280)**: el desplazamiento suma 22·sp·k en el mismo cuadro. En `ColumnScroll` (TH, L640) no se compensa: lo de abajo baja con el empuje (QA-V5-R2-01, opción a, al empezar la 6a) | PlayMode: en W1280 con la rueda abajo, una vuelta nueva no mueve ninguna fila a la vista. En TH, la columna desplazada no salta (`SCT.TheColumnScrollFollowsAColumnThatShrinks`, sin cambios) |
 | **DD5-28** | **La capa de estado como fase de `SeriesPanelMotion`** (gate, QA-G5T-11; §6.10): la línea de tiempo pura en `SeriesTimelines` (desde el alfa actual; 90 `ease.enter` al subir, 160 `ease.exit` al bajar; con reducir movimiento, igual), la fase en `SeriesPanelMotion` (**F** mientras corre; `Stop()` la deja en 0; `Instant`, en su objetivo), `StateLayerAlpha` en `SeriesPanelVisual`, y los eventos de la tabla de §6.10 en `SeriesPanelView` (el *hover* solo con un puntero de mouse). Constantes `SeriesStateLayerInMs` / `OutMs`, `SeriesHoverAlpha` y `SeriesPressedAlpha` (§6.9) | dotnet (`STL`): los valores por cuadro de §6.10 (± 0,001) y la inversión desde el alfa actual. PlayMode (`SMT`): `IsFinite` durante los 90 y los 160, y no con el *hover* quieto; `Stop()` en 0; la variante con reducir movimiento igual; 0 B por cuadro. PlayMode (vista): con un mouse, entrar, presionar, soltar y salir dan 0,04, 0,08, 0,04 y 0; con un puntero táctil no hay *hover*; un arrastre de más de 8 dp apaga la capa; `ITT.NothingAnimatesAfterTheExit` con el puntero de mouse sobre un panel al tocar `Terminar` con el teclado |
 
 **Prioridad:** DD5-13 a DD5-17 (sin ellos hay tinta encimada o un último renglón al 67 %) y DD5-25 (las tomas fallarían por la geometría) antes de WP-B1; DD5-28 con su línea de tiempo en WP-A y su fase en WP-D1 (los dos antes de WP-B1); los demás, en WP-B1 y WP-B3.
@@ -907,3 +908,14 @@ Las notas usaban el piso con s = 1,054 (309,8); Unity usa 1,0549 (310,15), y con
 - **Legacy, solo lectura**: no hizo falta abrirlo (lo visual del legacy ya estaba medido en §14); `git -C ../rowmate-legacy status --porcelain` vacío al terminar; no se leyó `lib/core/strava/strava_secrets.dart`.
 - **Ninguna prueba ni toma tocó** el `prefs.json` ni la base del usuario (las tomas usan una `MemoryPreferences` por toma y una base temporal). El `RowMate.exe` del usuario siguió abierto en `Builds/Windows/simulator` y no se tocó; WP-D2 no hace builds.
 - **Repo público**: este documento y las biblias citan el repo con rutas relativas, el legacy como [rowmate-legacy](https://github.com/figuibej/rowmate-legacy) o `../rowmate-legacy` y el scratch como `<scratch>`; ninguna ruta de la PC. Sin *commits*.
+
+---
+
+## Cambios al iniciar la It. 6a
+
+QA-V5-R2-01 (DD5-27 en `ColumnScroll`), decidido por el Designer con la opción (a) por defecto: [06a-escena-lago/00-deuda-diseno §1](../06a-escena-lago/00-deuda-diseno.md), 2026-11-02. No cambia código, constantes, pruebas ni tomas: las notas pasan a decir lo que el código ya hace.
+
+| Dónde | Qué cambió |
+|---|---|
+| §5.2 (el desplazamiento) | DD5-27 vale solo para `RowsScroll` (W1280). En `ColumnScroll` (TH, L640) el desplazamiento conserva su valor, como el legacy, y lo de abajo de la fila nueva baja con el empuje, sin saltos |
+| §10 (DD5-27) | La fila dice "solo en `RowsScroll`" y nombra la prueba de la columna que ya existe |

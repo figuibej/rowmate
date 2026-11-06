@@ -135,6 +135,16 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(lt.Id);
             }
 
+            foreach (var ac in It06aIds.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
+            foreach (var lt in It06aIds.LegacyCases)
+            {
+                known.Add(lt.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -768,6 +778,15 @@ namespace RowMate.Tests.EditMode.Traceability
                 }
             }
 
+            // It. 6a: lo mismo con los que la It. 6a vuelve a verificar con dotnet (AC-WKT-13-15, AC-APP-05-08, AC-BLE-15-09…).
+            foreach (var ac in It06aIds.Acceptance)
+            {
+                if (HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s"))
+                {
+                    earlier.Add(ac.Id);
+                }
+            }
+
             var offenders = new List<string>();
             foreach (var id in It04aIds.UnityOnlyIds)
             {
@@ -958,6 +977,15 @@ namespace RowMate.Tests.EditMode.Traceability
             var scan = Scan();
             var earlier = new HashSet<string>(It04bIds.FromEarlier, StringComparer.Ordinal);
             foreach (var ac in It05Ids.Acceptance)
+            {
+                if (HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s"))
+                {
+                    earlier.Add(ac.Id);
+                }
+            }
+
+            // It. 6a: lo mismo con los que la It. 6a vuelve a verificar con dotnet (AC-WKT-13-15, AC-APP-05-08, AC-BLE-15-09…).
+            foreach (var ac in It06aIds.Acceptance)
             {
                 if (HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s"))
                 {
@@ -1164,8 +1192,262 @@ namespace RowMate.Tests.EditMode.Traceability
             // de equipo, que deja PENDIENTE UNITY).
             var scan = Scan();
             var earlier = new HashSet<string>(It05Ids.FromEarlier, StringComparer.Ordinal);
+
+            // It. 6a: los que la It. 6a vuelve a verificar con dotnet (AC-WKT-13-15, -13-08, -13-12, -17-07: sus reglas puras de la
+            // escena) ya no son solo de Unity.
+            foreach (var ac in It06aIds.Acceptance)
+            {
+                if (HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s"))
+                {
+                    earlier.Add(ac.Id);
+                }
+            }
+
             var offenders = new List<string>();
             foreach (var id in It05Ids.UnityOnlyIds)
+            {
+                if (earlier.Contains(id) || !scan.Categories.TryGetValue(id, out var files))
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    if (!file.EndsWith("WorkoutDeviceChecksTests.cs", StringComparison.Ordinal))
+                    {
+                        offenders.Add(id + " en " + file);
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
+        }
+
+        // ------------------------------------------------------------------ It. 6a (02-tech-design §6.3, §6.5)
+
+        [Test, Category("AC-BASE-09")]
+        public void It06aIdsAreComplete()
+        {
+            // 101 ID = 78 nuevos (SCN 77 por ficha + WKT 1: AC-WKT-17-13) + 23 de iteraciones anteriores (§5.2 y §5.3); LT-62 a
+            // LT-87 (01-po-spec, encabezado, §4 y §6).
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var earlier = new HashSet<string>(It06aIds.FromEarlier, StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            var byCard = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var ac in It06aIds.Acceptance)
+            {
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It06aIds: " + ac.Id);
+                Assert.That(AcPattern.IsMatch(ac.Id), Is.True, ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                if (earlier.Contains(ac.Id))
+                {
+                    Assert.That(before.Contains(ac.Id), Is.True, ac.Id + " figura como de una iteración anterior pero no está en It01Ids a It05Ids");
+                    continue;
+                }
+
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior: va en FromEarlier");
+                var card = ac.Id.Substring(0, ac.Id.LastIndexOf('-'));
+                byCard.TryGetValue(card, out var count);
+                byCard[card] = count + 1;
+            }
+
+            Assert.That(It06aIds.Acceptance.Length, Is.EqualTo(101));
+            Assert.That(It06aIds.FromEarlier.Length, Is.EqualTo(23));
+            Assert.That(earlier.Count, Is.EqualTo(23), "repetidos en FromEarlier");
+            foreach (var id in It06aIds.FromEarlier)
+            {
+                Assert.That(ids.Contains(id), Is.True, id);
+            }
+
+            var expected = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["AC-SCN-02"] = 8, ["AC-SCN-03"] = 7, ["AC-SCN-09"] = 6, ["AC-SCN-10"] = 7, ["AC-SCN-11"] = 7, ["AC-SCN-14"] = 7,
+                ["AC-SCN-15"] = 8, ["AC-SCN-23"] = 4, ["AC-SCN-01"] = 14, ["AC-SCN-13"] = 4, ["AC-SCN-19"] = 2, ["AC-SCN-20"] = 2,
+                ["AC-SCN-21"] = 1, ["AC-WKT-17"] = 1,
+            };
+            Assert.That(byCard, Is.EquivalentTo(expected), "los 78 nuevos por ficha (encabezado de la spec)");
+
+            Assert.That(It06aIds.LegacyCases.Length, Is.EqualTo(26));
+            for (var i = 0; i < It06aIds.LegacyCases.Length; i++)
+            {
+                var lt = It06aIds.LegacyCases[i];
+                Assert.That(lt.Id, Is.EqualTo("LT-" + (62 + i).ToString("00", System.Globalization.CultureInfo.InvariantCulture)),
+                    "la numeración sigue a la de la 5 (LT-61)");
+                Assert.That(lt.File, Does.StartWith("test/scene/").And.EndWith("_test.dart"), lt.Id);
+                CheckKinds(lt.Id, lt.Checks);
+            }
+
+            // Sin d ni s: solo de Unity (p, ps, u o cap) o solo de equipo (eq: los [Ignore] de WorkoutDeviceChecksTests, WP-B2).
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            var deviceOnly = new List<string>();
+            foreach (var ac in It06aIds.Acceptance)
+            {
+                if (ac.Checks == "eq")
+                {
+                    deviceOnly.Add(ac.Id);
+                    continue;
+                }
+
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            // QA-V6a-PAR-05 y QA-V6a-11 (ronda 1 de la verificación): los LT que se verifican solo en PlayMode (LT-78 a LT-81 y LT-83 a
+            // LT-87) también son de Unity: sin -UnityResults, run-tests.ps1 -Matrix los da PENDIENTE UNITY (no SIN TEST).
+            foreach (var lt in It06aIds.LegacyCases)
+            {
+                Classify(lt.Id, lt.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It06aIds.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It06aIds.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(It06aIds.DeviceOnlyIds, Is.EquivalentTo(deviceOnly));
+            Assert.That(unityOnly.Count, Is.EqualTo(24 + 9), "02-tech-design §6.5: 24 AC y 9 LT de PlayMode");
+            Assert.That(deviceOnly, Is.EquivalentTo(new[] { "AC-SCN-01-09", "AC-SCN-01-10" }));
+            Assert.That(workPackageB, Is.Empty);
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It06aDotnetIdsHaveTests()
+        {
+            // Lo que el plan verifica con dotnet ([d] o [s] en 02-tech-design §6.5) tiene al menos un test con su categoría en
+            // Tests/EditMode o Tests/Simulator (WP-A); también los LT de dotnet (LT-62 a LT-77 y LT-82).
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It06aIds.Acceptance)
+            {
+                if ((HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s")) && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            foreach (var lt in It06aIds.LegacyCases)
+            {
+                if (HasKind(lt.Checks, "d") && !categories.ContainsKey(lt.Id))
+                {
+                    missing.Add(lt.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d]/[s] de la It. 6a sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It06aLegacyCasesKeepTheirNames()
+        {
+            // Los de dotnet, en Tests/EditMode; los de PlayMode (LT-78 a LT-81, LT-83 a LT-87), en Tests/PlayMode desde WP-B1
+            // (It06aUnityOnlyIdsHaveAUnityLocation).
+            var scan = Scan();
+            var problems = new List<string>();
+            var dotnet = 0;
+            foreach (var lt in It06aIds.LegacyCases)
+            {
+                if (!HasKind(lt.Checks, "d"))
+                {
+                    continue;
+                }
+
+                dotnet++;
+                CheckLegacyCase(scan, lt.Id, lt.File, lt.Line, lt.Name, problems);
+            }
+
+            Assert.That(dotnet, Is.EqualTo(17), "LT-62 a LT-77 y LT-82");
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It06aUnityOnlyIdsHaveAUnityLocation()
+        {
+            // Como It05UnityOnlyIdsHaveAUnityLocation. Mientras ninguno de los nuevos de la escena (AC-SCN-*, solo de Unity) tenga su
+            // prueba de Unity (WP-B), se ignora con el motivo; desde que aparece uno, se exigen todos, y también los LT de PlayMode
+            // con su nombre y su cita.
+            var folders = new Dictionary<string, SourceIndex?>(StringComparer.Ordinal)
+            {
+                ["p"] = ScanFolders("Tests/PlayMode"),
+                ["ps"] = ScanFolders("Tests/PlayModeSimulator"),
+                ["u"] = ScanFolders("Tests/UnityEditMode"),
+                ["cap"] = ScanFolders("Snapshots"),
+            };
+            var checks = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var ac in It06aIds.Acceptance)
+            {
+                checks[ac.Id] = ac.Checks;
+            }
+
+            // QA-V6a-PAR-05: los LT de PlayMode también están en UnityOnlyIds.
+            foreach (var lt in It06aIds.LegacyCases)
+            {
+                checks[lt.Id] = lt.Checks;
+            }
+
+            var earlier = new HashSet<string>(It06aIds.FromEarlier, StringComparer.Ordinal);
+            var missing = new List<string>();
+            var newFound = 0;
+            foreach (var id in It06aIds.UnityOnlyIds)
+            {
+                var found = false;
+                foreach (var kind in folders.Keys)
+                {
+                    var index = folders[kind];
+                    if (!HasKind(checks[id], kind) || index == null)
+                    {
+                        continue;
+                    }
+
+                    found |= kind == "cap" ? index.MentionsText(id) : index.Categories.ContainsKey(id);
+                }
+
+                if (found && !earlier.Contains(id) && id.StartsWith("AC-SCN-", StringComparison.Ordinal))
+                {
+                    newFound++;
+                }
+
+                if (!found)
+                {
+                    missing.Add(id + " (" + checks[id] + ")");
+                }
+            }
+
+            if (newFound == 0)
+            {
+                Assert.Ignore("pendiente WP-B: todavía no hay pruebas de Unity de la It. 6a (" + missing.Count + " IDs sin su prueba)");
+            }
+
+            var playMode = folders["p"];
+            if (playMode != null)
+            {
+                foreach (var lt in It06aIds.LegacyCases)
+                {
+                    if (HasKind(lt.Checks, "p"))
+                    {
+                        CheckLegacyCase(playMode, lt.Id, lt.File, lt.Line, lt.Name, missing);
+                    }
+                }
+            }
+
+            Assert.That(missing, Is.Empty, "IDs de la It. 6a solo de Unity sin su prueba en la carpeta esperada: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It06aUnityOnlyIdsHaveNoDotnetResult()
+        {
+            // Los nuevos de la It. 6a solo de Unity o de equipo no llevan su categoría en Tests/EditMode ni en Tests/Simulator (sí en
+            // un [Ignore] de equipo de WorkoutDeviceChecksTests, que deja PENDIENTE UNITY).
+            var scan = Scan();
+            var earlier = new HashSet<string>(It06aIds.FromEarlier, StringComparer.Ordinal);
+            var offenders = new List<string>();
+            var ids = new List<string>(It06aIds.UnityOnlyIds);
+            ids.AddRange(It06aIds.DeviceOnlyIds);
+            foreach (var id in ids)
             {
                 if (earlier.Contains(id) || !scan.Categories.TryGetValue(id, out var files))
                 {

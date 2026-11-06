@@ -43,5 +43,8 @@ namespace RowMate.Bootstrap
 
         // El contorno de depuración de la zona del bote en el inmersivo (It. 4a, AC-WKT-17-09): solo PlayMode y el arnés.
         public bool BoatZoneOutline { get; set; }
+
+        // It. 6a (06a-escena-lago/02-tech-design §3.3): la escena del inmersivo (SceneBridge); null = sin escena (el fondo provisorio).
+        public RowMate.Presentation.Workout.IImmersiveScene? Scene { get; set; }
     }
 }

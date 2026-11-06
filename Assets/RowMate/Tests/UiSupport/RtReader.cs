@@ -11,12 +11,45 @@ namespace RowMate.Tests.UiSupport
         {
             var crop = cropTopLeft ?? new RectInt(0, 0, rt.width, rt.height);
             crop = Clamp(crop, rt.width, rt.height);
+            if (UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsHalfFormat(rt.graphicsFormat)
+                || UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsIEEE754Format(rt.graphicsFormat)
+                || rt.graphicsFormat == UnityEngine.Experimental.Rendering.GraphicsFormat.B10G11R11_UFloatPack32)
+            {
+                return ReadFloat(rt, crop);
+            }
+
             var texture = new Texture2D(crop.width, crop.height, TextureFormat.RGBA32, false, true);
             var active = RenderTexture.active;
             RenderTexture.active = rt;
             texture.ReadPixels(new Rect(crop.x, rt.height - crop.y - crop.height, crop.width, crop.height), 0, 0, false);
             texture.Apply(false);
             RenderTexture.active = active;
+            return texture;
+        }
+
+        // It. 6a (la RT de la escena de media precisión en los niveles con HDR): los valores lineales, codificados en sRGB y en bytes,
+        // como los de una RT R8G8B8A8_SRGB leída con Read (lo mismo que se ve en el panel).
+        private static Texture2D ReadFloat(RenderTexture rt, RectInt crop)
+        {
+            var raw = new Texture2D(crop.width, crop.height, TextureFormat.RGBAFloat, false, true);
+            var active = RenderTexture.active;
+            RenderTexture.active = rt;
+            raw.ReadPixels(new Rect(crop.x, rt.height - crop.y - crop.height, crop.width, crop.height), 0, 0, false);
+            raw.Apply(false);
+            RenderTexture.active = active;
+            var pixels = raw.GetPixels();
+            var bytes = new Color32[pixels.Length];
+            for (var i = 0; i < pixels.Length; i++)
+            {
+                var c = pixels[i];
+                bytes[i] = new Color(Mathf.LinearToGammaSpace(Mathf.Clamp01(c.r)), Mathf.LinearToGammaSpace(Mathf.Clamp01(c.g)),
+                    Mathf.LinearToGammaSpace(Mathf.Clamp01(c.b)), Mathf.Clamp01(c.a));
+            }
+
+            Object.DestroyImmediate(raw);
+            var texture = new Texture2D(crop.width, crop.height, TextureFormat.RGBA32, false, true);
+            texture.SetPixels32(bytes);
+            texture.Apply(false);
             return texture;
         }
 

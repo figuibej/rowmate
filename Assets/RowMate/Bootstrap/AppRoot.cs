@@ -64,6 +64,26 @@ namespace RowMate.Bootstrap
         // preferencias; FrameTimeProbe escribe "[PERF] paneles: …"). Las rutinas las siembra SnapshotCli.SeedDatabase -seed F5.
         public const string PerfRoutinesArgument = "-rowmate-perf-routines";
         public const string PerfSeriesArgument = "-rowmate-perf-series";
+
+        // It. 6a (06a-escena-lago/02-tech-design §4.5; AC-SCN-01-10, AC-WKT-13-15, AC-WKT-14-19): la medida de la escena en el build de
+        // desarrollo, por tiempo. -rowmate-perf-scene <s>: libre con Fuerte; -rowmate-scene-delay <s>: la escena demorada (sin precarga);
+        // -rowmate-quality <nivel>: el nivel forzado (con medium, la línea de base de GPU para la It. 14); -rowmate-perf-hours: la
+        // secuencia de VID-05; -rowmate-perf-completion: Corta con el diálogo y la toma aérea.
+        public const string PerfSceneArgument = "-rowmate-perf-scene";
+        public const string SceneDelayArgument = "-rowmate-scene-delay";
+        public const string QualityArgument = "-rowmate-quality";
+        public const string PerfHoursArgument = "-rowmate-perf-hours";
+        public const string PerfCompletionArgument = "-rowmate-perf-completion";
+
+        // It. 6a, ronda 1 de la verificación (QA-V6a-13, QA-V6a-REN-03; AC-WKT-14-19): -rowmate-perf-long-series <s>: "Serie larga" (la
+        // siembra SnapshotCli.SeedDatabase -seed F4B) con la escena durante <s> s, con sus cambios de paso cada 30 s; FrameTimeProbe
+        // escribe sus ventanas de 10 s (los últimos 5 s de cada paso caen adentro de una).
+        public const string PerfLongSeriesArgument = "-rowmate-perf-long-series";
+
+        // It. 6a, ronda 2 de la verificación (QA-V6a-R2-01): -rowmate-perf-profile <archivo.raw> con -rowmate-perf-long-series: el
+        // Profiler (registro binario con la pila de cada asignación) de los 25,5 a los 27,5 s de Serie larga (el halo y la cuenta grande
+        // de los últimos 5 s del primer paso). El archivo lo lee el Editor (RowMate.EditorTools.ProfileAllocations).
+        public const string PerfProfileArgument = "-rowmate-perf-profile";
 #endif
 
         [SerializeField] private UiAssets? _assets;
@@ -83,6 +103,9 @@ namespace RowMate.Bootstrap
         private HudWarmup? _warmup;
         private RowMate.Infrastructure.Preferences.JsonFilePreferences? _preferences;
         private BackSource _backSource;
+        private SceneBridge? _sceneBridge;
+        private RowMate.Platform.Display.ThermalAdapter? _thermal;
+        private RowMate.Core.Scene.IRenderAssetQuality? _assetQuality;
 
         public UiAssets? Assets => _assets;
 
@@ -220,9 +243,13 @@ namespace RowMate.Bootstrap
             }
 #endif
 
+            // 6b. It. 6a (06a-escena-lago/02-tech-design §3.1 a §3.4, §4.2): la escena 3D del inmersivo (SceneHost con su puente), si
+            //     SceneWorld.asset está completo; si no, el inmersivo sigue con el fondo provisorio (un aviso).
+            _sceneBridge = CreateScene();
+
             // 7. La UI (ShellHost). En un build normal SimulatorLayerFactory devuelve null (sin capa).
             _shell = ShellHost.Build(_app, root, new ShellHostOptions(_scheduler, _platform.IsDesktop, _platform.BackButton, _platform.Display,
-                SimulatorLayerFactory.CreateOrNull(_backend, _app, _scheduler), _platform.Clipboard, _platform.Keyboard) { Pipeline = _surface!.Pipeline });
+                SimulatorLayerFactory.CreateOrNull(_backend, _app, _scheduler), _platform.Clipboard, _platform.Keyboard) { Pipeline = _surface!.Pipeline, Scene = _sceneBridge });
             _pacer = new FramePacer(_shell.Pacing);
 
             // 8. El remo empieza a escuchar (el simulado se conecta), las rutinas se cargan sin esperar (AC-APP-01-09) y el
@@ -246,6 +273,25 @@ namespace RowMate.Bootstrap
             if (perfSeries != null && perfEntries == null)
             {
                 _ = RunPerfSeries(perfSeries);
+            }
+
+            // It. 6a (§4.5): la escena (libre con Fuerte), la secuencia de las horas (VID-05) y el diálogo de completado con la toma aérea.
+            var perfScene = ArgumentValue(PerfSceneArgument);
+            if (perfScene != null && perfEntries == null && perfSeries == null)
+            {
+                _ = RunPerfScene(perfScene);
+            }
+            else if (HasArgument(PerfHoursArgument) && perfEntries == null && perfSeries == null)
+            {
+                _ = RunPerfHours();
+            }
+            else if (HasArgument(PerfCompletionArgument) && perfEntries == null && perfSeries == null)
+            {
+                _ = RunPerfCompletion();
+            }
+            else if (ArgumentValue(PerfLongSeriesArgument) != null && perfEntries == null && perfSeries == null)
+            {
+                _ = RunPerfLongSeries(ArgumentValue(PerfLongSeriesArgument)!);
             }
 #endif
             if (warmUp)
@@ -284,6 +330,125 @@ namespace RowMate.Bootstrap
                 _shell.HandleBack(_backSource);
             }
         }
+
+        // It. 6a (06a-escena-lago/02-tech-design §3.2, §4.2, §4.4): la escena se avanza y se dibuja una vez por cuadro, DESPUÉS de los
+        // Update (las animaciones del HUD de este cuadro ya corrieron) y antes de que la UI se componga (el panel muestrea la RT recién
+        // dibujada: cero cuadros de atraso, S6a-7). La adaptación térmica mide solo los cuadros en que la escena se dibujó.
+        private void LateUpdate()
+        {
+            var bridge = _sceneBridge;
+            if (bridge == null || _shell == null || _scheduler == null || _app == null || _platform == null)
+            {
+                return;
+            }
+
+            var host = bridge.Host;
+            host.SetViewport(Screen.width, Screen.height, _platform.Display.DpScale);
+            var before = host.Draws;
+            var now = _scheduler.MonotonicSeconds;
+            bridge.Tick(now, _shell.Motion, _app.Workout.State.Value.Phase);
+            if (_thermal != null)
+            {
+                ApplyQuality(_thermal.Sample(now, host.Draws != before));
+            }
+        }
+
+        private SceneBridge? CreateScene()
+        {
+            var world = _assets?.SceneWorld;
+            if (world == null || !world.IsComplete || _app == null || _platform == null || _logger == null)
+            {
+                _logger?.Log(LogLevel.Warning, RowMate.Scene.SceneHost.Tag, "sin SceneWorld completo (correr RowMate/Bootstrap/Reaplicar): el inmersivo sigue con el fondo provisorio");
+                return null;
+            }
+
+            var tier = RowMate.Platform.Display.GraphicsTier.ChooseForThisDevice();
+            var forcedTier = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (RowMate.Platform.Display.GraphicsTier.TryParse(ArgumentValue(QualityArgument), out var forced))
+            {
+                tier = forced;
+                forcedTier = true;
+            }
+#endif
+            _assetQuality = Application.isEditor
+                ? (RowMate.Core.Scene.IRenderAssetQuality)new RowMate.Platform.Display.EditorRenderAssetQuality()
+                : new RowMate.Platform.Display.PlayerUrpAssetQuality();
+            _assetQuality.ApplyTier(tier);
+            var host = new RowMate.Scene.SceneHost(world, _app, new RowMate.Scene.SceneHostOptions
+            {
+                Tier = tier,
+                AssetQuality = _assetQuality,
+                RegionCode = RegionOf(_platform.Locale.PreferredLanguageTags),
+            });
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var delay = ArgumentValue(SceneDelayArgument);
+            if (delay != null && double.TryParse(delay, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) && seconds > 0)
+            {
+                _sceneDelaySeconds = seconds;
+            }
+#endif
+            // QA-V6a-REN-13: con el nivel forzado (-rowmate-quality, la línea de base de GPU para la It. 14) la adaptación queda apagada: la
+            // resolución es la del nivel durante toda la corrida (antes subía de 0,85 a 0,95 y las ventanas mezclaban tres resoluciones).
+            _thermal = forcedTier ? null : new RowMate.Platform.Display.ThermalAdapter(host.Resolution);
+            _logger.Log(LogLevel.Info, RowMate.Scene.SceneHost.Tag, "escena: nivel " + tier + (forcedTier ? " (forzado: sin adaptación)" : ""));
+            return new SceneBridge(host, _logger);
+        }
+
+        // La adaptación (ARCHITECTURE §20.3): la resolución y la densidad en la escena; la distancia de sombras y el nivel en el asset.
+        private void ApplyQuality(RowMate.Core.Scene.QualityAction action)
+        {
+            var host = _sceneBridge?.Host;
+            if (host == null)
+            {
+                return;
+            }
+
+            switch (action.Kind)
+            {
+                case RowMate.Core.Scene.QualityActionKind.LowerResolution:
+                case RowMate.Core.Scene.QualityActionKind.RaiseResolution:
+                    host.SetResolution(action.Resolution);
+                    break;
+                case RowMate.Core.Scene.QualityActionKind.LowerShadowDistance:
+                    _assetQuality?.SetShadowDistance(host.Profile.ShadowDistance / 2);
+                    break;
+                case RowMate.Core.Scene.QualityActionKind.LowerVegetationDensity:
+                    host.SetVegetationDensity(0.5);
+                    break;
+                case RowMate.Core.Scene.QualityActionKind.LowerTier:
+                    // QA-V6a-REN-09: el nivel entero (el perfil de la escena y, por el IRenderAssetQuality de sus opciones, el asset de URP).
+                    host.LowerTier();
+                    break;
+            }
+
+            if (action.Kind != RowMate.Core.Scene.QualityActionKind.None)
+            {
+                _logger?.Log(LogLevel.Info, RowMate.Scene.SceneHost.Tag, "adaptación: " + action.Kind + " (resolución " + host.Resolution.ToString("0.00", CultureInfo.InvariantCulture) + ")");
+            }
+        }
+
+        // La región del sistema para el hemisferio de la luna (DV-57): "es-AR" → "AR"; sin región, null (el norte).
+        private static string? RegionOf(System.Collections.Generic.IReadOnlyList<string> tags)
+        {
+            if (tags == null || tags.Count == 0)
+            {
+                return null;
+            }
+
+            var parts = tags[0].Split('-', '_');
+            for (var i = 1; i < parts.Length; i++)
+            {
+                if (parts[i].Length == 2)
+                {
+                    return parts[i].ToUpperInvariant();
+                }
+            }
+
+            return null;
+        }
+
+        private double _sceneDelaySeconds;
 
         // Segundo plano (Android e iOS: la actividad se pausa y el loop se detiene; en escritorio Unity no lo llama con
         // runInBackground: minimizada NO es segundo plano). 02-tech-design §4.2:
@@ -345,6 +510,8 @@ namespace RowMate.Bootstrap
             _warmup = null;
             _shell?.Dispose();
             _shell = null;
+            _sceneBridge?.Dispose();
+            _sceneBridge = null;
             _app?.Dispose();
             _app = null;
             // It. 5: lo último que se tocó se termina de guardar (hasta 1 s, como la base).
@@ -367,8 +534,17 @@ namespace RowMate.Bootstrap
             _backend = null;
             _store?.Dispose();
             _store = null;
+            // It. 6a (lo encontró SceneBudgetTests: los contadores de dibujo son de todo el cuadro): la copia del panel también se
+            // destruye. UiSurface.Dispose la deja sin RT (y una copia viva sin RT dibuja en la pantalla): en las pruebas que cargan y
+            // descargan Boot.unity quedaban paneles de más dibujando en cada cuadro.
+            var runtimePanel = _surface?.Panel;
             _surface?.Dispose();
             _surface = null;
+            if (runtimePanel != null)
+            {
+                RowMate.Presentation.Surface.RuntimePanelFactory.Destroy(runtimePanel);
+            }
+
             _keepAwake?.Dispose();
             _keepAwake = null;
             _scheduler?.Dispose();
@@ -476,6 +652,12 @@ namespace RowMate.Bootstrap
                     var entryRoutine = named.Count > 0 ? (i == 0 ? null : named[(i - 1) % named.Count]) : (i % 2 == 0 ? null : routine);
                     var free = entryRoutine == null;
                     logger.Log(LogLevel.Info, "PERF", "entrada " + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + (free ? "libre" : "rutina " + entryRoutine!.Name));
+                    if (_sceneDelaySeconds > 0)
+                    {
+                        // -rowmate-scene-delay: la escena demorada (sin precarga), para medir su preparación por tramos y su primer dibujo.
+                        _sceneBridge?.Host.DelayReadinessForPerf(_sceneDelaySeconds);
+                    }
+
                     var started = free ? app.WorkoutRest.StartFree() : app.WorkoutRest.StartRoutine(entryRoutine!);
                     if (!started)
                     {
@@ -485,6 +667,7 @@ namespace RowMate.Bootstrap
                     }
 
                     await scheduler.Delay(TimeSpan.FromSeconds(12));
+                    LogSceneWarmup(logger, i + 1);
                     await app.Workout.FinishAsync();
                     await scheduler.Delay(TimeSpan.FromSeconds(3));
                 }
@@ -495,6 +678,247 @@ namespace RowMate.Bootstrap
             catch (Exception error)
             {
                 logger.Log(LogLevel.Error, "PERF", "medición de la entrada: falla", error);
+                Application.Quit(1);
+            }
+        }
+
+        // It. 6a: el peor cuadro de la preparación de la escena desde el último toque (la escena demorada: ≤ su tramo, AC-WKT-13-15).
+        private void LogSceneWarmup(IAppLogger logger, int entry)
+        {
+            var host = _sceneBridge?.Host;
+            if (host == null)
+            {
+                return;
+            }
+
+            logger.Log(LogLevel.Info, "PERF", "escena (n.º " + entry.ToString(CultureInfo.InvariantCulture) + "): " + host.Readiness.Value + ", peor cuadro de la preparación "
+                + host.WorstWarmupMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms, dibujos " + host.Draws.ToString(CultureInfo.InvariantCulture)
+                + ", nivel " + host.Tier + ", resolución " + host.Resolution.ToString("0.00", CultureInfo.InvariantCulture)
+                + "; preparándose: " + _sceneBridge!.WarmupFrames.ToString(CultureInfo.InvariantCulture) + " cuadros con tramo y "
+                + _sceneBridge.StarvedFrames.ToString(CultureInfo.InvariantCulture) + " sin tramo"
+                + (_sceneBridge.LastStarvedBy != null ? " (lo último que lo retuvo: " + _sceneBridge.LastStarvedBy.Name + ")" : "")
+                // Ronda 1 de la verificación: la unidad más cara del armado (QA-V6a-REN-06), la orilla armada entera a la vista (REN-04: 0) y
+                // las veces que el cuadro del armado del HUD terminó la orilla (CatchUp).
+                + "; peor unidad " + host.WorstUnitMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms (" + host.WorstUnitPhase
+                + (host.WorstUnitStep.Length > 0 ? ": " + host.WorstUnitStep : "") + "; por fase: " + UnitsByPhase(host) + "); orilla entera a la vista: "
+                + host.InViewShoreRebuilds.ToString(CultureInfo.InvariantCulture) + "; orilla terminada en el negro: "
+                + host.CatchUps.ToString(CultureInfo.InvariantCulture) + "; CPU de la escena del último cuadro "
+                + host.LastCpuMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+        }
+
+        // La unidad más cara de cada fase del armado (QA-V6a-REN-06).
+        private static string UnitsByPhase(RowMate.Scene.SceneHost host)
+        {
+            var text = new System.Text.StringBuilder();
+            for (var phase = 0; phase < RowMate.Scene.SceneHost.PhaseCount; phase++)
+            {
+                if (text.Length > 0)
+                {
+                    text.Append(", ");
+                }
+
+                text.Append(RowMate.Scene.SceneHost.PhaseName(phase)).Append(' ').Append(host.WorstUnitMsOf(phase).ToString("0.00", CultureInfo.InvariantCulture));
+            }
+
+            return text.ToString();
+        }
+
+        // Espera a que se pueda empezar (el remo conectado) y la escena esté lista (la precarga en reposo), como mucho 20 s.
+        private async System.Threading.Tasks.Task<bool> WaitForStart(AppContext app, UnityScheduler scheduler)
+        {
+            app.Shell.Select(1);
+            for (var wait = 0; wait < 200 && (!app.WorkoutRest.State.Value.CanStart
+                                              || _sceneBridge != null && _sceneBridge.Host.Readiness.Value == RowMate.Scene.SceneReadiness.Loading); wait++)
+            {
+                await scheduler.Delay(TimeSpan.FromMilliseconds(100));
+            }
+
+            await scheduler.Delay(TimeSpan.FromSeconds(2));
+            return app.WorkoutRest.State.Value.CanStart;
+        }
+
+        // -rowmate-perf-scene <s> (AC-SCN-01-10): libre con Fuerte durante <s> s; FrameTimeProbe escribe la ventana de 10 s (p99, máximo,
+        // GPU, memoria) y la entrada; al final, la escena (nivel, resolución, peor armado). Solo con ROWMATE_DATA_DIR. Sale con 0.
+        private async System.Threading.Tasks.Task RunPerfScene(string secondsText)
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            if (!DataLocation.IsOverridden || !int.TryParse(secondsText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) || seconds < 10)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de la escena: hace falta ROWMATE_DATA_DIR y los segundos (10 o más)");
+                Application.Quit(1);
+                return;
+            }
+
+            try
+            {
+                if (!await WaitForStart(app, scheduler))
+                {
+                    logger.Log(LogLevel.Error, "PERF", "medición de la escena: el remo no se conectó");
+                    Application.Quit(1);
+                    return;
+                }
+
+                DeviceBackendFactory.SetPerfPreset(_backend!, 280, 30);
+                logger.Log(LogLevel.Info, "PERF", "medición de la escena: libre con Fuerte, " + seconds.ToString(CultureInfo.InvariantCulture) + " s");
+                app.WorkoutRest.StartFree();
+                await scheduler.Delay(TimeSpan.FromSeconds(seconds));
+                LogSceneWarmup(logger, 1);
+                await app.Workout.FinishAsync();
+                await scheduler.Delay(TimeSpan.FromSeconds(3));
+                logger.Log(LogLevel.Info, "PERF", "medición de la escena: terminada");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de la escena: falla", error);
+                Application.Quit(1);
+            }
+        }
+
+        // -rowmate-perf-hours (VID-05): libre a las 17 h forzadas y + cada 2 s hasta las 23 h. Sale con 0.
+        private async System.Threading.Tasks.Task RunPerfHours()
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            try
+            {
+                if (!DataLocation.IsOverridden || !await WaitForStart(app, scheduler))
+                {
+                    logger.Log(LogLevel.Error, "PERF", "medición de las horas: hace falta ROWMATE_DATA_DIR y el remo");
+                    Application.Quit(1);
+                    return;
+                }
+
+                // QA-V6a-06: la hora se fija en Workout, ANTES del toque (como la pone el usuario desde el panel), no en el cuadro del toque.
+                app.Scene.HourOverride.Value = 17;
+                await scheduler.Delay(TimeSpan.FromSeconds(2));
+                app.WorkoutRest.StartFree();
+                await scheduler.Delay(TimeSpan.FromSeconds(4));
+                for (var hour = 18; hour <= 23; hour++)
+                {
+                    app.Scene.HourOverride.Value = hour;
+                    logger.Log(LogLevel.Info, "PERF", "hora de la escena: " + hour.ToString(CultureInfo.InvariantCulture) + " h");
+                    await scheduler.Delay(TimeSpan.FromSeconds(2));
+                }
+
+                await scheduler.Delay(TimeSpan.FromSeconds(8));
+                LogSceneWarmup(logger, 1);
+                await app.Workout.FinishAsync();
+                await scheduler.Delay(TimeSpan.FromSeconds(3));
+                app.Scene.HourOverride.Value = null;
+                logger.Log(LogLevel.Info, "PERF", "medición de las horas: terminada");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de las horas: falla", error);
+                Application.Quit(1);
+            }
+        }
+
+        // -rowmate-perf-completion: "Corta" (sembrada con -seed F5) hasta el diálogo de completado y la toma aérea (60 fps mientras se
+        // mueve; después puede bajar a 30 y la adaptación no dispara); después el Terminar del diálogo. Sale con 0.
+        private async System.Threading.Tasks.Task RunPerfCompletion()
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            try
+            {
+                await app.Routines.LoadAsync();
+                var routines = NamedRoutines(app, "Corta");
+                if (!DataLocation.IsOverridden || routines == null || routines.Count != 1 || !await WaitForStart(app, scheduler))
+                {
+                    logger.Log(LogLevel.Error, "PERF", "medición del completado: hace falta ROWMATE_DATA_DIR, el remo y Corta (sembrar con -seed F5)");
+                    Application.Quit(1);
+                    return;
+                }
+
+                // QA-V6a-06: StartRoutine directo, sin el toque en la lista ni el diálogo de confirmación: su primera entrada paga código que
+                // en la app real ya corrió al tocar la rutina (00-deuda-5 §1.2). Esa entrada no es la medida de AC-WKT-13-15 (lo es la de
+                // -rowmate-perf-entries y la prueba a mano por la lista).
+                logger.Log(LogLevel.Info, "PERF", "completado: Corta con StartRoutine directo (la primera entrada no es la del usuario)");
+                app.WorkoutRest.StartRoutine(routines[0]);
+                await scheduler.Delay(TimeSpan.FromSeconds(45));
+                logger.Log(LogLevel.Info, "PERF", "completado: fotogramas a " + (OnDemandRenderingInterval() > 1 ? "30" : "60") + " fps con el diálogo quieto");
+                LogSceneWarmup(logger, 1);
+                await app.Workout.AcknowledgeCompletion();
+                await scheduler.Delay(TimeSpan.FromSeconds(3));
+                logger.Log(LogLevel.Info, "PERF", "medición del completado: terminada");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición del completado: falla", error);
+                Application.Quit(1);
+            }
+        }
+
+        private static int OnDemandRenderingInterval()
+        {
+            return UnityEngine.Rendering.OnDemandRendering.renderFrameInterval;
+        }
+
+        // -rowmate-perf-long-series <s> (QA-V6a-13, QA-V6a-REN-03; AC-WKT-14-19, AC-SCN-01-10): "Serie larga" (100 × 30 s de trabajo y 30 s de
+        // descanso, la fila de píldoras más larga; sembrada con SnapshotCli -seed F4B) con la escena durante <s> s y Fuerte; FrameTimeProbe
+        // escribe la ventana de 10 s (máximo, p99, GPU, memoria y asignaciones por cuadro) y la entrada. Arranca con StartRoutine directo:
+        // su primera entrada no es la del usuario (QA-V6a-06). Solo con ROWMATE_DATA_DIR. Sale con 0.
+        private async System.Threading.Tasks.Task RunPerfLongSeries(string secondsText)
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            try
+            {
+                await app.Routines.LoadAsync();
+                var routines = NamedRoutines(app, "Serie larga");
+                if (!DataLocation.IsOverridden || routines == null || routines.Count != 1
+                    || !int.TryParse(secondsText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) || seconds < 10
+                    || !await WaitForStart(app, scheduler))
+                {
+                    logger.Log(LogLevel.Error, "PERF", "medición de Serie larga: hace falta ROWMATE_DATA_DIR, el remo, los segundos (10 o más) y Serie larga (sembrar con -seed F4B)");
+                    Application.Quit(1);
+                    return;
+                }
+
+                DeviceBackendFactory.SetPerfPreset(_backend!, 280, 30);
+                logger.Log(LogLevel.Info, "PERF", "medición de Serie larga con la escena: " + seconds.ToString(CultureInfo.InvariantCulture)
+                    + " s, con StartRoutine directo (la primera entrada no es la del usuario)");
+                app.WorkoutRest.StartRoutine(routines[0]);
+                var profile = ArgumentValue(PerfProfileArgument);
+                if (!string.IsNullOrEmpty(profile) && seconds >= 28)
+                {
+                    await scheduler.Delay(TimeSpan.FromSeconds(25.5));
+                    UnityEngine.Profiling.Profiler.maxUsedMemory = 256 * 1024 * 1024;
+                    UnityEngine.Profiling.Profiler.logFile = profile;
+                    UnityEngine.Profiling.Profiler.enableBinaryLog = true;
+                    UnityEngine.Profiling.Profiler.enableAllocationCallstacks = true;
+                    UnityEngine.Profiling.Profiler.enabled = true;
+                    logger.Log(LogLevel.Info, "PERF", "Profiler: grabando de 25,5 a 27,5 s");
+                    await scheduler.Delay(TimeSpan.FromSeconds(2));
+                    UnityEngine.Profiling.Profiler.enabled = false;
+                    UnityEngine.Profiling.Profiler.enableBinaryLog = false;
+                    UnityEngine.Profiling.Profiler.logFile = "";
+                    logger.Log(LogLevel.Info, "PERF", "Profiler: terminado");
+                    await scheduler.Delay(TimeSpan.FromSeconds(seconds - 27.5));
+                }
+                else
+                {
+                    await scheduler.Delay(TimeSpan.FromSeconds(seconds));
+                }
+
+                LogSceneWarmup(logger, 1);
+                await app.Workout.FinishAsync();
+                await scheduler.Delay(TimeSpan.FromSeconds(3));
+                logger.Log(LogLevel.Info, "PERF", "medición de Serie larga: terminada");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición de Serie larga: falla", error);
                 Application.Quit(1);
             }
         }
@@ -570,7 +994,9 @@ namespace RowMate.Bootstrap
                 }
 
                 await scheduler.Delay(TimeSpan.FromSeconds(2));
-                logger.Log(LogLevel.Info, "PERF", "medición de los paneles: " + seconds.ToString(CultureInfo.InvariantCulture) + " s");
+                // QA-V6a-06: con StartRoutine directo (sin el toque en la lista): la primera entrada no es la del usuario.
+                logger.Log(LogLevel.Info, "PERF", "medición de los paneles: " + seconds.ToString(CultureInfo.InvariantCulture)
+                    + " s, con StartRoutine directo (la primera entrada no es la del usuario)");
                 foreach (var routine in routines)
                 {
                     if (!app.WorkoutRest.StartRoutine(routine))

@@ -44,13 +44,12 @@ namespace RowMate.Presentation.Controls
     //   ícono no son elementos (el presupuesto de 60, ARCHITECTURE §7.8).
     // - PLACA: lo que el mismo elemento dibuja debajo de las cifras (el disco y el aro de la cuenta grande, M7).
     // - RollProgress: 0 → 1 del rodillo en curso (1 sin rodillo), para la regla de toma (un rodillo antes de su mitad bloquea).
-    public sealed class TabularNumber : VisualElement, IMotion
+    public sealed class TabularNumber : VisualElement, IMotion, IRecurringMotion
     {
         public const string UssClass = "rm-tabular-number";
         private const int MaxCells = 16;
         private const long FallbackCheckDelayMs = 250;
 
-        private static readonly string[] CharStrings = BuildCharStrings();
         private static bool _warnedSlot;
 
         private readonly MotionDriver? _motion;
@@ -265,6 +264,41 @@ namespace RowMate.Presentation.Controls
             _suffix.Color = color;
             MarkDirtyRepaint();
         }
+
+        // It. 6a, ronda 2 de la verificación (QA-V6a-R2-01; 06a-escena-lago/02-tech-design, "Cambios por verificación (ronda 2)"):
+        // el color que cambia EN CADA CUADRO (el latido de la cuenta del paso en los últimos 5 s) va en el dibujo, no en un estilo en
+        // línea. Un estilo en línea que cambia rehace el estilo del elemento en el cuadro y UI Toolkit copia cada grupo de
+        // estilo que el elemento tiene en línea (ComputedStyle.ApplyStyleValue / ApplyStyleTransformOrigin): 3 asignaciones por
+        // cuadro en el player. Esto solo repinta: SetPaintColor reemplaza el color del estilo en las cifras (no en los afijos ni en
+        // la placa), con el mismo color que el estilo daba (los mismos píxeles). Sin cambios, no repinta.
+        public void SetPaintColor(Color color)
+        {
+            if (_hasPaintColor && _paintColor == color)
+            {
+                return;
+            }
+
+            _hasPaintColor = true;
+            _paintColor = color;
+            MarkDirtyRepaint();
+        }
+
+        public void ClearPaintColor()
+        {
+            if (!_hasPaintColor)
+            {
+                return;
+            }
+
+            _hasPaintColor = false;
+            MarkDirtyRepaint();
+        }
+
+        // El color con el que se dibujan las cifras (el de SetPaintColor o el del estilo).
+        public Color DrawnColor => _hasPaintColor ? _paintColor : resolvedStyle.color;
+
+        private bool _hasPaintColor;
+        private Color _paintColor;
 
         // La placa (M7): se dibuja antes que las cifras, en el mismo elemento (el disco y el aro de la cuenta grande).
         public void SetPlate(Action<MeshGenerationContext, Rect>? plate)
@@ -705,7 +739,7 @@ namespace RowMate.Presentation.Controls
                 return;
             }
 
-            var color = MeshColor.ForMesh(resolvedStyle.color);
+            var color = MeshColor.ForMesh(_hasPaintColor ? _paintColor : resolvedStyle.color);
             var right = box.width - InsideSpan(_suffix);
             var baselineY = BaselineFromTop;
             var top = baselineY - _ascent;
@@ -945,21 +979,12 @@ namespace RowMate.Presentation.Controls
             context.DrawText(affix.Text, new Vector2(AffixLeft(affix, prefix), top), affix.SizeDp * scaledPixelsPerPoint, color, font);
         }
 
+        // ASCII, Latin-1 (el × del chip de la serie también), la puntuación general (—, …) y el signo menos, sin asignar en cada
+        // dibujo; cualquier otro, una sola vez (Core/Common/CharStrings; O-4 de la lente de motion de la 5: antes, lo que pasaba de
+        // U+00FF asignaba en cada dibujo).
         private static string CharString(char c)
         {
-            return c < CharStrings.Length ? CharStrings[c] : c.ToString();
-        }
-
-        // ASCII y Latin-1 (el × del chip de la serie también, sin asignar en cada dibujo).
-        private static string[] BuildCharStrings()
-        {
-            var strings = new string[256];
-            for (var i = 0; i < strings.Length; i++)
-            {
-                strings[i] = ((char)i).ToString();
-            }
-
-            return strings;
+            return RowMate.Core.Common.CharStrings.Of(c);
         }
 
         // Un afijo: el texto, su FontAsset (el de la clase de tipo del hijo oculto), su tamaño en dp, color, aire, lugar y

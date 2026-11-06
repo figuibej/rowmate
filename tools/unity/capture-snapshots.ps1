@@ -4,10 +4,12 @@
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it5 por defecto desde la It. 5: los paneles de series, CAP-01..26, DEMO-01..12 y VID-01..09 en
+# -Set: el catalogo (it6a por defecto desde la It. 6a: la escena del lago, CAP-01..24, DEMO-01..08, VID-01..11 e it6a-low en
+# docs/migration/iterations/06a-escena-lago/snapshots, con el Editor SIN -nographics (Direct3D 11) y la escena real en nivel Alto;
+# it5: los paneles de series, CAP-01..26, DEMO-01..12 y VID-01..09 en
 # docs/migration/iterations/05-series-parciales/snapshots; it4b: el HUD EXR, CAP-01..31, DEMO-01..12 y VID-01..08 en
 # docs/migration/iterations/04b-hud-exr/snapshots; it4a: el entrenamiento de la 4a, con las tomas del HUD reemplazadas por las de
 # it4b (no se vuelven a tomar), 30 CAP (CAP-27 con a, b y c), DEMO-01..14 y VID-01..03
@@ -23,7 +25,7 @@
 #   1. Unity -batchmode -quit -executeMethod RowMate.EditorTools.SimulatorDefine.EnableForTests: agrega el define (y deja la
 #      marca Library/RowMate/simulator-tests.txt, con la que SimulatorBuildGuard frena cualquier build).
 #   2. Unity -batchmode -executeMethod RowMate.Snapshots.SnapshotCli.Run, SIN -quit: el arnes registra su maquina de estados
-#      en EditorApplication.update y sale solo con EditorApplication.Exit (0 bien, 1 alguna toma fallo, 3 tope de 30 min).
+#      en EditorApplication.update y sale solo con EditorApplication.Exit (0 bien, 1 alguna toma fallo, 3 tope de 45 min).
 #   3. SIEMPRE (finally), aunque el paso 2 falle o se corte: RestoreAfterTests deja los defines como estaban y borra la marca;
 #      despues se verifica en ProjectSettings/ProjectSettings.asset que ROWMATE_SIMULATOR quedo igual que antes del paso 1.
 # Con -NoSimulator solo el paso 2 (sin el define el arnes hace CAP-22 y CAP-23).
@@ -31,8 +33,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it5', 'it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it5',
+    [ValidateSet('it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it6a',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -100,6 +102,9 @@ function Invoke-Unity([string[]]$UnityArgs) {
     $info.UseShellExecute = $false
     $process = [System.Diagnostics.Process]::Start($info)
     $process.WaitForExit()
+    # It. 6a (06a-escena-lago/00-deuda-5 Sec. 3): 198 = Unity no encontro una licencia valida. Cuando la licencia Personal la guarda el
+    # cliente de licencias de Unity Hub en su propia carpeta, despues de reiniciar el equipo y con la Hub cerrada Unity no la encuentra.
+    if ($process.ExitCode -eq 198) { Write-Host '[unity] Unity salio con 198: no encontro una licencia valida. Abri Unity Hub (con la sesion iniciada), espera a que cargue y repeti el comando.' }
     return $process.ExitCode
 }
 
@@ -152,7 +157,8 @@ function Get-SetFolder {
     if ($Set -eq 'it3') { return 'docs/migration/iterations/03-rutinas/snapshots' }
     if ($Set -eq 'it4a') { return 'docs/migration/iterations/04a-motor-hud-funcional/snapshots' }
     if ($Set -eq 'it4b') { return 'docs/migration/iterations/04b-hud-exr/snapshots' }
-    return 'docs/migration/iterations/05-series-parciales/snapshots'
+    if ($Set -eq 'it5') { return 'docs/migration/iterations/05-series-parciales/snapshots' }
+    return 'docs/migration/iterations/06a-escena-lago/snapshots'
 }
 
 function Invoke-Harness {
@@ -184,6 +190,11 @@ if (Test-ProjectLocked) {
 if ($RestoreOnly) {
     exit (Restore-Simulator $false $false)
 }
+
+# It. 6a (06a-escena-lago/02-tech-design Sec. 4.2; QA-G6aT-05): la guardia de ProjectSettings. La corrida no puede dejar cambiados
+# ProjectSettings/ ni Assets/RowMate/Settings/ (el define lo manejan EnableForTests y RestoreAfterTests y la guardia lo ignora).
+. (Join-Path $PSScriptRoot 'ProjectSettingsGuard.ps1')
+$settingsBefore = Get-ProjectSettingsSnapshot $repo
 
 # Carpeta de datos propia de la corrida (AC-HIS-20-04): la hereda Unity y se borra en finally.
 $previousDataDir = $env:ROWMATE_DATA_DIR
@@ -219,4 +230,6 @@ finally {
     if ($null -eq $previousDataDir) { Remove-Item Env:ROWMATE_DATA_DIR -ErrorAction SilentlyContinue } else { $env:ROWMATE_DATA_DIR = $previousDataDir }
     Remove-Item -Recurse -Force -Path $dataDir -ErrorAction SilentlyContinue
 }
+$guardCode = Write-ProjectSettingsGuardResult '[capturas]' (Compare-ProjectSettingsSnapshot $repo $settingsBefore)
+if ($exitCode -eq 0 -and $guardCode -ne 0) { $exitCode = $guardCode }
 exit $exitCode

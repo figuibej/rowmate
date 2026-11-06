@@ -185,6 +185,17 @@ namespace RowMate.Presentation.Workout
             this.Bind(ui.App.WorkoutRest.State, Render);
             this.Bind(ui.App.WorkoutRest.Toasts, OnToast);
             this.Bind(ui.App.Texts, OnTexts);
+            // It. 6a (P-14; 06a-escena-lago/02-tech-design §3.4): con Workout en reposo a la vista, la escena se prepara por tramos
+            // (como el legacy precarga el agua en workout_screen.dart:44). Preload es idempotente.
+            this.Bind(ui.App.Shell.SelectedIndex, _ => MaybePreloadScene());
+        }
+
+        private void MaybePreloadScene()
+        {
+            if (_ui.Scene != null && IsOnScreen && _ui.App.WorkoutRest.State.Value.IsIdle)
+            {
+                _ui.Scene.Preload();
+            }
         }
 
         public ScrollView Scroll { get; }
@@ -235,6 +246,10 @@ namespace RowMate.Presentation.Workout
             ShowBanner(!state.RowerConnected);
             FreeButton.SetEnabled(state.CanStart);
             RenderRoutines(state);
+            if (idle)
+            {
+                MaybePreloadScene();
+            }
         }
 
         private void RenderRoutines(WorkoutRestState state)

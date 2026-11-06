@@ -32,3 +32,10 @@ Había dos presupuestos y dos esquemas de calidad: ARCHITECTURE §20 ("Móvil/Es
 |---|---|
 | QA-P-10 | ADR nuevo: tabla única, 3 niveles como `ScriptableObject`, adaptación térmica con respaldo por CPU y `renderScale` |
 | QA-P-18 | Nivel Bajo para Android 8+ ARM64 (Q-90) |
+
+## Cambios por la verificación de la It. 6a (ronda 1)
+
+| ID | Qué cambió |
+|---|---|
+| QA-V6a-REN-09 | **El último paso de la adaptación baja el nivel entero**: `SceneHost.LowerTier()` aplica el `QualityTierProfile` de abajo a la escena ya armada (HDR y formato de la RT, MSAA, sombras, *bloom*, campo de estrellas, capa de nubes, LOD, bosque cercano y pasto; sin rehacer el mundo) y el asset de URP por `IRenderAssetQuality`; la resolución no sube. **El nivel inicial en escritorio**: Medio con una GPU integrada conocida (`GraphicsTier.IsIntegratedDesktopGpu`: los gráficos integrados de Intel, las APU de AMD y el adaptador de software de Windows), Alto con el resto. Riesgo que queda: una integrada que no está en la lista arranca en Alto y la adaptación tarda ≥ 40 s en llegar al nivel |
+| QA-V6a-REN-07 | **El formato de la RT de la escena por nivel** (`SceneRenderTarget.FormatFor`): Medio `B10G11R11_UFloatPack32` (4 B/px, lo de la tabla de 06a-escena-lago/02-tech-design §4.1), Alto `R16G16B16A16_SFloat`, Bajo `R8G8B8A8_SRGB`. La precisión de `B10G11R11` en el teléfono (el bandeado de los degradés del cielo) queda NO VERIFICABLE hasta la It. 14 |

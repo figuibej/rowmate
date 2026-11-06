@@ -87,6 +87,10 @@ namespace RowMate.Presentation.Workout
         private string _emptyText = "";
         private string _emptyLine0 = "";
         private string _emptyLine1 = "";
+        // O-5 de la lente de motion de la 5 (06a-escena-lago/00-deuda-5 §3): el corte de los vacíos se rehace solo si cambió el
+        // texto (otro idioma) o la fuente, o si el panel volvió a un panel de UI Toolkit; no en cada Apply (una vez por segundo).
+        private string? _emptySplitText;
+        private object? _emptySplitFont;
         private string _beforeRepLine = "";
         private bool _chipDescender;
         private bool _titleDescender;
@@ -254,6 +258,9 @@ namespace RowMate.Presentation.Workout
         public double LastDrawMs { get; private set; }
 
         public int DrawCount { get; private set; }
+
+        // Las veces que se cortó el vacío en dos renglones (O-5; para las pruebas).
+        internal int EmptySplits { get; private set; }
 
         // ── Textos (el idioma) ──
 
@@ -566,6 +573,7 @@ namespace RowMate.Presentation.Workout
             Motion.Hover(false, false, true);
             RowsWheel.WheelTo(_rowsScroll, true);
             _measureDirty = true;
+            _emptySplitText = null;
             Remeasure();
             _kRowsFrom = _kRowsTo;
             UpdateHit();
@@ -767,6 +775,15 @@ namespace RowMate.Presentation.Workout
 
         private void SplitEmpty()
         {
+            var font = _bodyFont.Font;
+            if (font != null && ReferenceEquals(_emptySplitText, _emptyText) && ReferenceEquals(_emptySplitFont, font))
+            {
+                return;
+            }
+
+            EmptySplits++;
+            _emptySplitText = _emptyText;
+            _emptySplitFont = font;
             _emptyLine0 = _emptyText;
             _emptyLine1 = "";
             var words = _emptyText.Split(' ');

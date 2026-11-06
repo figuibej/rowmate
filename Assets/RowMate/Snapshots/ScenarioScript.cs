@@ -159,11 +159,17 @@ namespace RowMate.Snapshots
         // Workout y "Entrenamiento libre" (el inmersivo entra con su fundido, que Settle deja terminado).
         public IEnumerator StartFree()
         {
+            return StartFree(true);
+        }
+
+        // It. 6a (CAP-24): sin Settle, para una toma a mitad de la entrada (el reloj queda en el instante del toque).
+        public IEnumerator StartFree(bool settle)
+        {
             yield return GoToWorkout();
             AlignWallClock();
             Host.Tap("workout-free");
             SessionStart = Host.Scheduler.MonotonicSeconds;
-            yield return Settle();
+            yield return settle ? Settle() : Frames(2);
         }
 
         // Toca la tarjeta de la rutina en Workout (por su nombre): abre el diálogo de inicio, o el aviso si no se puede iniciar.
@@ -237,6 +243,32 @@ namespace RowMate.Snapshots
 
         // Lo que AdvanceTo recorre cuadro a cuadro antes de una toma de it4b.
         public const double TailSeconds = 2;
+
+        // It. 6a, ronda 1 (QA-V6a-04): hasta N segundos desde el toque CUADRO A CUADRO (1/60 s), sin el salto de AdvanceTo: la escena ve
+        // cada lectura y cada fase en su momento (con un salto, integraba todo el tramo con las lecturas del final). Para una toma de la
+        // escena que depende de lo que pasó antes (CAP-22, como VID-08).
+        public IEnumerator StepTo(double secondsSinceStart)
+        {
+            if (double.IsNaN(SessionStart))
+            {
+                throw new InvalidOperationException("StepTo sin una sesión empezada (StartFree o StartRoutine)");
+            }
+
+            var target = SessionStart + secondsSinceStart;
+            while (target - Host.Scheduler.MonotonicSeconds > UiTestHost.FrameSeconds + 1e-9)
+            {
+                Host.Step();
+                yield return null;
+            }
+
+            var rest = target - Host.Scheduler.MonotonicSeconds;
+            if (rest > 1e-9)
+            {
+                Host.Advance(rest);
+            }
+
+            yield return Frames(2);
+        }
 
         // "A los N s" para una foto fija: un instante del segundo N de la sesión, con los rodillos del cambio de segundo ya
         // quietos (N + 0,45 o más) y dentro de la ventana de la lectura [k + 0,56; k + 0,84] del reloj de prueba, así la regla

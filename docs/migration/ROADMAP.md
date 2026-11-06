@@ -291,7 +291,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Incluye.** SCN: F-SCN-02, F-SCN-03, F-SCN-09, F-SCN-10, F-SCN-11, F-SCN-14, F-SCN-15, F-SCN-23.
 
-**También toca.** F-SCN-01 (composición de la escena con el agua degradada; se cierra en la 6b), F-SCN-13 (agua degradada; la disponibilidad del agua avanzada se cierra en la 6b), F-SCN-19 y F-SCN-20 (silueta de montañas y objetos del lago), F-SCN-21 (el lago es el escenario por defecto), F-WKT-13 (capa de escena del inmersivo), F-BLE-16 ("Hora escena").
+**También toca.** F-SCN-01 (composición de la escena con el agua degradada; se cierra en la 6b), F-SCN-13 (agua degradada; la disponibilidad del agua avanzada se cierra en la 6b), F-SCN-19 y F-SCN-20 (silueta de montañas y objetos del lago), F-SCN-21 (el lago es el escenario por defecto), F-WKT-13 (capa de escena del inmersivo: la entrada con el vuelo de cámara, la salida, el velo de pausa sobre la escena), F-WKT-14 (la fila de 200 píldoras con la escena), F-WKT-17 (el HUD sobre la escena, el fundido al rotar, la zona del bote y el contraste de las píldoras, AC-WKT-17-13), F-APP-05 (reducir movimiento con la escena), F-BLE-16 ("Hora escena").
 
 **Tests legacy a portar.** `scene_camera_test` (4), `scene_state_test` (casos de velocidad y distancia :14, :26 y :55; este último se porta como contrato aunque el agua nueva no lo use, QA-P-28), `time_of_day_test` (6), `environment_test` (casos genéricos y lago), `sky_shore_painter_test` (casos de cielo y lago), `water_painter_test` (:11, agua de respaldo), `scene_view_test` (los 4 del lago: 2 tamaños × 12 h y 23 h).
 **Criterios nuevos.**
@@ -330,8 +330,10 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 - Desenfoque del vidrio ≤ 0,6 ms en el nivel Medio (tabla única de ARCHITECTURE §20.1).
 - 60 fps sostenidos durante 30 min en el Android de gama media (R-12, regla 9).
 - Captura de aceptación visual: lago × 6, 12, 18 y 22 h.
+- El diálogo de completado con vidrio: durante la toma aérea del final (AC-SCN-02-07 de la 6a) el bote se ve frenando, desenfocado, detrás del diálogo (QA-V6a-03; P-19 de la 6a, por si el usuario lo prefiere corrido y nítido).
+- **Primero, la deuda de la 6a** ([REPORT de la 6a §7](iterations/06a-escena-lago/REPORT.md)), antes de construir encima: la entrada sin tirones con la precarga de la escena sin terminar (QA-V6a-R3-01: AC-WKT-13-15 vuelve a PASA, con un *driver* `[PERF]` que entre antes de que termine la precarga) y el margen de la primera entrada (QA-V6a-R2-04); la 11.ª línea de brillo del agua degradada (QA-V6a-PAR-01: AC-SCN-13-03 vuelve a PASA); las montañas que se lean en vertical y en horizontal (QA-V6a-12, salvo que el usuario decida otra cosa en el gate de la 6a); `DeviceScreenView.Render` con el inmersivo arriba.
 
-**Demo.** Entrenamiento libre sobre el lago: el agua refleja el cielo y la orilla, el sol brilla en el agua, la estela queda detrás del bote y la niebla esfuma lo lejano. Las tarjetas del HUD dejan ver la escena desenfocada detrás. Forzar el modo degradado (o usar un equipo sin agua avanzada) muestra el agua de la 6a y la sesión sigue. Captura lago × 4 horas y medición de rendimiento en el teléfono de referencia.
+**Demo.** Entrenamiento libre sobre el lago: el agua refleja el cielo y la orilla, el sol brilla en el agua, la estela queda detrás del bote y la niebla esfuma lo lejano. Las tarjetas del HUD dejan ver la escena desenfocada detrás; al terminar una rutina, el bote frena detrás del vidrio del diálogo de completado mientras la cámara sube. Forzar el modo degradado (o usar un equipo sin agua avanzada) muestra el agua de la 6a y la sesión sigue. Captura lago × 4 horas y medición de rendimiento en el teléfono de referencia.
 
 **Verificación.** [dotnet] parámetros del agua y reglas de disponibilidad. [Editor] escena, capturas. [Device] Android de gama media (rendimiento) y Windows.
 
@@ -352,7 +354,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 **Incluye.** SCN: F-SCN-04, F-SCN-05, F-SCN-06, F-SCN-07, F-SCN-08.
 
 **Tests legacy a portar.** `scene_state_test` (casos de fase de palada y charcos :37, :46, :60, :69), `stroke_cycle_test` (4), `boat_painter_test` (1 + 2 tamaños).
-**Criterios nuevos.** Las reglas legacy de los charcos se mantienen con D-ANI-02: 2 por palada, el izquierdo primero, 4 s de vida, fijos en el mundo y ninguno en pausa. 60 fps con remero en el Android de gama media (regla 9).
+**Criterios nuevos.** Las reglas legacy de los charcos se mantienen con D-ANI-02: 2 por palada, el izquierdo primero, 4 s de vida, fijos en el mundo y ninguno en pausa. 60 fps con remero en el Android de gama media (regla 9). La boya o marca de 500 m en el agua, que pasa junto al bote cuando el panel cierra la vuelta (P-06 de la 6a). `Series anteriores` abierto en vertical con el remero a la vista (P-03 de la 5). La sombra del bote del legacy, el cabeceo que se suma a la respiración de la cámara y las medidas reales del bote (D-ART-04). El remero entra por el slot `rower.character` con la lista de Mixamo de la 6a (ASSET_SLOTS §2; Y Bot obligatorio, ninguna animación para remar).
 
 **Demo.** Con el simulador: a 20 spm la palada es lenta y con recuperación larga; con el preset Fuerte (30 spm) se acelera, y siempre que el drive mueve el bote, la escena acompaña. Al pausar, la palada se congela y el bote desacelera. Charcos en pares que se desvanecen, salpicadura en cada ataque, sombra que cambia con la hora.
 
@@ -644,10 +646,10 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-WKT-11 | C | 4a | 5 |
 | F-WKT-12 | C | 4a | 8 |
 | F-WKT-13 | C | 4b | 4a, 5, 6a, 6b |
-| F-WKT-14 | C | 4b | 4a, 5 |
+| F-WKT-14 | C | 4b | 4a, 5, 6a |
 | F-WKT-15 | C | 4b | — |
 | F-WKT-16 | C | 4b | 4a, 5 |
-| F-WKT-17 | C | 4b | 4a, 5, 6b |
+| F-WKT-17 | C | 4b | 4a, 5, 6a, 6b |
 | F-WKT-18 | C | 5 | — |
 | F-WKT-19 | C | 4b | — |
 | F-WKT-20 | C | 4a | 4b, 12 |
@@ -722,7 +724,7 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-APP-02 | C | 2 | 9, 12 |
 | F-APP-03 | C | 3 | 4a, 4b, 9 |
 | F-APP-04 | → F-STR-01 | 12 | — |
-| F-APP-05 | C | 2 | 4b, 5, 14 |
+| F-APP-05 | C | 2 | 4b, 5, 6a, 14 |
 | F-APP-06 | C | 2 | 4a, 9 |
 | F-APP-07 | → F-RUT-01 | 1 | — |
 | F-APP-08 | C | 2 | — |
@@ -811,7 +813,7 @@ Las propuestas del Designer ([ART_BIBLE §0.2](design/ART_BIBLE.md), [ANIMATION_
 | QA-P-17 | Respaldo del vidrio sin desenfoque | PO + Designer | 4a | Token `glass.fallback` del Designer (`#070D16 @86 %`, ART_BIBLE §3.2), con el borde y el radio del legacy: garantiza el contraste en el peor caso. Reemplaza al `#000000 @55 %` del legacy | No |
 | Q-91 | Sesión en segundo plano | PO | 4a | Paridad: la sesión sigue (FEATURE_INVENTORY Q-91) | No |
 | D-ANI-05 | Cuenta grande centrada en los últimos 3 s del paso y sello "Objetivo cumplido / No alcanzado" de 2 s | PO | 4b | Se adopta (agregado). Si el usuario lo rechaza, queda la cuenta regresiva normal | Sí |
-| D-ART-05 | Sol "de pantalla" separado del sol "de luz", con el mismo acimut | Architect | 6a | Se adopta: el sol se ve donde lo ubica el legacy y las sombras son coherentes | No |
+| D-ART-05 | Sol "de pantalla" separado del sol "de luz", con el mismo acimut | Architect | 6a | Se adopta: el sol se ve en la misma zona del cielo y con la misma progresión que el legacy (izquierda, centro, derecha; en 3D no puede caer en su posición de pantalla en las dos orientaciones a la vez: DV-52 de la 6a) y las sombras son coherentes | No |
 | D-ART-06 | Las nubes conservan la deriva por viento y pierden la deriva lateral por distancia | PO | 6a | Se adopta (coherente con Q-65) | No |
 | D-ART-08 | Texturas CC0 opcionales (Poly Haven, ambientCG) y luna de la NASA | Usuario | 6a | **No**, hasta que el usuario diga que sí: procedurales + Terrain Sample Asset Pack | Sí |
 | P-09 | Lista exacta de archivos de Mixamo | Designer | 6a | El Designer la entrega en el diseño de la 6a; el usuario descarga antes de la 7 | — |
@@ -878,3 +880,4 @@ Correcciones por el gate de armonía del plan ([QA_PLAN_REVIEW.md](QA_PLAN_REVIE
 | It. 4a (cierre, PO) | Pendientes de la [spec de la It. 4a §15](iterations/04a-motor-hud-funcional/01-po-spec.md): F-WKT-14 (la fila de información) en "También toca" de la 4a y en la matriz §4; el rojo fuera de objetivo es `#FF625B` en la demo de la 4a y en D-ART-01 (§6); D-ART-10 en §6, con su gate. Por la verificación: P-17 (la suspensión del equipo no cuenta como tiempo de sesión) en §6 y como criterio de la 4b (QA-V4a-ROB-05), y en la 10a el paso por distancia que nunca queda trabado (QA-V4a-L01) |
 | It. 4b (cierre, PO) | Pendientes de la [spec de la It. 4b §15](iterations/04b-hud-exr/01-po-spec.md): P-17 aceptada por el usuario en el gate de la 4a (§2, It. 4b, y §6); "También toca" de la 4b con F-WKT-01, -02, -03, -06 y -20, F-APP-03, -05 y -10 y F-BLE-16 (§2 y la matriz §4). Para la It. 5 quedan, como insumo de su spec, dos decisiones de la 4b: los paneles de series expandidos contra el lugar de la cuenta grande en vertical (04b/00-deuda-diseno §4.8) y el presupuesto de elementos del HUD, que la 4b deja en su tope ([REPORT de la 4b §9](iterations/04b-hud-exr/REPORT.md)) |
 | It. 5 (cierre, PO) | Pendientes de la [spec de la It. 5 §15](iterations/05-series-parciales/01-po-spec.md): la demo de la It. 5 con `Series 600` (los valores que decía el plan eran los de `docs/image-03.png` del legacy, imposibles con 1 000 m de trabajo); "También toca" de la 5 con F-WKT-01, -02, -03, -13, -14, -16 y -17, F-APP-05, F-BLE-15 y -16 y F-HIS-20 (§2 y la matriz §4; F-WKT-11, F-APP-10 y F-APP-11 ya la tenían); las decisiones aplicadas y las que van al gate de la 5 (DV-48 a DV-51, P-08); BKL-26 en §3 (el aviso de cada vuelta con la diferencia, P-09) |
+| It. 6a (cierre, PO) | Pendientes de la [spec de la It. 6a §15](iterations/06a-escena-lago/01-po-spec.md): "También toca" de la 6a con F-WKT-14, F-WKT-17 y F-APP-05 (§2 y la matriz §4); D-ART-05 en §6 con la redacción de DV-52 ("la misma zona del cielo y la misma progresión"); la boya de 500 m en la It. 7 (P-06), con `Series anteriores` en vertical, la sombra del bote, el cabeceo y la lista de Mixamo. En la 6b, la deuda de la 6a (QA-V6a-R3-01, -R2-04, -PAR-01, -12 y `DeviceScreenView.Render`), que va primero, además del diálogo de completado con vidrio (P-19), sumado en la verificación de la 6a |

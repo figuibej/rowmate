@@ -95,6 +95,9 @@ function Invoke-Unity([string[]]$UnityArgs) {
     $info.UseShellExecute = $false
     $process = [System.Diagnostics.Process]::Start($info)
     $process.WaitForExit()
+    # It. 6a (06a-escena-lago/00-deuda-5 Sec. 3): 198 = Unity no encontro una licencia valida. Cuando la licencia Personal la guarda el
+    # cliente de licencias de Unity Hub en su propia carpeta, despues de reiniciar el equipo y con la Hub cerrada Unity no la encuentra.
+    if ($process.ExitCode -eq 198) { Write-Host '[unity] Unity salio con 198: no encontro una licencia valida. Abri Unity Hub (con la sesion iniciada), espera a que cargue y repeti el comando.' }
     return $process.ExitCode
 }
 
@@ -191,6 +194,11 @@ if ($RestoreOnly) {
     exit (Restore-Simulator $false $false)
 }
 
+# It. 6a (06a-escena-lago/02-tech-design Sec. 4.2; QA-G6aT-05): la guardia de ProjectSettings. Las pruebas no pueden dejar cambiados
+# ProjectSettings/ ni Assets/RowMate/Settings/ (el define del simulador lo restaura este mismo script y no cuenta).
+. (Join-Path $PSScriptRoot 'ProjectSettingsGuard.ps1')
+$settingsBefore = Get-ProjectSettingsSnapshot $repo
+
 $wasInSettings = Test-SimulatorInSettings
 $script:definesBefore = $wasInSettings
 $runStarted = Get-Date
@@ -242,6 +250,8 @@ finally {
 }
 
 Write-Host ('[unity-tests] -runTests -> ' + $exitCode + ' (log: ' + $log + ')')
+$guardCode = Write-ProjectSettingsGuardResult '[unity-tests]' (Compare-ProjectSettingsSnapshot $repo $settingsBefore)
+if ($exitCode -eq 0 -and $guardCode -ne 0) { $exitCode = $guardCode }
 if ($Platform -eq 'PlayMode') { Remove-EditorTestResults $runStarted }
 Show-Results $xml $log
 exit $exitCode

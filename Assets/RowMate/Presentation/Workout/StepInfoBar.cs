@@ -169,6 +169,8 @@ namespace RowMate.Presentation.Workout
             Pulse = new StepPulse(ui.Motion, UpNextBg, Countdown, TokenColors.ToColor(Tokens.TextPrimary));
             PillRow = new PillRowView(ui, Pulse);
             Add(PillRow);
+            // QA-V6a-R2-01: el halo de la en curso lo dibuja la barra (debajo de la fila), así el latido no repinta la fila entera.
+            PillRow.HostHalosIn(this);
             Add(_row);
             Seal = new SealRow(ui, SetBarHeight);
             Add(Seal);

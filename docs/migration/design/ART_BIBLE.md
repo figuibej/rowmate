@@ -519,39 +519,43 @@ Todo respeta `Screen.safeArea` (notch, isla, barra de gestos). La rotación cons
 
 Los 6 keyframes del legacy (5 h amanecer, 7 h mañana, 12 h mediodía, 18 h atardecer, 20 h anochecer, 22–4 h noche) con sus 8 campos (`skyTop`, `skyHorizon`, `waterNear`, `waterFar`, `sunColor`, `sunGlow`, `fog`, `ambient`) se portan **tal cual** al Core (`SceneTimeOfDay`, nombre de ARCHITECTURE §2; tabla en audit §7.3) con la misma interpolación lineal y el mismo cierre 22→4→5 h. Todo lo de esta sección se **deriva** de esa paleta y de la hora: no hay una segunda paleta que pueda desincronizarse.
 
-### 6.2 Dirección del sol y de la luna [DECIDIR D-ART-05]
+### 6.2 Dirección del sol y de la luna [D-ART-05 resuelto en la It. 6a]
 
-El legacy da el astro en coordenadas de pantalla (`x` 0,15–0,85 del ancho; elevación `e ∈ [0; 1]`). En 3D se convierte a direcciones del mundo, independientes de la orientación:
+El legacy da el astro en coordenadas de pantalla (`x` 0,15–0,85 del ancho; elevación `e ∈ [0; 1]`). En 3D se convierte a direcciones del mundo, independientes de la orientación (`CelestialPlacement`, valores en `Core/Scene/Art/SkyArt`; [06a-escena-lago/04-design-notes §4](../iterations/06a-escena-lago/04-design-notes.md)):
 
 | Magnitud | Fórmula | Mediodía | Comentario |
 |---|---|---|---|
-| Acimut (ambos soles) | `az = (xFrac − 0,5) · 70°` (positivo = derecha del sentido de avance) | 0° (adelante) | Rango ±24,5°: siempre dentro del cuadro en vertical (hFOV 53°) y horizontal (hFOV 73°) |
-| Sol "de pantalla" (disco, halo, brillo en el agua) | `elevDisp = 1,5° + 15,5° · e − 4° · puesta` | 17° | Visible en horizontal (borde superior a 22,8°) y vertical (40,9°) |
-| Sol "de luz" (luz direccional, sombras) | `elevLuz = 6° + 49° · e` | 55° | Sombras cortas al mediodía, largas al amanecer/atardecer |
-| Luna (de noche, `h' = h + 12`) | mismas fórmulas con `e(h')` y `salidaLuna` | | Luz de luna: `elevLuz = 10° + 40° · e` |
-| Puesta y salida graduales (Q-63) | `puesta = smoothstep(18,5 h; 19,55 h)`; `salidaLuna = smoothstep(19,57 h; 20,6 h)`; al amanecer, espejo: la luna baja entre 3,4 y 4,42 h y el sol sube entre 4,45 y 5,5 h | | El astro entra y sale detrás del paisaje (−2,5° bajo el horizonte); los umbrales de noche del legacy (`elev ≤ −0,4`, ambiente < 0,6) no cambian |
-| Cambio sol↔luna de la luz | una sola luz direccional; su intensidad pasa por su mínimo (0,05) a las 19:34 y 4:26 y en ese instante cambia de dirección | | Invisible para el usuario |
+| Acimut (ambos astros) | `az = (xFrac − 0,5) · 70°` (positivo = derecha del sentido de avance) | 0° (adelante) | −17,5° a las 6 h y +17,5° a las 18 h; la luna con la hora espejada |
+| Disco (disco, halo, líneas del agua) | `elev = −2,5° + (1,5° + 10,5° · e + 2,5°) · vis` | **12°** | Debajo de la barra de pasos en los cinco perfiles (C-01). Nunca se corre más de 0,3°/min (lo más rápido, 0,257°/min) |
+| Luz del sol (luz direccional, sombras) | `elevLuz = 6° + 49° · e` | 55° | Sombras cortas al mediodía, largas (9,5 × el alto) a las 6 y a las 18 h |
+| Luna (de noche, `h' = h + 12`) | mismas fórmulas con `e(h')` | 12° a las 0 h; 10,6° a las 22 h | Luz de luna: `elevLuz = 10° + 40° · e`, intensidad `(0,04 + 0,12 · iluminación) · vis` |
+| Visibilidad (Q-63) | sol `S(4,45; 5,50) · (1 − S(18,50; 19,55))`; luna `S(19,5719; 20,6)` a la tarde y `S(4,4281; 3,40)` a la mañana | | El astro entra y sale detrás del paisaje (−2,5°); los umbrales de noche del legacy (`elev ≤ −0,4`, ambiente < 0,6) no cambian |
+| Cambio sol↔luna de la luz | una sola luz direccional; su intensidad vale **0** a las 19:34:19 y a las 4:25:41 (C-02) y en ese instante cambia de dirección | | Invisible: los dos astros están a −2,5° |
 
-Consecuencia buscada: la luz viene **de adelante** (contraluz con camino de brillo hacia la cámara, muy EXR). Las sombras caen hacia la cámara y del lado opuesto al astro, que es la regla legacy (sombra del lado contrario). El remero, que mira a la cámara, queda en semicontraluz: lo compensan la luz ambiente del cielo y el término de relleno de su material (§7.9).
+Consecuencia buscada: la luz viene **de adelante** (contraluz con camino de brillo hacia la cámara, muy EXR). Las sombras caen hacia la cámara y del lado opuesto al astro, que es la regla legacy (sombra del lado contrario). El remero, que mira a la cámara, queda en semicontraluz: lo compensan la luz ambiente del cielo y el término de relleno de su material (§7.9). La luz no la tapan las cordilleras (su alto depende de la ventana).
 
-### 6.3 Derivados por keyframe
+### 6.3 Derivados por keyframe (la tabla de la hora, `HourLookTable`; It. 6a)
 
-Interpolación lineal entre keyframes, igual que la paleta. Valores de URP (luz direccional en unidades de intensidad de URP, no lux).
+Interpolación lineal entre keyframes (5, 7, 12, 18, 20, 22, 28 = 4 y 29 = 5 h), igual que la paleta. Lo que no está en la tabla sale de la paleta y del astro en cada cuadro (AC-SCN-09-04: una sola paleta manda). Es la tabla **ajustada con las tomas de `it6a`** ([06a-escena-lago/04-design-notes, "Cambios por implementación de WP-D2"](../iterations/06a-escena-lago/04-design-notes.md)).
 
-| Hora | Luz clave (color · intensidad) | Ambiente (gradiente cielo / ecuador / suelo) | Sombras | Niebla (inicio–fin, color) | Exposición | Balance de blancos (temp / tinte) | Saturación / contraste | Bloom (intensidad / umbral) |
-|---|---|---|---|---|---|---|---|---|
-| 5 h amanecer | `sunColor` `#FFB070` · 0,55 | `skyTop`·0,63 / `skyHorizon`·0,63 / `waterNear`·0,5 | 0,55, muy largas | 80–400 m, `fog` `#C98A7A` + bruma baja (lago) | −0,2 EV | +15 / +5 | 0 / +2 | 0,70 / 1,0 |
-| 7 h mañana | `#FFE4A0` · 1,25 | ×0,85 | 0,75 | 80–400, `#DCE8F5` + bruma (lago, se disipa a las 9:30) | 0 | +8 / +2 | +2 / +4 | 0,45 / 1,1 |
-| 12 h mediodía | `#FFF6D5` · 1,75 | ×0,90 | 0,85, cortas | 80–400, `#CFE9FF` | −0,15 | 0 / 0 | +4 / +8 | 0,35 / 1,2 |
-| 18 h atardecer | `#FFB36B` · 0,85 | ×0,77 | 0,65, muy largas | 80–400, `#E0A28A` | +0,1 | +20 / +6 | +6 / +4 | 0,75 / 1,0 |
-| 20 h anochecer (luna) | `#DDE6FF` · 0,16 × fase | ×0,45 | 0,35 (solo Alto) | 60–380, `#30335A` | +0,35 | −10 / −2 | −10 / 0 | 0,85 / 0,9 |
-| 22–4 h noche (luna) | `#E6EEFF` · (0,04 + 0,10 · iluminación lunar) | ×0,32 | 0 (Medio/Bajo), 0,25 (Alto) | 50–350, `#0F1730` | +0,6 | −25 / −4 | −20 / −5 | 0,95 / 0,8 |
+| Hora | Luz clave | Sombras (Medio / Alto) | Exposición | Balance (temp / tinte) | Saturación / contraste | Bloom (intensidad / umbral) |
+|---|---|---|---|---|---|---|
+| 5 h | `sunColor` · `0,55 · vis` | 0,55 / 0,55 | −0,10 EV | +15 / +5 | 0 / 0 | 0,70 / 1,0 |
+| 7 h | · 1,25 | 0,75 / 0,75 | 0 | +8 / +2 | +2 / +2 | 0,45 / 1,1 |
+| 12 h | · 1,75 | 0,85 / 0,85 | 0 | 0 / 0 | +4 / +4 | **1,30 / 1,4** |
+| 18 h | · 0,85 | 0,65 / 0,65 | 0 | +15 / +4 | +6 / +2 | 0,75 / 1,0 |
+| 20 h (luna) | luna | 0 / 0,35 | 0 | −5 / −1 | −5 / 0 | 0,85 / 0,9 |
+| 22–4 h (luna) | luna | 0 / 0,25 | 0 | −10 / −2 | −10 / −5 | 0,95 / 0,8 |
 
-- **Ambiente:** modo *Gradient* de URP; multiplicador = `ambient` del legacy × 0,9 (ya incluido en "×N").
-- **Tonemapping:** ACES en la escena. La UI se compone después del post (no se tonemapea): los colores de tokens se ven exactos.
-- **Viñeta** 0,18 suavidad 0,4 en todas las horas; **grano** solo Alto, 0,08, de noche.
-- **Luces nocturnas** (ventanas, faroles, faro, cabaña) se encienden con el umbral legacy `ambient < 0,6`, con fundido de 20 min de escena (ANIMATION_BIBLE §6).
-- **Fase lunar real** por fecha (mes sinódico 29,530588853 d; luna nueva de referencia 2000-01-06 18:14 UTC): disco con terminador y textura (slot `sky.moon`). Corrige el hallazgo 7 del audit.
+- **El modelo de luz** (`RowMateLighting.hlsl`, `MaterialArt`): `luz(N) = T(a) ⊙ [0,80·Hemi(N) + 0,45·Kn·envolvente(N·L; w)·sombra]`, con `T(a) = (a; a; mín(1; a + 0,12))` el tinte del legacy, `Hemi` el matiz de `skyTop`, `skyHorizon` y `waterNear` (luminancia 1) **con el 20 % de su croma** (`AmbientHue`) y `Kn = sunColor/máx · I/1,75`. Una cara al astro da ≈ 1,25 del tinte y una a la sombra ≈ 0,80. La envolvente del follaje es 0,50 y la del pasto 0,20. Lo de terceros recibe el equivalente de URP (luz direccional y ambiente *Trilight*).
+- **Tonemapping: ninguno** (`HourLookTable.NeutralTonemapping = false`). La paleta del legacy ya es un color de pantalla: *Neutral* la comprimía (el horizonte de las 12 h `#8FD3FF` salía `#90BED4`) y ACES corre los azules y naranjas del contrato. Lo HDR (el disco, el brillo del casco) se recorta en 1 con el *bloom* alrededor. La UI se compone después, en su RT de 8 bits: los tokens se ven exactos.
+- **La niebla no va por hora**: es la del contrato (80–400 m, 80 %, color `fog` de la paleta) con la extendida de 400 a 1 200 m para el terreno lejano y la bruma baja `m(h)` (0,55 de 6 a 7 h; 0 desde las 9:30).
+- **La noche se pone azul con la paleta y el tinte del legacy**, no con el balance: con el balance frío la ventana encendida se veía blanca o verde.
+- **El velo de pausa** va en el mismo `Volume`: saturación × `(1 − 0,3·w)` y exposición `+ w · VeilEv`, con **`VeilEv` −0,17** (ajustado con la sonda de CAP-20: el canal máximo del cielo × 0,85 ± 0,03 y el croma × 0,70 ± 0,05).
+- **Viñeta** 0,18 suavidad 0,4 a toda hora. Sin grano, sin TAA y sin el *dithering* de la cámara (las tomas se repiten byte a byte); el bandeado de la noche lo corta un tramado *Bayer* fijo en el cielo.
+- **Nivel Bajo**: sin HDR ni *bloom* (el disco plano y el halo); quedan la exposición, el balance, la saturación y el contraste.
+- **Luces nocturnas** (ventanas, faroles, faro, cabaña) se encienden con el umbral legacy `ambient < 0,6`, cada una en su minuto dentro de ± 10 min, con un fundido de 0,4 s (DV-60). La ventana es `#FFE082` (el color de contrato) × la ganancia de lo emisivo **1** (sin tonemapping, más que 1 recorta su rojo y la corre al verde): no se tiñe, no recibe luz ni entra en la niebla.
+- **Fase lunar real** por fecha (mes sinódico 29,530588853 d; luna nueva de referencia 2000-01-06 18:14 UTC): disco con terminador y textura (slot `sky.moon`), con el lado iluminado espejado en el hemisferio sur (C-19). Corrige el hallazgo 7 del audit.
 
 ---
 
@@ -567,7 +571,7 @@ Interpolación lineal entre keyframes, igual que la paleta. Valores de URP (luz 
 | Fondo | 400–1 500 | colinas, ciudad en bloques, línea de árboles | mallas de baja densidad, niebla fuerte |
 | Horizonte lejano | 2 500–4 000 | cordilleras, skyline, acantilado lejano, tribunas lejanas | capa "Horizon" dibujada con el cielo, con perspectiva aérea propia `lerp(tono; fog; 0,35 + 0,4 · profundidad)` [CONTRATO de color]; **se acerca al 4 % de la velocidad del bote** (Q-65) sin desplazarse de costado |
 
-Reglas: nada "flota" en el agua (hallazgo 1): todo prop de orilla apoya en terreno, muro o muelle. Los props aparecen con fundido entre 400 y 360 m y desaparecen con dither entre 2 y 0,5 m de la cámara (hallazgo 2). Las posiciones, frecuencias, topes y metros exactos de los hitos son los del legacy (Q-61, tabla 7.5 del audit).
+Reglas: nada "flota" en el agua (hallazgo 1): todo prop de orilla apoya en terreno, muro o muelle. Los props aparecen con un tramado *Bayer* fijo entre 400 y 360 m y salen con tramado entre 2 y 1 m de la cámara, sobre la misma lista del legacy `[d + 1; d + 400]` (hallazgo 2; DV-62, It. 6a). El cambio de LOD es un tramado complementario en el 10 % del límite. Todo lo de la orilla entra en la niebla común del contrato (80–400 m, 80 %), con la extendida hasta 1 200 m para el terreno lejano. Las posiciones, frecuencias, topes y metros exactos de los hitos son los del legacy (Q-61, tabla 7.5 del audit).
 
 Corte transversal genérico de la orilla (x desde el eje del bote): **agua 0–9 m** → **línea de costa en |x| = 9,0** (contrato `|x| ≥ 9`) → franja de transición (playa, muro o talud, 1–3 m) → orilla con props del legacy → ladera o fondo.
 
@@ -575,14 +579,14 @@ Corte transversal genérico de la orilla (x desde el eje del bote): **agua 0–9
 
 | Aspecto | Spec |
 |---|---|
-| Composición | Lago calmo y espejado; dos cordones: lejano a 3,5 km con nieve (tono `#5C6E8A`, picos > 75 % con nieve `#F2F6FA`), cercano a 1,2 km boscoso (`#2F4A3A`); bosque de coníferas denso en ambas orillas |
-| Orilla | Playa de canto rodado de 1,2 m (pendiente 15°) → talud de pasto y roca que sube de 0,3 a 2,5 m entre x = 10 y 16 → ladera con bosque hasta 25 m de alto a x = 60 |
-| Props legacy | Pinos cada 6–12 m en x = ±10..16, escala 0,7–1,3, 3 paletas de verde (audit 7.6) → conífera 3D (malla procedural de capas + LOD + impostor); muelle cada 400 m en x = −9 (madera `#8D6E63`, pilotes `#5D4037`); cabaña cada 600 m en x = +13 (chalet de madera `#6D4C41`, techo `#4E342E`, ventana nocturna `#FFE082`) |
-| Extra [EXR] | Juncos en la franja de transición (instanciados, 1 cada 0,8 m con huecos), rocas sueltas, bruma baja 5–9:30 h |
-| Materiales | Corteza `#5D4037` smoothness 0,15; follaje con translucidez falsa (wrap 0,35); roca `#6B6A66` triplanar; pasto `#4F7A3A` → amarillento a la tarde por color grading |
-| Cielo | Cobertura de nubes 0,35; cúmulos de buen tiempo |
-| Agua | Ver §7.7, perfil "Espejo" |
-| Noche | Ventanas de cabañas, reflejo largo de la luna, estrellas plenas |
+| Composición | Lago calmo; dos cordones con el perfil del legacy por acimut: lejano (`#5C6E8A`, D₀ 3,5 km) con nieve `lerp(#F2F6FA; fog; 0,3)` en **todo lo que pasa el 58 % del perfil** (borde ± 0,03 y lenguas de ± 0,04 cada 1,7°; 45 % del ancho en TV y 33 % en TH) y *alpenglow* `0,35·g`; cercano (`#2F4A3A`, D₀ 1,2 km, 0,7 del alto). **Alto: el del legacy** `tan Θ = mín(0,12·alto/focal; tan 9°)` (6,84° en horizontal, 9° en vertical). Se acercan al 4 % de la velocidad y nunca se corren de costado. Bosque de coníferas a la izquierda y pradera a la derecha (It. 6a) |
+| Orilla | La línea de costa en `\|x\| = 9 + 0,5·n(z/41)` (solo hacia afuera) → playa de canto rodado de 1 m (0 → 0,27 m, con la franja húmeda y la línea de contacto) → talud de pasto y roca de 0,27 a 2,5 m entre `\|x\|` 10 y 16 → a la izquierda, ladera boscosa `2,5 + 0,12·(\|x\| − 16)`; a la derecha, pradera `2,5 + 0,02·(x − 16)`. Lo agregado no pasa las envolventes: izquierda `2,2 + 0,20·\|x\|` desde 18 (así el bosque no tapa la nieve), derecha `2,2 + 0,06·x` desde 30; en `\|x\| < 18` solo lo del legacy y lo bajo (≤ 1,2 m) |
+| Props legacy | Pinos cada 6–12 m en x = ±10..16, escala 0,7–1,3, 3 paletas de verde (audit 7.6) → conífera 3D (3 faldas de 9 a 12 lóbulos, 3 formas × 3 paletas, LOD 1 200 / 400 / 120 triángulos; sin impostor en la 6a); muelle cada 400 m en x = −9 (madera `#8D6E63`, pilotes `#5D4037`); cabaña cada 600 m en x = +13 (chalet de madera `#6D4C41`, techo `#4E342E`, ventana nocturna `#FFE082`) |
+| Extra [EXR] | Juncos de 0,6 a 1,2 m en `\|x\|` 8,6–9,6 (1 cada 0,8 m con huecos), rocas (1 cada 7 m), bosque cercano en `\|x\|` 18–45 hasta 120 m (Poisson de 6 m por segmento) y la copa lejana en la malla del terreno, matas de la pradera, pasto y helechos opacos (sin *alpha test*), bruma baja de 5 a 9:30 h |
+| Materiales | Corteza `#5D4037` smoothness 0,15; follaje con translucidez falsa (envolvente 0,50, ajustada en la It. 6a); roca `#6B6A66` triplanar; pasto `#4F7A3A` → amarillento a la tarde por color grading |
+| Cielo | El telón del legacy por ventana (degradé `1 − (1 − q)²` mezclado en sRGB, bruma de 1,5°, las 80 estrellas y las 7 nubes del legacy en su píxel); capa lejana de cirros (τ 2°–9°, cobertura 0,35) solo en Alto |
+| Agua | En la 6a, la degradada de §7.7 con sus agregados; perfil "Espejo" en la 6b |
+| Noche | Ventanas de cabañas (`#FFE082`, de a una en ± 10 min), las líneas del agua plateadas bajo la luna, estrellas plenas, la nieve plateada con luna llena |
 | Presupuesto | ≤ 120 props legacy visibles + juncos instanciados (1 draw call) |
 
 ### 7.3 Río urbano — inspiración Henley / Charles River
@@ -674,7 +678,7 @@ Corte transversal genérico de la orilla (x desde el eje del bote): **agua 0–9
 | Alto | todo + planar 1/4 + 2 Gerstner extra | ≤ 110 ALU, 6 texturas |
 | Medio (objetivo de paridad en gama media) | Gerstner del perfil, 2 normales, cubemap, interacción, reflejo analítico de orilla, glitter | ≤ 70 ALU, 5 texturas |
 | Bajo | 1 normal, cubemap, charcos como decals simples, sin interacción | ≤ 35 ALU, 2 texturas |
-| Agua degradada (R-04, obligatoria) | port directo del fallback legacy: degradé de 3 tramos + 10 líneas de brillo que avanzan con la distancia; *SubShader*/`Fallback` automático si el equipo no soporta el shader | ≤ 12 ALU, 0 texturas |
+| Agua degradada (R-04, obligatoria; la de la It. 6a) | port directo del fallback legacy: degradé de 3 tramos + 10 líneas de brillo que avanzan con la distancia (× la visibilidad del astro, así no saltan en el cambio de sol a luna) + tres agregados con `RM_WATER_EXTRAS`: reflejo leve de `skyHorizon` (0,25, de 30 a 400 m), franja somera (0,25, de 8,4 a 9 m) y bruma baja (0,6·m(h)) | **≤ 24 ALU** (DT6a-07; medido: 24), 0 texturas |
 
 El paso de degradada a avanzada durante la escena se hace con un fundido de 0,6 s (mejora de F-SCN-13).
 
@@ -713,11 +717,11 @@ Banderas (fórmula legacy), copas de árboles con viento, boyas que se mecen, ga
 
 ### 8.1 Persecución [CONTRATO]
 
-Cámara nivelada (sin inclinación) con desplazamiento de lente, a **2,2 m** de altura, remero a **9,5 m**, horizonte al **40 %** (vertical) / **42 %** (horizontal) del alto, focal = lado corto. En Unity: cámara física; FOV vertical derivado `2·atan((alto/2)/lado corto)`; `lensShift.y` = −0,10 (vertical) / −0,08 (horizontal) (validar signo en el Editor con la prueba de proyección de `scene_camera_test`). Recorte cercano 0,5 m.
+Cámara nivelada (sin inclinación), a **2,2 m** de altura, remero a **9,5 m**, horizonte al **40 %** (vertical) / **42 %** (horizontal) del alto, focal = lado corto. En Unity (It. 6a): **la matriz de proyección la calcula Core** (`ChaseCameraProjection`, desfasada con el horizonte del contrato) y la cámara la usa tal cual, sin `lensShift`; las marcas del legacy caen en su píxel ± 1 dp. Recorte cercano 0,5 m y lejano 2 000 m.
 
 ### 8.2 Vida de la cámara [EXR, sin romper el contrato]
 
-"Respiración" y seguimiento suave especificados con números en ANIMATION_BIBLE §5. Restricciones de arte: el horizonte nunca se mueve más de ±3 px respecto de su línea contrato; el remero nunca sale de la zona protegida (§5.2); en "reducir movimiento" se apaga.
+"Respiración" y seguimiento suave especificados con números en ANIMATION_BIBLE §5. Restricciones de arte: el horizonte nunca se mueve más de ±3 px respecto de su línea contrato (con el rolido de **0,15°** se aparta como mucho 1,26 dp en TV, 1,92 en TH y 2,93 en W1280); el remero nunca sale de la zona protegida (§5.2); en "reducir movimiento" se apaga.
 
 ### 8.3 Cámaras alternativas estilo EXR [DECIDIR D-ART-07 · BKL-02, fuera de paridad]
 
@@ -750,7 +754,9 @@ Objetivo (R-12): **60 fps sostenidos durante 30 min** en el dispositivo de refer
 | CPU | escena ≤ 1,5 ms · Animation Rigging ≤ 0,3 ms · UI ≤ 1,0 ms (sin relayout por cuadro: los números animan con transformaciones) | |
 | Sobre-dibujo | ≤ 2,5× en la zona de vegetación; partículas ≤ 400 vivas | |
 
-**LOD:** props con 3 niveles + impostor (pino: 1 200 / 400 / 120 tris / billboard de 2 tris); transición con dither (*LOD cross-fade*); distancias de LOD multiplicadas por 0,7 en Bajo.
+**LOD:** props con 3 niveles (pino: 1 200 / 400 / 120 tris; el impostor queda para la 6b si la medida lo pide, DT6a-14); transición con tramado *Bayer* complementario en el 10 % del límite; distancias de LOD multiplicadas por 0,7 en Bajo.
+
+**Reparto de la escena del lago (It. 6a, nivel Medio; la tabla única es la de [06a-escena-lago/02-tech-design §4.1](../iterations/06a-escena-lago/02-tech-design.md))**: ≈ 87 *draw calls* y ≈ 135 k triángulos estimados, ≈ 11,3 ms de GPU; **medido en el Editor** 71 / 46 (*draw calls* / SetPass) en Medio, 91 / 61 en Alto y 58 / 33 en Bajo, con 156 k / 216 k / 107 k triángulos, y en el build de Windows ≤ 5,7 ms de GPU en Medio y ≤ 7,3 en Alto. El tope de SetPass de Alto (escritorio y tomas) es **80**; Medio y Bajo, 50. El costo de fragmento de cada *shader* de la escena está en [06a-escena-lago/04-design-notes, "Cambios por implementación de WP-D1" §1](../iterations/06a-escena-lago/04-design-notes.md). Los 60 fps en el teléfono de referencia quedan para la It. 14.
 
 **Adaptación térmica:** el diseño está en [ARCHITECTURE §20.3](../architecture/ARCHITECTURE.md) (`ThermalAdapter`, ADR 018). Usa el tiempo de GPU de `FrameTimingManager` y, si el equipo no lo informa, el de CPU; la resolución se ajusta con `renderScale` y nunca con `ScalableBufferManager`, con cambios poco frecuentes y con histéresis. El orden en que se baja es el que pide el arte: resolución → reflejo → distancia de sombras → densidad de vegetación → nivel. Nunca se baja la tasa de cuadros antes que el detalle.
 
@@ -1032,3 +1038,27 @@ Series en vivo: parciales de 500 m y repeticiones (WP-D2). Fuente: [05-series-pa
 | §10.1 | Las 27 sondas de aspecto de la 5 en `SeriesCatalog` (S5-01 a S5-12, sin S5-09, que se mide en el video), todas dentro de su tolerancia, a 0, 1 o 2 por canal |
 
 **Pendiente para WP-B** (04-design-notes §15.5): cuando la línea `Rep r/R · m` cambia de largo, su rodillo hace rodar la línea entera en lugar de las celdas que cambian (H5-D2-01); en VID-06, la vuelta en curso llega a `0:01.0` con `0 m` y no con `4 m`, por el reloj de prueba del arnés (H5-D2-02).
+
+---
+
+## Cambios de la It. 6a
+
+La escena del lago: cielo, luz, hora, Lago alpino y agua degradada (WP-D2). Fuente: [06a-escena-lago/04-design-notes](../iterations/06a-escena-lago/04-design-notes.md) (§3 a §16, con "Cambios por gate QA", "Cambios por implementación de WP-D1" y "Cambios por implementación de WP-D2"), con lo que se midió en las tomas y los videos del arnés `it6a` (dos corridas, iguales byte a byte) contra LEG-01 a LEG-07 del oráculo, 2026-11-03. Ningún token de la UI cambia; los números de la escena viven en `Assets/RowMate/Core/Scene/Art/` (un valor por constante, con sus pruebas).
+
+| Dónde | Qué cambió |
+|---|---|
+| §0.2 | D-ART-05 (el disco y la luz con el mismo acimut y elevaciones propias) y D-ART-06 (las nubes sin la deriva por distancia) quedan **resueltos** como se proponían; D-ART-08 (CC0 y la luna de la NASA): **no** por defecto, se vuelve a ofrecer en el gate de la It. 8 (ASSET_SLOTS §7) |
+| §2.1 | `backdrop.*` sigue como el fondo provisorio de la escena demorada, **teñido por la hora**: `skyTop` arriba y `waterNear` abajo de la paleta del cuadro (a las 10 h, `#1E61BA` / `#145395`; a las 22 h, `#050A1E` / `#06122A`) |
+| §3.2 | Los degradés de pantalla (*scrims*) son de la **capa del HUD** (DV-67): arriba `#06122A` del 38 % a 0 en el 24 % alto, abajo del 32 % a 0 en el 18 % bajo; los dibuja la cámara de la escena al final y antes del post (0 elementos de UI; los alcanza el velo), siempre a pleno y sin animación con el HUD, y **nunca en la escena sola** ni en la pasada de contrato. Ni la tabla de la hora ni las sondas los compensan |
+| §3.3 y §10.1 | Las píldoras van con `step.*.hud` en el HUD (P6a-01): sobre el peor vidrio renderizado, trabajo 3,625, enfriamiento 3,705 y otro 3,691; la excepción contada (el borde de la hueca, 2,93 a 3,02) queda como la de la pista. El riesgo de las píldoras sobre la escena queda cerrado |
+| §6.2 | Se reescribe: el disco a **12°** al mediodía (arco de 10,5°, ≤ 0,3°/min), la luz `6° + 49°·e`, las ventanas de visibilidad del sol y de la luna y la luz **0** en el cambio de astro (19:34:19 y 4:25:41) |
+| §6.3 | Se reescribe con la tabla **ajustada con las tomas**: sin tonemapping (la paleta del legacy es un color de pantalla; *Neutral* y ACES la comprimían y corrían el matiz), exposición 0 a toda hora (−0,10 a las 5), el contraste a la mitad, el *bloom* de las 12 h en 1,30 / 1,4 (el sol mide 38 dp con luminancia > 0,9 en CAP-02 y 30,5 en TV), la noche azul por la paleta y no por el balance (−10 / −2 y −10 de saturación), el balance de la tarde +15 / +4. El modelo de luz con 0,80 de ambiente y 0,45 de clave (una cara a la sombra, ≈ 0,80 del tinte: el astro está siempre adelante y lo que mira a la cámara casi siempre está a la sombra), el 20 % del croma del cielo en el ambiente y la envolvente del follaje en 0,50. El velo con `VeilEv` −0,17. La ventana con ganancia 1. Sale la niebla por hora: es la del contrato |
+| §7.1 | La aparición con tramado *Bayer* de 400 a 360 m y la salida de 2 a 1 m sobre la lista del legacy (DV-62); el cambio de LOD complementario en el 10 % del límite; la niebla común |
+| §7.2 | Se reescribe para el lago de la 6a: las cordilleras con el alto del legacy y tope de 9°, la nieve sobre el 58 % del perfil con *alpenglow*, el corte de la orilla con sus envolventes (0,20 a la izquierda, para que el bosque no tape la nieve), los agregados (juncos de 0,6 a 1,2 m, rocas, bosque cercano hasta 120 m, la copa lejana, matas, pasto y helechos opacos), el cielo de telón y la noche |
+| §7.7 | El agua degradada de la 6a: las 10 líneas × la visibilidad del astro y tres agregados en **≤ 24 ALU** (DT6a-07; medido: 24). La avanzada sigue siendo de la 6b |
+| §7.8 | En la 6a, el casco solo (C-13): gelcoat `#F5F5F5` con la cubierta blanca de borda a borda (la línea de borda `#00B4D8` queda en el costado), *cockpit* `#263238`, bola de proa; con la exposición del casco × 0,78 y la mitad del croma del cielo en su ambiente, así la cubierta del mediodía queda en 0,80-0,95 sin recortarse (sin tonemapping, a × 1 era una silueta blanca plana) |
+| §8.1 | La matriz de proyección es la de Core (`ChaseCameraProjection`), sin `lensShift`; el plano lejano en 2 000 m |
+| §8.2 | El rolido de la respiración es **0,15°** (DT6a-01): el horizonte se aparta como mucho 2,93 dp (W1280) |
+| §9 | El reparto medido de la escena del lago, el tope de SetPass de Alto en **80** (confirmado: medido 61) y Medio y Bajo en 50; sin impostores en la 6a (DT6a-14) |
+
+**Las sondas de las tomas** (04-design-notes §10.4, medidas en la corrida publicada): las de contrato del cielo de CAP-02 (`#0B4FA8` y `#2C70BE`, diferencia 0); el matiz de la hora a ≤ 6,4° del de Core (CAP-01, -03 y -04; tope 8°); la ventana de CAP-04 en 98,9° y croma 0,090 (85°-110°, ≥ 0,04); el velo de CAP-20 y CAP-21 con el canal máximo × 0,851 y × 0,853 y el croma × 0,72 y × 0,73; el brillo del sol, 38 dp en CAP-02 (mínimo 28) y 30,5 dp en `it6a-brillo` (mínimo 30).

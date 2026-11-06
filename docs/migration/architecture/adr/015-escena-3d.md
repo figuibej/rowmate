@@ -38,3 +38,13 @@ El legacy dibuja una escena 2.5D con cámara de persecución, paisaje determinis
 | QA-P-15 | Un solo modelo de slots (base genérica + subtipos tipados, `SlotIds` en Core) y rutas únicas |
 | QA-P-28 | `ShaderDistance` como contrato, sin uso en el agua nueva |
 | Pedidos del Designer | D-ANI-01/02/03, D-ART-04/05, agua y textura de interacción |
+
+## Cambios por la It. 6a (WP-B, 2026-11-03)
+
+| ID | Qué cambió |
+|---|---|
+| DT6a-04 | **Sin escenas aditivas** por ahora: ni `World.unity` ni `Environments/Lake.unity`. Todo el contenido de la 6a es procedural o entra por un slot, así que el mundo lo arma `SceneWorldBuilder` (por tramos, `SceneWarmupPolicy`) bajo `scene-root` en `Boot.unity`, la única escena. El escenario es un `EnvironmentDefinition` (`Scenes/Environments/Lake.asset`) que cuelga de `SceneWorldDefinition` (`Scenes/SceneWorld.asset`, lo crea el *bootstrapper*). Las escenas aditivas pueden volver en la It. 8 si el Designer quiere colocar cosas a mano |
+| DT6a-05 | La escena se dibuja **a pedido** en una RT propia y la muestra `scene-surface` dentro del panel de la UI: ver [ADR 022](022-escena-en-el-panel.md). Fuera del inmersivo no hay dibujos (0 después de `Ready`; el único de calentamiento va antes) |
+| Un solo `Tick` | La escena avanza en el `LateUpdate` de `AppRoot` (no en un `Update` de `RowMate.Scene`), con `SceneSession.Tick` de Core y `SceneDirector.Apply`; en el arnés, en pasos de 1/60 s (`SceneSession.Advance`). 0 B por cuadro medido con `FrameAllocations.WatchScene` |
+| Slots | Los slots de la 6a (`PropSlot`, `TerrainLayerSlot`, `VegetationSlot`, `MaterialSlot`, `TextureSlot`, `DataSlot`, `SkyProfileSlot`, `HorizonProfileSlot`, `WaterProfileSlot`) con la fuente **Procedural por defecto** (válida y sin aviso) o **Asset**; `SlotResolver` da un solo `[SLOT] id: motivo` por slot y por anfitrión cuando un Asset falta o no valida, y la escena usa el procedural. `RowMate/Slots/Validar` (Editor, `SlotValidator`) re-enlaza por la ruta esperada. Solo las capas del terreno leen hoy un asset de terceros (`Texture2DArray`); los *prefabs* de vegetación del pack quedan para la It. 8 |
+| Agua degradada | Llega en la 6a (los tres colores y las 10 líneas del legacy en una malla de rejilla; sin reflejos). El agua por *shader* con reflejos es de la 6b |

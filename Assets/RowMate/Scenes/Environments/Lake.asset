@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9c04ca21183bfd43a627b7890f9e822, type: 3}
+  m_Name: Lake
+  m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Slots.EnvironmentDefinition
+  _environment: 0
+  _slots:
+  - {fileID: 11400000, guid: 22d0b99ab5a72844d9d39d232a223903, type: 2}
+  - {fileID: 11400000, guid: 5e125ba735f66ef4790314cde67a2524, type: 2}
+  - {fileID: 11400000, guid: 7dec2f231d2b4b34aa13e689ccbc4fc6, type: 2}
+  - {fileID: 11400000, guid: a6ad6d39be9ed454aa9da70ea85e7dc4, type: 2}
+  - {fileID: 11400000, guid: c313eb21d41ad2243b6a723a2c84276c, type: 2}
+  - {fileID: 11400000, guid: 64cf6eec5dffae9498ce357ecce8299e, type: 2}
+  - {fileID: 11400000, guid: cf71f5e33f55f414bbf6a0242b373453, type: 2}
+  - {fileID: 11400000, guid: 84c73b99d2a692a49815c24ff3b14c22, type: 2}
+  - {fileID: 11400000, guid: 94aee0b182852c947a2ca60b692d7292, type: 2}
+  - {fileID: 11400000, guid: 804eb7f164b99b14b9329de7302f9e51, type: 2}
+  - {fileID: 11400000, guid: ebf40286a7a09c146a139963045d8d7b, type: 2}
+  - {fileID: 11400000, guid: 5e81d89ad35034a47a4fa6197d265162, type: 2}
+  - {fileID: 11400000, guid: ee1509d0e6e0a4c4286dd8bb1133a236, type: 2}
+  - {fileID: 11400000, guid: e012961ea81549f4e8b806c73734ae96, type: 2}
+  - {fileID: 11400000, guid: 9153ebe057c55c0499672b6b657dc368, type: 2}
+  - {fileID: 11400000, guid: 9a7378b385c488f448f4ff6813da4873, type: 2}
+  - {fileID: 11400000, guid: 278d6c7de0056494ca63b02a17d92cfa, type: 2}

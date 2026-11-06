@@ -51,6 +51,15 @@ namespace RowMate.EditorTools
                 throw new System.IO.FileNotFoundException("falta " + UiAssets.AssetPath + " (paso ui.panel)");
             }
 
+            // It. 6a: el mundo de la escena (pasos scene.assets y scene.materials).
+            var world = AssetDatabase.LoadAssetAtPath<RowMate.Scene.Slots.SceneWorldDefinition>(RowMate.Scene.Slots.SceneWorldDefinition.AssetPath);
+            if (assets.SceneWorld != world)
+            {
+                assets.SetSceneWorld(world);
+                EditorUtility.SetDirty(assets);
+                AssetDatabase.SaveAssets();
+            }
+
             var repaired = "";
             var root = Find(scene, "AppRoot");
             if (root == null)
@@ -106,6 +115,9 @@ namespace RowMate.EditorTools
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = TokenColors.ToColor(Tokens.BgApp);
             camera.cullingMask = 0;
+            // It. 6a: la cámara de la UI no dibuja nada (la escena se dibuja a pedido en su RT): sin MSAA ni HDR del nivel.
+            camera.allowMSAA = false;
+            camera.allowHDR = false;
             if (!cameraObject.TryGetComponent<UniversalAdditionalCameraData>(out _))
             {
                 cameraObject.AddComponent<UniversalAdditionalCameraData>();

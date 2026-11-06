@@ -245,7 +245,7 @@ namespace RowMate.Tests.EditMode.Project
         }
 
         // La expresión de QA-G3-20 más file:/// con una unidad, /Users o /home, y la caché de pub.
-        private static readonly System.Text.RegularExpressions.Regex MachinePath = new System.Text.RegularExpressions.Regex(
+        internal static readonly System.Text.RegularExpressions.Regex MachinePath = new System.Text.RegularExpressions.Regex(
             @"[A-Za-z]:[\\/]+Users[\\/]|[\\/]home[\\/][a-z]|AppData[\\/]+Local[\\/]+Temp[\\/]+claude|file:///+(?:[A-Za-z]:|Users/|home/)|Pub[\\/]+Cache|\.pub-cache",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
@@ -300,6 +300,170 @@ namespace RowMate.Tests.EditMode.Project
             }
 
             return false;
+        }
+
+        // ------------------------------------------------------------------ It. 6a (06a-escena-lago/02-tech-design §3.7, §2.10)
+
+        // AC-SCN-15-08: lo de terceros (el Terrain Sample Asset Pack, Mixamo) vive en Assets/ThirdParty/ y no se versiona salvo
+        // sus .meta; el CI compila y pasa sin el pack.
+        [TestCase("Assets/ThirdParty/TerrainSampleAssetPack/Textures/Rock_Albedo.png", true, Category = "AC-SCN-15-08")]
+        [TestCase("Assets/ThirdParty/TerrainSampleAssetPack/Prefabs/Fern.prefab", true, Category = "AC-SCN-15-08")]
+        [TestCase("Assets/ThirdParty/TerrainSampleAssetPack/Textures/Rock_Albedo.png.meta", false, Category = "AC-SCN-15-08")]
+        [TestCase("Assets/ThirdParty/TerrainSampleAssetPack.meta", false, Category = "AC-SCN-15-08")]
+        [TestCase("Assets/RowMate/Slots/terrain.layer.rock.asset", false, Category = "AC-SCN-15-08")]
+        public void ThirdPartyPackIsIgnoredExceptMeta(string path, bool ignored)
+        {
+            var exit = RunGit(RepoPaths.Root, out var output, "check-ignore", "-q", "--no-index", path);
+            if (exit != 0 && exit != 1)
+            {
+                Unavailable("git check-ignore salió con " + exit + ": " + output);
+            }
+
+            Assert.That(exit == 0, Is.EqualTo(ignored), path + (ignored ? " tiene que estar ignorado" : " NO tiene que estar ignorado"));
+        }
+
+        // QA-G6aT-18 (AC-SCN-15-08): nada versionado de Assets/ referencia un asset de terceros salvo los .asset de los slots
+        // (Assets/RowMate/Slots/): se juntan los GUID de los .meta de Assets/ThirdParty/ (versionados o por versionar) y se buscan
+        // en los assets de texto de Unity versionados o por versionar. Así, sin el pack, solo un slot apunta a algo que no está y
+        // cae al procedural.
+        [Test, Category("AC-SCN-15-08")]
+        public void NoVersionedAssetReferencesThirdPartyOutsideTheSlots()
+        {
+            var candidates = TrackedFiles(RepoPaths.Root);
+            candidates.AddRange(AddableFiles(RepoPaths.Root));
+            var thirdParty = new HashSet<string>(StringComparer.Ordinal);
+            var assets = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var path in candidates)
+            {
+                var full = RepoPaths.Combine(path);
+                if (!File.Exists(full))
+                {
+                    continue;
+                }
+
+                if (path.StartsWith("Assets/ThirdParty/", StringComparison.Ordinal) && path.EndsWith(".meta", StringComparison.Ordinal))
+                {
+                    var guid = MetaGuid.Match(File.ReadAllText(full));
+                    if (guid.Success)
+                    {
+                        thirdParty.Add(guid.Groups[1].Value);
+                    }
+                }
+                else if (path.StartsWith("Assets/", StringComparison.Ordinal) && IsUnityTextAsset(path))
+                {
+                    assets[path] = File.ReadAllText(full);
+                }
+            }
+
+            Assert.That(assets.Count, Is.GreaterThan(10), "el recorrido encontró los assets de Unity versionados");
+            var offenders = ThirdPartyReferenceOffenders(assets, thirdParty);
+            Assert.That(offenders, Is.Empty, "assets versionados (fuera de los slots) que referencian Assets/ThirdParty/:\n" + string.Join("\n", offenders));
+        }
+
+        [Test, Category("AC-SCN-15-08")]
+        public void TheThirdPartyReferenceRuleFindsAViolation()
+        {
+            // Control positivo: un material que apunta a una textura del pack se detecta; el mismo GUID en un slot, no.
+            const string Guid = "0123456789abcdef0123456789abcdef";
+            var guids = new HashSet<string>(StringComparer.Ordinal) { Guid };
+            var files = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["Assets/RowMate/Art/Materials/Scene/Terrain.mat"] = "  m_Texture: {fileID: 2800000, guid: " + Guid + ", type: 3}\n",
+                ["Assets/RowMate/Slots/terrain.layer.rock.asset"] = "  asset: {fileID: 11400000, guid: " + Guid + ", type: 2}\n",
+                ["Assets/RowMate/Settings/Quality/Medium.asset"] = "  m_Other: {fileID: 0}\n",
+            };
+            Assert.That(ThirdPartyReferenceOffenders(files, guids), Is.EqualTo(new[] { "Assets/RowMate/Art/Materials/Scene/Terrain.mat: " + Guid }));
+            Assert.That(MetaGuid.Match("fileFormatVersion: 2\nguid: " + Guid + "\n").Groups[1].Value, Is.EqualTo(Guid));
+        }
+
+        // QA-G6aT-19: el puerto del generador de la VM de Dart (BSD-3) lleva su aviso. Si existe Core/Scene/DartRandom.cs, la raíz
+        // del repo tiene THIRD_PARTY_NOTICES.md con el copyright, las tres condiciones y el descargo de la licencia del SDK de Dart,
+        // y el encabezado del puerto remite a ese archivo (los builds lo copian junto al ejecutable: NoticesPostprocessor, WP-B2).
+        [Test, Category("AC-SCN-14-02"), Category("AC-APP-19-03")]
+        public void TheDartPortCarriesItsLicense()
+        {
+            const string Port = "Assets/RowMate/Core/Scene/DartRandom.cs";
+            if (!File.Exists(RepoPaths.Combine(Port)))
+            {
+                Assert.Pass("sin el puerto de Dart no hace falta el aviso");
+            }
+
+            var notices = RepoPaths.Combine("THIRD_PARTY_NOTICES.md");
+            Assert.That(File.Exists(notices), Is.True, "THIRD_PARTY_NOTICES.md en la raíz del repo");
+            var text = File.ReadAllText(notices).Replace("\r\n", "\n");
+            foreach (var part in new[]
+            {
+                "Copyright 2012, the Dart project authors.",
+                "Redistributions of source code must retain the above copyright\nnotice, this list of conditions and the following disclaimer.",
+                "Redistributions in binary form must reproduce the above\ncopyright notice, this list of conditions and the following\ndisclaimer in the documentation and/or other materials provided\nwith the distribution.",
+                "Neither the name of Google LLC nor the names of its\ncontributors may be used to endorse or promote products derived\nfrom this software without specific prior written permission.",
+                "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS\n\"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES",
+                "EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+                Port,
+            })
+            {
+                Assert.That(Collapse(text), Does.Contain(Collapse(part)), "THIRD_PARTY_NOTICES.md: " + part);
+            }
+
+            var header = File.ReadAllText(RepoPaths.Combine(Port));
+            Assert.That(header, Does.Contain("THIRD_PARTY_NOTICES.md").And.Contain("BSD-3").And.Contain("the Dart project authors"),
+                "el encabezado de DartRandom.cs cita el origen y remite al aviso");
+        }
+
+        // Los GUID de un .meta y las referencias de un asset de texto de Unity (YAML: "guid: <32 hex>").
+        private static readonly System.Text.RegularExpressions.Regex MetaGuid = new System.Text.RegularExpressions.Regex(@"(?m)^guid:\s*([0-9a-f]{32})\s*$");
+        private static readonly System.Text.RegularExpressions.Regex GuidReference = new System.Text.RegularExpressions.Regex(@"\bguid:\s*([0-9a-f]{32})");
+
+        private static readonly string[] UnityTextAssets =
+        {
+            ".asset", ".prefab", ".unity", ".mat", ".controller", ".overrideController", ".anim", ".playable", ".shadervariants",
+            ".preset", ".lighting", ".spriteatlas", ".terrainlayer", ".mask", ".signal", ".renderTexture", ".physicMaterial", ".uxml",
+            ".uss", ".tss",
+        };
+
+        private static bool IsUnityTextAsset(string path)
+        {
+            foreach (var extension in UnityTextAssets)
+            {
+                if (path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // "<ruta>: <guid>" por cada asset fuera de Assets/ThirdParty/ y de los .asset de Assets/RowMate/Slots/ que nombra un GUID de
+        // terceros.
+        private static List<string> ThirdPartyReferenceOffenders(IDictionary<string, string> assets, ISet<string> thirdParty)
+        {
+            var offenders = new List<string>();
+            foreach (var entry in assets)
+            {
+                var slot = entry.Key.StartsWith("Assets/RowMate/Slots/", StringComparison.Ordinal) && entry.Key.EndsWith(".asset", StringComparison.Ordinal);
+                if (slot || entry.Key.StartsWith("Assets/ThirdParty/", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (System.Text.RegularExpressions.Match match in GuidReference.Matches(entry.Value))
+                {
+                    if (thirdParty.Contains(match.Groups[1].Value))
+                    {
+                        offenders.Add(entry.Key + ": " + match.Groups[1].Value);
+                    }
+                }
+            }
+
+            offenders.Sort(StringComparer.Ordinal);
+            return offenders;
+        }
+
+        // Para comparar el texto de la licencia sin depender de la sangría de cada línea.
+        private static string Collapse(string text)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
         }
 
         [TestCase("Assets/RowMate/Config/StravaSecrets.json", true, Category = "QA-V-02")]

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: WaterDegraded
+  m_Shader: {fileID: 4800000, guid: e6522ad9bbf6e3d418df18fcd3eb0cae, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - RM_WATER_EXTRAS
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats: []
+    m_Colors:
+    - _RmShallowColor: {r: 0.35294098, g: 0.39999998, b: 0.33725497, a: 1}
+    - _RmShimmer: {r: 0, g: 0, b: 1, a: 1}
+    - _RmShimmerColor: {r: 1, g: 0.96, b: 0.8399999, a: 1}
+    - _RmWaterBandBottom: {r: 0.049999982, g: 0.30999997, b: 0.56, a: 1}
+    - _RmWaterBandMid: {r: 0.17999998, g: 0.56, b: 0.8399999, a: 1}
+    - _RmWaterBandTop: {r: 0.5, g: 0.74, b: 0.92, a: 1}
+    - _RmWaterExtras: {r: 0.25, g: 0.25, b: 0.6, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -19,7 +19,7 @@ namespace RowMate.Presentation.Controls
     // - Sin asignar en el cuadro a cuadro: el texto es la cadena de la lectura (una por segundo) y las cadenas de un carácter están
     //   precalculadas (DrawnFont.CharString).
     // - Es un IMotion (finito) solo mientras rueda: avisa repaint en cada cuadro del rodillo.
-    public sealed class TabularCells : IMotion
+    public sealed class TabularCells : IMotion, IRecurringMotion
     {
         private readonly MotionDriver? _motion;
         private readonly Action _repaint;

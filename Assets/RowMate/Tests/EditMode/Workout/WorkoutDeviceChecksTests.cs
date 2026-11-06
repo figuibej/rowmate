@@ -137,7 +137,7 @@ namespace RowMate.Tests.EditMode.Workout
         }
 
         [Test, Category("AC-WKT-18-10")]
-        [Ignore("NO VERIFICABLE: [Device-Win] cerrar y abrir el build de simulador (la preferencia de los paneles sobrevive)")]
+        [Ignore("[Device-Win] a mano: verificado en el build de simulador al empezar la 6a (06a-escena-lago/00-deuda-5 §1.4, pasos 9 y 11)")]
         public void WindowsPanelsSurviveARestart()
         {
             // Windows: abrir 500 m, cerrar la app y volver a abrirla: al iniciar otra vez una rutina, 500 m ya está abierto. La regla
@@ -146,7 +146,7 @@ namespace RowMate.Tests.EditMode.Workout
         }
 
         [Test, Category("AC-WKT-18-12")]
-        [Ignore("NO VERIFICABLE: [Device-Win] el teclado real en la ventana (Tab, Enter y Espacio sobre los paneles)")]
+        [Ignore("[Device-Win] a mano: verificado en el build de simulador al empezar la 6a (06a-escena-lago/00-deuda-5 §1.4, paso 3)")]
         public void WindowsKeyboardOnThePanels()
         {
             // Windows: Tab recorre Terminar, Pausa, 500 m, Reps y la llave con el anillo de foco; Enter y Espacio abren y cierran.
@@ -155,7 +155,7 @@ namespace RowMate.Tests.EditMode.Workout
         }
 
         [Test, Category("AC-WKT-18-21")]
-        [Ignore("NO VERIFICABLE: [Device-Win] la ventana [PERF] del build de simulador con los paneles abriéndose y cerrándose")]
+        [Ignore("[Device-Win] [PERF] en el build: verificado al empezar la 6a, el peor cuadro 25,0 ms y p99 ≤ 1,5 ms (06a-escena-lago/00-deuda-5 §1.3)")]
         public void WindowsPanelsPerf()
         {
             // Windows (build de simulador, -rowmate-perf-series): con Fondo 3000 y Series 600 y los paneles abriéndose y cerrándose
@@ -164,11 +164,50 @@ namespace RowMate.Tests.EditMode.Workout
         }
 
         [Test, Category("AC-WKT-13-15")]
-        [Ignore("NO VERIFICABLE: [Device-Win] la ventana [PERF] de las tres entradas en el build de simulador")]
+        [Ignore("[Device-Win] [PERF] en el build de simulador, ronda 1 de la verificación de la 6a (06a-escena-lago/02-tech-design, \"Cambios por verificación (ronda 1)\" V1-14): -rowmate-perf-entries 10 (libre, Prueba 4a y Cinco reps con los paneles): la primera del proceso 12,7 ms en el cuadro del toque; las siguientes ≤ 10,5 ms, con el peor en el cuadro del armado del HUD (negro y quieto) y ≤ 6,5 ms con movimiento; salidas ≤ 7,9 ms")]
         public void WindowsEntryWithoutJank()
         {
             // Windows (build de simulador): tres entradas seguidas (libre, Prueba 4a y Cinco reps con los dos paneles abiertos):
             // ningún cuadro de más de 16,7 ms mientras algo se mueve. El orden de la entrada lo prueba ITT (PlayMode).
+            Assert.Fail("solo en el equipo");
+        }
+
+        // ── It. 6a: la escena 3D (06a-escena-lago/02-tech-design §6.3 "Equipo") ──
+
+        [Test, Category("AC-SCN-01-09")]
+        [Ignore("NO VERIFICABLE: [Device-And] sin el módulo de Android ni un teléfono de gama media (60 fps con la escena en el nivel Medio; regla 9, It. 14)")]
+        public void AndroidSceneSixtyFps()
+        {
+            // Android (Galaxy A54 / Pixel 6a): libre con Fuerte 5 min a 60 fps sostenidos con la escena del lago (§4.1: ≈ 11,3 ms de GPU).
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-SCN-01-10"), Category("AC-WKT-13-15"), Category("AC-WKT-14-19")]
+        [Ignore("[Device-Win] [PERF] en el build de simulador con el código final, ronda 1 de la verificación de la 6a (06a-escena-lago/02-tech-design, \"Cambios por verificación (ronda 1)\" V1-14): libre con Fuerte 5 min en Alto, dos corridas: después de la entrada p99 ≤ 3,0 ms y máx ≤ 4,1 ms de CPU por ventana de 10 s, salvo una ventana de la primera corrida con un cuadro de 93,5 ms (a los 271 s, sin repetirse en la segunda: NO DEMOSTRADO que sea de la app); GPU ≤ 5,5 ms; Medio forzado (sin adaptación) p99 ≤ 2,4 ms; Serie larga 150 s con la escena máx ≤ 7,5 ms, p99 ≤ 5,4 ms; la entrada por el camino del usuario ≤ 12,7 ms (los drivers con StartRoutine o el toque directo, 21 a 24 ms en el cuadro del toque); 0 subidas de shaders de la escena o de URP después de Ready (tools/build/perf-log-check.ps1)")]
+        public void WindowsScenePerf()
+        {
+            // Windows (build de desarrollo con simulador y ROWMATE_DATA_DIR): las ventanas [PERF] de FrameTimeProbe.
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-SCN-23-03")]
+        [Ignore("[Device-Win] a mano en el build de simulador: Hora escena a las 22, cerrar y abrir: vuelve a la hora real (no se guarda; SceneHourSimulatorTests lo prueba con un anfitrión nuevo)")]
+        public void WindowsSceneHourDoesNotSurviveRestart()
+        {
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-SCN-01-05")]
+        [Ignore("[Device-Win] en el build de simulador, ronda 1 de la verificación de la 6a: -rowmate-perf-entries 10 (libre, Prueba 4a y Cinco reps) y las demás corridas de V1-14 sin avisos nuevos en el registro y 0 [SLOT] (sin el pack)")]
+        public void WindowsThreeSessionsCleanLog()
+        {
+            Assert.Fail("solo en el equipo");
+        }
+
+        [Test, Category("AC-SCN-01-06")]
+        [Ignore("[Device-Win] Workout en reposo con la escena precargada: 0 dibujos de la escena después de Ready (SLC, DEMO-01) y, a mano en la verificación de la 6a, el motor 3D del proceso a la mitad que en el inmersivo (contador GPU Engine; 05-qa-verification §4.1). La sonda [PERF] no mide fuera del inmersivo: sin un número propio de la ronda 1")]
+        public void WindowsGpuIdleInWorkout()
+        {
             Assert.Fail("solo en el equipo");
         }
     }

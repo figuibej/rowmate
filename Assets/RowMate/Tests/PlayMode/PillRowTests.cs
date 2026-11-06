@@ -154,9 +154,9 @@ namespace RowMate.Tests.PlayMode
                 var probes = new[]
                 {
                     PixelProbe.Point("vidrio de la fila", "hud-topbar", new Vector2(0.5f, 0.92f), glass, 1),
-                    PixelProbe.PointIn("pulgar: pista step.work @30 % sobre el vidrio", "hud-pill-row", e => ThumbRect(e, 0), new Vector2(0.8f, 0.5f),
-                        Over(Tokens.StepWork, StepPills.CurrentTrackAlpha, glass), 2),
-                    PixelProbe.PointIn("pulgar: relleno step.work", "hud-pill-row", e => ThumbRect(e, 0), new Vector2(0.25f, 0.5f), Tokens.StepWork.Rgb.ToHex(), 3),
+                    PixelProbe.PointIn("pulgar: pista step.work.hud @30 % sobre el vidrio", "hud-pill-row", e => ThumbRect(e, 0), new Vector2(0.8f, 0.5f),
+                        Over(Tokens.StepWorkHud, StepPills.CurrentTrackAlpha, glass), 2),
+                    PixelProbe.PointIn("pulgar: relleno step.work.hud", "hud-pill-row", e => ThumbRect(e, 0), new Vector2(0.25f, 0.5f), Tokens.StepWorkHud.Rgb.ToHex(), 3),
                 };
                 foreach (var probe in probes)
                 {
@@ -187,7 +187,7 @@ namespace RowMate.Tests.PlayMode
             yield return AdvanceTo(47.6);
             yield return Frames(2);
             holes += FillHoles(3, "en pausa (CAP-27)");
-            Assert.That(holes, Is.Empty, "píxeles del relleno que no son step.work");
+            Assert.That(holes, Is.Empty, "píxeles del relleno que no son step.work.hud");
         }
 
         // Los píxeles del relleno de la píldora n (sin el brillo de arriba ni los bordes suavizados) que se alejan de step.work.
@@ -207,7 +207,7 @@ namespace RowMate.Tests.PlayMode
             var pixels = new RectInt(Start(world.xMin * density), Start(world.yMin * density), 0, 0);
             pixels.xMax = End(world.xMax * density);
             pixels.yMax = End(world.yMax * density);
-            var expected = Tokens.StepWork.Rgb;
+            var expected = Tokens.StepWorkHud.Rgb; // It. 6a: las píldoras van con los tokens .hud (PillRowView.HudColor; AC-WKT-17-13)
             var frame = H.ReadPixels();
             var found = new System.Text.StringBuilder();
             var count = 0;

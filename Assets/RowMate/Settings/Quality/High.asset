@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ec4e009e57809d4caa3400fe2a81589, type: 3}
+  m_Name: High
+  m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Quality.QualityTierProfile
+  _tier: 0
+  _urpAsset: {fileID: 11400000, guid: 4d0f317dcfc24554a83e65b0a5134c8c, type: 2}
+  _qualityLevelName: High
+  _resolution: 1
+  _msaa: 4
+  _fxaa: 0
+  _hdr: 1
+  _shadows: 1
+  _shadowDistance: 80
+  _shadowCascades: 2
+  _shadowResolution: 2048
+  _nightShadowStrength: 0.25
+  _bloom: 1
+  _starField: 1
+  _cloudLayer: 1
+  _fillDensity: 1
+  _grassEnd: 60
+  _lodScale: 1
+  _nearForest: 1
+  _lowMist: 1

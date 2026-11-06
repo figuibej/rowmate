@@ -16,6 +16,8 @@ namespace RowMate.Presentation.Workout
     {
         private Texture2D? _texture;
         private double _horizon = double.NaN;
+        private Color _sky = TokenColors.ToColor(Tokens.BackdropSky);
+        private Color _water = TokenColors.ToColor(Tokens.BackdropWater);
 
         public HudBackdrop()
         {
@@ -61,8 +63,35 @@ namespace RowMate.Presentation.Workout
             }
 
             _horizon = horizon;
-            var sky = TokenColors.ToColor(Tokens.BackdropSky);
-            var water = TokenColors.ToColor(Tokens.BackdropWater);
+            Refill();
+        }
+
+        // It. 6a (AC-SCN-01-01; DD6a-23): con la escena, el fondo provisorio va teñido por la hora (skyTop y waterNear de la paleta de
+        // Core); se rellena al cambiar el minuto (400 B, sin asignar). Sin escena, los tokens backdrop.* (los de las 12 h).
+        public void SetColors(Color sky, Color water)
+        {
+            if (sky == _sky && water == _water)
+            {
+                return;
+            }
+
+            _sky = sky;
+            _water = water;
+            if (!double.IsNaN(_horizon))
+            {
+                Refill();
+            }
+        }
+
+        public Color SkyColor => _sky;
+
+        public Color WaterColor => _water;
+
+        private void Refill()
+        {
+            var horizon = _horizon;
+            var sky = _sky;
+            var water = _water;
             if (_texture == null)
             {
                 _texture = BackdropTexture.Create(sky, water, horizon);

@@ -70,8 +70,6 @@ namespace RowMate.Presentation.Controls
     {
         public const string HolderClass = "rm-hud-series-panel__font";
 
-        private static readonly string[] CharStrings = BuildCharStrings();
-
         public DrawnFont(VisualElement owner, string typeClass, float sizeDp, float? letterSpacing)
         {
             if (owner == null)
@@ -298,20 +296,10 @@ namespace RowMate.Presentation.Controls
             context.DrawText(glyph, new Vector2(centerX - advance / 2f, baseline - AscentAt(sizeDp)), sizeDp * pixelsPerPoint, mesh, font);
         }
 
+        // La cadena de un carácter sin asignar en cada dibujo (Core/Common/CharStrings; O-4 de la lente de motion de la 5).
         public static string CharString(char c)
         {
-            return c < CharStrings.Length ? CharStrings[c] : c.ToString();
-        }
-
-        private static string[] BuildCharStrings()
-        {
-            var strings = new string[0x2027];
-            for (var i = 0; i < strings.Length; i++)
-            {
-                strings[i] = ((char)i).ToString();
-            }
-
-            return strings;
+            return RowMate.Core.Common.CharStrings.Of(c);
         }
     }
 

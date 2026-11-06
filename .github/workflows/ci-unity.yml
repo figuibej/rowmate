@@ -46,7 +46,9 @@ jobs:
           unityVersion: 6000.3.27f1
           testMode: ${{ matrix.testMode }}
           artifactsPath: artifacts-${{ matrix.testMode }}-sim-${{ matrix.simulator }}
-          customParameters: ${{ matrix.simulator && '-rowmateSimulatorTestRun' || '' }}
+          # QA-V6a-REN-15 (It. 6a): en ubuntu-latest GameCI corre el Editor sobre un servidor X virtual (OpenGL por software): las
+          # pruebas con la categoria GPU (sondas de color de +-1, conteos de SetPass) no valen ahi y quedan afuera, como en -nographics.
+          customParameters: ${{ matrix.simulator && '-rowmateSimulatorTestRun' || '' }} -testCategory "!GPU"
       - name: Restaurar los defines y sacar la marca (antes de guardar la caché)
         if: ${{ always() && matrix.simulator }}
         run: bash tools/unity/ci-simulator-define.sh restore

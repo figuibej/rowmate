@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc24eea5731ca2448a37fb93d01220e3, type: 3}
+  m_Name: terrain.layer.sand
+  m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Slots.TerrainLayerSlot
+  _slotId: terrain.layer.sand
+  _source: 0
+  _expectedPath: Assets/ThirdParty/TerrainSampleAssetPack/TerrainLayers/sand.terrainlayer
+  _budget: 2048
+  _asset: {fileID: 0}

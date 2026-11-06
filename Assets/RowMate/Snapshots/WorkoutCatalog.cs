@@ -357,7 +357,7 @@ namespace RowMate.Snapshots
             cap22.Checks = h => Expect(
                 ("0:03", () => h.TextOf("hud-countdown") == "0:03"),
                 ("escala 1,1", () => Near((float)Hud(h).Steps!.Pulse.Scale, 1.1f, 0.002f)),
-                ("en step.work.hud puro", () => ColorIs(h.Find("hud-countdown")!.resolvedStyle.color, Tokens.StepWorkHud)),
+                ("en step.work.hud puro", () => ColorIs(Hud(h).Steps!.Countdown.DrawnColor, Tokens.StepWorkHud)),
                 ("Próximo: Descanso entero", () => Inside(h, "hud-up-next") && UpNextWhole(h) && h.TextOf("hud-up-next-type")?.Trim() == "Descanso"));
             cap22.WithProbe(PixelProbe.Dominant("cuenta step.work.hud", "hud-countdown", Tokens.StepWorkHud.Rgb.ToHex(), 3), true);
             all.Add(cap22);

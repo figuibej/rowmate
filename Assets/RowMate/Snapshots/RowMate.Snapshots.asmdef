@@ -6,6 +6,7 @@
         "RowMate.App",
         "RowMate.Infrastructure",
         "RowMate.Presentation",
+        "RowMate.Scene",
         "RowMate.Bootstrap",
         "RowMate.Simulator",
         "RowMate.Simulator.Presentation",

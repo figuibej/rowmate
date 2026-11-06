@@ -29,11 +29,12 @@ namespace RowMate.Tests.EditMode.Project
         }
 
         [Test, Category("AC-BASE-09")]
-        public void TheIt5SetIsTheDefault()
+        public void TheIt5SetStaysSelectable()
         {
+            // It. 6a: it6a es el por defecto desde la 6a (ItSixAToolingTests); it5 sigue con su carpeta (la regeneración única de la 6a).
             var script = Read(CaptureScript);
-            Assert.That(script, Does.Contain("[string]$Set = 'it5',"));
-            Assert.That(script, Does.Contain("return '" + It5 + "'"), "su carpeta de salida");
+            Assert.That(script, Does.Contain("'it5', 'it4b'"));
+            Assert.That(script, Does.Contain("if ($Set -eq 'it5') { return '" + It5 + "' }"), "su carpeta de salida");
             Assert.That(script, Does.Contain("if ($Set -eq 'it4b') { return 'docs/migration/iterations/04b-hud-exr/snapshots' }"), "it4b sigue (la regeneración)");
             var bytes = File.ReadAllBytes(RepoPaths.Combine(CaptureScript));
             for (var i = 0; i < bytes.Length; i++)
@@ -43,7 +44,7 @@ namespace RowMate.Tests.EditMode.Project
 
             var cli = Read(Cli);
             Assert.That(cli, Does.Contain("public const string It5Output = \"" + It5 + "\";"));
-            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it5\";"));
+            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it6a\";"), "desde la 6a, it6a por defecto");
             Assert.That(File.Exists(RepoPaths.Combine(Catalog)), Is.True, "SeriesCatalog");
         }
 

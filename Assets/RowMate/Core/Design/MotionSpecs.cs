@@ -443,5 +443,65 @@ namespace RowMate.Core.Design
 
         // La regla de toma (§5.1; SD-11): un panel recién abierto o cerrado se toma al menos 820 ms después del toque.
         public const double SeriesSettleTapMs = 820;
+
+        // ════ It. 6a — La escena (06a-escena-lago/02-tech-design §2.2, §2.5, §9.3; 04-design-notes §11, §3.4; DN6a-07, -08, -10,
+        // -20). Un valor por constante (§9.3): ChaseCameraMotion, SceneHourTransition y SceneTimelines los leen de acá; WP-D2
+        // puede ajustarlos dejando las pruebas al día. Segundos y metros salvo que el nombre diga Ms. ════
+
+        // ── La respiración (ANIMATION_BIBLE §5.2 sin los términos del bote, que llegan en la 7; AC-SCN-02-04; DT6a-01) ──
+        // lateral 0,035·sin(2π·0,071t) + 0,015·sin(2π·0,173t + 1,7) m; vertical 0,025·sin(2π·0,093t + 0,4) m;
+        // rolido 0,15°·sin(2π·0,061t + 2,1); cabeceo 0,10°·sin(2π·0,083t + 0,9).
+        public const double BreathLateralA = 0.035, BreathLateralFreqA = 0.071;
+        public const double BreathLateralB = 0.015, BreathLateralFreqB = 0.173, BreathLateralPhaseB = 1.7;
+        public const double BreathVertical = 0.025, BreathVerticalFreq = 0.093, BreathVerticalPhase = 0.4;
+        public const double BreathRollDeg = 0.15, BreathRollFreq = 0.061, BreathRollPhase = 2.1;
+        public const double BreathPitchDeg = 0.10, BreathPitchFreq = 0.083, BreathPitchPhase = 0.9;
+
+        // La entrada de la respiración: S(0; 0,6 s) desde el fin del vuelo o desde ShowInPlace (DN6a-20).
+        public const double BreathingRampSeconds = 0.6;
+
+        // En pausa ×0,6: 300 ms al pausar y 240 al reanudar, ease.move (los del velo).
+        public const double BreathingPausedFactor = 0.6;
+        public const double BreathingPauseInMs = PauseVeilInMs;
+        public const double BreathingPauseOutMs = PauseVeilOutMs;
+
+        // ── El vuelo de entrada (AC-SCN-02-05; DN6a-08): 220-1 820 ms desde el toque; Bézier cúbica P0 (3; 9; −14), P1 (2,4; 7,2;
+        // −8,5), P2 (0,6; 3,4; −2,5), P3 (0; 2,2; 0) con ease-in-out-sine en la posición y la orientación (slerp desde mirar al
+        // bote en (0; 0,4; 9,5)); la focal desde ×1,25 la del contrato con ease.move; el horizonte de la proyección desde H/2
+        // hasta el del contrato entre 0,6 y 1 del recorrido, con ease.move. ──
+        public const double FlightStartMs = 220;
+        public const double FlightDurationMs = 1600;
+        public const double FlightP0X = 3, FlightP0Y = 9, FlightP0Z = -14;
+        public const double FlightP1X = 2.4, FlightP1Y = 7.2, FlightP1Z = -8.5;
+        public const double FlightP2X = 0.6, FlightP2Y = 3.4, FlightP2Z = -2.5;
+        public const double FlightLookAtY = 0.4;
+        public const double FlightFocalFrom = 1.25;
+        public const double FlightHorizonFrom = 0.6;
+
+        // ── La salida (AC-SCN-02-06): +1,5 m arriba y −4 m atrás en 1,2 s, ease.move, desde la pose del cuadro. ──
+        public const double ExitRiseM = 1.5;
+        public const double ExitBackM = 4;
+        public const double ExitSeconds = 1.2;
+
+        // ── La toma aérea (AC-SCN-02-07; DN6a-07): +1,70 m y −1,70 m (2,4 m: 0,4 m/s en 6 s), cabeceo −4°, ease.move; la
+        // respiración de 1 a 0 con la misma curva; después, quieta. ──
+        public const double AerialRiseM = 1.70;
+        public const double AerialBackM = 1.70;
+        public const double AerialPitchDeg = -4;
+        public const double AerialSeconds = 6;
+
+        // ── La hora de la escena (AC-SCN-23-02, AC-SCN-09-01; DV-58, DN6a-10): Hora escena en 1,5 s (ease.move); el minuto real
+        // en 1 s lineal. ──
+        public const double ForcedHourSeconds = 1.5;
+        public const double MinuteTickSeconds = 1.0;
+
+        // ── Las estrellas (DV-53, DN6a-05): 0,9 s (ease.move) al cruzar el umbral; las luces de la noche (DV-60): 0,4 s. ──
+        public const double StarFadeSeconds = 0.9;
+        public const double NightLightFadeSeconds = 0.4;
+
+        // ── El inmersivo con la escena (§3.9; AC-SCN-01-07, AC-WKT-17-07; DT6a-06): la escena demorada entra en 0,6 s (ease.enter);
+        // el HUD al cambiar de clase de ventana, en 200 (ease.enter). La aparición (220-400) y la salida son las de la 4b. ──
+        public const double SceneLateFadeMs = 600;
+        public const double HudReflowMs = 200;
     }
 }

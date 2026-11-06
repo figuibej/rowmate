@@ -386,6 +386,238 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(formula, Is.EqualTo(new[] { "Assets/RowMate/Core/Workout/SanitizedDistance.cs" }), "la regla del salto, en un solo lugar");
         }
 
+        // ------------------------------------------------------------------ It. 6a (06a-escena-lago/02-tech-design §2, §6.3)
+
+        // Toda regla de la escena es Core puro (Q-69, AC-SCN-01-14): Core/Scene (con Art y Geometry) y las líneas de tiempo y el
+        // contraste de Core/Design, sin reloj del sistema, cronómetro, timers ni Unity. El tiempo llega por SceneTickInputs.
+        [Test, Category("AC-SCN-01-14"), Category("AC-APP-19-03")]
+        public void NoSystemClockInTheSceneCore()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\bDateTime(Offset)?\s*\.\s*(Now|UtcNow|Today)\b"),
+                new Regex(@"\bStopwatch\b"),
+                new Regex(@"\bEnvironment\s*\.\s*TickCount(64)?\b"),
+                new Regex(@"\bTimeProvider\b"),
+                new Regex(@"\bTask\s*\.\s*Delay\s*\("),
+                new Regex(@"\bnew\s+Timer\s*\("),
+                new Regex(@"\bThread\s*\.\s*Sleep\s*\("),
+                new Regex(@"\bUnityEngine\b"),
+            };
+            var files = new List<string>(SourceScan.CsFiles("Core/Scene"));
+            Assert.That(files.Count, Is.GreaterThan(40), "el escaneo encontró Core/Scene");
+            files.Add(RepoPaths.Combine("Assets/RowMate/Core/Design/SceneTimelines.cs"));
+            files.Add(RepoPaths.Combine("Assets/RowMate/Core/Design/HudContrast.cs"));
+            var offenders = new List<string>();
+            foreach (var file in files)
+            {
+                Assert.That(File.Exists(file), Is.True, file);
+                offenders.AddRange(SourceScan.Matches(file, patterns, true));
+            }
+
+            Assert.That(offenders, Is.Empty, "reloj del sistema o Unity en el Core de la escena:\n" + string.Join("\n", offenders));
+        }
+
+        // AC-SCN-02-08: una sola cámara y sin entrada de usuario. Ninguna clase de la escena (Core/Scene y la escena de Unity,
+        // Scene/) nombra la entrada: Input, el Input System, Pointer*, Keyboard, Mouse ni Touch.
+        [Test, Category("AC-SCN-02-08")]
+        public void TheSceneHasNoUserInput()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\bInput\s*\."),
+                new Regex(@"\bUnityEngine\s*\.\s*InputSystem\b"),
+                new Regex(@"\bInputSystem\b"),
+                new Regex(@"\bPointer[A-Z]\w*"),
+                new Regex(@"\b(Keyboard|Mouse|Touchscreen|Touch|Gamepad)\b"),
+                new Regex(@"\bIPointer\w*Handler\b"),
+                new Regex(@"\bOnMouse(Down|Up|Drag|Over)\b"),
+            };
+            Assert.That(patterns[0].IsMatch("var x = Input.GetAxis(\"a\");"), Is.True, "control positivo");
+            Assert.That(patterns[3].IsMatch("RegisterCallback<PointerDownEvent>(OnDown);"), Is.True, "control positivo");
+            Assert.That(patterns[0].IsMatch("in SceneTickInputs inputs"), Is.False, "las entradas de la escena no son entrada de usuario");
+            AssertNoMatches(new[] { "Core/Scene", "Scene" }, patterns, true, "entrada de usuario en la escena (AC-SCN-02-08)");
+        }
+
+        // AC-SCN-03-05, AC-WKT-13-14: la distancia de escena es propia de la escena. Fuera de Core/Scene y de la escena de Unity
+        // (Scene/), ningún código de producción nombra el estado, la sesión ni el cuadro de la escena (donde vive la distancia),
+        // así el motor, el HUD y los datos nunca la leen. El arnés (Snapshots), el Editor y las pruebas quedan afuera.
+        [Test, Category("AC-SCN-03-05"), Category("AC-WKT-13-14")]
+        public void TheSceneDistanceStaysInTheScene()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\b(SceneState|SceneSession|SceneFrame|ShaderDistance|ForceDistanceForTest)\b"),
+            };
+            var folders = new[] { "Core", "App", "Simulator", "Infrastructure", "Presentation", "Platform", "SimulatorPresentation", "Bootstrap" };
+            var offenders = new List<string>();
+            var scanned = 0;
+            foreach (var file in SourceScan.CsFiles(folders))
+            {
+                if (RepoPaths.Relative(file).StartsWith("Assets/RowMate/Core/Scene/", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                scanned++;
+                offenders.AddRange(SourceScan.Matches(file, patterns, true));
+            }
+
+            Assert.That(scanned, Is.GreaterThan(200), "el escaneo encontró el código de producción");
+            Assert.That(offenders, Is.Empty, "la distancia de escena se lee fuera de la escena:\n" + string.Join("\n", offenders));
+            var engine = SourceScan.StripCommentsAndLiterals(File.ReadAllText(RepoPaths.Combine("Assets/RowMate/Core/Workout/WorkoutEngine.cs")));
+            Assert.That(engine, Does.Not.Contain("RowMate.Core.Scene"), "el motor no conoce la escena");
+        }
+
+        // QA-G6aT-05: en el Editor nunca se asigna un asset de URP a la configuración del proyecto ni se cambia la compilación
+        // asíncrona de la configuración del Editor. Solo Editor/Bootstrap/UrpProvisioner.cs asigna QualitySettings.renderPipeline y
+        // GraphicsSettings.defaultRenderPipeline (el bootstrapper); nadie usa EditorSettings.asyncShaderCompilation (las pruebas y
+        // el arnés usan ShaderUtil.allowAsyncCompilation, que no se guarda).
+        [Test, Category("AC-APP-19-03")]
+        public void OnlyTheProvisionerAssignsTheRenderPipeline()
+        {
+            var assign = new[]
+            {
+                new Regex(@"\bQualitySettings\s*\.\s*renderPipeline\s*=(?!=)"),
+                new Regex(@"\bGraphicsSettings\s*\.\s*defaultRenderPipeline\s*=(?!=)"),
+                new Regex(@"\bGraphicsSettings\s*\.\s*renderPipelineAsset\s*=(?!=)"),
+            };
+            var asyncSetting = new[] { new Regex(@"\bEditorSettings\s*\.\s*asyncShaderCompilation\b") };
+            const string Provisioner = "Assets/RowMate/Editor/Bootstrap/UrpProvisioner.cs";
+            var offenders = new List<string>();
+            var provisionerAssigns = 0;
+            foreach (var file in SourceScan.CsFiles(""))
+            {
+                var matches = new List<string>(SourceScan.Matches(file, assign, true));
+                if (RepoPaths.Relative(file) == Provisioner)
+                {
+                    provisionerAssigns = matches.Count;
+                }
+                else
+                {
+                    offenders.AddRange(matches);
+                }
+
+                offenders.AddRange(SourceScan.Matches(file, asyncSetting, true));
+            }
+
+            Assert.That(provisionerAssigns, Is.GreaterThanOrEqualTo(2), "el escaneo encontró las asignaciones del bootstrapper");
+            Assert.That(assign[0].IsMatch("if (QualitySettings.renderPipeline == x)"), Is.False, "una comparación no es una asignación");
+            Assert.That(offenders, Is.Empty, "un asset de URP asignado fuera del bootstrapper o la compilación asíncrona del Editor:\n"
+                + string.Join("\n", offenders));
+        }
+
+        // QA-G6aT-14: los controles de prueba internal de Core (SceneSession.ForceDistanceForTest, FreezeSceneTimeForTest,
+        // ForceHourForTest, BreathingOffForTest; SceneState.ForceForTest) solo se llaman, en la escena de Unity (Scene/), desde
+        // miembros internal *ForTest propios: así ningún camino de producción los alcanza (Core/AssemblyInfo.cs da los internos a
+        // RowMate.Scene por eso).
+        [Test, Category("AC-SCN-01-14"), Category("AC-APP-19-03")]
+        public void SceneCallsCoreTestControlsOnlyFromItsOwnTestControls()
+        {
+            var controls = CoreTestControls();
+            Assert.That(controls, Is.SupersetOf(new[] { "ForceDistanceForTest", "FreezeSceneTimeForTest", "ForceHourForTest", "BreathingOffForTest" }));
+            var offenders = new List<string>();
+            foreach (var file in SourceScan.CsFiles("Scene"))
+            {
+                offenders.AddRange(TestControlOffenders(RepoPaths.Relative(file), File.ReadAllText(file), controls));
+            }
+
+            Assert.That(offenders, Is.Empty, "controles de prueba de Core llamados fuera de un control internal *ForTest:\n" + string.Join("\n", offenders));
+        }
+
+        [Test, Category("AC-APP-19-03")]
+        public void TheTestControlRuleFindsAViolation()
+        {
+            // Control positivo de la regla anterior: un control llamado desde Tick (público) se detecta; desde un internal *ForTest,
+            // no; un comentario no cuenta.
+            var controls = new HashSet<string>(StringComparer.Ordinal) { "ForceHourForTest" };
+            var sample = "namespace X\n{\n    public sealed class Host\n    {\n        private SceneSession _s;\n"
+                + "        public void Tick()\n        {\n            _s.ForceHourForTest(12);\n        }\n\n"
+                + "        internal void ForceHourForTest(double? hour)\n        {\n            _s?.ForceHourForTest(hour);\n        }\n\n"
+                + "        private void Other()\n        {\n            // _s.ForceHourForTest(3);\n        }\n    }\n}\n";
+            var offenders = TestControlOffenders("Host.cs", sample, controls);
+            Assert.That(offenders.Count, Is.EqualTo(1), string.Join("\n", offenders));
+            Assert.That(offenders[0], Does.StartWith("Host.cs:8:"));
+        }
+
+        // AC-SCN-23-03 (AC-BLE-16-11): la hora forzada de la escena no se guarda. Ninguna clave de preferencias (ni ningún otro
+        // literal del código de producción) nombra la hora de la escena.
+        [Test, Category("AC-BLE-16-11"), Category("AC-BLE-16-07")]
+        public void NoPreferenceKeyNamesTheSceneHour()
+        {
+            // Una clave es un literal sin espacios (un texto de la UI como "Hora escena" no lo es).
+            var key = new Regex(@"(?i)""[\w.\-]*(scene[._-]?hour|hour[._-]?override|forced[._-]?hour|hora[._-]?escena)[\w.\-]*""");
+            Assert.That(key.IsMatch("\"scene.hourOverride\""), Is.True, "control positivo");
+            Assert.That(key.IsMatch("\"simulator.sceneHour\""), Is.True, "control positivo");
+            Assert.That(key.IsMatch("\"immersive.lapsExpanded\""), Is.False);
+            Assert.That(key.IsMatch("\"Hora escena\""), Is.False, "el rótulo del panel no es una clave");
+            var folders = new[] { "Core", "App", "Simulator", "Infrastructure", "Presentation", "Platform", "SimulatorPresentation", "Bootstrap", "Scene" };
+            var offenders = new List<string>();
+            foreach (var file in SourceScan.CsFiles(folders))
+            {
+                var code = SourceScan.StripComments(File.ReadAllText(file));
+                foreach (Match match in key.Matches(code))
+                {
+                    offenders.Add(RepoPaths.Relative(file) + ":" + SourceScan.LineOf(code, match.Index) + ": " + match.Value);
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, "un literal (¿una clave de preferencias?) nombra la hora de la escena:\n" + string.Join("\n", offenders));
+        }
+
+        // Los nombres de los controles de prueba internal de Core: internal <tipo> <Nombre>ForTest(.
+        private static HashSet<string> CoreTestControls()
+        {
+            var declaration = new Regex(@"\binternal\s+[\w<>\[\]?,\s]+?\s+(\w+ForTest)\s*\(");
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var file in SourceScan.CsFiles("Core"))
+            {
+                foreach (Match match in declaration.Matches(SourceScan.StripCommentsAndLiterals(File.ReadAllText(file))))
+                {
+                    result.Add(match.Groups[1].Value);
+                }
+            }
+
+            return result;
+        }
+
+        // Cada llamada a un control de Core (x.Nombre( o x?.Nombre() tiene que estar adentro de un miembro internal cuyo nombre
+        // termina en ForTest: el miembro es la última declaración con modificador de acceso antes de la llamada.
+        private static List<string> TestControlOffenders(string file, string text, ISet<string> controls)
+        {
+            var code = SourceScan.StripCommentsAndLiterals(text.Replace("\r\n", "\n"));
+            var member = new Regex(@"^[ \t]*((?:public|internal|private|protected)(?:\s+(?:static|override|virtual|sealed|async|unsafe|new|readonly|extern|partial))*)\s+[\w<>\[\]?,.\s]+?\s+(\w+)\s*(\(|\{|=>)", RegexOptions.Multiline);
+            var members = member.Matches(code);
+            var call = new Regex(@"\??\.\s*(\w+ForTest)\s*\(");
+            var offenders = new List<string>();
+            foreach (Match match in call.Matches(code))
+            {
+                if (!controls.Contains(match.Groups[1].Value))
+                {
+                    continue;
+                }
+
+                Match? owner = null;
+                foreach (Match m in members)
+                {
+                    if (m.Index < match.Index)
+                    {
+                        owner = m;
+                    }
+                }
+
+                var ok = owner != null
+                    && Regex.IsMatch(owner.Groups[1].Value, @"\binternal\b")
+                    && owner.Groups[2].Value.EndsWith("ForTest", StringComparison.Ordinal);
+                if (!ok)
+                {
+                    offenders.Add(file + ":" + SourceScan.LineOf(code, match.Index) + ": " + match.Groups[1].Value + " en " + (owner == null ? "?" : owner.Groups[2].Value));
+                }
+            }
+
+            return offenders;
+        }
+
         private static void AssertNoMatches(string[] folders, Regex[] patterns, bool blankLiterals, string what)
         {
             var offenders = new List<string>();

@@ -76,6 +76,38 @@ namespace RowMate.Presentation.Motion
         // Después del primer Tick (el primer cuadro presentado): antes, nada se anima.
         public bool Armed { get; private set; }
 
+        // It. 6a (QA-V6a-REN-06): el usuario toca, arrastra o desplaza (la rueda). No es un IMotion, pero el tramo de la escena en reposo
+        // tiene que verlo como movimiento (SceneBridge): un desplazamiento de la lista de Workout no carga con una unidad del armado. Lo
+        // avisa la raíz del shell (ShellHost) con los eventos de puntero y de rueda; vale mientras haya un botón apretado y hasta
+        // UserInputHoldSeconds después del último evento (un PointerUp perdido se olvida a los UserInputStuckSeconds).
+        public const double UserInputHoldSeconds = 0.3;
+        public const double UserInputStuckSeconds = 5;
+        private double _lastUserInput = double.NegativeInfinity;
+        private bool _pointerDown;
+
+        public void NoteUserInput(bool? pressed = null)
+        {
+            _lastUserInput = _clock.MonotonicSeconds;
+            if (pressed.HasValue)
+            {
+                _pointerDown = pressed.Value;
+            }
+        }
+
+        public bool UserInputActive
+        {
+            get
+            {
+                var since = _clock.MonotonicSeconds - _lastUserInput;
+                if (_pointerDown && since > UserInputStuckSeconds)
+                {
+                    _pointerDown = false;
+                }
+
+                return _pointerDown || since < UserInputHoldSeconds;
+            }
+        }
+
         public int ActiveCount => _count;
 
         // Alguna animación con fin en curso (todas salvo latido y spinner).
@@ -93,6 +125,30 @@ namespace RowMate.Presentation.Motion
                 }
 
                 return false;
+            }
+        }
+
+        // It. 6a (SceneBridge, el tramo del armado de la escena; B6a-19): alguna finita que no se repite con cada lectura (la cascada, las
+        // transiciones, los diálogos, las fases de la 4b y la 5), sin contar los rodillos ni los destellos (IRecurringMotion) ni lo que espera
+        // un layout.
+        public bool HasFiniteNonRecurringMotions => FirstFiniteNonRecurring != null;
+
+        // La primera de esas (el diagnóstico [PERF] de la escena que se prepara: qué retiene el armado).
+        public IMotion? FirstFiniteNonRecurring
+        {
+            get
+            {
+                for (var i = 0; i < _count; i++)
+                {
+                    var item = _items[i];
+                    // Ni la que espera un layout que no llega (GrowMotion de un contenido oculto detrás del inmersivo: no mueve nada).
+                    if (item != null && item.IsFinite && !(item is IRecurringMotion) && !(item is ILayoutBoundMotion bound && bound.IsWaitingForLayout))
+                    {
+                        return item;
+                    }
+                }
+
+                return null;
             }
         }
 

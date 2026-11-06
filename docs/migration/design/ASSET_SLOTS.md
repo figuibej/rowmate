@@ -28,7 +28,7 @@ Coincide con la tabla de prerrequisitos del [ROADMAP](../ROADMAP.md) §0.
 | 1 | Fuentes Inter, Barlow Semi Condensed y JetBrains Mono (§3) | It. 2 | la UI usa la fuente por defecto de Unity |
 | 2 | Íconos: fuente Material Symbols Rounded, recortada a los glifos de la app (§4) | It. 2 | íconos provisorios dibujados por código (§4.4): mismo tamaño y color, nunca un cuadrado vacío |
 | 3 | Terrain Sample Asset Pack (§5.2) | It. 6a | texturas procedurales de terreno |
-| 4 | Mixamo **Y Bot** (§2; la lista definitiva se confirma en el diseño de la It. 6a, P-09) | antes de la It. 7 | maniquí procedural |
+| 4 | Mixamo **Y Bot** (§2; lista definitiva, confirmada en la It. 6a, P-09) | antes de la It. 7 | maniquí procedural |
 | 5 | Mixamo personaje realista (§2.3) | It. 7 o 14 | Y Bot con mono pintado |
 | 6 | Assets oficiales de Strava (§6) | It. 12 | botón propio con el color de Strava |
 | Opcional | CC0 y NASA (§7), con OK del usuario (D-ART-08, gate de la It. 6a) | It. 6a–8 | procedurales |
@@ -61,19 +61,20 @@ Leyenda de "Recomendado": **Proc.** = se queda con el procedural propio (es la m
 | `water.normalDetail` | 2 mapas de normal tileables 512² | **Generados en el Editor** por un script propio (suma de ondas + ruido fBm, *tileable*) | Proc. | propio |
 | `water.foam` | Textura de espuma 256² | Celdas de Voronoi + ruido, generada en el Editor | Proc. | propio |
 | `sky.profile` | Paleta legacy + derivados por hora | Datos (tabla de audit §7.3 y ART_BIBLE §6.3) | Proc. | propio |
-| `sky.clouds` | Capa de nubes 1 024×512 + 7 nubes héroe | Ruido fBm con *domain warp* horneado al iniciar | Proc. | propio |
-| `sky.moon` | Albedo de la luna 512² | Ruido de cráteres + "mares" oscuros | Opcional: NASA CGI Moon Kit (§7) | PD |
-| `sky.stars` | Campo de estrellas | Hash por dirección en el shader del cielo | Proc. | propio |
+| `sky.clouds` | Las 7 nubes del legacy (atlas 512 × 256 RG8: cuatro variantes con las cinco manchas del legacy, el borde comido por fBm y 2-3 sub-copos; R el cuerpo, G la sombra) + la capa lejana de cirros (1 024 × 512 R8, sin costura en el acimut; solo Alto) | `SkyTextures`, horneado por filas al precargar (It. 6a) | Proc. | propio |
+| `sky.moon` | Albedo de la luna 256² (mide de 8 a 16 dp de radio) | Cuatro "mares" claros (0,68 a 0,82 sobre tierras altas de 0,94: a esa escala, un disco claro con manchas) + cráteres por ruido; la fase y el hemisferio en el *shader* | Proc. (la de la NASA, solo con OK: §7) | propio |
+| `sky.stars` | Las 80 estrellas del legacy (`Random(42)`, en su píxel) + el fondo tenue (solo Alto) | Instancias (las 80) y un *hash* por celda de 3° en el cielo (el fondo) | Proc. | propio |
 
 ### 1.3 Terreno, vegetación y horizonte (It. 6a y 8)
 
 | Id | Qué es | Placeholder procedural | Recomendado | Licencia |
 |---|---|---|---|---|
-| `terrain.layer.grass` / `.sand` / `.soil` / `.pebbles` / `.rock` / `.snow` | Capas de terreno de orilla (albedo + normal + máscara) | Color por ruido + normal por ruido, triplanar | **Unity AS: Terrain Sample Asset Pack** (§5) | Unity Asset Store EULA |
-| `vegetation.grass` / `.fern` / `.bush` | Vegetación chica de orilla | Matas de tarjetas cruzadas con textura procedural | Unity AS: Terrain Sample Asset Pack | Unity Asset Store EULA |
+| `terrain.layer.grass` / `.sand` / `.soil` / `.pebbles` / `.rock` / `.snow` | Capas de terreno de orilla (albedo + normal + máscara); con el pack se copian al precargar a dos `Texture2DArray` (mismo tamaño, formato y *mips*; la que no valida vuelve al procedural con un `[SLOT]`) | Los colores de las zonas por ruido de cinta (canto rodado, franja húmeda, línea de contacto, pasto, suelo de bosque, roca por pendiente), 1 textura de ruido 256², ≤ 35 ALU | **Unity AS: Terrain Sample Asset Pack** (§5) | Unity Asset Store EULA |
+| `vegetation.grass` / `.fern` / `.bush` | Vegetación chica de orilla | Matas de hojas **opacas** (sin *alpha test*; It. 6a): pasto de 6 hojas, helechos de 5 frondas, arbustos de lóbulos; el fin del pasto por nivel (60 / 40 / 30 m) | Unity AS: Terrain Sample Asset Pack | Unity Asset Store EULA |
 | `vegetation.reeds` | Juncos (lago) | Hojas largas procedurales con viento | Proc. | propio |
+| `vegetation.canopyFar` (nuevo, It. 6a) | La copa lejana del bosque (izquierda, `\|x\|` > 45 o `z` > 120 m) | El terreno levantado hasta la envolvente menos 1 a 3 m de ruido, con oclusión en los valles, en la misma malla del terreno | Proc. | propio |
 | `vegetation.poplar` | Álamos de fondo (regata) | Columna de copas elipsoides + impostor | Proc. | propio |
-| `horizon.lake` | 2 cordilleras (lejana con nieve, cercana boscosa) | Malla de perfil del legacy (48 tramos) extruida en 3D con ruido y nieve por altura | Proc. | propio |
+| `horizon.lake` | 2 cordilleras (lejana con nieve, cercana boscosa) | Dos tiras de 260 columnas del perfil del legacy por acimut, como anillo de elevación (alto del legacy con tope de 9°), con la nieve sobre el 58 % y el *alpenglow*; sin profundidad, detrás de todo | Proc. | propio |
 | `horizon.river` | Skyline en bloques con ventanas nocturnas | Bloques procedurales con grilla de ventanas por shader (50 % encendidas fijas) | Proc. | propio |
 | `horizon.coast` | Acantilado lejano | Perfil legacy extruido | Proc. | propio |
 | `horizon.regatta` | Tribunas, torre, banderas y línea de árboles lejanas | Bloques procedurales | Proc. | propio |
@@ -84,7 +85,7 @@ Todos tienen **3 LOD + impostor**, apoyan en terreno o muro (nada flota) y respe
 
 | Id | Placeholder procedural (es el recomendado salvo que se indique) | Texturas sugeridas |
 |---|---|---|
-| `prop.pine` | Conífera de 3 a 6 pisos de "faldas" con ruido de borde, tronco cónico, 3 paletas de verde del legacy; LOD 1 200 / 400 / 120 tris / billboard | corteza procedural |
+| `prop.pine` | Conífera de 3 "faldas" de 9 a 12 lóbulos (3 a 5 más angostas en el bosque cercano), tronco cónico, 3 formas × 3 paletas de verde del legacy; LOD 1 200 / 400 / 120 tris (sin impostor en la 6a, DT6a-14) | corteza procedural |
 | `prop.cabin` | Chalet de madera con techo a dos aguas, alero, puerta, ventana emisiva de noche | madera procedural o CC0 |
 | `prop.pier` | Muelle de tablones con pilotes y bitas | madera |
 | `prop.building` | Fachada de 6 m, 3–6 pisos, cornisa, grilla de ventanas por shader (atlas), 3 tonos del legacy | ladrillo/piedra procedural o CC0 |
@@ -134,7 +135,16 @@ Todos tienen **3 LOD + impostor**, apoyan en terreno o muro (nada flota) y respe
 
 **Licencia:** los personajes y animaciones de Mixamo se pueden usar sin regalías en proyectos personales, comerciales y sin fines de lucro; no se pueden redistribuir como archivos sueltos ([preguntas frecuentes de Mixamo](https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html)). Por eso van a `Assets/ThirdParty/Mixamo/`, fuera del repositorio (§0).
 
-Esta es la lista preliminar. La definitiva (archivos exactos y nombres) la confirma el Designer en el diseño de la It. 6a (P-09, ROADMAP §6), para que el usuario descargue antes de la It. 7.
+**Esta es la lista definitiva** (P-09; confirmada en la It. 6a, [06a-escena-lago/04-design-notes §18](../iterations/06a-escena-lago/04-design-notes.md)). **No hace falta ninguna animación de Mixamo para remar**: la remada es IK procedural sobre el rig Humanoid (ANIMATION_BIBLE §0.3). De Mixamo se usa el personaje. Descargá antes de la It. 7:
+
+| # | Archivo (en `Assets/ThirdParty/Mixamo/`) | En Mixamo | ¿Obligatorio? |
+|---|---|---|---|
+| 1 | `YBot/YBot.fbx` | **Characters** → `Y Bot`, `FBX for Unity(.fbx)`, `T-pose` (§2.2) | **Sí**, antes de la 7 |
+| 2 | `XBot/XBot.fbx` | **Characters** → `X Bot`, los mismos ajustes (§2.2, punto 4) | Recomendado (prueba `RiggingFit` con otras proporciones) |
+| 3 | `RowerRealistic/RowerRealistic.fbx` | el primero que pase la lista de control de §2.3 (primero a revisar: `Kaya`), los mismos ajustes | Opcional (7 o 14) |
+| 4 | `YBot/YBot@SittingIdle.fbx` | **Animations** → `Sitting Idle` con Y Bot elegido, `Without Skin`, 30 fps, sin reducción (§2.4) | Opcional, solo de referencia (`rower.clip.idleRef`; nunca se reproduce) |
+
+En la 7, el slot `rower.character` acepta el 1 o el 3; si falta o no valida (Humanoid, dedos, alto de 1,55 a 2,05 m, ≤ 30 k triángulos), vuelve al maniquí procedural.
 
 ### 2.1 Cuenta
 
@@ -176,7 +186,7 @@ Alternativa opcional que requiere OK del usuario: generar un atleta con **MakeHu
    - **Skin:** `Without Skin`
    - **Frames per Second:** `30`
    - **Keyframe Reduction:** `none`
-3. Guardalo como `RowerRealistic@SittingIdle.fbx`.
+3. Guardalo como `YBot@SittingIdle.fbx` (en `Assets/ThirdParty/Mixamo/YBot/`; con el personaje realista, `RowerRealistic@SittingIdle.fbx` en su carpeta).
 
 ### 2.5 Importar en Unity (cada FBX de personaje)
 
@@ -207,7 +217,7 @@ Alternativa opcional que requiere OK del usuario: generar un atleta con **MakeHu
 
 ### 2.6 Importar el clip opcional
 
-Seleccioná `RowerRealistic@SittingIdle.fbx` → **Rig**: `Humanoid`, Avatar Definition **`Copy From Other Avatar`** → elegí el avatar del personaje → Apply. **Animation**: Loop Time ✓; Root Transform Rotation, Position (Y) y Position (XZ): **Bake Into Pose** ✓ con Based Upon `Original`. Asignalo a `rower.clip.idleRef`.
+Seleccioná `YBot@SittingIdle.fbx` (o `RowerRealistic@SittingIdle.fbx`) → **Rig**: `Humanoid`, Avatar Definition **`Copy From Other Avatar`** → elegí el avatar del personaje → Apply. **Animation**: Loop Time ✓; Root Transform Rotation, Position (Y) y Position (XZ): **Bake Into Pose** ✓ con Based Upon `Original`. Asignalo a `rower.clip.idleRef`.
 
 ---
 
@@ -425,6 +435,8 @@ Contenido: capas de terreno (pasto, arena, tierra, canto rodado, nieve, roca), 2
 | [Poly Haven](https://polyhaven.com/textures) | ídem (alternativa) | CC0 | descargar 1K → mismo destino |
 | [NASA SVS — CGI Moon Kit](https://svs.gsfc.nasa.gov/4720) | mapa de color de la luna real | dominio público (crédito "NASA's Scientific Visualization Studio") | descargar el mapa de color más chico (≥ 1K), reducir a 512 → `sky.moon` |
 
+**Recomendación de la It. 6a (D-ART-08): no, por defecto** ([06a-escena-lago/04-design-notes §19](../iterations/06a-escena-lago/04-design-notes.md)). En el lago la cercanía la mejora más el Terrain Sample Asset Pack que el CC0, la luna mide de 8 a 16 dp de radio y la procedural alcanza a ese tamaño, y sumar fuentes suma pasos y créditos. Se vuelve a ofrecer en el gate de la It. 8 (las fachadas del río y los clubes); si el usuario dice que sí, entra por `MaterialSlot` y `TextureSlot` sin tocar lógica, en `Assets/ThirdParty/CC0/`.
+
 Prohibido: assets pagos, licencias "no comercial" (CC BY-NC), modelos extraídos de juegos, cualquier cosa sin licencia explícita.
 
 ---
@@ -503,3 +515,17 @@ Cifras tabulares y kerning del HUD (WP-D0). Fuente: [04a-motor-hud-funcional/00-
 | §3, punto 7 | La derivada integrada con su receta reproducible (`tools/fonts/freeze_tnum.py`, fontTools 4.68.0 sin red). Sale la rama "si Barlow no trae `tnum`": la trae. El derivado de Inter para listas y ejes queda para la It. 9, si hace falta |
 
 Verificado al generarla: las diez cifras de cada derivada en `zero.tf` … `nine.tf` con un solo avance (507, 521 y 535 unidades); las tablas de la derivada idénticas a las de la receta verificada en 00-deuda-diseno salvo la fecha de `head` (ahora la de Barlow, para que dos corridas den los mismos bytes); las listas K2 con 1 445, 1 695, 1 695, 1 695 y 1 272 pares (juego de 116 caracteres, 115 con glifo) y los 2 882 pares que ya tenían las tablas de TextCore, con el mismo valor (0 diferencias).
+
+---
+
+## Cambios de la It. 6a
+
+La escena del lago con todo procedural (WP-D2). Fuente: [06a-escena-lago/04-design-notes §5, §7, §18, §19 y "Cambios por implementación de WP-D2"](../iterations/06a-escena-lago/04-design-notes.md) y [02-tech-design §3.7](../iterations/06a-escena-lago/02-tech-design.md), 2026-11-03. Cada `.asset` de `Assets/RowMate/Slots/` lleva la fuente `Procedural` asignada y **no avisa** (QA-G6aT-04); `[SLOT]` solo sale con un asset asignado que falta o no valida. Sin el Terrain Sample Asset Pack la demo se ve completa (§8); los *prefabs* de vegetación del pack todavía no se leen (la vegetación con *prefabs* es de la It. 8): de los slots con fuente Asset, solo las capas del terreno usan el asset de terceros.
+
+| Dónde | Qué cambió |
+|---|---|
+| §1.2 | `sky.clouds`: el atlas de las 7 nubes del legacy (cuatro variantes con sus manchas) y la capa lejana de cirros (solo Alto); `sky.moon`: 256², con los mares claros que se leen a 8-16 dp de radio; `sky.stars`: las 80 del legacy y el fondo tenue (solo Alto) |
+| §1.3 | Las capas del pack en dos `Texture2DArray` con su validación (DN6a-15); la vegetación chica, opaca y sin *alpha test*; **`vegetation.canopyFar`** (nuevo: la copa lejana en la malla del terreno); `horizon.lake` como dos tiras de 260 columnas con el alto del legacy y la nieve sobre el 58 % |
+| §1.4 | `prop.pine` sin impostor en la 6a (LOD2 de 120 triángulos hasta 400 m; DT6a-14) |
+| §2 | **La lista definitiva de Mixamo** para la It. 7 (P-09): Y Bot obligatorio, X Bot recomendado, el personaje realista y el clip `Sitting Idle` opcionales; ninguna animación para remar. Reemplaza a la "preliminar" |
+| §7 | La recomendación de D-ART-08: no por defecto; se vuelve a ofrecer en el gate de la It. 8 |

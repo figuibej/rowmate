@@ -43,12 +43,25 @@ namespace RowMate.Bootstrap
 
             var pacing = new FramePacingPolicy();
             var motion = new MotionDriver(options.Clock, pacing, new MotionSettings(), app.Logger);
+            // It. 6a (QA-V6a-REN-06): el toque, el arrastre y la rueda, para el tramo de la escena en reposo (MotionDriver.UserInputActive).
+            root.RegisterCallback<PointerDownEvent>(_ => motion.NoteUserInput(true), TrickleDown.TrickleDown);
+            root.RegisterCallback<PointerUpEvent>(_ => motion.NoteUserInput(false), TrickleDown.TrickleDown);
+            root.RegisterCallback<PointerCancelEvent>(_ => motion.NoteUserInput(false), TrickleDown.TrickleDown);
+            root.RegisterCallback<PointerMoveEvent>(evt =>
+            {
+                if (evt.pressedButtons != 0)
+                {
+                    motion.NoteUserInput();
+                }
+            }, TrickleDown.TrickleDown);
+            root.RegisterCallback<WheelEvent>(_ => motion.NoteUserInput(), TrickleDown.TrickleDown);
             var fade = VerticalFadeTexture.Create();
             var ui = new UiContext(app, motion, fade, options.Display, options.IsDesktop, options.Clipboard, options.Keyboard)
             {
                 GammaPanel = options.Pipeline == UiColorPipeline.GammaRt,
                 BoatZoneOutline = options.BoatZoneOutline,
-                ReserveWrench = options.TopLayer != null
+                ReserveWrench = options.TopLayer != null,
+                Scene = options.Scene
             };
             var shell = new AppShellView(ui, options.TopLayer);
             root.Add(shell);

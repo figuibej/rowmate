@@ -18,7 +18,7 @@ namespace RowMate.Snapshots
     // conjunto por defecto; it3 e it2 siguen igual. SeedDatabase (otro -executeMethod, con -quit) escribe la base sintética de CAP-27
     // (-snapshotSeedDb <carpeta>/cap27.db -seed Cap27) para tools/unity/capture-cap27.ps1.
     // SIN -quit: Run() registra la máquina de estados en EditorApplication.update y vuelve; al terminar sale con
-    // EditorApplication.Exit (0 bien, 1 alguna toma falló, 3 venció el tope de 30 min). En batchmode sin -quit el Editor sigue
+    // EditorApplication.Exit (0 bien, 1 alguna toma falló, 3 venció el tope de 45 min). En batchmode sin -quit el Editor sigue
     // vivo y update corre (S-0). Casi todas las tomas necesitan ROWMATE_SIMULATOR (tools/unity/capture-snapshots.ps1 lo pone y
     // lo saca); sin el define solo hay CAP-22 y CAP-23, y lo avisa.
     public static class SnapshotCli
@@ -32,7 +32,9 @@ namespace RowMate.Snapshots
 
         // It. 5 (05-series-parciales/02-tech-design §5): los paneles de series (SeriesCatalog), el conjunto por defecto desde la 5.
         public const string It5Output = "docs/migration/iterations/05-series-parciales/snapshots";
-        public const string DefaultSet = "it5";
+        // It. 6a (06a-escena-lago/02-tech-design §5): la escena del lago (SceneCatalog), el conjunto por defecto desde la 6a.
+        public const string It6aOutput = "docs/migration/iterations/06a-escena-lago/snapshots";
+        public const string DefaultSet = "it6a";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
@@ -52,7 +54,12 @@ namespace RowMate.Snapshots
                 return It4aOutput;
             }
 
-            return string.Equals(set, "it4b", StringComparison.OrdinalIgnoreCase) ? It4bOutput : It5Output;
+            if (string.Equals(set, "it4b", StringComparison.OrdinalIgnoreCase))
+            {
+                return It4bOutput;
+            }
+
+            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? It5Output : It6aOutput;
         }
 
         public static void Run()
@@ -96,9 +103,9 @@ namespace RowMate.Snapshots
             // con esas claves en verdadero AL LADO de la base pedida (la misma carpeta temporal de ROWMATE_DATA_DIR; nunca la del usuario):
             // la medida de la entrada con los dos paneles desde la cascada (AC-WKT-13-15).
             var prefs = Value(args, "-prefs");
-            if (file == null || file.Length == 0 || (seedName != "Cap27" && seedName != "F4A" && seedName != "F5"))
+            if (file == null || file.Length == 0 || (seedName != "Cap27" && seedName != "F4A" && seedName != "F4B" && seedName != "F5"))
             {
-                Debug.LogError("[SNAPSHOT] SeedDatabase: falta -snapshotSeedDb <archivo> (y solo existen -seed Cap27, -seed F4A y -seed F5)");
+                Debug.LogError("[SNAPSHOT] SeedDatabase: falta -snapshotSeedDb <archivo> (y solo existen -seed Cap27, -seed F4A, -seed F4B y -seed F5)");
                 EditorApplication.Exit(2);
                 return;
             }
@@ -112,6 +119,11 @@ namespace RowMate.Snapshots
                 else if (seedName == "F5")
                 {
                     RoutineSeeds.WriteFile(file, RoutineSeeds.F5);
+                }
+                else if (seedName == "F4B")
+                {
+                    // It. 6a, ronda 1 (QA-V6a-13): Serie larga (y las demás de la 4b) para -rowmate-perf-long-series en el build.
+                    RoutineSeeds.WriteFile(file, RoutineSeeds.F4B);
                 }
                 else
                 {
@@ -201,7 +213,17 @@ namespace RowMate.Snapshots
 #endif
             var scenarios = Select(set, filter);
             var folder = Path.GetFullPath(output);
-            new SnapshotRunner(scenarios, folder, pipeline, !string.IsNullOrWhiteSpace(filter), exit, SnapshotCatalog.TitleFor(set)).Start();
+            // It. 6a (§5.1; QA-G6aT-12): la compilación de shaders sincrónica durante TODA la corrida (el primer dibujo de cada toma sale
+            // con los shaders de verdad y no con el de "compilando"). ShaderUtil.allowAsyncCompilation no se guarda en ProjectSettings
+            // (EditorSettings.asyncShaderCompilation, que sí se guarda, no se toca); vuelve a su valor al salir.
+            var asyncBefore = ShaderUtil.allowAsyncCompilation;
+            ShaderUtil.allowAsyncCompilation = false;
+            Action<int> done = code =>
+            {
+                ShaderUtil.allowAsyncCompilation = asyncBefore;
+                exit(code);
+            };
+            new SnapshotRunner(scenarios, folder, pipeline, !string.IsNullOrWhiteSpace(filter), done, SnapshotCatalog.TitleFor(set)).Start();
         }
 
         private static string? Value(string[] args, string name)

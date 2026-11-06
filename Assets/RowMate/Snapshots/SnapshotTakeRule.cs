@@ -117,6 +117,32 @@ namespace RowMate.Snapshots
             return blockers;
         }
 
+        // It. 6a (06a-escena-lago/02-tech-design §5.1): con la escena real abierta, la toma no se hace con la escena preparándose (salvo
+        // la toma que lo pide: la escena demorada) ni con la orilla a medio armar. Lo que pasa va a inFlight para el manifest.
+        public static List<string> SceneBlockers(UiTestHost host, bool mayBeLoading, List<string> inFlight)
+        {
+            var blockers = new List<string>();
+            var scene = host.Scene;
+            if (scene == null || !scene.IsOpen)
+            {
+                return blockers;
+            }
+
+            var pending = !scene.IsStreamingIdle;
+            inFlight.Add("escena: " + scene.Readiness.Value + (pending ? ", orilla a medio armar" : "") + ", dibujos " + scene.Draws.ToString(CultureInfo.InvariantCulture));
+            if (!mayBeLoading && scene.Readiness.Value != RowMate.Scene.SceneReadiness.Ready)
+            {
+                blockers.Add("la escena no está lista (" + scene.Readiness.Value + ")");
+            }
+
+            if (!mayBeLoading && pending)
+            {
+                blockers.Add("la orilla de la escena a medio armar");
+            }
+
+            return blockers;
+        }
+
         private static string Describe(IMotion motion)
         {
             var name = motion.GetType().Name;

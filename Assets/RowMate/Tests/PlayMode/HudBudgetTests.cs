@@ -113,6 +113,177 @@ namespace RowMate.Tests.PlayMode
             Assert.That(worstApply + worstDraw, Is.LessThanOrEqualTo(16), "el trabajo del HUD: aplicar " + worstApply.ToString("0.00") + " ms, la fila " + worstDraw.ToString("0.00") + " ms");
         }
 
+        // QA-V6a-R2-01 (06a-escena-lago/02-tech-design, "Cambios por verificación (ronda 2)"; AC-WKT-14-19, AC-WKT-17-06): las
+        // asignaciones EN CUADROS REALES en la franja de LongSeriesStaysSmooth (26,2 a 31,5 s de Serie larga, remando, sin pausa): el
+        // halo de los últimos 5 s, el latido de la cuenta del paso, la cuenta grande con su aro, el cambio de paso a los 30 s y el halo
+        // que se apaga. Se mide TODO lo del cuadro menos el reloj de prueba: el C# del cuadro (el MotionDriver con el HUD), cada
+        // generateVisualContent del inmersivo (FrameAllocations.WatchTree, con la cuenta por elemento) y lo que UI Toolkit hace por el
+        // panel (PanelStep: el recálculo de estilos, el layout, los eventos de geometría y las páginas de mallas de UIR, que es donde
+        // el Profiler del build vio las asignaciones de cada cuadro). El reloj de prueba (las lecturas del remo y el segundo del motor
+        // con su Apply: lo que se arma a 1 Hz, que §20.2 permite) va aparte, con su tope.
+        // Lo que se afirma es lo de QA-V6a-R2-01: NINGUNA asignación continua. Antes de la corrección, 242 de 318 cuadros asignaban
+        // (cada cuadro de los últimos 5 s). Quedan los cuadros de los eventos: el cambio de paso (≈ 0,2 s seguidos), la primera vez de
+        // la cuenta grande y alguna página nueva de UIR cuando la fila se repinta por su relleno o por una lectura (de a un cuadro).
+        // El control positivo (un elemento del árbol que asigna en su dibujo y en su evento de geometría en CADA cuadro) se ve en la
+        // misma medida y rompe los mismos topes.
+        public const int LongSeriesMaxFramesWithAllocations = 32;
+        public const int LongSeriesMaxRun = 14;
+
+        [UnityTest, Category("AC-WKT-14-19"), Category("AC-WKT-17-06")]
+        public IEnumerator LongSeriesNoAllocationsPerFrame()
+        {
+            CreateWorkout(RoutineSeeds.F4B);
+            yield return StartRoutine("Serie larga");
+            yield return AdvanceTo(25.7);
+
+            var allocating = new AllocatingElement { name = "control-positivo" };
+            Immersive.Root.Add(allocating);
+            yield return null;
+            var positiveStats = new WindowStats();
+            using (var positive = FrameAllocations.WatchTree(Immersive.Root))
+            {
+                yield return MeasureWindow(positive, positiveStats, SessionStart + 26.2, i =>
+                {
+                    allocating.MarkDirtyRepaint();
+                    allocating.Resize(i);
+                });
+                positive.Stop();
+                Debug.Log("[HBT] control positivo de Serie larga: " + positive + "; " + positiveStats);
+                Assert.That(positive.DrawsOf("control-positivo"), Is.GreaterThanOrEqualTo(positiveStats.Frames), "el control se dibujó en cada cuadro: " + positive);
+                Assert.That(positive.DrawAllocations, Is.GreaterThanOrEqualTo(positiveStats.Frames), "su dibujo asigna en cada cuadro: " + positive);
+                Assert.That(positive.PanelSteps, Is.EqualTo(positiveStats.Frames), "el panel se midió en cada cuadro: " + positive);
+                Assert.That(positive.PanelFramesWithAllocations, Is.EqualTo(positiveStats.Frames), "lo que asigna el panel en cada cuadro se ve: " + positive);
+                Assert.That(positiveStats.LongestRun, Is.GreaterThan(LongSeriesMaxRun), "el control positivo rompe el tope de cuadros seguidos: " + positiveStats);
+            }
+
+            allocating.RemoveFromHierarchy();
+            var row = Hud.Steps!.PillRow;
+            var countdown = Hud.Steps.Countdown;
+            var sawHalo = false;
+            var sawCount = false;
+            var sawChange = false;
+            var sawPulse = false;
+            var stats = new WindowStats();
+            using (var measured = FrameAllocations.WatchTree(Immersive.Root))
+            {
+                yield return MeasureWindow(measured, stats, SessionStart + 31.5, _ =>
+                {
+                    sawHalo |= row.HaloAlpha > 0.2;
+                    sawCount |= H.IsShown("hud-big-countdown");
+                    sawChange |= row.LookAt(1) == RowMate.Core.Workout.StepPillLook.Current;
+                    sawPulse |= Hud.Steps!.Pulse.Scale > 1.05 && countdown.DrawnColor != countdown.resolvedStyle.color;
+                });
+                measured.Stop();
+                Debug.Log("[HBT] Serie larga de 26,2 a 31,5 s: " + measured + "; " + stats);
+                Assert.That(sawHalo && sawCount && sawChange && sawPulse, Is.True, "pasó por el halo (" + sawHalo + "), la cuenta grande (" + sawCount
+                    + "), el cambio de paso (" + sawChange + ") y el latido de la cuenta del paso (" + sawPulse + ")");
+                Assert.That(measured.DrawsOf("hud-big-countdown"), Is.GreaterThan(60), "la cuenta grande se repintó: " + measured);
+                Assert.That(measured.DrawsOf("hud-countdown"), Is.GreaterThan(60), "la cuenta del paso se repintó (su latido va en el dibujo): " + measured);
+                Assert.That(row.HaloDrawCount, Is.GreaterThan(60), "el halo (en la barra) se repintó: " + row.HaloDrawCount);
+                Assert.That(measured.PanelSteps, Is.EqualTo(stats.Frames), "el panel se midió en cada cuadro: " + measured);
+                Assert.That(stats.Frames, Is.GreaterThan(300));
+                Assert.That(stats.FramesWithAllocations, Is.LessThanOrEqualTo(LongSeriesMaxFramesWithAllocations), "sin asignaciones continuas: " + stats + "; " + measured);
+                Assert.That(stats.LongestRun, Is.LessThanOrEqualTo(LongSeriesMaxRun), "ningún tramo de cuadros seguidos más largo que el cambio de paso: " + stats);
+                Assert.That(stats.SteadyFramesWithAllocations, Is.LessThanOrEqualTo(2), "de 28,25 a 29,65 s (el halo, el latido y la cuenta grande, sin eventos del reloj): " + stats);
+                // Lo de 1 Hz (el segundo del motor con su Apply y las lecturas del remo): a lo sumo unos pocos cuadros por segundo.
+                Assert.That(measured.ClockFramesWithAllocations, Is.LessThanOrEqualTo(4 * 6), "el reloj asigna solo a 1 Hz: " + measured);
+            }
+        }
+
+        // Los cuadros de una ventana: cuántos asignaron (en el paso, en un dibujo o en el panel), el tramo seguido más largo, cuáles
+        // (en segundos de la sesión) y los que asignaron en el tramo quieto sin eventos del reloj.
+        private sealed class WindowStats
+        {
+            public int Frames;
+            public int FramesWithAllocations;
+            public int LongestRun;
+            public int SteadyFramesWithAllocations;
+            public readonly System.Text.StringBuilder Times = new System.Text.StringBuilder();
+            private int _run;
+
+            public void Add(double second, int allocations, bool clockEvent)
+            {
+                Frames++;
+                if (allocations <= 0)
+                {
+                    _run = 0;
+                    return;
+                }
+
+                FramesWithAllocations++;
+                _run++;
+                LongestRun = Math.Max(LongestRun, _run);
+                if (second >= 28.25 && second <= 29.65 && !clockEvent)
+                {
+                    SteadyFramesWithAllocations++;
+                }
+
+                Times.Append(second.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)).Append(" (").Append(allocations).Append(clockEvent ? ", con el reloj" : "").Append(") ");
+            }
+
+            public override string ToString()
+            {
+                return Frames + " cuadros, " + FramesWithAllocations + " con asignaciones (tramo seguido más largo " + LongestRun + ", en el tramo quieto "
+                       + SteadyFramesWithAllocations + "): " + Times;
+            }
+        }
+
+        private IEnumerator MeasureWindow(FrameAllocations measured, WindowStats stats, double until, Action<int> beforeFrame)
+        {
+            var dt = TimeSpan.FromTicks((long)Math.Round(UiTestHost.FrameSeconds * TimeSpan.TicksPerSecond));
+            Action advance = () => H.Scheduler.Advance(dt);
+            Action tick = H.Handle.Tick;
+            var i = 0;
+            while (H.Scheduler.MonotonicSeconds < until - 1e-9)
+            {
+                beforeFrame(i);
+                var before = measured.Total;
+                var clockBefore = measured.ClockAllocations;
+                measured.Clock(advance);
+                measured.Step(tick);
+                measured.PanelStep();
+                yield return null;
+                measured.Sample();
+                // Lo que el panel no rehízo en PanelStep (lo de después del cuadro: los dibujos del cuadro real) cuenta en este cuadro.
+                stats.Add(H.Scheduler.MonotonicSeconds - SessionStart, measured.Total - before, measured.ClockAllocations > clockBefore);
+                i++;
+            }
+        }
+
+        private sealed class AllocatingElement : VisualElement
+        {
+            public byte[]? Last;
+            public byte[]? Geometry;
+
+            public void Resize(int frame)
+            {
+                style.height = frame % 2 == 0 ? 4 : 5;
+            }
+
+            public AllocatingElement()
+            {
+                pickingMode = PickingMode.Ignore;
+                style.position = Position.Absolute;
+                style.width = 4;
+                // El control del panel: un cambio de tamaño por cuadro (Resize) y un byte[64] en su GeometryChangedEvent, que UI Toolkit
+                // despacha en el Update del panel (adentro de PanelStep).
+                RegisterCallback<GeometryChangedEvent>(_ => Geometry = new byte[64]);
+                style.height = 4;
+                generateVisualContent += context =>
+                {
+                    Last = new byte[64];
+                    var painter = context.painter2D;
+                    painter.fillColor = Color.gray;
+                    painter.BeginPath();
+                    painter.MoveTo(new Vector2(0, 0));
+                    painter.LineTo(new Vector2(4, 0));
+                    painter.LineTo(new Vector2(4, 4));
+                    painter.ClosePath();
+                    painter.Fill();
+                };
+            }
+        }
+
         // §3.13 (QA-G4bT-11 (c); QA-V4b-05): 0 B por cuadro (el Recorder de GC.Alloc) con 200 píldoras y el halo que late, y con la
         // fila sola de 1998 pasos (el tope del editor, una HudPillRow armada a mano con el pulgar en el medio y el halo, sin correr el
         // motor 1998 pasos): la tira por columnas de píxel cuesta lo mismo que con 200 (DT4b-21). En pausa y sin lecturas nada cambia
@@ -295,6 +466,26 @@ namespace RowMate.Tests.PlayMode
             H.PressEnter();
             yield return MeasureSeries("el anillo de foco", 30);
             Assert.That(Hud.Series!.Laps.HasFocusRing, Is.True, "con el anillo");
+            // La capa de hover (REPORT de la 5 §7.1; 06a-escena-lago/00-deuda-5 §3): no había entrado en la medida porque el puntero
+            // de prueba no la prendía. El puntero entra en parciales (sube en 90 ms) y sale (baja en 160 ms) en la misma ventana.
+            yield return Settle();
+            var hoverPeak = 0.0;
+            var lapsName = Hud.Series!.Laps.name;
+            yield return MeasureSeries("la capa de hover", 30, i =>
+            {
+                if (i == 0)
+                {
+                    H.PointerEnter(lapsName);
+                }
+                else if (i == 12)
+                {
+                    H.PointerLeave(lapsName);
+                }
+
+                hoverPeak = Math.Max(hoverPeak, Hud.Series!.Laps.Visual.HoverAlpha);
+            });
+            Assert.That(hoverPeak, Is.EqualTo(RowMate.Core.Design.MotionSpecs.SeriesHoverAlpha).Within(1e-6), "el hover llegó a su alfa");
+            Assert.That(Hud.Series!.Laps.Visual.HoverAlpha, Is.EqualTo(0).Within(1e-6), "y se apagó");
 
             // La rueda de las filas en W1280 (S-LARGO: 4 vueltas y 3 repeticiones).
             CreateWorkout(RoutineSeeds.F5, o =>
@@ -334,12 +525,14 @@ namespace RowMate.Tests.PlayMode
 
         private const int FramesPerScene = 30;
 
-        private IEnumerator MeasureSeries(string label, int frames = FramesPerScene)
+        private IEnumerator MeasureSeries(string label, int frames = FramesPerScene, Action<int>? beforeFrame = null)
         {
             var measured = FrameAllocations.Watch(Hud.Series!.Laps, Hud.Series.Reps);
             var dt = TimeSpan.FromTicks((long)Math.Round(UiTestHost.FrameSeconds * TimeSpan.TicksPerSecond));
             for (var i = 0; i < frames; i++)
             {
+                // Lo que la escena hace antes del cuadro (el puntero de prueba de la capa de hover), fuera de la medida, como el reloj.
+                beforeFrame?.Invoke(i);
                 // El reloj de prueba (las lecturas del remo y el segundo del motor, con su Apply: lo que se arma a 1 Hz, que §20.2 permite)
                 // fuera de la medida; adentro, el cuadro de la UI (el MotionDriver con las motions de los paneles y sus callbacks) y el
                 // repintado de los paneles. La sonda de WP-B1 vio que lo único que asignaba en una ventana era la lectura del remo.

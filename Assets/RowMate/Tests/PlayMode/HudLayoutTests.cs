@@ -578,6 +578,14 @@ namespace RowMate.Tests.PlayMode
             Assert.That(Hud.Steps!.Seal.IsShowing, Is.True, "el sello");
             H.Resize(DeviceProfile.TV);
             yield return Frames(3);
+            // It. 6a (DT6a-06): al cambiar de clase de ventana el reacomodo es en el acto y las piezas del HUD (la barra con el sello)
+            // entran con su fundido de 200 ms en el layout nuevo: se mira al terminar el fundido, con el sello todavía a la vista.
+            for (var i = 0; i * UiTestHost.FrameSeconds * 1000 < MotionSpecs.HudReflowMs + UiTestHost.FrameSeconds * 1000; i++)
+            {
+                H.Step();
+                yield return null;
+            }
+
             Assert.That(H.Immersive, Is.SameAs(page), "sello en TV: el mismo inmersivo");
             Assert.That(Hud.Steps!.Seal.IsShowing && Inside("hud-seal-title"), Is.True, "sello en TV: a la vista, en la ventana");
             Assert.That(H.Root.Query<VisualElement>("hud-seal-title").ToList().Count, Is.EqualTo(1), "sello en TV: uno solo");

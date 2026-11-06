@@ -71,6 +71,50 @@ namespace RowMate.Tests.EditMode.Project
             }
         }
 
+        // It. 6a (06a-escena-lago/02-tech-design §6.2): los seis vectores de la escena los escribe el oráculo de Flutter
+        // (run-oracle.ps1 -Scene) con el mismo legacy que el resto, y cada uno pesa ≤ 1 MiB.
+        private static readonly string[] SceneFiles =
+        {
+            "scene_random.json", "scene_palette.json", "scene_light.json", "scene_sky.json", "scene_lake.json", "scene_water.json",
+        };
+
+        [Test, Category("AC-BASE-03"), Category("AC-SCN-01-14")]
+        public void SceneFilesPresentWithHeader()
+        {
+            var commit = GoldenVectors.Load("fmt.json").Header.LegacyCommit;
+            var missing = new List<string>();
+            foreach (var name in SceneFiles)
+            {
+                if (!File.Exists(RepoPaths.Golden(name)))
+                {
+                    missing.Add(name);
+                    continue;
+                }
+
+                Assert.That(new FileInfo(RepoPaths.Golden(name)).Length, Is.LessThanOrEqualTo(MaxBytes), name + " supera 1 MiB");
+                var file = GoldenVectors.Load(name);
+                Assert.That(file.Header.LegacyCommit, Is.EqualTo(commit), name + ": el mismo commit del legacy que el resto");
+                Assert.That(file.Header.Generator, Is.EqualTo("tools/oracle/engine/test/scene_vectors_test.dart"), name + ": generator");
+                Assert.That(File.Exists(RepoPaths.Combine(file.Header.Generator)), Is.True, name + ": no existe " + file.Header.Generator);
+                var sections = 0;
+                foreach (var section in file.Body.Properties)
+                {
+                    if (section.Key == "header")
+                    {
+                        continue;
+                    }
+
+                    sections++;
+                    Assert.That(GoldenTable.IsTable(section.Value), Is.True, name + "/" + section.Key + ": en formato de tabla");
+                    Assert.That(Entries(section.Value), Is.GreaterThan(0), name + "/" + section.Key + " no tiene casos");
+                }
+
+                Assert.That(sections, Is.GreaterThan(0), name + " no tiene secciones");
+            }
+
+            Assert.That(missing, Is.Empty, "faltan vectores de la escena (tools/oracle/run-oracle.ps1 -Scene): " + string.Join(", ", missing));
+        }
+
         [Test, Category("AC-BASE-03")]
         public void FilesWithinSizeCap()
         {

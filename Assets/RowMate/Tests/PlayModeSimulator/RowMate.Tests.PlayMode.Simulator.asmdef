@@ -7,9 +7,12 @@
         "RowMate.Core",
         "RowMate.App",
         "RowMate.Presentation",
+        "RowMate.Scene",
         "RowMate.Bootstrap",
         "RowMate.Simulator",
         "RowMate.Simulator.Presentation",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

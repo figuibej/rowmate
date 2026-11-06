@@ -4,6 +4,7 @@
 #
 #   tools/oracle/run-oracle.ps1 [-LegacyPath <ruta>] [-DartExe <ruta>] [-Only <nombre>[,...]] [-L10n]
 #   tools/oracle/run-oracle.ps1 -Engine [-LegacyPath <ruta>] [-FlutterExe <ruta>]
+#   tools/oracle/run-oracle.ps1 -Scene [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 #
 # Pasos: guardia R-02 (ningun script menciona el modulo de credenciales del legacy), guardia del legacy ANTES
 # (status --porcelain vacio, listado --ignored archivo por archivo e instantanea de metadatos sin abrir archivos),
@@ -17,12 +18,19 @@
 # tools/oracle/engine no puede mostrar nada fuera de pubspec.yaml y test/. Con -LegacyPath escribe
 # tools/oracle/engine/pubspec_overrides.yaml (ignorado por git); sin -LegacyPath lo borra si quedo de antes. Solo corre el
 # motor (los scripts de bin/, con -Only). -FlutterExe (o ROWMATE_FLUTTER) elige el flutter; si no, el del PATH.
+#
+# -Scene (It. 6a, 06a-escena-lago/02-tech-design Sec. 6.2): el oraculo de la escena, en el mismo proyecto engine/ y con los
+# mismos controles que -Engine (las lineas del .gitignore antes, pub get --offline, la guardia del legacy antes y despues y
+# nada sin ignorar en engine/ al terminar). Corre test/scene_vectors_test.dart (Assets/RowMate/Tests/Golden/oracle/scene_*.json)
+# y test/scene_legacy_images_test.dart (LEG-01 a LEG-07 en docs/migration/iterations/06a-escena-lago/snapshots/legacy), con
+# ROWMATE_ORACLE_OUT, ROWMATE_LEGACY_COMMIT y ROWMATE_LEG_OUT. -Engine y -Scene juntos corren las dos cosas.
 param(
     [string]$LegacyPath = "",
     [string]$DartExe = "",
     [string[]]$Only = @(),
     [switch]$L10n,
     [switch]$Engine,
+    [switch]$Scene,
     [string]$FlutterExe = ""
 )
 
@@ -31,7 +39,8 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $legacyGiven = $LegacyPath -ne ''
 if ($LegacyPath -eq '') { $LegacyPath = Join-Path $repo '..\rowmate-legacy' }
 $legacy = (Resolve-Path $LegacyPath).Path
-$runBin = (-not $Engine) -or ($Only.Count -gt 0)
+$flutterProject = $Engine -or $Scene
+$runBin = (-not $flutterProject) -or ($Only.Count -gt 0)
 $engineDir = Join-Path $PSScriptRoot 'engine'
 $engineIgnores = @(
     '/tools/oracle/engine/.dart_tool/',
@@ -41,7 +50,7 @@ $engineIgnores = @(
     '/tools/oracle/engine/pubspec.lock'
 )
 
-if ($Engine) {
+if ($flutterProject) {
     # QA-G4aT-05: las cinco lineas del .gitignore ANTES del primer pub get.
     $gitignore = @([System.IO.File]::ReadAllLines((Join-Path $repo '.gitignore')) | ForEach-Object { $_.Trim() })
     foreach ($line in $engineIgnores) {
@@ -196,7 +205,7 @@ try {
             if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO arb_to_catalog (' + $LASTEXITCODE + ')'); $failed++ }
         }
     }
-    if ($Engine) {
+    if ($flutterProject) {
         $overrides = Join-Path $engineDir 'pubspec_overrides.yaml'
         if ($legacyGiven) {
             $yaml = "dependency_overrides:`n  rowmate:`n    path: " + ($legacy -replace '\\', '/') + "`n"
@@ -214,15 +223,26 @@ try {
             } else {
                 $env:ROWMATE_ORACLE_OUT = $outDir
                 $env:ROWMATE_LEGACY_COMMIT = $legacyCommit
-                Write-Host '[oracle] flutter test test/engine_vectors_test.dart'
-                & $FlutterExe test test/engine_vectors_test.dart
-                if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO flutter test (' + $LASTEXITCODE + ')'); $failed++ }
+                if ($Engine) {
+                    Write-Host '[oracle] flutter test test/engine_vectors_test.dart'
+                    & $FlutterExe test test/engine_vectors_test.dart
+                    if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO flutter test (' + $LASTEXITCODE + ')'); $failed++ }
+                }
+                if ($Scene) {
+                    $legOut = Join-Path $repo 'docs\migration\iterations\06a-escena-lago\snapshots\legacy'
+                    New-Item -ItemType Directory -Force -Path $legOut | Out-Null
+                    $env:ROWMATE_LEG_OUT = $legOut
+                    Write-Host '[oracle] flutter test test/scene_vectors_test.dart test/scene_legacy_images_test.dart'
+                    & $FlutterExe test test/scene_vectors_test.dart test/scene_legacy_images_test.dart
+                    if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO flutter test de la escena (' + $LASTEXITCODE + ')'); $failed++ }
+                }
             }
         }
         finally {
             Pop-Location
             Remove-Item Env:ROWMATE_ORACLE_OUT -ErrorAction SilentlyContinue
             Remove-Item Env:ROWMATE_LEGACY_COMMIT -ErrorAction SilentlyContinue
+            Remove-Item Env:ROWMATE_LEG_OUT -ErrorAction SilentlyContinue
         }
         # Nada de lo que dejan pub get y flutter test puede quedar sin ignorar (QA-G4aT-05).
         $engineStatus = & git --no-optional-locks -C $repo status --porcelain --untracked-files=all -- tools/oracle/engine

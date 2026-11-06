@@ -1,7 +1,7 @@
 {
-    "version": 3,
+    "version": 4,
     "editorVersion": "6000.3.27f1",
-    "appliedAtUtc": "2026-10-29T13:02:57.6940735Z",
+    "appliedAtUtc": "2026-11-03T12:51:29.6433067Z",
     "steps": [
         {
             "id": "player.identity",
@@ -39,9 +39,9 @@
             "detail": "ya era Input System"
         },
         {
-            "id": "urp.provisional",
+            "id": "urp.tiers",
             "status": "ok",
-            "detail": "renderer con el PostProcessData de URP; asignado en Graphics y en 6 nivel(es) de calidad existente(s)"
+            "detail": "niveles Low, Medium, High; capa RowMateScene = 8; Frame Timing Stats; Graphics = High"
         },
         {
             "id": "urp.tidy",
@@ -62,6 +62,16 @@
             "id": "ui.panel",
             "status": "ok",
             "detail": "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app; respaldos: íconos, Noto Emoji"
+        },
+        {
+            "id": "scene.assets",
+            "status": "ok",
+            "detail": "0 asset(s) nuevos; 52 slots (0 con un asset del usuario, el resto procedurales); 3 niveles; Lake y SceneWorld"
+        },
+        {
+            "id": "scene.materials",
+            "status": "ok",
+            "detail": "0 asset(s) nuevos; 15 materiales; 138 variantes en la colección"
         },
         {
             "id": "scene.boot",

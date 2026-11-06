@@ -159,6 +159,13 @@ namespace RowMate.Presentation.Workout
 
             _disposed = true;
             _motion.Stop();
+            if (_haloHost != null)
+            {
+                _haloHost.generateVisualContent -= DrawHostedHalos;
+                _motion.HaloRepaint = null;
+                _haloHost = null;
+            }
+
             PillGlowTexture.Destroy(_glow);
             _glow = null;
         }
@@ -217,7 +224,11 @@ namespace RowMate.Presentation.Workout
             var frame = _motion.Frame;
             var painter = context.painter2D;
             _context = context;
-            DrawHalos(context, row, layout, frame);
+            if (_haloHost == null)
+            {
+                DrawHalos(context, row, layout, frame, Vector2.zero);
+            }
+
             if (layout.Strip)
             {
                 DrawStrip(painter, row, layout, frame);
@@ -243,19 +254,69 @@ namespace RowMate.Presentation.Workout
 
         // ── Las partes ──
 
-        private void DrawHalos(MeshGenerationContext context, HudPillRow row, in PillRowLayout layout, in PillRowFrame frame)
+        private void DrawHalos(MeshGenerationContext context, HudPillRow row, in PillRowLayout layout, in PillRowFrame frame, Vector2 offset)
         {
             if (frame.Current >= 0 && frame.Current < layout.Count && frame.HaloAlpha > 0.0005)
             {
                 DrawGlow(context, ShapeOf(layout, frame.Current), Radius(layout, frame.Current), BaseColor(row.Types[frame.Current]),
-                    StepBarTimeline.HaloAtEdge(frame.HaloAlpha));
+                    StepBarTimeline.HaloAtEdge(frame.HaloAlpha), offset);
             }
 
             if (frame.Changing && frame.Ending >= 0 && frame.Ending < layout.Count && frame.EndingHaloAlpha > 0.0005)
             {
                 DrawGlow(context, ShapeOf(layout, frame.Ending), Radius(layout, frame.Ending), BaseColor(row.Types[frame.Ending]),
-                    StepBarTimeline.HaloAtEdge(frame.EndingHaloAlpha));
+                    StepBarTimeline.HaloAtEdge(frame.EndingHaloAlpha), offset);
             }
+        }
+
+        // It. 6a, ronda 2 de la verificación (QA-V6a-R2-01; 06a-escena-lago/02-tech-design, "Cambios por verificación (ronda 2)"): el
+        // halo lo dibuja el PADRE de la fila (la barra de pasos, que ya está en el HUD: no suma elementos al presupuesto de 60), en su
+        // generateVisualContent, con la misma textura, los mismos vértices y el mismo orden (el contenido del padre va debajo de sus
+        // hijos: debajo de las píldoras, como el primer paso del dibujo de la fila). El latido de los últimos 5 s repinta solo esos 36
+        // vértices; la fila se repinta por el relleno (¼ px) y el cambio de paso. Sin anfitrión, la fila dibuja su halo como antes.
+        public void HostHalosIn(VisualElement host)
+        {
+            if (host == null)
+            {
+                throw new ArgumentNullException(nameof(host));
+            }
+
+            if (_haloHost != null)
+            {
+                _haloHost.generateVisualContent -= DrawHostedHalos;
+            }
+
+            _haloHost = host;
+            host.generateVisualContent += DrawHostedHalos;
+            _motion.HaloRepaint = host.MarkDirtyRepaint;
+            MarkDirtyRepaint();
+            host.MarkDirtyRepaint();
+        }
+
+        // Los dibujos del halo (en el anfitrión) y el trabajo del último, en ms.
+        public int HaloDrawCount { get; private set; }
+
+        private VisualElement? _haloHost;
+
+        private void DrawHostedHalos(MeshGenerationContext context)
+        {
+            var row = _motion.Row;
+            var host = _haloHost;
+            if (row == null || panel == null || host == null || host.panel == null)
+            {
+                return;
+            }
+
+            var layout = ComputeLayout();
+            if (layout.Count == 0)
+            {
+                return;
+            }
+
+            EnsureEdges(layout);
+            var offset = this.ChangeCoordinatesTo(host, Vector2.zero);
+            DrawHalos(context, row, layout, _motion.Frame, offset);
+            HaloDrawCount++;
         }
 
         private void DrawPill(Painter2D painter, HudPillRow row, in PillRowLayout layout, in PillRowFrame frame, int index)
@@ -594,7 +655,7 @@ namespace RowMate.Presentation.Workout
 
         // El halo en 9 partes estiradas por lado (DN4b-17): las esquinas se parten en el borde de la píldora (el perfil empieza
         // justo ahí) y en su radio; el centro (la píldora) es transparente. 6 × 6 vértices.
-        private void DrawGlow(MeshGenerationContext context, in DpRect shape, double radius, Color baseColor, double edgeAlpha)
+        private void DrawGlow(MeshGenerationContext context, in DpRect shape, double radius, Color baseColor, double edgeAlpha, Vector2 offset)
         {
             if (_glow == null)
             {
@@ -617,7 +678,7 @@ namespace RowMate.Presentation.Workout
                     var v = GlowU(row, edge, slice);
                     _glowVertices[row * 6 + column] = new Vertex
                     {
-                        position = new Vector3((float)e[column], (float)e[6 + row], Vertex.nearZ),
+                        position = new Vector3((float)e[column] + offset.x, (float)e[6 + row] + offset.y, Vertex.nearZ),
                         tint = tint32,
                         uv = new Vector2((float)u, (float)(1 - v)),
                     };
@@ -760,9 +821,37 @@ namespace RowMate.Presentation.Workout
             }
         }
 
+        // It. 6a (AC-WKT-17-13; P6a-01; DD6a-18): las píldoras del HUD van con la variante .hud de su tipo (step.*.hud), la que llega a
+        // 3:1 sobre el peor vidrio con la escena detrás (HudContrast). PillRowView solo vive en la barra del HUD (StepInfoBar).
         private static Color BaseColor(StepType type)
         {
-            return TokenColors.ToColor(StepTypeInfo.Color(type));
+            return TokenColors.ToColor(HudColor(type));
+        }
+
+        public static ColorToken HudColor(StepType type)
+        {
+            var base0 = StepTypeInfo.Color(type);
+            if (ReferenceEquals(base0, Tokens.StepWork))
+            {
+                return Tokens.StepWorkHud;
+            }
+
+            if (ReferenceEquals(base0, Tokens.StepRest))
+            {
+                return Tokens.StepRestHud;
+            }
+
+            if (ReferenceEquals(base0, Tokens.StepWarmup))
+            {
+                return Tokens.StepWarmupHud;
+            }
+
+            if (ReferenceEquals(base0, Tokens.StepCooldown))
+            {
+                return Tokens.StepCooldownHud;
+            }
+
+            return Tokens.StepUnknownHud;
         }
 
         private static Color WithAlpha(Color color, double alpha)

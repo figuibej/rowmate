@@ -117,6 +117,18 @@ namespace RowMate.EditorTools
                 }
 
                 Debug.Log(Prefix + "listo: " + report.summary.outputPath + " (" + report.summary.totalSize + " bytes)");
+                if (request.BuildTarget == BuildTarget.StandaloneWindows64 || request.BuildTarget == BuildTarget.StandaloneWindows)
+                {
+                    var notices = BuildOutputInspector.FindMissingNotices(request.OutputFolder);
+                    if (notices != null)
+                    {
+                        Debug.LogError(Prefix + notices);
+                        return 2;
+                    }
+
+                    Debug.Log(Prefix + BuildOutputInspector.NoticesFile + " junto al ejecutable.");
+                }
+
                 if (!request.Simulator)
                 {
                     if (request.Development)

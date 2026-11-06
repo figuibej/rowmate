@@ -168,7 +168,7 @@ namespace RowMate.Tests.UiSupport
         {
             var page = Immersive ?? throw new InvalidOperationException("OpenCompletion: no hay inmersivo.");
             var dialog = page.OpenCompletionForTest(completion);
-            Handle.Tick();
+            TickAll();
             return dialog;
         }
 
@@ -176,13 +176,13 @@ namespace RowMate.Tests.UiSupport
         public void SetLocalOffset(TimeSpan offset)
         {
             Scheduler.SetLocalOffset(offset);
-            Handle.Tick();
+            TickAll();
         }
 
         public void ShiftWallClock(TimeSpan by)
         {
             Scheduler.ShiftUtc(by);
-            Handle.Tick();
+            TickAll();
         }
 
         // El remo de prueba de la It. 4a (HostBackends.TestRower), si es el del host.
@@ -247,6 +247,12 @@ namespace RowMate.Tests.UiSupport
             var backButton = options.BackButton ?? new CountingBackButtonPolicy();
             var result = new UiTestHost(options, host, panel, target, document, logger, scheduler, display, locale, accessibility, backButton,
                 routines, creationClock, clipboard, keyboard);
+            if (options.SceneUrpTier.HasValue)
+            {
+                // QA-V6a-REN-16: también lo del asset de URP del nivel (sombras, MSAA), restaurado en Dispose.
+                result._tierScope = new TierScope(options.SceneUrpTier.Value);
+            }
+
             result.Compose(routines.Repository);
             return result;
         }
@@ -271,15 +277,20 @@ namespace RowMate.Tests.UiSupport
             var texts = LocalizationSet.Load(UiAssetsLocator.StringsEs(), UiAssetsLocator.StringsEn());
             App = AppComposer.Compose(new AppServices(Backend, repository, Sessions, Scheduler, _logger, texts, Locale, Accessibility,
                 new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock, Lifecycle = Lifecycle, SystemUi = SystemUi, Preferences = PreferencesFor(options) });
+            _sceneBridge?.Dispose();
+            _sceneBridge = options.Scene == SceneMode.Real ? CreateScene(options) : null;
             Handle = ShellHost.Build(App, Root, new ShellHostOptions(Scheduler, options.IsDesktop, _backButton, Display,
-                TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard) { Pipeline = options.Pipeline, BoatZoneOutline = options.BoatZoneOutline });
+                TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard)
+            {
+                Pipeline = options.Pipeline, BoatZoneOutline = options.BoatZoneOutline, Scene = options.FakeScene ?? _sceneBridge,
+            });
             Handle.Shell.Ui.TextMenuTouchMode = options.TextMenuTouchMode;
             if (options.StartApp)
             {
                 App.Start();
             }
 
-            Handle.Tick();
+            TickAll();
         }
 
         // ── It. 5: las preferencias (05-series-parciales/02-tech-design §2.7, §6.2; AC-HIS-20-04) ──
@@ -344,7 +355,7 @@ namespace RowMate.Tests.UiSupport
         {
             var column = SeriesColumn ?? throw new InvalidOperationException("OverrideSeries: no hay paneles de series (sin inmersivo con rutina).");
             column.OverrideSeries(series, instant);
-            Handle.Tick();
+            TickAll();
         }
 
         // La columna de los paneles del inmersivo de arriba (null sin rutina o sin HUD).
@@ -356,7 +367,7 @@ namespace RowMate.Tests.UiSupport
         public void Advance(TimeSpan by)
         {
             Scheduler.Advance(by);
-            Handle.Tick();
+            TickAll();
         }
 
         public void Advance(double seconds)
@@ -377,7 +388,7 @@ namespace RowMate.Tests.UiSupport
         {
             var limit = (max ?? TimeSpan.FromSeconds(2)).TotalSeconds;
             var elapsed = 0.0;
-            Handle.Tick();
+            TickAll();
             while (Handle.Motion.HasFiniteMotions && elapsed < limit && !Handle.Motion.WaitingForLayout)
             {
                 Step();
@@ -440,20 +451,20 @@ namespace RowMate.Tests.UiSupport
             }
 
             Lifecycle.SetBackground(false);
-            Handle.Tick();
+            TickAll();
         }
 
         // La ventana sin foco o minimizada (Windows: el loop sigue y el reloj también).
         public void Unfocus()
         {
             Lifecycle.SetFocus(false);
-            Handle.Tick();
+            TickAll();
         }
 
         public void Focus()
         {
             Lifecycle.SetFocus(true);
-            Handle.Tick();
+            TickAll();
         }
 
         // Toca la tarjeta de Workout de la rutina con ese nombre (con hit-test).
@@ -533,7 +544,7 @@ namespace RowMate.Tests.UiSupport
             }
 
             SendPointer(PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, button = 0, mousePosition = to, clickCount = 1 }), target);
-            Handle.Tick();
+            TickAll();
             return target;
         }
 
@@ -558,7 +569,7 @@ namespace RowMate.Tests.UiSupport
                 target.SendEvent(wheel);
             }
 
-            Handle.Tick();
+            TickAll();
             return target;
         }
 
@@ -714,7 +725,7 @@ namespace RowMate.Tests.UiSupport
         public void PressBack(BackSource source)
         {
             Handle.HandleBack(source);
-            Handle.Tick();
+            TickAll();
         }
 
         // Una tecla a la hoja con foco (o a la raíz), como la manda UI Toolkit: en un campo, el TextElement interno (S-B3a:
@@ -832,26 +843,26 @@ namespace RowMate.Tests.UiSupport
             Display.DpScale = profile.Density;
             Profile = profile;
             DestroyTarget(previous);
-            Handle.Tick();
+            TickAll();
         }
 
         public void SetInsets(SafeInsets insets)
         {
             Display.SafeArea = insets;
-            Handle.Tick();
+            TickAll();
         }
 
         public void SetLanguage(params string[] tags)
         {
             Locale.Set(tags);
             App.RefreshSystemSettings(tags);
-            Handle.Tick();
+            TickAll();
         }
 
         public void SetAccessibility(double textScale, bool reduceMotion)
         {
             Accessibility.Set(textScale, reduceMotion);
-            Handle.Tick();
+            TickAll();
         }
 
         // ── Consultas ─────────────────────────────────────────────────────────
@@ -958,6 +969,11 @@ namespace RowMate.Tests.UiSupport
 
             _disposed = true;
             Handle.Dispose();
+            _sceneBridge?.Dispose();
+            _sceneBridge = null;
+            _tierScope?.Dispose();
+            _tierScope = null;
+            RestoreShaderCompilation();
             App.Dispose();
             Backend.Dispose();
             Routines.Dispose();
@@ -985,6 +1001,89 @@ namespace RowMate.Tests.UiSupport
             }
 
             DestroyTarget(_target);
+        }
+
+        // ── It. 6a: la escena real (06a-escena-lago/02-tech-design §1.1 B1, §5.1) ──
+
+        private SceneBridge? _sceneBridge;
+        private TierScope? _tierScope;
+        private bool _shaderCompilationTouched;
+        private bool _asyncShadersBefore;
+
+        // La escena (SceneMode.Real) y su puente; null sin escena.
+        public RowMate.Scene.SceneHost? Scene => _sceneBridge?.Host;
+
+        public SceneBridge? SceneBridge => _sceneBridge;
+
+        // El Tick del shell y, con escena, el de la escena (el armado en el acto, la orilla en el acto y la sesión en pasos de 1/60 s).
+        private void TickAll()
+        {
+            Handle.Tick();
+            SceneTick();
+        }
+
+        public void SceneTick()
+        {
+            var bridge = _sceneBridge;
+            if (bridge == null || _disposed)
+            {
+                return;
+            }
+
+            bridge.Host.SetViewport(Profile.WidthPx, Profile.HeightPx, Profile.Density);
+            bridge.Tick(Scheduler.MonotonicSeconds, Handle.Motion, App.Workout.State.Value.Phase, !Options.ScenePlayerWarmup);
+        }
+
+        private SceneBridge CreateScene(UiHostOptions options)
+        {
+            var world = options.SceneWorld ?? LoadSceneWorld();
+            if (!_shaderCompilationTouched)
+            {
+                // §5.1 (QA-G6aT-12): la compilación de shaders sincrónica mientras dura el anfitrión (el primer dibujo sale con los shaders
+                // de verdad, no con el de "compilando"). ShaderUtil.allowAsyncCompilation no se guarda en ProjectSettings.
+#if UNITY_EDITOR
+                _asyncShadersBefore = UnityEditor.ShaderUtil.allowAsyncCompilation;
+                UnityEditor.ShaderUtil.allowAsyncCompilation = false;
+#endif
+                _shaderCompilationTouched = true;
+            }
+
+            var host = new RowMate.Scene.SceneHost(world, App, new RowMate.Scene.SceneHostOptions
+            {
+                Tier = options.SceneTier,
+                RegionCode = options.SceneRegion,
+                SynchronousStreaming = !options.ScenePlayerStreaming,
+                FixedSteps = true,
+            });
+            return new SceneBridge(host, _logger);
+        }
+
+        private void RestoreShaderCompilation()
+        {
+            if (!_shaderCompilationTouched)
+            {
+                return;
+            }
+
+            _shaderCompilationTouched = false;
+#if UNITY_EDITOR
+            UnityEditor.ShaderUtil.allowAsyncCompilation = _asyncShadersBefore;
+#endif
+        }
+
+        public static RowMate.Scene.Slots.SceneWorldDefinition LoadSceneWorld()
+        {
+#if UNITY_EDITOR
+            var world = UnityEditor.AssetDatabase.LoadAssetAtPath<RowMate.Scene.Slots.SceneWorldDefinition>(RowMate.Scene.Slots.SceneWorldDefinition.AssetPath);
+            if (world == null)
+            {
+                throw new InvalidOperationException("falta " + RowMate.Scene.Slots.SceneWorldDefinition.AssetPath + ": correr RowMate/Bootstrap/Reaplicar");
+            }
+
+            return world;
+#else
+            throw new InvalidOperationException("UiTestHost solo corre en el Editor.");
+#endif
         }
 
         // ── Internos ──────────────────────────────────────────────────────────

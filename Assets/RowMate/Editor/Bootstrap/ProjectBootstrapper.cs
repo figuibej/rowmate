@@ -20,7 +20,7 @@ namespace RowMate.EditorTools
     // - Cada paso corre en su propio try/catch: uno que falla queda "failed" y los demás siguen; si falla alguno,
     //   la versión no se marca como aplicada (se reintenta en el PRÓXIMO OPEN, no en cada recompilación) y la consola
     //   muestra los pasos manuales. El menú RowMate/Bootstrap/Reaplicar fuerza una corrida en cualquier momento.
-    // - No crea niveles de calidad definitivos (QA-P-10) y nunca activa el modo simulador (R-01).
+    // - Desde la v4 (It. 6a, ADR 018) fija los tres niveles de calidad definitivos (urp.tiers); nunca activa el modo simulador (R-01).
     // - En batchmode no abre diálogos: solo registra en la consola.
     [InitializeOnLoad]
     public static class ProjectBootstrapper
@@ -29,7 +29,10 @@ namespace RowMate.EditorTools
         // 1 = bootstrapper mínimo de la It. 1. 2 = primer open real (It. 2): el renderer de URP lleva PostProcessData.
         // 3 = It. 2 (WP-B, 02-tech-design §1.3): assets de URP ordenados, ventana y splash, FontAsset, PanelSettings y la
         // escena Boot (urp.tidy, player.window, ui.fonts, ui.panel, scene.boot), siempre antes de defines.check.
-        public const int CurrentVersion = 3;
+        // 4 = It. 6a (06a-escena-lago/02-tech-design §1.1, §7.2 B0 y B1): los tres niveles de calidad definitivos con sus assets de URP, la
+        // capa RowMateScene y Frame Timing Stats (urp.tiers, que reemplaza a urp.provisional), los assets de la escena (scene.assets: niveles,
+        // slots con el procedural asignado, Lake y SceneWorld) y sus materiales con la colección de variantes (scene.materials).
+        public const int CurrentVersion = 4;
         public const string StatePath = "ProjectSettings/RowMateBootstrap.json";
         public const string LogPrefix = "[BOOTSTRAP] ";
 
@@ -149,11 +152,13 @@ namespace RowMate.EditorTools
                 RunStep(results, "player.rendering", PlayerSettingsStep.ApplyRendering);
                 RunStep(results, "player.runtime", PlayerSettingsStep.ApplyRuntime);
                 RunStep(results, "player.input", PlayerSettingsStep.ApplyInputHandler);
-                RunStep(results, "urp.provisional", UrpProvisioner.Apply);
+                RunStep(results, "urp.tiers", UrpProvisioner.Apply);
                 RunStep(results, "urp.tidy", UrpProvisioner.Tidy);
                 RunStep(results, "player.window", PlayerSettingsStep.ApplyWindow);
                 RunStep(results, "ui.fonts", FontAssetBuilder.Apply);
                 RunStep(results, "ui.panel", UiAssetsBuilder.Apply);
+                RunStep(results, "scene.assets", SceneAssetsBuilder.Apply);
+                RunStep(results, "scene.materials", SceneMaterialsBuilder.Apply);
                 RunStep(results, "scene.boot", BootSceneBuilder.Apply);
                 RunStep(results, "defines.check", PlayerSettingsStep.CheckSimulatorDefine);
 
@@ -218,10 +223,15 @@ namespace RowMate.EditorTools
         {
             switch (id)
             {
-                case "urp.provisional":
-                    return "Pasos manuales: 1) Assets > Create > Rendering > URP Asset (with Universal Renderer) en "
-                        + UrpProvisioner.Folder + "; 2) Project Settings > Graphics > Default Render Pipeline = ese asset; "
-                        + "3) Project Settings > Quality: asignarlo en cada nivel existente (sin crear ni borrar niveles).";
+                case "urp.tiers":
+                    return "Pasos manuales: 1) Assets > Create > Rendering > URP Asset (with Universal Renderer) tres veces en "
+                        + UrpProvisioner.Folder + " (RowMate_URP_High, _Medium y _Low, con RowMate_Renderer); 2) Project Settings > Quality: "
+                        + "exactamente tres niveles Low, Medium y High con su asset (Windows en High, Android e iOS en Medium); 3) Graphics > "
+                        + "Default Render Pipeline = RowMate_URP_High; 4) Tags and Layers: la capa RowMateScene; 5) Player > Frame Timing Stats.";
+                case "scene.assets":
+                    return "Paso manual: correr RowMate/Bootstrap/Reaplicar (crea Settings/Quality, Slots y Scenes/SceneWorld.asset).";
+                case "scene.materials":
+                    return "Paso manual: correr RowMate/Bootstrap/Reaplicar (crea Art/Materials/Scene y Settings/Scene/SceneShaderVariants).";
                 case "player.input":
                     return "Paso manual: Project Settings > Player > Other Settings > Active Input Handling = Input System Package (New), y reiniciar el Editor.";
                 case "urp.tidy":

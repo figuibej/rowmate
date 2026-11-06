@@ -186,6 +186,38 @@ namespace RowMate.Tests.PlayMode
             AssertSpan("parciales y (los mismos rectángulos)", VisualRect(Laps).yMin, VisualRect(Laps).yMax, 210.9, 322.6);
         }
 
+        // O-5 de la lente de motion de la 5 (06a-escena-lago/00-deuda-5 §3): el corte de los vacíos en dos renglones se rehace solo
+        // si cambia el texto (otro idioma); los Apply de cada segundo con el mismo vacío no lo vuelven a cortar (antes, Split y Join
+        // una vez por segundo). Los renglones siguen siendo los de DD5-19 en los dos idiomas.
+        [UnityTest, Category("AC-WKT-18-05"), Category("AC-WKT-18-21")]
+        public IEnumerator TheEmptySplitIsRedoneOnlyWhenTheTextChanges()
+        {
+            CreateSeries(DeviceProfile.TV, laps: true, reps: true);
+            yield return StartAt("Series 600", 190.2);
+            var laps = Laps.EmptySplits;
+            var reps = Reps.EmptySplits;
+            Assert.That(laps, Is.GreaterThanOrEqualTo(1), "parciales ya cortó su vacío");
+            Assert.That(reps, Is.GreaterThanOrEqualTo(1), "repeticiones ya cortó su vacío");
+            var draws = Laps.DrawCount;
+            yield return AdvanceTo(196.2);
+            yield return Settle();
+            Assert.That(Laps.DrawCount, Is.GreaterThan(draws), "los paneles se volvieron a dibujar con los segundos del descanso");
+            Assert.That(Laps.EmptySplits, Is.EqualTo(laps), "6 s del descanso con el mismo vacío: no se rehace el corte");
+            Assert.That(Reps.EmptySplits, Is.EqualTo(reps));
+            Assert.That(SlotNamed("hud-laps-empty").Line0 + " / " + SlotNamed("hud-laps-empty").Line1, Is.EqualTo("Sin parciales / en este paso"));
+            Assert.That(SlotNamed("hud-reps-empty").Line0 + " / " + SlotNamed("hud-reps-empty").Line1, Is.EqualTo("Sin repeticiones / completas"));
+
+            H.SetLanguage("en-US");
+            yield return Settle();
+            Assert.That(Laps.EmptySplits, Is.GreaterThan(laps), "otro idioma: otro corte");
+            Assert.That(SlotNamed("hud-laps-empty").Line0 + " / " + SlotNamed("hud-laps-empty").Line1, Is.EqualTo("No splits / in this step"));
+            Assert.That(SlotNamed("hud-reps-empty").Line0 + " / " + SlotNamed("hud-reps-empty").Line1, Is.EqualTo("No completed / reps"));
+            var english = Laps.EmptySplits;
+            yield return AdvanceTo(199.2);
+            yield return Settle();
+            Assert.That(Laps.EmptySplits, Is.EqualTo(english), "y después, otra vez quieto");
+        }
+
         // ── Lo largo se achica y nunca se corta (DV-49, AC-WKT-18-17; DT5-16) ──
 
         [UnityTest, Category("AC-WKT-18-17"), Category("AC-WKT-17-10")]

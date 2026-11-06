@@ -57,7 +57,7 @@ namespace RowMate.Tests.EditMode.Project
             var bootstrapper = SourceScan.StripComments(Read("Assets/RowMate/Editor/Bootstrap/ProjectBootstrapper.cs"));
             var scope = bootstrapper.IndexOf("using (GeneratedAssetGuard.AllowWrites())", StringComparison.Ordinal);
             Assert.That(scope, Is.GreaterThan(0), "el bootstrapper abre el permiso");
-            Assert.That(bootstrapper.IndexOf("RunStep(results, \"urp.provisional\"", StringComparison.Ordinal), Is.GreaterThan(scope));
+            Assert.That(bootstrapper.IndexOf("RunStep(results, \"urp.tiers\"", StringComparison.Ordinal), Is.GreaterThan(scope));
             Assert.That(bootstrapper.IndexOf("RunStep(results, \"ui.fonts\"", StringComparison.Ordinal), Is.GreaterThan(scope));
             var clears = 0;
             foreach (var file in SourceScan.CsFiles(""))

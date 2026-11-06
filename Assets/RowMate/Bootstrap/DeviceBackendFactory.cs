@@ -19,5 +19,18 @@ namespace RowMate.Bootstrap
             return HardwareBackend.Create(logger);
 #endif
         }
+
+        // It. 6a ([PERF] de la escena, solo desarrollo): el preset del simulador (Fuerte = 280 W y 30 spm, SimulatorPanelStore). Sin el
+        // simulador no hace nada.
+        public static void SetPerfPreset(DeviceBackend backend, int watts, int spm)
+        {
+#if ROWMATE_SIMULATOR
+            if (backend is SimulatorDeviceBackend simulator)
+            {
+                simulator.Simulator.TargetWatts = watts;
+                simulator.Simulator.TargetSpm = spm;
+            }
+#endif
+        }
     }
 }

@@ -1,0 +1,130 @@
+namespace RowMate.Core.Scene
+{
+    // Una estrella lista para dibujar: la dirección del mundo (unitaria), el radio angular y el alfa (ya con el fundido).
+    public readonly struct StarInstance
+    {
+        public StarInstance(double dirX, double dirY, double dirZ, double radiusRad, double alpha)
+        {
+            DirX = dirX;
+            DirY = dirY;
+            DirZ = dirZ;
+            RadiusRad = radiusRad;
+            Alpha = alpha;
+        }
+
+        public double DirX { get; }
+        public double DirY { get; }
+        public double DirZ { get; }
+        public double RadiusRad { get; }
+        public double Alpha { get; }
+    }
+
+    // Una nube lista para dibujar: la dirección del centro de su base, el tamaño angular (s/focal), la variante del atlas
+    // (i mod 4), los alfas del cuerpo y de la sombra (ya con WrapFade) y su punto en la pantalla del legacy.
+    public readonly struct CloudInstance
+    {
+        public CloudInstance(double dirX, double dirY, double dirZ, double sizeRad, int variant, double bodyAlpha, double shadeAlpha, double screenX,
+                             double screenY)
+        {
+            DirX = dirX;
+            DirY = dirY;
+            DirZ = dirZ;
+            SizeRad = sizeRad;
+            Variant = variant;
+            BodyAlpha = bodyAlpha;
+            ShadeAlpha = shadeAlpha;
+            ScreenX = screenX;
+            ScreenY = screenY;
+        }
+
+        public double DirX { get; }
+        public double DirY { get; }
+        public double DirZ { get; }
+        public double SizeRad { get; }
+        public int Variant { get; }
+        public double BodyAlpha { get; }
+        public double ShadeAlpha { get; }
+        public double ScreenX { get; }
+        public double ScreenY { get; }
+    }
+
+    // Lo que hay que dibujar en un cuadro (06a-escena-lago/02-tech-design §2.15): la cámara (pose y matriz), la paleta, el astro
+    // (con los radios del disco y del halo y el espejo del sur), la luz y el post, las 80 estrellas, las 7 nubes, las cordilleras,
+    // el agua (los tres colores, las 10 líneas, la fase y la visibilidad del astro), la bruma, los objetos de la orilla visibles con
+    // el nivel de sus luces, la distancia (double), la velocidad, el tiempo de escena y la hora visible. Los arreglos se reservan
+    // en Create (o al abrir): Tick solo escribe. Draw = false con la escena oculta (lo pone quien dibuja).
+    public struct SceneFrame
+    {
+        public bool Draw;
+
+        // Solo el dibujo de calentamiento (§3.4): estrellas, ventanas y nubes a la vista para que el dibujo toque todas las
+        // variantes de la sesión.
+        public bool WarmUpAll;
+
+        public SceneCamera Window;
+        public CameraPose Pose;
+        public SceneMatrix4 Projection;
+        public CameraMode CameraMode;
+        public double BreathingMultiplier;
+        public double HorizonDeviationDp;
+
+        public double VisibleHour;
+        public ScenePalette Palette;
+        public CelestialState Celestial;
+        public LegacyLight LegacyLight;
+        public MoonPhaseInfo Moon;
+        public bool SouthernMirror;
+        public double DiskRadiusRad;
+        public double HaloRadiusRad;
+        public double HaloAlphaScale;
+        public double DiskHdr;
+
+        public HourLook Look;
+        public PostLook Post;
+
+        public StarInstance[] Stars;
+        public double StarFade;
+        public CloudInstance[] Clouds;
+        public SceneColor CloudBody;
+
+        public double HorizonPeakTan;
+        public double HorizonFarScale;
+        public double HorizonNearScale;
+        public SceneColor HorizonFar;
+        public SceneColor HorizonNear;
+        public SceneColor Snow;
+
+        public SceneColor WaterTop;
+        public SceneColor WaterMid;
+        public SceneColor WaterBottom;
+        public ShimmerLine[] Lines;
+        public double WaterPhase;
+        public double ShimmerVisibility;
+        public double ShimmerCenterX;
+
+        public double LowMist;
+        public double Golden;
+
+        public ShorePropBuffer VisibleProps;
+
+        // El nivel de la luz de cada objeto visible (en el mismo orden): 0-1 para las cabañas, 0 para lo demás.
+        public double[] PropLight;
+
+        public double Distance;
+        public double Speed;
+        public double SceneTime;
+
+        public static SceneFrame Create(int maxVisibleProps = 120)
+        {
+            return new SceneFrame
+            {
+                Stars = new StarInstance[StarField.Count],
+                Clouds = new CloudInstance[CloudModel.Count],
+                Lines = new ShimmerLine[DegradedWater.LineCount],
+                VisibleProps = new ShorePropBuffer(maxVisibleProps),
+                PropLight = new double[maxVisibleProps],
+                Projection = SceneMatrix4.Identity,
+            };
+        }
+    }
+}

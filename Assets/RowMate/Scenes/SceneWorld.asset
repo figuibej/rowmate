@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 389e1673e92a4ef448d30bca5e063263, type: 3}
+  m_Name: SceneWorld
+  m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Slots.SceneWorldDefinition
+  _lake: {fileID: 11400000, guid: 01a73a58d682c73439b6f11af8c789be, type: 2}
+  _slots:
+  - {fileID: 11400000, guid: 79aed1a737ccb434aa96b651f878f7db, type: 2}
+  - {fileID: 11400000, guid: 4e7ec4fad07bdd448b21d0984db2c821, type: 2}
+  - {fileID: 11400000, guid: 2358406e92f29d443a99c7df4163efff, type: 2}
+  - {fileID: 11400000, guid: 8f0c6479cb55a1c428d4aaa506ad696d, type: 2}
+  - {fileID: 11400000, guid: ffd690738d394de47880710f531c5f46, type: 2}
+  - {fileID: 11400000, guid: 37339afd2b1dacf42818a81cbd95ba14, type: 2}
+  - {fileID: 11400000, guid: 44b20ad2995e1964896bbc2c132c0075, type: 2}
+  - {fileID: 11400000, guid: 7c79d8dda7198c743a7a72b7aec9c787, type: 2}
+  - {fileID: 11400000, guid: c68588acad90eb643abd7e9135576b00, type: 2}
+  - {fileID: 11400000, guid: 132900981fdd31f46ac2dc16d264f16d, type: 2}
+  - {fileID: 11400000, guid: fd97aba3ee7c30f44a7ce13dc9f152fc, type: 2}
+  - {fileID: 11400000, guid: df7fa63f906a2cf478458017c91a31ff, type: 2}
+  _high: {fileID: 11400000, guid: 8cc7cfe9cfdf1984fb6c35f1bd87a2c1, type: 2}
+  _medium: {fileID: 11400000, guid: 6d44c08c8fb862d448b06b0f88dfa461, type: 2}
+  _low: {fileID: 11400000, guid: 823d27f29d32bff439ea31e57437118b, type: 2}
+  _materials:
+    Sky: {fileID: 2100000, guid: 4c59f8e8960213c49bbeb0fcd637285d, type: 2}
+    Stars: {fileID: 2100000, guid: 6583cf1be839c8143a1d611cb00ecaf6, type: 2}
+    Clouds: {fileID: 2100000, guid: 051b2c06a9ba95b49886cb8572bcb0fd, type: 2}
+    HorizonFar: {fileID: 2100000, guid: 05c29b3d3e0ae6d42b478ca5ec5ab29a, type: 2}
+    HorizonNear: {fileID: 2100000, guid: b021635da3a87fe488af910182e113cf, type: 2}
+    Water: {fileID: 2100000, guid: abfa56471df0db4418cff73b94ff7256, type: 2}
+    Terrain: {fileID: 2100000, guid: f43185866a2d9b34183016287eaa8233, type: 2}
+    Prop: {fileID: 2100000, guid: 89cdb1105b03d954390ad7cd3aaaf05b, type: 2}
+    PropWindow: {fileID: 2100000, guid: 146cd8011cd54d14e837c60ba8d1ab0c, type: 2}
+    Foliage: {fileID: 2100000, guid: 4883c20a09c841449a46f1e30a32ffaa, type: 2}
+    Grass: {fileID: 2100000, guid: da2ce343d2bea414f99c9dce2b5f500b, type: 2}
+    Reeds: {fileID: 2100000, guid: c6f624c38a6fcea4aaf92adc2b192f0b, type: 2}
+    Hull: {fileID: 2100000, guid: 8512a43e71d67c243a074cb7d67d57e8, type: 2}
+    BoatShadow: {fileID: 2100000, guid: 4ade8f106250d1d4bb32e3b540896ea1, type: 2}
+    ScreenOverlay: {fileID: 2100000, guid: b574a5740676cc44aa6043e12a5a1dbd, type: 2}
+  _variants: {fileID: 20000000, guid: 5be0a8baf2ba2e347944bbd13d788f18, type: 2}

@@ -18,3 +18,4 @@ MonoBehaviour:
   _presentMaterial: {fileID: 0}
   _iconsOutlineFallback: {fileID: 11400000, guid: 846fc2a2adfad4346a05315267d02f20, type: 2}
   _emojiFallback: {fileID: 11400000, guid: c236429d7054a6f488ae563d4449e91b, type: 2}
+  _sceneWorld: {fileID: 11400000, guid: dadf80a5d5eff544a8f167817d48d722, type: 2}

@@ -41,7 +41,33 @@ namespace RowMate.EditorTools
             // It. 5 (05-series-parciales/02-tech-design §3.7): las rutinas de las entradas y la medida de los paneles de series.
             "-rowmate-perf-routines",
             "-rowmate-perf-series",
+            // It. 6a (06a-escena-lago/02-tech-design §4.5): la medida de la escena, solo en desarrollo.
+            "-rowmate-perf-scene",
+            "-rowmate-scene-delay",
+            "-rowmate-quality",
+            "-rowmate-perf-hours",
+            "-rowmate-perf-completion",
+            // It. 6a, ronda 1 de la verificación (QA-V6a-13, QA-V6a-REN-03): Serie larga con la escena.
+            "-rowmate-perf-long-series",
+            // It. 6a, ronda 2 de la verificación (QA-V6a-R2-01): el Profiler con la pila de las asignaciones en Serie larga.
+            "-rowmate-perf-profile",
         };
+
+        // It. 6a (QA-G6aT-19): el aviso de licencias de terceros (BSD-3 del SDK de Dart, por DartRandom) viaja con cada build de Windows,
+        // junto al ejecutable (lo copia NoticesPostprocessor). null si está; si no, el motivo.
+        public const string NoticesFile = "THIRD_PARTY_NOTICES.md";
+
+        public static string? FindMissingNotices(string buildFolder)
+        {
+            var path = Path.Combine(buildFolder, NoticesFile);
+            if (!File.Exists(path))
+            {
+                return "falta " + NoticesFile + " junto al ejecutable (QA-G6aT-19)";
+            }
+
+            var text = File.ReadAllText(path);
+            return text.Contains("Dart") && text.Contains("Redistribution") ? null : NoticesFile + " sin la licencia del SDK de Dart";
+        }
 
         public static readonly string[] TestNeedles =
         {

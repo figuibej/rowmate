@@ -42,6 +42,8 @@ namespace RowMate.Presentation.Motion
         private double _scaleTarget = 1;
         private double _last;
         private bool _running;
+        private float _lastBeat = float.NaN;
+        private float _appliedScale = 1f;
 
         public StepPulse(MotionDriver driver, VisualElement upNextBg, TabularNumber countdown, Color restColor)
         {
@@ -193,8 +195,9 @@ namespace RowMate.Presentation.Motion
             _scaleTarget = 1;
             _scale.SnapTo(1);
             _last = _driver.Now;
-            _countdown.style.color = _rest;
+            _countdown.ClearPaintColor();
             _countdown.style.scale = StyleKeyword.Null;
+            _appliedScale = 1f;
             _running = false;
             _driver.Remove(this);
         }
@@ -235,8 +238,12 @@ namespace RowMate.Presentation.Motion
             // Próximo: fondo y borde.
             if (_upNext)
             {
-                var beat = reduced ? 1.0 : MotionSpecs.UpNextMinOpacity + (1 - MotionSpecs.UpNextMinOpacity) * p;
-                _upNextBg.style.opacity = (float)beat;
+                var beat = (float)(reduced ? 1.0 : MotionSpecs.UpNextMinOpacity + (1 - MotionSpecs.UpNextMinOpacity) * p);
+                if (beat != _lastBeat)
+                {
+                    _lastBeat = beat;
+                    _upNextBg.style.opacity = beat;
+                }
             }
 
             // La rampa del color de la cuenta.
@@ -255,16 +262,37 @@ namespace RowMate.Presentation.Motion
                 }
             }
 
+            // QA-V6a-R2-01: el color de la cuenta, que late en CADA cuadro de los últimos 5 s, va en su dibujo (TabularNumber.SetPaintColor):
+            // un estilo en línea por cuadro rehacía el estilo del elemento y asignaba en cada cuadro. La escala sigue en style.scale (los
+            // mismos píxeles que antes) pero se escribe solo si cambió: se mueve en el resorte de la entrada y de la salida (finito, unos
+            // cuadros) y queda quieta en 1,1 mientras late.
             var mix = reduced ? _ramp : _ramp * p;
-            _countdown.style.color = TokenColors.Lerp(_rest, _accent, mix);
-            var s = (float)_scale.Position;
-            if (Mathf.Abs(s - 1f) < 1e-4f)
+            if (mix <= 0)
             {
-                _countdown.style.scale = StyleKeyword.Null;
+                _countdown.ClearPaintColor();
             }
             else
             {
-                _countdown.style.scale = new UnityEngine.UIElements.Scale(new Vector3(s, s, 1f));
+                _countdown.SetPaintColor(TokenColors.Lerp(_rest, _accent, mix));
+            }
+
+            var s = (float)_scale.Position;
+            if (Mathf.Abs(s - 1f) < 1e-4f)
+            {
+                s = 1f;
+            }
+
+            if (s != _appliedScale)
+            {
+                _appliedScale = s;
+                if (s == 1f)
+                {
+                    _countdown.style.scale = StyleKeyword.Null;
+                }
+                else
+                {
+                    _countdown.style.scale = new UnityEngine.UIElements.Scale(new Vector3(s, s, 1f));
+                }
             }
         }
     }

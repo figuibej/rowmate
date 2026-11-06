@@ -102,6 +102,10 @@ if (Test-ProjectLocked) {
     Write-Host '[build] el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado): cerralo y volve a correr.'
     exit 10
 }
+# It. 6a (06a-escena-lago/02-tech-design Sec. 4.2; QA-G6aT-05): la guardia de ProjectSettings. El build no puede dejar cambiados
+# ProjectSettings/ ni Assets/RowMate/Settings/ (BuildCli restaura el backend y Frame Timing Stats; el define lo maneja SimulatorDefine).
+. (Join-Path $PSScriptRoot '../unity/ProjectSettingsGuard.ps1')
+$settingsBefore = Get-ProjectSettingsSnapshot $repo
 $artifacts = Get-FullPath $ArtifactsPath
 New-Item -ItemType Directory -Force -Path $artifacts | Out-Null
 # Un log por destino, variante y backend (QA-V2-03): el de Mono y el de IL2CPP no se pisan.
@@ -122,9 +126,14 @@ $process = [System.Diagnostics.Process]::Start($info)
 $process.WaitForExit()
 $code = $process.ExitCode
 Write-Host ('[build] ' + $Target + ' ' + $variant + ' ' + $Backend + ' -> ' + $code + ' (log: ' + $log + ')')
+# It. 6a (06a-escena-lago/00-deuda-5 Sec. 3): 198 = Unity no encontro una licencia valida (la guarda el cliente de licencias de la Hub:
+# despues de reiniciar el equipo y con la Hub cerrada, Unity no la encuentra).
+if ($code -eq 198) { Write-Host '[build] Unity salio con 198: no encontro una licencia valida. Abri Unity Hub (con la sesion iniciada), espera a que cargue y repeti el comando.' }
 if (Test-Path $log) {
     Select-String -Path $log -Pattern '\[BUILD\]', 'error CS\d+', 'Build Finished' | Select-Object -Last 20 | ForEach-Object { Write-Host ('  ' + $_.Line) }
 }
+$guardCode = Write-ProjectSettingsGuardResult '[build]' (Compare-ProjectSettingsSnapshot $repo $settingsBefore)
+if ($code -eq 0 -and $guardCode -ne 0) { $code = $guardCode }
 
 # Humo de la base en el player (solo con -DbSmoke, en un build de desarrollo de Windows que salio bien).
 if ($DbSmoke -and $code -eq 0) {

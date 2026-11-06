@@ -22,7 +22,7 @@ namespace RowMate.Snapshots
         public const string HrmRow = "hrm-device-SIM:HRM";
 
         // El catálogo de un conjunto (03-rutinas/02-tech-design §5.1; 04a-motor-hud-funcional/02-tech-design §7.1): it2 = este,
-        // it3 = RoutinesCatalog, it4a (por defecto desde la 4a) = WorkoutCatalog.
+        // it3 = RoutinesCatalog, it4a (por defecto desde la 4a) = WorkoutCatalog. It. 6a: it6a (por defecto desde la 6a) = SceneCatalog.
         public static IReadOnlyList<SnapshotScenario> For(string set)
         {
             if (string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase))
@@ -41,7 +41,13 @@ namespace RowMate.Snapshots
                 return WorkoutCatalog.All;
             }
 
-            return string.Equals(set, "it4b", StringComparison.OrdinalIgnoreCase) ? HudExrCatalog.All : SeriesCatalog.All;
+            if (string.Equals(set, "it4b", StringComparison.OrdinalIgnoreCase))
+            {
+                return HudExrCatalog.All;
+            }
+
+            // It. 6a: it6a (por defecto) = SceneCatalog; it5 = SeriesCatalog.
+            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? SeriesCatalog.All : SceneCatalog.All;
         }
 
         public static string TitleFor(string set)
@@ -61,7 +67,12 @@ namespace RowMate.Snapshots
                 return "It. 4a (Entrenar)";
             }
 
-            return string.Equals(set, "it4b", StringComparison.OrdinalIgnoreCase) ? "It. 4b (HUD EXR)" : "It. 5 (Series en vivo)";
+            if (string.Equals(set, "it4b", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 4b (HUD EXR)";
+            }
+
+            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? "It. 5 (Series en vivo)" : "It. 6a (Escena del lago)";
         }
 
         public static IReadOnlyList<SnapshotScenario> All

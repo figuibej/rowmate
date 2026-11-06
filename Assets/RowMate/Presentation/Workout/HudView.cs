@@ -19,6 +19,7 @@ namespace RowMate.Presentation.Workout
     // §3): dibuja un WorkoutHudState (los textos ya formateados y el semáforo los arma WorkoutHudStore) y aplica HudGeometry por
     // zona (HudZones). Capas, de atrás hacia adelante (AC-WKT-13-02):
     //   #hud-backdrop                       el fondo provisorio (AC-SCN-01-01); el velo de pausa es su tinte (It. 4b)
+    //   #scene-surface                      It. 6a, con escena: la RT de la escena (encima del provisorio: el fundido de la demorada)
     //   #hud-boat-zone                      contorno de depuración de la zona del bote (solo si lo pide el anfitrión)
     //   #hud-topbar                         StepInfoBar (con rutina: píldoras, información y sello) o FreeTopBar (libre: reloj y chip)
     //   #hud-spm                            la tarjeta grande (zona arriba a la izquierda)
@@ -66,8 +67,25 @@ namespace RowMate.Presentation.Workout
             pickingMode = PickingMode.Ignore;
             _glow = GlowTexture.Create();
 
+            // It. 6a (06a-escena-lago/02-tech-design §3.3; DT6a-12): el fondo provisorio atrás de todo y, con escena, scene-surface JUSTO
+            // ENCIMA (QA-V6a-01, D2-05: en UI Toolkit el hijo de después se dibuja arriba). Mientras se ve la escena el provisorio pasa a
+            // display: none (0 elementos netos); en el fundido de 0,6 s de la escena demorada se ven los dos (+1) y la escena funde SOBRE
+            // el provisorio: la mezcla de los dos, no un corte.
             Backdrop = new HudBackdrop();
             Add(Backdrop);
+            if (ui.Scene != null)
+            {
+                SceneSurface = new SceneSurface(ui.Scene);
+                SceneSurface.style.display = DisplayStyle.None;
+                Add(SceneSurface);
+            }
+
+            if (ui.Scene != null)
+            {
+                // DD6a-23: el provisorio teñido por la hora (el minuto del reloj de pared y la hora forzada del simulador).
+                _hourTint = clock.Subscribe(_ => TintBackdropByHour());
+                _forcedHour = ui.App.Scene.HourOverride.Subscribe(_ => TintBackdropByHour(), false);
+            }
 
             if (ui.BoatZoneOutline)
             {
@@ -142,7 +160,8 @@ namespace RowMate.Presentation.Workout
             Controls = new HudControls(ui, finish, pause, resume);
             Add(Controls);
 
-            _veil = new PauseVeilMotion(ui.Motion, a => Backdrop.SetVeil(a));
+            // It. 6a (AC-WKT-13-12; DT6a-10): el mismo velo también a la escena, como peso (alfa/0,15), en el mismo cuadro.
+            _veil = new PauseVeilMotion(ui.Motion, a => Backdrop.SetVeil(a), w => _ui.Scene?.SetPauseVeil(w));
 
             SetVitalsArrangement(false, true);
             // Lo que se mide para HudGeometry (GeometryChangedEvent no se propaga: cada elemento avisa).
@@ -168,6 +187,9 @@ namespace RowMate.Presentation.Workout
         public bool IsRoutine { get; }
 
         public HudBackdrop Backdrop { get; }
+
+        // It. 6a: el elemento de la escena (null sin escena).
+        public SceneSurface? SceneSurface { get; }
 
         public VisualElement? BoatZone { get; }
 
@@ -293,6 +315,73 @@ namespace RowMate.Presentation.Workout
             LastApplyMs = _work.Elapsed.TotalMilliseconds;
         }
 
+        // ── It. 6a: la escena detrás del HUD (06a-escena-lago/02-tech-design §3.3, §3.9) ──
+
+        private IDisposable? _hourTint;
+        private IDisposable? _forcedHour;
+        private bool _sceneShown;
+
+        // La escena a la vista: scene-surface visible y el fondo provisorio en display: none (con `keepBackdrop`, los dos: el fundido de
+        // 0,6 s de la escena demorada).
+        public void SetSceneShown(bool shown, bool keepBackdrop = false)
+        {
+            if (SceneSurface == null)
+            {
+                return;
+            }
+
+            _sceneShown = shown;
+            SceneSurface.style.display = shown ? DisplayStyle.Flex : DisplayStyle.None;
+            Backdrop.style.display = shown && !keepBackdrop ? DisplayStyle.None : DisplayStyle.Flex;
+            if (shown)
+            {
+                SceneSurface.Refresh();
+            }
+        }
+
+        public bool SceneShown => _sceneShown;
+
+        // La opacidad de scene-surface (la aparición 220-400, el fundido de la escena demorada, la salida 200-400).
+        public void SetSceneOpacity(double opacity)
+        {
+            if (SceneSurface == null)
+            {
+                return;
+            }
+
+            SceneSurface.style.opacity = opacity >= 0.9995 ? (StyleFloat)StyleKeyword.Null : (float)Math.Max(0, opacity);
+        }
+
+        // La escena sola de las tomas (QA-6a-PAR-02, QA-G6aT-12; solo el arnés): los hermanos de scene-surface en display: none.
+        internal void HideForCapture()
+        {
+            foreach (var child in Children())
+            {
+                if (!ReferenceEquals(child, SceneSurface))
+                {
+                    child.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
+        // DD6a-23: skyTop y waterNear de la hora visible (la forzada del simulador o la real con resolución de minuto).
+        private void TintBackdropByHour()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            var hour = RowMate.Core.Scene.SceneHour.Effective(_ui.App.Scene.HourOverride.Value, _ui.App.Scheduler.LocalNow);
+            var palette = RowMate.Core.Scene.SceneTimeOfDay.PaletteFor(hour);
+            Backdrop.SetColors(ToColor(palette.SkyTop), ToColor(palette.WaterNear));
+        }
+
+        private static Color ToColor(in RowMate.Core.Scene.SceneColor c)
+        {
+            return new Color((float)c.R, (float)c.G, (float)c.B, 1f);
+        }
+
         // La última foto (O-01; DD4b-05): desde el primer estado de reposo, nada más cambia (los valores, la barra con sus píldoras
         // o la libre con su chip, el sello, la cuenta y el reloj de la banda y el de pared). Lo finito que corría termina con su
         // reloj; lo que se repite sigue hasta que la página sale del árbol.
@@ -360,6 +449,9 @@ namespace RowMate.Presentation.Workout
             _veil.Stop();
             _kcalSlide.Stop();
             Controls.Dispose();
+            _hourTint?.Dispose();
+            _forcedHour?.Dispose();
+            SceneSurface?.Dispose();
             Backdrop.Dispose();
             if (Application.isPlaying)
             {

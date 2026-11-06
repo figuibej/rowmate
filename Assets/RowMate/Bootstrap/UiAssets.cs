@@ -25,6 +25,7 @@ namespace RowMate.Bootstrap
         [SerializeField] private Material? _presentMaterial;
         [SerializeField] private FontAsset? _iconsOutlineFallback;
         [SerializeField] private FontAsset? _emojiFallback;
+        [SerializeField] private RowMate.Scene.Slots.SceneWorldDefinition? _sceneWorld;
 
         public PanelSettings? Panel => _panel;
 
@@ -41,6 +42,16 @@ namespace RowMate.Bootstrap
         public FontAsset? EmojiFallback => _emojiFallback;
 
         public bool IsComplete => _panel != null && _stringsEs != null && _stringsEn != null;
+
+        // It. 6a (06a-escena-lago/02-tech-design §3.4): el mundo de la escena 3D (Scenes/SceneWorld.asset). Sin él (o incompleto, sin
+        // los materiales), el inmersivo sigue con el fondo provisorio.
+        public RowMate.Scene.Slots.SceneWorldDefinition? SceneWorld => _sceneWorld;
+
+        // Para BootSceneBuilder (Editor, It. 6a).
+        public void SetSceneWorld(RowMate.Scene.Slots.SceneWorldDefinition? world)
+        {
+            _sceneWorld = world;
+        }
 
         // Para UiAssetsBuilder (Editor): asigna todo de una vez.
         public void Set(PanelSettings panel, TextAsset stringsEs, TextAsset stringsEn, Material? presentMaterial)

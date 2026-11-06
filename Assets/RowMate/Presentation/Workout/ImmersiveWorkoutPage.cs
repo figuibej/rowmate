@@ -74,11 +74,31 @@ namespace RowMate.Presentation.Workout
         private bool _revealed;
         private HudLayout? _lastLayout;
 
+        // It. 6a (06a-escena-lago/02-tech-design §3.9): la escena 3D (null sin escena: el fondo provisorio de siempre).
+        private readonly IImmersiveScene? _scene;
+        private readonly SceneFadeMotion? _sceneFade;
+        private readonly HudReflowMotion _reflow;
+        private IDisposable? _sceneReadiness;
+        private IDisposable? _pacingRelease;
+        private bool _flightPending;
+        private bool _sceneShown;
+        private bool _sceneClosed;
+        private bool? _landscape;
+
         public ImmersiveWorkoutPage(UiContext ui, ShellLayout layout)
         {
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             _layout = layout ?? throw new ArgumentNullException(nameof(layout));
             _openedAt = ui.Motion.Now;
+            // La escena arranca en el cuadro del toque (en 0) y corre desde acá aunque todavía no se dibuje (AC-SCN-02-05).
+            _scene = ui.Scene;
+            _scene?.Open(_openedAt);
+            if (_scene != null)
+            {
+                _sceneFade = new SceneFadeMotion(ui.Motion, ApplySceneFade, OnSceneFadeDone);
+            }
+
+            _reflow = new HudReflowMotion(ui.Motion, ApplyReflow);
             Hud = ui.App.CreateHud();
             Session = Hud.State.Value.Session;
 
@@ -103,10 +123,20 @@ namespace RowMate.Presentation.Workout
             HoldWrench(true);
             DeclareInitialSurface();
             _layout.Changed += OnShellLayoutChanged;
+            // QA-V6a-02 (VID-09): la clase de la ventana desde el toque. Sin esto la PRIMERA rotación del inmersivo solo la anotaba (no
+            // había una clase anterior con qué compararla) y el HUD aparecía entero, sin su entrada de 200 ms.
+            var window = _layout.WindowSize;
+            if (window.x > 0 && window.y > 0)
+            {
+                _landscape = window.x > window.y;
+            }
 
             // La entrada (§3.2): los controles responden desde su tramo (con reducir movimiento, desde el cuadro 0). El HUD se arma
             // cuando el fondo empieza a aparecer (OnBackdrop): con reducir movimiento, ya en este Play.
             _cascade.Play();
+
+            // La escena que llega tarde (AC-SCN-01-07): cuando queda lista, aparece en su lugar con su fundido de 0,6 s.
+            _sceneReadiness = _scene?.Readiness.Subscribe(OnSceneReadiness, false);
 
             // Abre sin foco (DN4a-10): el toque que la abrió no deja el foco en Workout.
             Blur();
@@ -145,6 +175,9 @@ namespace RowMate.Presentation.Workout
 
         public bool IsExiting => _exiting;
 
+        // La hora del toque en el reloj del motion (la sonda [PERF] mide la entrada desde acá).
+        public double OpenedAt => _openedAt;
+
         public bool HasRevealed => _revealed;
 
         public void OnPushed()
@@ -162,6 +195,13 @@ namespace RowMate.Presentation.Workout
             _popped = true;
             _cascade.Stop();
             _exit.Stop();
+            _sceneFade?.Stop();
+            _reflow.Stop();
+            _sceneReadiness?.Dispose();
+            _sceneReadiness = null;
+            _pacingRelease?.Dispose();
+            _pacingRelease = null;
+            CloseScene();
             CancelCompletionTimer();
             CancelDialogs(true);
             ReleaseShell();
@@ -320,6 +360,7 @@ namespace RowMate.Presentation.Workout
                 dialog.Box.RegisterCallback<GeometryChangedEvent>(_ => RepublishSurface());
                 _ui.Dialogs.Open(dialog, instantly);
                 RepublishSurface();
+                OnCompletionOpened();
             }
             catch (Exception error)
             {
@@ -337,6 +378,30 @@ namespace RowMate.Presentation.Workout
 
                 Hud.AcknowledgeCompletionAsync().Forget(_ui.Logger, WorkoutEngine.Tag);
             }
+        }
+
+        // It. 6a (AC-SCN-02-07; P-07): con el diálogo de completado, la toma aérea (0,4 m/s, 6 s, cabeceo de −4°; con reducir movimiento,
+        // nada). Cuando la toma terminó y el diálogo está quieto, la página suelta su demanda de 60 fps (la vuelve a pedir nadie: la
+        // salida la libera igual en ReleaseShell).
+        private void OnCompletionOpened()
+        {
+            if (_scene == null || _exiting || _popped)
+            {
+                return;
+            }
+
+            _scene.BeginAerial(_ui.Motion.Now);
+            _pacingRelease?.Dispose();
+            var settle = MotionSpecs.AerialSeconds + MotionSpecs.CompletedDialogDelayMs / 1000.0;
+            _pacingRelease = _ui.App.Scheduler.Schedule(TimeSpan.FromSeconds(settle), () =>
+            {
+                _pacingRelease = null;
+                if (_pacing && !_exiting && !_popped && Completion != null)
+                {
+                    _pacing = false;
+                    _ui.Motion.Pacing.Release();
+                }
+            });
         }
 
         // Para el arnés y las pruebas (QA-G4bT-11 (d)): el diálogo con los totales de un caso, sin correr la rutina.
@@ -365,6 +430,11 @@ namespace RowMate.Presentation.Workout
 
             _exiting = true;
             _view?.Freeze();
+            // La cámara sube y retrocede desde la pose que tenga (AC-SCN-02-06); con reducir movimiento no se mueve.
+            _scene?.BeginExit(_ui.Motion.Now);
+            _sceneFade?.Stop();
+            _pacingRelease?.Dispose();
+            _pacingRelease = null;
             CancelCompletionTimer();
             CancelDialogs(false);
             ReleaseShell();
@@ -449,10 +519,115 @@ namespace RowMate.Presentation.Workout
             {
                 BuildView();
             }
+            else if (_flightPending && !_exiting && !_popped)
+            {
+                // It. 6a (§3.9): el cuadro SIGUIENTE al del armado del HUD (el HUD paga su armado solo, 00-deuda-5 §5): la escena entra
+                // con el vuelo anclado a los 220 ms del toque y la opacidad del fondo de la cascada.
+                _flightPending = false;
+                StartScene(false);
+            }
 
             if (_view != null)
             {
                 SetOpacity(_view.Backdrop, opacity);
+                if (_sceneShown && _sceneFade?.IsRunning != true)
+                {
+                    _view.SetSceneOpacity(opacity);
+                }
+            }
+        }
+
+        // ── It. 6a: la escena (06a-escena-lago/02-tech-design §3.9) ──
+
+        // La escena entra: con el vuelo (o en su lugar con reducir movimiento), si ya está lista; si no, el fondo provisorio sigue y la
+        // escena aparece con su fundido cuando quede lista (OnSceneReadiness).
+        private void StartScene(bool inPlace)
+        {
+            var scene = _scene;
+            var view = _view;
+            if (scene == null || view == null || _sceneShown || _exiting || _popped)
+            {
+                return;
+            }
+
+            if (scene.Readiness.Value != ImmersiveSceneReadiness.Ready)
+            {
+                return;
+            }
+
+            if (inPlace)
+            {
+                scene.ShowInPlace(_ui.Motion.Now);
+            }
+            else
+            {
+                scene.BeginFlight(SceneTimelines.FlightStartSeconds(_openedAt));
+            }
+
+            _sceneShown = true;
+            view.SetSceneShown(true);
+            view.SetSceneOpacity(_cascade.IsRunning ? _cascade.BackdropOpacity : 1);
+        }
+
+        private void OnSceneReadiness(ImmersiveSceneReadiness readiness)
+        {
+            if (readiness != ImmersiveSceneReadiness.Ready || _view == null || _sceneShown || _flightPending || _exiting || _popped)
+            {
+                return;
+            }
+
+            // La escena demorada (AC-SCN-01-07): aparece en su lugar (con la rampa de la respiración) y funde 0,6 s sobre el provisorio.
+            _scene!.ShowInPlace(_ui.Motion.Now);
+            _sceneShown = true;
+            _view.SetSceneShown(true, true);
+            _view.SetSceneOpacity(0);
+            _sceneFade!.Play();
+        }
+
+        private void ApplySceneFade(double opacity)
+        {
+            if (!_exiting)
+            {
+                _view?.SetSceneOpacity(opacity);
+            }
+        }
+
+        private void OnSceneFadeDone()
+        {
+            if (!_exiting && !_popped && _sceneShown)
+            {
+                _view?.SetSceneShown(true);
+                _view?.SetSceneOpacity(1);
+            }
+        }
+
+        private void CloseScene()
+        {
+            if (_scene == null || _sceneClosed)
+            {
+                return;
+            }
+
+            _sceneClosed = true;
+            _scene.Close();
+        }
+
+        // DT6a-06: al cambiar de clase de ventana (vertical ↔ horizontal) las piezas del HUD entran en 200 en el layout nuevo.
+        private void ApplyReflow(double opacity)
+        {
+            var view = _view;
+            if (view == null || _exiting || _cascade.IsRunning)
+            {
+                return;
+            }
+
+            for (var i = 0; i < Pieces.Length; i++)
+            {
+                var element = view.PieceOf(Pieces[i]);
+                if (element != null)
+                {
+                    SetOpacity(element, opacity);
+                }
             }
         }
 
@@ -504,6 +679,22 @@ namespace RowMate.Presentation.Workout
             }
 
             zones.Update();
+
+            // It. 6a (§3.9): la escena NO se dibuja en el cuadro del armado del HUD; entra en el siguiente con el vuelo. Con reducir
+            // movimiento, en su lugar desde el cuadro 0 (sin respiración). Este cuadro es negro y quieto: lo que la escena tenga pendiente
+            // para su primer cuadro a la vista (la orilla de 0 m después de una sesión larga) se termina acá (QA-V6a-REN-04).
+            if (_scene != null)
+            {
+                _scene.CatchUp();
+                if (_ui.App.Accessibility.Value.ReduceMotion)
+                {
+                    StartScene(true);
+                }
+                else
+                {
+                    _flightPending = true;
+                }
+            }
         }
 
         private void OnPieceInteractive(HudPiece piece)
@@ -563,6 +754,11 @@ namespace RowMate.Presentation.Workout
             SetOpacity(view.Callouts.Count, visual.Hud);
             SetOpacity(view.Callouts.Paused, visual.Hud);
             SetOpacity(view.Backdrop, visual.Backdrop);
+            if (_sceneShown)
+            {
+                // It. 6a: scene-surface funde a negro con el fondo (200-400).
+                view.SetSceneOpacity(visual.Backdrop);
+            }
         }
 
         private void OnRevealStarted()
@@ -573,6 +769,8 @@ namespace RowMate.Presentation.Workout
             }
 
             _revealed = true;
+            // It. 6a (§3.9): a los 400 de la salida el negro cubre la escena: se cierra (deja de integrar y de dibujar).
+            CloseScene();
             // Desde acá vale el toque en Workout (ROB-01, AC-WKT-01-09; QA-V4b-MOT-02): la raíz que sale deja de absorber.
             Root.pickingMode = PickingMode.Ignore;
             RevealStarted?.Invoke();
@@ -712,6 +910,20 @@ namespace RowMate.Presentation.Workout
             {
                 _zones.Invalidate();
                 _zones.Update();
+            }
+
+            // It. 6a (DT6a-06): un cambio de clase de ventana (vertical ↔ horizontal) hace entrar el HUD en 200 en el layout nuevo; un
+            // cambio de tamaño dentro de la misma clase se reacomoda en el acto. La escena se adapta en el acto (otra RT, la misma sesión).
+            var size = _layout.WindowSize;
+            if (size.x > 0 && size.y > 0)
+            {
+                var landscape = size.x > size.y;
+                if (_landscape.HasValue && _landscape.Value != landscape && !_exiting && !_popped && _view != null && !_cascade.IsRunning)
+                {
+                    _reflow.OnOrientationClassChanged(_ui.App.Accessibility.Value.ReduceMotion);
+                }
+
+                _landscape = landscape;
             }
         }
 

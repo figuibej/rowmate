@@ -199,7 +199,7 @@ namespace RowMate.Presentation.Motion.Hud
             var wasChanging = _ending >= 0;
             var wasRamping = !double.IsNaN(_rampStart);
             Compose(nowSeconds);
-            RepaintIfNeeded(wasChanging || wasRamping);
+            RepaintIfNeeded(wasChanging, wasRamping);
             return NeedsTicks();
         }
 
@@ -272,25 +272,50 @@ namespace RowMate.Presentation.Motion.Hud
             _frame = new PillRowFrame(_current, fill, halo, _ending, _endingMet, _endingFillFrom, in change, endingHalo, in thumb, t < thumbMs);
         }
 
-        private void RepaintIfNeeded(bool force)
+        // It. 6a, ronda 2 de la verificación (QA-V6a-R2-01; 06a-escena-lago/02-tech-design, "Cambios por verificación (ronda 2)"): con un
+        // repintado aparte para el halo (HaloRepaint: el halo lo dibuja el elemento de la barra, PillRowView.HostHalosIn), el latido de
+        // los últimos 5 s repinta solo el halo (36 vértices) y no la fila entera: repintar la fila (las 200 píldoras de Serie larga) en
+        // cada cuadro hacía que UIR pidiera páginas nuevas de vértices una y otra vez (UIRenderDevice.Allocate → Page, asignaciones del
+        // GC y memoria nativa que subía de 135 a 178-186 MB en el player). Sin HaloRepaint, como antes: un solo repintado.
+        public Action? HaloRepaint { get; set; }
+
+        private void RepaintIfNeeded(bool force, bool haloForce = false)
         {
             var fill = _frame.Fill;
             var halo = _frame.HaloAlpha + _frame.EndingHaloAlpha;
-            var repaint = force || _frame.Changing || double.IsNaN(_lastRepaintFill) || Math.Abs(halo - _lastRepaintHalo) > 1e-4;
-            if (!repaint)
+            var haloChanged = haloForce || double.IsNaN(_lastRepaintHalo) || Math.Abs(halo - _lastRepaintHalo) > 1e-4;
+            var row = force || _frame.Changing || double.IsNaN(_lastRepaintFill);
+            if (!row)
             {
                 var moved = Math.Abs(fill - _lastRepaintFill);
-                repaint = FillWidthPx > 0 ? moved * FillWidthPx >= MotionSpecs.PillRepaintPx : moved > 0;
+                row = FillWidthPx > 0 ? moved * FillWidthPx >= MotionSpecs.PillRepaintPx : moved > 0;
             }
 
-            if (!repaint)
+            var haloRepaint = HaloRepaint;
+            if (haloRepaint == null)
             {
+                if (!row && !haloChanged)
+                {
+                    return;
+                }
+
+                _lastRepaintFill = fill;
+                _lastRepaintHalo = halo;
+                _repaint();
                 return;
             }
 
-            _lastRepaintFill = fill;
-            _lastRepaintHalo = halo;
-            _repaint();
+            if (row)
+            {
+                _lastRepaintFill = fill;
+                _repaint();
+            }
+
+            if (haloChanged || force || _frame.Changing)
+            {
+                _lastRepaintHalo = halo;
+                haloRepaint();
+            }
         }
     }
 }

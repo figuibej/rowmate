@@ -8,7 +8,7 @@ namespace RowMate.Presentation.Motion
     // valor cambió. k = AccentPulse.K(t): el borde superior va en el color de la métrica con alfa k (1 → 0,60 en 300 ms con
     // ease.pulse) y el brillo con opacidad 0,14·k. En reposo k = 0,60 (legacy withOpacity(0.6), DV-02). El color en línea es
     // contrato (02-tech-design §3.12 regla 5). Reducir movimiento: igual (es opacidad).
-    public sealed class AccentFlash : TimedMotion
+    public sealed class AccentFlash : TimedMotion, IRecurringMotion
     {
         private readonly VisualElement _card;
         private readonly VisualElement? _glow;
