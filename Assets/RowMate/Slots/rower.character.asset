@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a4c4516bc9d5a845b91312185c9a426, type: 3}
+  m_Name: rower.character
+  m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Slots.RowerCharacterSlot
+  _slotId: rower.character
+  _source: 0
+  _expectedPath: Assets/ThirdParty/Mixamo/RowerRealistic/RowerRealistic.fbx
+  _budget: 60000
+  _asset: {fileID: 0}
+  _expectedPaths:
+  - Assets/ThirdParty/Mixamo/RowerRealistic/RowerRealistic.fbx
+  - Assets/ThirdParty/Mixamo/YBot/YBot.fbx

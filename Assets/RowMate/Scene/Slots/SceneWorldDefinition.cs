@@ -27,9 +27,21 @@ namespace RowMate.Scene.Slots
         public Material? BoatShadow;
         public Material? ScreenOverlay;
 
+        // It. 7 (07-remero-palada/02-tech-design §1.3; WP-B1): el remero, los remos, la salpicadura, el agua que responde y la boya. Sin
+        // ellos (un SceneWorld.asset de antes de la 7) el mundo copia el shader por nombre.
+        public Material? Rower;
+        public Material? Oar;
+        public Material? Spray;
+        public Material? WaterMarks;
+        public Material? Buoy;
+
         public Material?[] All()
         {
-            return new[] { Sky, Stars, Clouds, HorizonFar, HorizonNear, Water, Terrain, Prop, PropWindow, Foliage, Grass, Reeds, Hull, BoatShadow, ScreenOverlay };
+            return new[]
+            {
+                Sky, Stars, Clouds, HorizonFar, HorizonNear, Water, Terrain, Prop, PropWindow, Foliage, Grass, Reeds, Hull, BoatShadow, ScreenOverlay, Rower, Oar,
+                Spray, WaterMarks, Buoy,
+            };
         }
 
         public bool IsComplete

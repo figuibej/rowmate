@@ -34,7 +34,9 @@ namespace RowMate.Snapshots
         public const string It5Output = "docs/migration/iterations/05-series-parciales/snapshots";
         // It. 6a (06a-escena-lago/02-tech-design §5): la escena del lago (SceneCatalog), el conjunto por defecto desde la 6a.
         public const string It6aOutput = "docs/migration/iterations/06a-escena-lago/snapshots";
-        public const string DefaultSet = "it6a";
+        // It. 7 (07-remero-palada/02-tech-design §5): it7 (por defecto desde la 7) = RowerCatalog.
+        public const string It7Output = "docs/migration/iterations/07-remero-palada/snapshots";
+        public const string DefaultSet = "it7";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
@@ -59,7 +61,12 @@ namespace RowMate.Snapshots
                 return It4bOutput;
             }
 
-            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? It5Output : It6aOutput;
+            if (string.Equals(set, "it6a", StringComparison.OrdinalIgnoreCase))
+            {
+                return It6aOutput;
+            }
+
+            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? It5Output : It7Output;
         }
 
         public static void Run()

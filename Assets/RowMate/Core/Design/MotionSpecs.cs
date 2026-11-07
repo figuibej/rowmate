@@ -503,5 +503,36 @@ namespace RowMate.Core.Design
         // el HUD al cambiar de clase de ventana, en 200 (ease.enter). La aparición (220-400) y la salida son las de la 4b. ──
         public const double SceneLateFadeMs = 600;
         public const double HudReflowMs = 200;
+
+        // ════ It. 7 — La palada (07-remero-palada/02-tech-design §2.2, §2.3, §2.6, §2.9, §2.10; ANIMATION_BIBLE §3.1, §3.2, §3.8,
+        // §3.9, §5.2; 00-arte-remero §6, §7, §9) ════
+
+        // ── La fase visual φ (AC-SCN-04-04): ω_s sigue a spm/60 con τ 0,5 s activo y cae a 0 con τ 0,15 s en pausa; la ganancia del
+        // seguidor K = 4 s⁻¹; el SPM del ratio r se suaviza con τ 0,8 s (AC-SCN-04-05). ──
+        public const double StrokeSpeedTauSeconds = 0.5;
+        public const double StrokeStopTauSeconds = 0.15;
+        public const double StrokePhaseGain = 4;
+        public const double StrokeRatioSpmTauSeconds = 0.8;
+
+        // ── El esfuerzo e = clamp((W − 60)/240; 0; 1), suavizado τ 1 s (ANIMATION_BIBLE §3.8). ──
+        public const double EffortWattsFloor = 60, EffortWattsSpan = 240, EffortTauSeconds = 1.0;
+
+        // ── El reposo (AC-SCN-05-10): a los 1,5 s quieto entra en 0,4 s y sale en 0,2; respira 15/min (pecho ± 0,6 cm, hombros
+        // ± 0,5 cm) y mira de a ratos (± 2° cada 4–7 s, resorte crítico de 0,6 s). ──
+        public const double IdleDelaySeconds = 1.5, IdleFadeInSeconds = 0.4, IdleFadeOutSeconds = 0.2;
+        public const double IdleBreathsPerMinute = 15, IdleChestM = 0.006, IdleShoulderM = 0.005;
+        public const double IdleGazeDeg = 2, IdleGazeMinSeconds = 4, IdleGazeMaxSeconds = 7, IdleGazeSpringSeconds = 0.6;
+
+        // ── La cámara suma el bote (AC-SCN-06-03; DT7-06): 25 % de la arfada (τ 0,2 s), 30 % del surge (τ 0,35 s) y 15 % del
+        // cabeceo (τ 0,5 s) con el tope suave hasta 2,95 dp del horizonte. ──
+        public const double CameraHeaveShare = 0.25, CameraHeaveTauSeconds = 0.2;
+        public const double CameraSurgeShare = 0.30, CameraSurgeTauSeconds = 0.35;
+        public const double CameraPitchShare = 0.15, CameraPitchTauSeconds = 0.5;
+        public const double CameraHorizonCapDp = 2.95;
+
+        // ── La boya (AC-SCN-08-10; arte §9): resorte crítico τ 0,6 s con corrección ≤ 0,5 m/s, fundido de 0,6 s al terminar el paso
+        // sin cerrar la vuelta. El lado del óvalo de sombra cambia en 1,5 s ease.move (DA7-10). ──
+        public const double BuoySpringSeconds = 0.6, BuoyMaxCorrectionMps = 0.5, BuoyFadeSeconds = 0.6;
+        public const double ShadowSideFadeSeconds = 1.5;
     }
 }

@@ -100,24 +100,7 @@ namespace RowMate.Scene
         }
     }
 
-    // El bote provisorio (06a-escena-lago/02-tech-design §3.5, §3.6 "Bote"; AC-SCN-01-08; 04-design-notes §9, §8.3): el casco de
-    // HullMesh en la cinta (z 5,3 a 13,5, quieto respecto de la cámara del contrato) y su sombra ovalada sobre el agua en el centro del
-    // casco, del lado opuesto al astro (la arma el shader BoatShadow).
-    public sealed class BoatVisual
-    {
-        public const float HullCenterZ = (float)((RowMate.Core.Scene.Art.LakeArt.HullStern + RowMate.Core.Scene.Art.LakeArt.HullBow) / 2);
-
-        public BoatVisual(Transform parent, int layer, Mesh hull, Material hullMaterial, Mesh quad, Material shadowMaterial)
-        {
-            Hull = SceneObjects.Create("scene-boat", parent, layer, hull, hullMaterial, true, true);
-            Shadow = SceneObjects.Create("scene-boat-shadow", parent, layer, quad, shadowMaterial, false, false);
-            Shadow.transform.localPosition = new Vector3(0, 0.004f, HullCenterZ);
-        }
-
-        public MeshRenderer Hull { get; }
-
-        public MeshRenderer Shadow { get; }
-    }
+    // It. 7: el bote salió a Boat/BoatVisual.cs (la jerarquía con el surge, el cabeceo, el remero y los remos).
 
     // Los degradés de pantalla (06a-escena-lago/02-tech-design §3.3, §3.6; DV-67, C-18): de la capa del HUD, dibujados por la cámara de
     // la escena en la cola 3500, antes del post (así los alcanza el velo), con 0 elementos de UI. Apagados en la escena sola

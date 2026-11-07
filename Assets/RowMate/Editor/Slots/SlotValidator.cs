@@ -100,9 +100,31 @@ namespace RowMate.EditorTools
                 }
             }
 
+            // It. 7 (DT7-13): el remero no se asigna en el slot (queda en Procedural): se informa el binding y su validación.
+            sb.Append("  ").Append(RowerReport()).Append('\n');
             AssetDatabase.SaveAssets();
             sb.Append("  ").Append(slots.Count).Append(" slots: ").Append(procedural).Append(" procedurales, ").Append(problems).Append(" con problemas\n");
             return sb.ToString();
+        }
+
+        // rower.character: el binding (Bootstrap/Generated, ignorado) y lo que mide su modelo, o el maniquí.
+        public static string RowerReport()
+        {
+            var binding = AssetDatabase.LoadAssetAtPath<RowerCharacterBinding>(RowerCharacterBinding.AssetPath);
+            if (binding == null)
+            {
+                return "rower.character: sin binding (ningún FBX de Mixamo en las rutas esperadas): el maniquí";
+            }
+
+            if (binding.Model == null)
+            {
+                return "rower.character: el binding apunta a " + binding.SourcePath + " y el FBX no está: el maniquí con un aviso [SLOT]";
+            }
+
+            var ok = RowerCharacterValidation.Validate(binding.Model, out var reason, out var stats);
+            var measures = "Humanoid " + stats.Humanoid + ", dedos " + stats.FingerBones + ", alto " + stats.HeightM.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)
+                           + " m, " + stats.Triangles + " triángulos, " + stats.Bones + " huesos, legible " + stats.Readable;
+            return "rower.character: " + binding.SourcePath + (ok ? " válido (" : " NO valida: " + reason + " (") + measures + ")";
         }
     }
 }

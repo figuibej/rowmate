@@ -689,23 +689,23 @@ El paso de degradada a avanzada durante la escena se hace con un fundido de 0,6 
 | Casco | largo 8,20 m [CONTRATO], manga 0,29 m en la línea de flotación y 0,33 m en la borda a la altura del cockpit, francobordo 0,10 m; proa afilada con bola de proa blanca (obligatoria en remo), popa con aleta; cubierta de fibra con brillo de *gelcoat* (smoothness 0,85, clearcoat falso) |
 | Colores | casco `#F5F5F5` → `#B0BEC5` en la obra viva [CONTRATO, degradé del legacy], **línea de borda `#00B4D8`** [CONTRATO], cockpit `#263238` [CONTRATO]; número de proa opcional |
 | Riggers | ala de carbono (*wing rigger*) negra satinada con dos tirantes; pernos a ±0,80 m (envergadura 1,60 m), altura del eje del remo 0,31 m sobre el agua; chumaceras (*swivels*) blancas |
-| Carro y rieles | asiento ergonómico negro a 0,14 m sobre el agua, recorrido 0,62 m (legacy 0,6), rieles de aluminio |
-| Pedalera | zapatillas blancas fijas a 1,15 m del perno [CONTRATO de la distancia a los pies], ángulo 42° |
+| Carro y rieles | asiento ergonómico negro a 0,14 m sobre el agua, rieles de aluminio de 0,72 m a ±0,09 m; recorrido de `RiggingFit` (≈ 0,55 m con el maniquí de 1,85 m; It. 7, DT7-02: los 0,6 m del legacy quedan solo en `LegacyBoatGeometry`) |
+| Pedalera | zapatillas blancas, placa a 42°; posición de `RiggingFit` (talones ≈ 0,17–0,20 m a popa del perno: canillas verticales en el catch). Los 1,15 m del legacy [CONTRATO] son imposibles con remos reales y quedan solo en `LegacyBoatGeometry` (It. 7, DT7-02) |
 | Remos (par) | largo 2,88 m, interior 0,88 m; caña de carbono negra con textura de tejido sutil; puño de goma gris; manguito y collarín blancos; **pala tipo "hacha" 0,47×0,22 m cara `#00B4D8`** [CONTRATO del color] con punta blanca; flexión visual de la caña en el drive (ANIMATION_BIBLE §4.6) |
-| Sombra | sombra real (mapa de sombras) en Medio/Alto; en Bajo, óvalo suave del legacy (opacidad 0,08 × ambiente, desplazado al lado opuesto del astro) [CONTRATO] |
-| Reflejo | el bote, los remos y el remero entran en la reflexión planar (Alto) o en un reflejo falso invertido de baja resolución (Medio) |
-| Presupuesto | casco ≤ 6 k tris, riggers + carro ≤ 2 k, cada remo ≤ 1,5 k; 2 materiales |
+| Sombra | sombra real (mapa de sombras) si el nivel tiene sombras y la luz del cuadro tiene fuerza ≥ 0,05: el agua degradada la recibe (oscurece 0,10 en sombra plena) y el casco recibe la del remero; si no (Bajo, Medio de noche), óvalo suave del legacy (opacidad 0,08 × ambiente, corrido 0,35 m al lado opuesto del astro, cambio de lado en 1,5 s) [CONTRATO]. Nunca los dos (It. 7, DT7-08) |
+| Reflejo | el bote, los remos y el remero entran en la reflexión planar (Alto) o en un reflejo falso invertido de baja resolución (Medio). Postergado con la 6b (issue #6): en la 7 no hay reflejo |
+| Presupuesto | casco ≤ 6 k tris, riggers + rieles + pedalera ≤ 2 k (colores de vértice, shader `Hull`), carro aparte (se mueve), cada remo ≤ 1,2 k (shader `Oar`: partes por color de vértice, caña con ancho mínimo de 1,2 dp, flexión `_RmOarLoad`); las cañas no proyectan sombra, las palas sí (It. 7, DA7-06) |
 
 ### 7.9 Remero
 
 | Aspecto | Spec |
 |---|---|
 | Personaje | Mixamo, rig Humanoid (slot `rower.character`; elección concreta y pasos en ASSET_SLOTS). Altura objetivo 1,80–1,88 m; proporciones reales (el legacy exagera tronco y cabeza solo por ser 2D) |
-| Vestimenta | **mono de remo** (*unisuit*) ajustado: base `#1565C0` [CONTRATO del color del traje] con franjas laterales `#00B4D8` y panel lateral `#0D3B6E` (color de carro/pies del legacy); medias blancas; gorra opcional (slot). Si el personaje elegido trae ropa propia, el material "RowMate/Fabric" la tiñe con la misma paleta |
-| Materiales | Piel: URP Lit + dispersión falsa (wrap lighting 0,4 y tinte `#E89A80` en el terminador), smoothness 0,45, brillo de sudor que sube con el tiempo activo (0 → +0,15 en 20 min, sutil); tela técnica: Shader Graph con brillo de borde (*sheen*) `#FFFFFF @12 %`, smoothness 0,35, normal de tejido 0,3; pelo: tarjetas con *alpha clip* + dither (nunca alpha blend en móvil) |
+| Vestimenta | **mono de remo** (*unisuit*) ajustado: base `#1565C0` [CONTRATO del color del traje] con franjas laterales `#00B4D8` y panel lateral `#0D3B6E` (color de carro/pies del legacy); medias blancas; gorra opcional (slot). Pelo `#3E2723` (el del legacy) y anteojos `#101418`; la gorra (`rower.cap`) apagada por defecto (It. 7, DT7-09). Un personaje del slot se viste con la misma paleta: `RowerOutfitBaker` pinta las regiones por hueso dominante (DA7-05) |
+| Materiales | **Un shader** `RowMate/Scene/Rower` (It. 7, 07-remero-palada/04-design-notes §2), 1 material, 0 texturas: la región sale del color de vértice (9 regiones) con bordes nítidos (grilla de celdas). Piel: envolvente 0,4 y terminador teñido `#E89A80`, suavidad 0,45. Tela: brillo de borde (*sheen*) `#FFFFFF @12 %` × el tinte de la hora, suavidad 0,35, especular apagado (× 0,25). Anteojos: el cielo de la hora con Fresnel (0,7). Sin normal de tejido, sin tarjetas de pelo y sin brillo de sudor (Para issues) |
 | Relleno de cámara | término de relleno en piel y tela `0,12 · sunColor · saturate(N·V)` para que el frente se lea en contraluz |
-| Placeholder | maniquí procedural (`ProceduralRower`) con el **mismo esqueleto y nombres de huesos de Mixamo** (`mixamorig:*`), avatar Humanoid armado en ejecución con `AvatarBuilder`, segmentos en cápsulas con el mono pintado; usa exactamente el mismo controlador de pose y el mismo IK (ANIMATION_BIBLE §7.3) |
-| Presupuesto | LOD0 ≤ 30 k tris, LOD1 ≤ 12 k (a > 25 m, solo cámaras extra), 3 materiales máx., texturas 1 024 (móvil) / 2 048 (desktop) |
+| Placeholder | maniquí procedural (`ProceduralRower`, el valor por defecto) con el **mismo esqueleto y nombres de huesos de Mixamo** (`mixamorig:*`, sin dedos): *loft* de superelipse (exponente 2,5, 12 lados) con *skinning* de 2 huesos, ≤ 6 k triángulos. Sin avatar ni `AvatarBuilder`: el mismo solver que Y Bot (ANIMATION_BIBLE §7.3, DT7-01) |
+| Presupuesto | maniquí ≤ 6 k tris; personaje del slot ≤ 60 k (Y Bot: 55,3 k, 52 huesos con peso) y ≤ 75 huesos; 1 material por submalla, 0 texturas; fragmento ≤ 30 ALU en Medio (medido: 26). LOD de Y Bot para móvil: Para issues |
 
 ### 7.10 Mundo vivo (todo guiado por tiempo de escena; detalle en ANIMATION_BIBLE §6)
 

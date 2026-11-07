@@ -138,6 +138,36 @@ namespace RowMate.Core.Scene
                 pose.PitchDeg + multiplier * pitch, pose.RollDeg + multiplier * roll, pose.FocalDp, pose.HorizonDp);
         }
 
+        // Los términos del bote (It. 7; AC-SCN-06-03; ANIMATION_BIBLE §5.2; DT7-06), ya filtrados (BoatCameraFilter) y por el mismo
+        // multiplicador de la respiración (pausa × 0,6, reducir movimiento × 0, la entrada S(0; 0,6 s)): + 25 % de la arfada en y,
+        // + 30 % del surge en z y + 15 % del cabeceo del casco, este con un tope suave B·tanh(x/B), B = lo que le queda al horizonte
+        // hasta 2,95 dp (en rad, con la focal de la pose): el ± 3 dp es la regla dura. Las traslaciones no mueven el horizonte.
+        public static CameraPose AddBoatTerms(in CameraPose pose, in SceneCamera cam, in Stroke.BoatMotionSample filtered, double multiplier)
+        {
+            if (multiplier == 0)
+            {
+                return pose;
+            }
+
+            var y = pose.Y + multiplier * MotionSpecs.CameraHeaveShare * filtered.HeaveM;
+            var z = pose.Z + multiplier * MotionSpecs.CameraSurgeShare * filtered.SurgeM;
+            var pitch = SoftPitchRad(pose, cam, multiplier * MotionSpecs.CameraPitchShare * filtered.PitchRad);
+            return new CameraPose(pose.X, y, z, pose.YawDeg, pose.PitchDeg + pitch * 180 / Math.PI, pose.RollDeg, pose.FocalDp, pose.HorizonDp);
+        }
+
+        // El tope suave del cabeceo (DT7-06): en TV, V390 y P360 entra casi entero; en W1280, TH y L640, casi en 0.
+        public static double SoftPitchRad(in CameraPose pose, in SceneCamera cam, double pitchRad)
+        {
+            var room = MotionSpecs.CameraHorizonCapDp - HorizonDeviationDp(cam, pose);
+            if (!(room > 0) || pose.FocalDp <= 0)
+            {
+                return 0;
+            }
+
+            var cap = room / pose.FocalDp;
+            return cap * Math.Tanh(pitchRad / cap);
+        }
+
         // Cuánto se aparta el horizonte de su línea del contrato en los bordes de la pantalla, en dp (el barrido de AC-SCN-02-04 y
         // la marca de VID-10). La traslación no lo mueve (está en el infinito); lo mueven el cabeceo, el rolido y la proyección.
         public static double HorizonDeviationDp(in SceneCamera cam, in CameraPose pose)
@@ -229,6 +259,26 @@ namespace RowMate.Core.Scene
             var dz = tz - fz;
             yawDeg = Math.Atan2(dx, dz) * 180 / Math.PI;
             pitchDeg = Math.Atan2(dy, Math.Sqrt(dx * dx + dz * dz)) * 180 / Math.PI;
+        }
+    }
+
+    // Los términos del bote filtrados para la cámara (AC-SCN-06-03): arfada τ 0,2 s, surge τ 0,35 s y cabeceo τ 0,5 s. Sin asignar.
+    public struct BoatCameraFilter
+    {
+        public Stroke.BoatMotionSample Value;
+
+        public void Step(double dt, in Stroke.BoatMotionSample target)
+        {
+            var step = dt < 0 || double.IsNaN(dt) ? 0 : (dt > SceneState.MaxStep ? SceneState.MaxStep : dt);
+            Value.HeaveM += (target.HeaveM - Value.HeaveM) * (1 - Math.Exp(-step / MotionSpecs.CameraHeaveTauSeconds));
+            Value.SurgeM += (target.SurgeM - Value.SurgeM) * (1 - Math.Exp(-step / MotionSpecs.CameraSurgeTauSeconds));
+            Value.PitchRad += (target.PitchRad - Value.PitchRad) * (1 - Math.Exp(-step / MotionSpecs.CameraPitchTauSeconds));
+            Value.RollRad = 0;
+        }
+
+        public void Snap(in Stroke.BoatMotionSample target)
+        {
+            Value = new Stroke.BoatMotionSample(target.PitchRad, target.HeaveM, 0, target.SurgeM);
         }
     }
 

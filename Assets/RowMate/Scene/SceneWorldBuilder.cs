@@ -80,6 +80,22 @@ namespace RowMate.Scene
         public Material? BoatShadow { get; internal set; }
         public Material? ScreenOverlayMaterial { get; internal set; }
 
+        // It. 7 (07-remero-palada/02-tech-design §3.1): las mallas y los materiales del remero, los remos, el carro, los herrajes, el agua
+        // que responde y la boya; el remero armado (se rehace con SceneHost.ForceCharacterForTest) y el bote.
+        public Mesh? OarShaft { get; internal set; }
+        public Mesh? OarBlade { get; internal set; }
+        public Mesh? Seat { get; internal set; }
+        public Mesh? Buoy { get; internal set; }
+        public Mesh? Fittings { get; internal set; }
+        public Material? RowerMaterial { get; internal set; }
+        public Material? OarMaterial { get; internal set; }
+        public Material? OarMaterialRight { get; internal set; }
+        public Material? SprayMaterial { get; internal set; }
+        public Material? WaterMarksMaterial { get; internal set; }
+        public Material? BuoyMaterial { get; internal set; }
+        public RowerCharacter? Rower { get; internal set; }
+        public BoatVisual? Boat { get; internal set; }
+
         // Las resoluciones de los slots (SlotValidator, SSL).
         public List<SlotResolution> Slots { get; } = new List<SlotResolution>();
 
@@ -92,6 +108,8 @@ namespace RowMate.Scene
         public void Dispose()
         {
             Store?.Dispose();
+            Rower?.Dispose();
+            Rower = null;
             Lighting?.Dispose();
             Meshes.Destroy();
             for (var i = _owned.Count - 1; i >= 0; i--)
@@ -133,6 +151,11 @@ namespace RowMate.Scene
         }
 
         public SceneWorld? World { get; private set; }
+
+        // It. 7: qué remero se arma (SceneHostOptions.Character) y, para las pruebas, un binding en lugar del de Resources.
+        public RowerCharacterKind Character { get; set; } = RowerCharacterKind.Auto;
+
+        public RowerCharacterBinding? Binding { get; set; }
 
         public int Units { get; private set; }
 
@@ -374,6 +397,26 @@ namespace RowMate.Scene
 
                     Units++;
                     yield return false;
+
+                    // It. 7: los remos (la caña y la pala en mallas separadas: solo la pala proyecta sombra, DA7-06), el carro y la boya.
+                    Step = "los remos, el carro y la boya";
+                    data = new MeshData(OarMesh.VertexCapacity, OarMesh.IndexCapacity);
+                    OarMesh.Build(RowMate.Core.Scene.Stroke.BoatSpec.Real, data);
+                    var oar = MeshUpload.NewMesh("scene-oar");
+                    upload.Upload(data, oar, false, null, true);
+                    world.OarShaft = world.Own(Submesh(oar, 0, "scene-oar-shaft"));
+                    world.OarBlade = world.Own(Submesh(oar, 1, "scene-oar-blade"));
+                    MeshUpload.Destroy(oar);
+                    data = new MeshData(SeatMesh.VertexCapacity, SeatMesh.IndexCapacity);
+                    SeatMesh.Build(data);
+                    world.Seat = world.Own(MeshUpload.NewMesh("scene-boat-seat"));
+                    upload.Upload(data, world.Seat, false, null, true);
+                    data = new MeshData(BuoyMesh.VertexCapacity, BuoyMesh.IndexCapacity);
+                    BuoyMesh.Build(data);
+                    world.Buoy = world.Own(MeshUpload.NewMesh("scene-buoy"));
+                    upload.Upload(data, world.Buoy, false, null, true);
+                    Units++;
+                    yield return false;
                 }
                 finally
                 {
@@ -403,6 +446,18 @@ namespace RowMate.Scene
             world.HullMaterial = Copy(world, m.Hull, "Hull");
             world.BoatShadow = Copy(world, m.BoatShadow, "BoatShadow");
             world.ScreenOverlayMaterial = Copy(world, m.ScreenOverlay, "ScreenOverlay");
+            Units++;
+            yield return false;
+
+            Step = "los materiales del remero y del agua que responde";
+            world.RowerMaterial = Copy(world, m.Rower, "Rower");
+            world.OarMaterial = Copy(world, m.Oar, "Oar");
+            world.OarMaterialRight = Copy(world, m.Oar, "Oar");
+            world.OarMaterialRight.name = "scene-Oar-right";
+            world.SprayMaterial = Copy(world, m.Spray, "Spray");
+            world.WaterMarksMaterial = Copy(world, m.WaterMarks, "WaterMarks");
+            world.BuoyMaterial = Copy(world, m.Buoy, "Buoy");
+            ConfigureRowerMaterials(world);
             Units++;
             yield return false;
 
@@ -436,8 +491,35 @@ namespace RowMate.Scene
             var sky = new SkyRenderer(root2, layer, world.Rig.Camera, world.Quad, world.Sky, world.Stars, world.Clouds);
             var horizon = new HorizonRenderer(root2, layer, world.HorizonFar!, world.HorizonNear!, world.HorizonFarMaterial, world.HorizonNearMaterial);
             var water = new WaterSurface(root2, layer, world.WaterGrid, world.Water);
-            var boat = new BoatVisual(root2, layer, world.Hull!, world.HullMaterial, world.Quad, world.BoatShadow);
+            world.Fittings = world.Own(MeshUpload.NewMesh("scene-boat-fittings"));
+            var boat = new BoatVisual(root2, layer, world.Hull!, world.HullMaterial, world.Quad, world.BoatShadow, world.Fittings, world.Seat!);
+            world.Boat = boat;
             var overlay = new ScreenOverlay(root2, layer, world.Quad, world.ScreenOverlayMaterial);
+            Units++;
+            yield return false;
+
+            // It. 7 (07-remero-palada/02-tech-design §3.1, §3.2): el remero (el personaje del slot se instancia en su unidad y se viste
+            // en otra), los herrajes a su medida (RiggingFit), los remos, el agua que responde, la salpicadura y la boya.
+            Step = "el remero";
+            world.Rower = RowerCharacterResolver.Resolve(Character, Binding, boat.Pitch, layer, world.RowerMaterial!, _slotLog);
+            Units++;
+            yield return false;
+
+            if (world.Rower.FromSlot)
+            {
+                Step = "la ropa del remero";
+                RowerCharacterResolver.Dress(world.Rower, world.RowerMaterial!);
+                Units++;
+                yield return false;
+            }
+
+            Step = "los herrajes, los remos y el agua que responde";
+            BuildFittings(world.Fittings, world.Rower.Spec);
+            var rightOar = world.OarMaterialRight!;
+            var oars = new OarRig(boat.Pitch, layer, world.OarShaft!, world.OarBlade!, world.OarMaterial!, rightOar, RowMate.Core.Scene.Stroke.BoatSpec.Real);
+            var marks = new WaterInteractionRenderer(world.Quad, world.WaterMarksMaterial!, world.Rig.Camera, layer);
+            var vfx = new StrokeVfx(world.Quad, world.SprayMaterial!, world.Rig.Camera, layer);
+            var buoy = new MarkerBuoy(root2, layer, world.Buoy!, world.BuoyMaterial!);
             Units++;
             yield return false;
 
@@ -463,10 +545,76 @@ namespace RowMate.Scene
             yield return false;
 
             Step = "el director y el nivel";
-            world.Director = new SceneDirector(world.Rig, lighting, sky, horizon, water, terrain, shore, fill, boat, overlay, root);
+            world.Director = new SceneDirector(world.Rig, lighting, sky, horizon, water, terrain, shore, fill, boat, overlay, root)
+            {
+                Rower = world.Rower,
+                Oars = oars,
+                WaterMarks = marks,
+                Spray = vfx,
+                Buoy = buoy,
+            };
+            marks.BoilsEnabled = _profile.Tier != QualityTier.Low;
             SceneQualityApplier.Apply(_profile, world.Rig.Camera, world.Rig.Data, lighting, world.Sky, world.Clouds, world.Grass, sky, shore, fill, world.Store);
             Units++;
             yield return true;
+        }
+
+        // Una submalla como malla propia (los mismos vértices; solo sus índices).
+        internal static Mesh Submesh(Mesh source, int submesh, string name)
+        {
+            var mesh = new Mesh { name = name, hideFlags = HideFlags.HideAndDontSave };
+            mesh.vertices = source.vertices;
+            mesh.normals = source.normals;
+            mesh.colors = source.colors;
+            mesh.uv = source.uv;
+            mesh.SetTriangles(source.GetTriangles(submesh), 0, true);
+            return mesh;
+        }
+
+        // Los colores de las regiones del remero y de las partes del remo (RowerArt, en lineal, con la suavidad en w) y los tamaños mínimos.
+        internal static void ConfigureRowerMaterials(SceneWorld world)
+        {
+            var regions = new Vector4[RowerArt.RegionCount];
+            for (var i = 0; i < regions.Length; i++)
+            {
+                regions[i] = Linear(RowerArt.RegionColors[i], RowerArt.RegionSmoothness[i]);
+            }
+
+            world.RowerMaterial!.SetVectorArray(SceneShaderIds.RowerColors, regions);
+            world.RowerMaterial.SetFloat(SceneShaderIds.RimFill, (float)RowerArt.RimFill);
+            var parts = new Vector4[RowerArt.OarColors.Length];
+            for (var i = 0; i < parts.Length; i++)
+            {
+                parts[i] = Linear(RowerArt.OarColors[i], RowerArt.OarSmoothness[i]);
+            }
+
+            world.OarMaterial!.SetVectorArray(SceneShaderIds.OarColors, parts);
+            world.OarMaterial.SetFloat(SceneShaderIds.MinWidthDp, (float)RowerArt.MinShaftDp);
+            world.OarMaterialRight!.SetVectorArray(SceneShaderIds.OarColors, parts);
+            world.OarMaterialRight.SetFloat(SceneShaderIds.MinWidthDp, (float)RowerArt.MinShaftDp);
+            world.SprayMaterial!.SetFloat(SceneShaderIds.MinDropDp, (float)RowerArt.MinDropDp);
+            world.SprayMaterial.enableInstancing = true;
+            world.WaterMarksMaterial!.enableInstancing = true;
+            world.BuoyMaterial!.SetColor(SceneShaderIds.BuoyColor, SceneLighting.Srgb(SceneColor.FromArgb(RowerArt.BuoyOrange)));
+        }
+
+        private static Vector4 Linear(uint argb, double smoothness)
+        {
+            var c = SceneLighting.Srgb(SceneColor.FromArgb(argb)).linear;
+            return new Vector4(c.r, c.g, c.b, (float)smoothness);
+        }
+
+        // Los herrajes a la medida del remero (la pedalera y los rieles de RiggingFit).
+        internal static void BuildFittings(Mesh mesh, in RowMate.Core.Scene.Stroke.RowerSpec spec)
+        {
+            var boat = RowMate.Core.Scene.Stroke.BoatSpec.Real;
+            var fit = RowMate.Core.Scene.Stroke.RiggingFit.Solve(boat, spec);
+            var data = new MeshData(BoatFittingsMesh.VertexCapacity, BoatFittingsMesh.IndexCapacity);
+            BoatFittingsMesh.Build(boat, spec, fit, data);
+            using (var upload = new MeshUpload())
+            {
+                upload.Upload(data, mesh, false, null, true);
+            }
         }
 
         private static readonly string[] LayerSlotIds = { SlotIds.TerrainPebbles, SlotIds.TerrainGrass, SlotIds.TerrainSoil, SlotIds.TerrainRock };

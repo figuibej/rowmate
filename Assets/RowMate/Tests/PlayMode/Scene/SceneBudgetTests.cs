@@ -554,5 +554,57 @@ namespace RowMate.Tests.PlayMode.Scene
             Assert.That(host.LowerTier(), Is.False, "Bajo es el último");
             AssertClean(H);
         }
+
+        // It. 7 (07-remero-palada/02-tech-design §4; DA7-14, QA7-G-01; B7-04 en "Cambios por implementación (WP-B)"): con el remero, en Medio
+        // a las 12 y a las 22 h, ≤ 100 dibujos y ≤ 50 SetPass (el tope de la 6a: la 6a sola ya da 45-46, así que los ≤ 40 del diseño no
+        // entran); ≤ 170 k triángulos con el maniquí y ≤ 280 k con Y Bot (su pasada de sombras vuelve a dibujar los 55 k; si la máquina no lo
+        // tiene, NO VERIFICABLE). Antes decía:
+        // ≤ 40 SetPass; ≤ 160 k triángulos con el maniquí y ≤ 205 k con Y Bot.
+        [UnityTest, Category("AC-SCN-01-11"), Category("Perf")]
+        public IEnumerator TheRowerFitsTheMediumBudget([Values(RowMate.Scene.RowerCharacterKind.Mannequin, RowMate.Scene.RowerCharacterKind.Slot)] RowMate.Scene.RowerCharacterKind kind)
+        {
+            AssumeGpu();
+            using (new TierScope(QualityTier.Medium))
+            {
+                CreateScene(DeviceProfile.TV, o =>
+                {
+                    o.SceneTier = QualityTier.Medium;
+                    o.SceneCharacter = kind;
+                });
+                yield return EnterFree();
+                if (kind == RowMate.Scene.RowerCharacterKind.Slot && !SceneHost.World!.Rower!.FromSlot)
+                {
+                    Assert.Ignore("NO VERIFICABLE: esta máquina no tiene el FBX de Mixamo (sin binding)");
+                }
+
+                H.Root.style.display = DisplayStyle.None;
+                yield return Frames(3);
+                foreach (var hour in new[] { 12, 22 })
+                {
+                    SceneHost.ForceHourForTest(hour);
+                    SceneHost.ForceDistanceForTest(920);
+                    using (var batches = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count"))
+                    using (var setPass = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count"))
+                    using (var triangles = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count"))
+                    {
+                        long maxBatches = 0, maxSetPass = 0, maxTriangles = 0;
+                        for (var i = 0; i < 30; i++)
+                        {
+                            H.Step();
+                            yield return null;
+                            maxBatches = Math.Max(maxBatches, batches.LastValue);
+                            maxSetPass = Math.Max(maxSetPass, setPass.LastValue);
+                            maxTriangles = Math.Max(maxTriangles, triangles.LastValue);
+                        }
+
+                        Debug.Log("[SBT] remero " + kind + " Medio " + hour + " h: " + maxBatches + " dibujos, " + maxSetPass + " SetPass, " + maxTriangles
+                                  + " triángulos (remero " + SceneHost.World!.Rower!.Triangles + ")");
+                        Assert.That(maxBatches, Is.LessThanOrEqualTo(100), hour + " h: dibujos");
+                        Assert.That(maxSetPass, Is.LessThanOrEqualTo(50), hour + " h: SetPass");
+                        Assert.That(maxTriangles, Is.LessThanOrEqualTo(kind == RowMate.Scene.RowerCharacterKind.Mannequin ? 170000 : 280000), hour + " h: triángulos");
+                    }
+                }
+            }
+        }
     }
 }

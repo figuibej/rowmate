@@ -85,6 +85,9 @@ namespace RowMate.Snapshots
         // lista o con la orilla a medio armar bloquea la toma (SnapshotTakeRule.SceneBlockers).
         public bool SceneMayBeLoading { get; set; }
 
+        // It. 7: las sondas de cada toma de una secuencia (Kind = Sequence), como Inspect: los valores van al manifest de esa toma.
+        public Func<UiTestHost, UnityEngine.Texture2D, List<string>, IEnumerable<string>>? ShotInspect { get; set; }
+
         // It. 6a (CAP-24): la toma a mitad de la entrada, con la cascada del HUD corriendo: lo finito se anota en el manifest (inFlight)
         // pero no bloquea.
         public bool MotionMayRun { get; set; }

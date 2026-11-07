@@ -5,6 +5,7 @@
 #   tools/oracle/run-oracle.ps1 [-LegacyPath <ruta>] [-DartExe <ruta>] [-Only <nombre>[,...]] [-L10n]
 #   tools/oracle/run-oracle.ps1 -Engine [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 #   tools/oracle/run-oracle.ps1 -Scene [-LegacyPath <ruta>] [-FlutterExe <ruta>]
+#   tools/oracle/run-oracle.ps1 -Stroke [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 #
 # Pasos: guardia R-02 (ningun script menciona el modulo de credenciales del legacy), guardia del legacy ANTES
 # (status --porcelain vacio, listado --ignored archivo por archivo e instantanea de metadatos sin abrir archivos),
@@ -24,6 +25,10 @@
 # nada sin ignorar en engine/ al terminar). Corre test/scene_vectors_test.dart (Assets/RowMate/Tests/Golden/oracle/scene_*.json)
 # y test/scene_legacy_images_test.dart (LEG-01 a LEG-07 en docs/migration/iterations/06a-escena-lago/snapshots/legacy), con
 # ROWMATE_ORACLE_OUT, ROWMATE_LEGACY_COMMIT y ROWMATE_LEG_OUT. -Engine y -Scene juntos corren las dos cosas.
+#
+# -Stroke (It. 7, 07-remero-palada/02-tech-design Sec. 6.2): el oraculo de la palada, en el mismo proyecto engine/ y con los mismos
+# controles. Corre test/stroke_vectors_test.dart (Assets/RowMate/Tests/Golden/oracle/scene_stroke.json) y
+# test/boat_legacy_images_test.dart (LEG-01 y LEG-02 en docs/migration/iterations/07-remero-palada/snapshots/legacy).
 param(
     [string]$LegacyPath = "",
     [string]$DartExe = "",
@@ -31,6 +36,7 @@ param(
     [switch]$L10n,
     [switch]$Engine,
     [switch]$Scene,
+    [switch]$Stroke,
     [string]$FlutterExe = ""
 )
 
@@ -39,7 +45,7 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $legacyGiven = $LegacyPath -ne ''
 if ($LegacyPath -eq '') { $LegacyPath = Join-Path $repo '..\rowmate-legacy' }
 $legacy = (Resolve-Path $LegacyPath).Path
-$flutterProject = $Engine -or $Scene
+$flutterProject = $Engine -or $Scene -or $Stroke
 $runBin = (-not $flutterProject) -or ($Only.Count -gt 0)
 $engineDir = Join-Path $PSScriptRoot 'engine'
 $engineIgnores = @(
@@ -235,6 +241,14 @@ try {
                     Write-Host '[oracle] flutter test test/scene_vectors_test.dart test/scene_legacy_images_test.dart'
                     & $FlutterExe test test/scene_vectors_test.dart test/scene_legacy_images_test.dart
                     if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO flutter test de la escena (' + $LASTEXITCODE + ')'); $failed++ }
+                }
+                if ($Stroke) {
+                    $legOut = Join-Path $repo 'docs\migration\iterations\07-remero-palada\snapshots\legacy'
+                    New-Item -ItemType Directory -Force -Path $legOut | Out-Null
+                    $env:ROWMATE_LEG_OUT = $legOut
+                    Write-Host '[oracle] flutter test test/stroke_vectors_test.dart test/boat_legacy_images_test.dart'
+                    & $FlutterExe test test/stroke_vectors_test.dart test/boat_legacy_images_test.dart
+                    if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO flutter test de la palada (' + $LASTEXITCODE + ')'); $failed++ }
                 }
             }
         }

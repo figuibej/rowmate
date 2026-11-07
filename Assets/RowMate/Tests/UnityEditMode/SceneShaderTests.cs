@@ -184,10 +184,22 @@ namespace RowMate.Tests.UnityEditMode
         [Test]
         public void EachFragmentFitsItsBudget()
         {
+            MeasureBudgets(ShaderArt.Scene, "costo del fragmento en Medio (D3D11)");
+        }
+
+        // It. 7 (WP-D2; 07-remero-palada/04-design-notes §6): los cinco del remero con su presupuesto de ShaderArt.Rower.
+        [Test]
+        public void TheRowerFragmentsFitTheirBudget()
+        {
+            MeasureBudgets(ShaderArt.Rower, "costo del fragmento del remero en Medio (D3D11)");
+        }
+
+        private static void MeasureBudgets(IEnumerable<SceneShaderSpec> specs, string title)
+        {
             Assume.That(Application.platform, Is.EqualTo(RuntimePlatform.WindowsEditor), "la medida es la del código de Direct3D 11");
             var report = new StringBuilder();
             var over = new StringBuilder();
-            foreach (var spec in ShaderArt.Scene)
+            foreach (var spec in specs)
             {
                 var data = ShaderUtil.GetShaderData(Load(spec));
                 var pass = FindForward(data);
@@ -220,7 +232,7 @@ namespace RowMate.Tests.UnityEditMode
                 }
             }
 
-            Debug.Log("[SHADER] costo del fragmento en Medio (D3D11): " + report);
+            Debug.Log("[SHADER] " + title + ": " + report);
             Assert.That(over.ToString(), Is.Empty, "fuera de presupuesto: " + over + "\n" + report);
         }
 

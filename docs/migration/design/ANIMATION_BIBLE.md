@@ -40,7 +40,9 @@ El gate, el valor por defecto y si se le confirma al usuario están en [ROADMAP 
 
 ### 0.3 Estrategia técnica de la animación del remero (decisión)
 
-**Decisión: IK procedural con Animation Rigging sobre el rig Humanoid de Mixamo, con toda la lógica de ciclo, curvas y geometría en Core (C# puro, testeable con dotnet).** Los clips de Mixamo **no** se usan para la remada.
+**Decisión: IK procedural sobre el rig Humanoid de Mixamo, con toda la lógica de ciclo, curvas, geometría e IK en Core (C# puro, testeable con dotnet).** Los clips de Mixamo **no** se usan para la remada.
+
+> **It. 7 (DT7-01):** el IK no usa Animation Rigging ni el IK del `Animator`. Core (`ScullingKinematics` + `TwoBoneIk`) da las posiciones de las articulaciones y el eje lateral de cada segmento; `RowerRigDriver` (Unity) orienta cada hueso hacia su hijo desde la pose de reposo medida al armar. Mismo código para el maniquí y para Y Bot, contactos exactos por construcción, determinista en el arnés y casi todo probado con dotnet. Los números de este documento no cambian. Lo que sigue en esta sección (la comparación) vale igual; la columna "Costo" queda: pose + `Apply` ≤ 0,08 ms, sin Burst ni jobs.
 
 | Criterio | Clips de Mixamo + blend tree | IK procedural (elegida) |
 |---|---|---|
@@ -382,22 +384,24 @@ Fases con nombre (para QA y para el código de efectos):
 | Recuperación — cuerpo adelante | 0,50 → 0,75 | el tronco pivota desde la cadera hasta +28° |
 | Recuperación — carro | 0,60 → 1,00 | las rodillas suben recién cuando las manos pasaron las rodillas |
 
-### 3.4 Ángulos articulares aproximados por posición (sculler de 1,85 m)
+### 3.4 Ángulos articulares por posición (maniquí de 1,85 m e Y Bot)
 
-Convenciones: rodilla, cadera y codo = **ángulo interior** (180° = recto); tronco desde la vertical, **+ hacia popa** (hacia los pies, como el legacy); hombro = flexión del brazo respecto del tronco (+ adelante, − atrás). Los valores de rodilla, cadera, hombro y codo los resuelve el IK; esta tabla es el **criterio de aceptación visual** (± 8°).
+Convenciones: rodilla, cadera y codo = **ángulo interior** (180° = recto); tronco desde la vertical, **+ hacia popa** (hacia los pies, como el legacy); hombro = flexión del brazo respecto del tronco (+ adelante, − atrás). Los valores de rodilla, cadera, hombro y codo los resuelve el IK; esta tabla es el **criterio de aceptación visual** (± 8°) y la exige entera `ScullingKinematicsTests.TheTenPosesOfTheTable` (los 60 valores, con cada cuerpo).
 
-| Posición | c | L / B / A | Tronco | Carro (0 = adelante) | Rodilla | Cadera | Hombro | Codo | Remo (visual) | Centro de la pala | Plumeo |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| Catch | 0,000 | 0 / 0 / 0 | +28° | 0,00 | 50° | 32° | +80° | 178° | −62° | 0 → −0,13 m | 0° |
-| Media pierna | 0,090 | 0,50 / 0 / 0 | +28° | 0,50 | 112° | 52° | +78° | 178° | −46° | −0,13 | 0° |
-| Apertura | 0,180 | 1,00 / 0,35 / 0 | +12° | 1,00 | 170° | 85° | +70° | 176° | −11° | −0,13 | 0° |
-| Brazos empiezan | 0,240 | 1 / 0,78 / 0,06 | −8° | 1,00 | 178° | 105° | +40° | 165° | +14° | −0,13 | 0° |
-| Finish | 0,360 | 1 / 1 / 1 | −18° | 1,00 | 178° | 112° | −25° | 85° | +42° | −0,13 | 0° |
-| Extracción | 0,395 | 1 / 1 / 1 | −18° | 1,00 | 178° | 112° | −25° | 85° | +42° | +0,05 | 11° |
-| Manos afuera | 0,600 | 1 / 0,65 / 0 | −2° | 1,00 | 178° | 95° | +72° | 178° | +14° | +0,09 | 90° |
-| Cuerpo adelante | 0,750 | 0,68 / 0 / 0 | +28° | 0,68 | 150° | 55° | +82° | 178° | −24° | +0,09 | 90° |
-| Medio carro | 0,850 | 0,35 / 0 / 0 | +28° | 0,35 | 95° | 40° | +82° | 178° | −46° | +0,10 | 88° |
-| Antes del catch | 0,960 | 0,03 / 0 / 0 | +28° | 0,03 | 52° | 32° | +80° | 178° | −61° | +0,17 | 2° |
+**Desde la verificación de la It. 7 (QA7-V-01, DV-78) es la hoja medida** ([07-remero-palada/02-tech-design](../iterations/07-remero-palada/02-tech-design.md) A7-01): la tabla anterior suponía un carro y unos brazos que no caben con las medidas reales (D-ART-04), los ramps del legacy y las manos en el puño del remo real (con piernas de 0,45 m, medio carro dobla la rodilla a ≈ 76°, no 112°; el remo vuelve más lento que los brazos, así que en "manos afuera" el codo queda en ≈ 128°). Tronco, carro, remo, pala y plumeo siguen siendo los de diseño. Y Bot (1,786 m, brazo 0,274 m contra 0,344) tiene su columna: con brazos más cortos el finish lleva el hombro a −43° y el codo a 54°.
+
+| Posición | c | L / B / A | Tronco | Carro (0 = adelante) | Rodilla | Cadera | Hombro | Codo | Y Bot: rod. / cad. / hom. / codo | Remo (visual) | Centro de la pala | Plumeo |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Catch | 0,000 | 0 / 0 / 0 | +28° | 0,00 | 50° | 29° | +98° | 171° | 46 / 25 / +99 / 171 | −62° | 0 → −0,13 m | 0° |
+| Media pierna | 0,090 | 0,50 / 0 / 0 | +28° | 0,50 | 76° | 33° | +103° | 171° | 74 / 29 / +103 / 171 | −46° | −0,13 | 0° |
+| Apertura | 0,180 | 1,00 / 0,35 / 0 | +12° | 1,00 | 124° | 62° | +81° | 166° | 131 / 64 / +81 / 167 | −11° | −0,13 | 0° |
+| Brazos empiezan | 0,240 | 1 / 0,78 / 0,06 | −8° | 1,00 | 175° | 100° | +45° | 130° | 175 / 99 / +35 / 114 | +14° | −0,13 | 0° |
+| Finish | 0,360 | 1 / 1 / 1 | −18° | 1,00 | 175° | 107° | −9° | 70° | 175 / 107 / −43 / 54 | +42° | −0,13 | 0° |
+| Extracción | 0,395 | 1 / 1 / 1 | −18° | 1,00 | 175° | 107° | −12° | 80° | 175 / 107 / −41 / 66 | +42° | +0,05 | 11° |
+| Manos afuera | 0,600 | 1 / 0,65 / 0 | −2° | 1,00 | 175° | 95° | +39° | 128° | 175 / 95 / +28 / 114 | +14° | +0,09 | 90° |
+| Cuerpo adelante | 0,750 | 0,68 / 0 / 0 | +28° | 0,68 | 109° | 44° | +85° | 147° | 107 / 41 / +79 / 137 | −24° | +0,09 | 90° |
+| Medio carro | 0,850 | 0,35 / 0 / 0 | +28° | 0,35 | 70° | 31° | +93° | 171° | 68 / 28 / +92 / 171 | −46° | +0,10 | 88° |
+| Antes del catch | 0,960 | 0,03 / 0 / 0 | +28° | 0,03 | 46° | 29° | +89° | 171° | 42 / 25 / +88 / 171 | −61° | +0,17 | 2° |
 
 Detalles que dan realismo (todos [EXR]):
 
@@ -428,7 +432,7 @@ En planta, el puño recorre el arco del remo (no una recta): `x = ±(0,80 − 0,
 
 | Magnitud | Curva sobre `c` |
 |---|---|
-| Barrido visual `α_v` | `α_v = −62° + 102° · (α_legacy + 55°) / 90°`, con `α_legacy` = barrido del contrato (−55°→+35°, smooth en drive 0–0,36, quieto 0,36–0,40, vuelta en 0,40–1,00). Catch −62°, finish +42° (arco 104°, sculler intermedio) |
+| Barrido visual `α_v` | `α_v = −62° + 104° · (α_legacy + 55°) / 90°`, con `α_legacy` = barrido del contrato (−55°→+35°, smooth en drive 0–0,36, quieto 0,36–0,40, vuelta en 0,40–1,00). Catch −62°, finish +42° (arco 104°, sculler intermedio). Era 102° y daba +40° (It. 7, gate QA7-G-02) |
 | Altura del centro de la pala | drive enterrada −0,13 (c 0,015–0,355) · extracción −0,13 → +0,05 (`smooth` en c 0,355–0,395) · subida a +0,09 (c 0,395–0,43) · recuperación +0,09, con **ondulación** de ±0,01 m siguiendo el oleaje del perfil · subida para cuadrar +0,09 → +0,17 (c 0,80–0,93) · **entrada** +0,17 → −0,13 (`smooth` en c 0,97 → 1,015, cruzando el 0: se evalúa con `c' = c + 1` si `c < 0,5`) |
 | Plumeo (giro sobre el eje del remo) | 0° en el drive · 0° → 90° (`smooth` en c 0,385–0,43, después de que la pala salió) · 90° en la recuperación (cara cóncava hacia arriba) · cuadrado 90° → 0° (`smooth` en c 0,84–0,95: empieza cuando las manos pasan sobre los tobillos) |
 | "Pala en el agua" (para efectos) | centro de pala ≤ 0. Sale en c ≈ 0,38 y entra en c ≈ 0,99: coincide con el contrato (pala adentro mientras `p < 0,38`) |
@@ -679,36 +683,18 @@ namespace RowMate.Core.Scene.Stroke
 }
 ```
 
-### 7.3 Rig: Animator con controlador de pose + Animation Rigging (QA-P-29)
+### 7.3 Rig: solver propio sobre los huesos (It. 7, DT7-01 y DT7-07)
 
-**Animator** (obligatorio: Animation Rigging evalúa sus restricciones sobre el grafo del `Animator`; sin un controlador, los huesos que el rig no toca, como los dedos, quedan en T-pose):
+Reemplaza al plan original (Animator con controlador de pose `RowerPose` + Animation Rigging, QA-P-29), que no se implementó: el paquete `com.unity.animation.rigging` queda en el manifiesto sin uso (Para issues de la 7).
 
-- **Avatar Humanoid.** Personaje de Mixamo: el del FBX (*Create From This Model*, ASSET_SLOTS §2.5). Maniquí `ProceduralRower`: se arma **en ejecución** con `AvatarBuilder.BuildHumanAvatar(raíz, HumanDescription)`. `human` mapea cada hueso `mixamorig:*` al nombre de `HumanTrait.BoneName` y `skeleton` toma la T-pose generada. Se arma una vez y queda en caché; se verifica `avatar.isValid && avatar.isHuman`. Si falla, se registra un aviso y el maniquí rema igual, sin la pose de dedos.
-- **Controlador de pose `RowerPose`.** Es un `RuntimeAnimatorController` en `Assets/RowMate/Art/Models/Rower/`, con **un solo estado** que reproduce `RowerGripPose.anim`: un clip Humanoid **estático de 1 cuadro** con los dedos cerrados sobre el puño (índice a meñique: músculos *1/2/3 Stretched* ≈ −0,85, *Spread* 0; pulgar: *1 Stretched* −0,2, *2/3 Stretched* −0,6, *Spread* 0,4; valores finales en el diseño de la It. 7). El resto del cuerpo queda en la pose sentada neutra, porque lo sobrescribe el rig. Como es un clip de músculos Humanoid, sirve sin *retarget* para Y Bot, el personaje realista y el maniquí. Lo genera un script de Editor (`RowerPoseClipBuilder`, en `RowMate.Editor`) con `AnimationUtility.SetEditorCurve` sobre los nombres de `HumanTrait.MuscleName`, y se versiona como `.anim` de texto.
-- **Ajustes:** *Apply Root Motion* apagado, *Update Mode* `Normal`, *Culling Mode* `Always Animate` (el remero está siempre en cuadro; así no se congela si algo lo tapa).
-- **Orden de armado** (`RowerRigDriver.Initialize`, una vez por personaje, al entrar al inmersivo):
-  1. Instanciar el personaje del slot, o crear `ProceduralRower`.
-  2. Asignar avatar y `RowerPose`, y llamar a `Animator.Rebind()`.
-  3. Medir los huesos para `RiggingFit`.
-  4. Crear por código el `Rig` y las restricciones de la tabla, con sus targets.
-  5. Llamar a `RigBuilder.Build()`.
+- **Core** (`Core/Scene/Stroke/`): `ScullingKinematics.Evaluate` resuelve en el marco del bote las 24 articulaciones (`RowerJoint`: Hips, Spine, Spine1, Spine2, Neck, Head, HeadTop y, por lado, Shoulder, Arm, ForeArm, Hand, GripPoint, UpLeg, Leg, Foot, ToeBase) y el **eje lateral** de cada segmento, con `TwoBoneIk` para piernas (cadera → tobillo fijo en la pedalera de `RiggingFit`, hint de rodilla 0,6 m arriba y ±0,12 afuera) y brazos (hombro con protracción → punto de agarre del puño, hint de codo afuera 0,35, abajo 0,25, a proa 0,25). La columna reparte el tronco 60/15/13/12 % con 6° de base; la cabeza mira `GazeTarget` (30 m a popa, peso 0,85).
+- **Unity** (`Scene/Rower/RowerRigDriver`): `Initialize` (una vez por personaje) mide la pose de reposo (rotación en mundo de cada hueso, dirección a su hijo y eje lateral de referencia), mide `RowerSpec` de los huesos (`SceneSession.SetRower`) y aplica `GripPose` a los dedos. `Apply` (cada cuadro, de la raíz a las puntas, ≈ 24 huesos, sin asignar, ≤ 0,05 ms): `rotación = LookRotation(dir_obj, lat_obj) · inversa(LookRotation(dir_reposo, lat_reposo)) · rotación_reposo`; la mano toma el 25 % del plumeo.
+- **Animator:** el del personaje queda **deshabilitado** (sin controlador). El maniquí `ProceduralRower` no tiene `Animator` ni avatar (sin `AvatarBuilder`).
+- **Agarre (DT7-07):** `GripPose` (Core) es una tabla de ángulos por falange (índice a meñique cerrados sobre el puño, pulgar opuesto) aplicada como rotación local de los dedos al armar. Sin `RowerGripPose.anim` ni `RowerPoseClipBuilder`. El maniquí no tiene dedos (puño rígido).
+- **Import:** Humanoid con *Optimize Game Objects* apagado y *Read/Write* encendido, que pone solo `MixamoImportPostprocessor` (ASSET_SLOTS §2.5, DT7-04).
+- **Pruebas:** `ScullingKinematicsTests`, `RiggingFitTests` y `RowerGeometryTests` (dotnet); `RowerRigTests` (PlayMode) compara las articulaciones medidas en los huesos de Unity contra Core (≤ 2 cm; manos a ≤ 2 cm del puño; ángulos ± 8°) con el maniquí y con Y Bot; las sondas de CAP-17 y CAP-18 imprimen la hoja medida.
 
-  Cambiar de personaje = destruir y repetir; nunca a mitad de una sesión.
-- **Dependencias.** Animation Rigging 1.4.1 compila sus *Animation C# Jobs* con Burst; el paquete trae `com.unity.burst` (≥ 1.4.1) y, a través de Burst, `com.unity.mathematics`. RowMate **no escribe restricciones propias**, que sí exigirían referenciar `Unity.Burst` y `Unity.Mathematics` desde `RowMate.Scene`: solo usa las de la tabla, que se configuran con `Transform` y `float`.
-- **Plan B** (solo si Animation Rigging bloquea en alguna plataforma; lo decide el Architect): IK Humanoid integrado del `Animator`, sin paquete. Usa `OnAnimatorIK` con `SetIKPosition`/`SetIKHintPosition` para manos y pies, `SetLookAtPosition` para la cabeza, `bodyPosition` para la pelvis y `SetBoneLocalRotation` para la columna, sobre el mismo controlador de pose. Los números de este documento no cambian.
-
-Encima del `Animator`, `RigBuilder` con estas restricciones, en este orden:
-
-| Rig | Restricción (Animation Rigging) | Huesos Mixamo | Target / hint |
-|---|---|---|---|
-| Pelvis | `OverrideTransform` (posición y rotación en mundo) | `mixamorig:Hips` | `SeatTarget`: asiento + desplazamiento de cadera; pitch = 60 % del tronco + 6° base |
-| Columna | `OverrideTransform` en espacio local: rotación de reposo del rig × delta del Core (la compone `RowerRigDriver`) | `Spine` 15 %, `Spine1` 13 %, `Spine2` 12 % del tronco | — |
-| Hombros | `OverrideTransform` | `LeftShoulder`, `RightShoulder` | protracción/retracción (§3.4) |
-| Piernas | `TwoBoneIKConstraint` × 2 | `UpLeg` → `Leg` → `Foot` | `FootTarget` fijo en la pedalera; hint de rodilla 0,6 m arriba y ±0,12 m afuera |
-| Brazos | `TwoBoneIKConstraint` × 2 | `Arm` → `ForeArm` → `Hand` | `GripTarget` hijo del puño del remo (posición + 25 % del plumeo); hint de codo afuera 0,35, abajo 0,25, hacia proa 0,25 |
-| Cabeza | `MultiAimConstraint` | `Neck` 0,4 · `Head` 0,6 | `GazeTarget` 30 m hacia popa a la altura de los ojos; peso 0,85 |
-
-Los remos **no** se pegan a las manos: los remos siguen la cinemática del Core y las manos siguen a los remos. Requisito de import: Rig Humanoid con *Optimize Game Objects* **desactivado** (Animation Rigging necesita los transforms; ver ASSET_SLOTS).
+Los remos **no** se pegan a las manos: los remos siguen la cinemática del Core y las manos siguen a los remos.
 
 ### 7.4 Ajuste del bote al personaje (`RiggingFit`)
 

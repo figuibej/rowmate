@@ -170,6 +170,37 @@ namespace RowMate.Scene
             "_RmStarDir", "_RmStarAlpha", "_RmCloudDir", "_RmCloudVariant", "_RmCloudAlpha", "_RmFade", "_RmLit", "_RmVariant", "_RmWindPhase", "_RmTint",
         };
 
+        // ── It. 7 (07-remero-palada/02-tech-design §7.4; WP-B0): el remero, los remos, la salpicadura, el agua que responde y la boya.
+        // Van aparte de los 13 de la 6a (ShaderNames = ShaderArt.Scene): los cubre RowerMaterialsTests y la colección de variantes. ──
+        public const string Rower = "RowMate/Scene/Rower";
+        public const string Oar = "RowMate/Scene/Oar";
+        public const string Spray = "RowMate/Scene/Spray";
+        public const string WaterMarks = "RowMate/Scene/WaterMarks";
+        public const string Buoy = "RowMate/Scene/Buoy";
+
+        public static readonly string[] RowerShaderNames = { Rower, Oar, Spray, WaterMarks, Buoy };
+
+        // Rower: el color (lineal) y la suavidad de las 9 regiones (RowerArt) y el relleno del frente.
+        public static readonly int RowerColors = Shader.PropertyToID("_RmRowerColors");
+        public static readonly int RimFill = Shader.PropertyToID("_RmRimFill");
+
+        // Oar: las 5 partes, la flexión (por remo, MaterialPropertyBlock) y el ancho mínimo de la caña.
+        public static readonly int OarColors = Shader.PropertyToID("_RmOarColors");
+        public static readonly int OarLoad = Shader.PropertyToID("_RmOarLoad");
+        public static readonly int MinWidthDp = Shader.PropertyToID("_RmMinWidthDp");
+        public static readonly int PixelSize = Shader.PropertyToID("_RmPixelSize");
+
+        // Spray (por instancia): (tamaño; alfa; tipo; largo del trazo); el tamaño mínimo de una gota.
+        public static readonly int SprayParams = Shader.PropertyToID("_RmSpray");
+        public static readonly int MinDropDp = Shader.PropertyToID("_RmMinDropDp");
+
+        // WaterMarks (por instancia): (edad; giro; alfa; tipo); el esfuerzo.
+        public static readonly int Marks = Shader.PropertyToID("_RmMarks");
+        public static readonly int Effort = Shader.PropertyToID("_RmEffort");
+
+        // Buoy: el naranja (el fundido es _RmFade).
+        public static readonly int BuoyColor = Shader.PropertyToID("_RmBuoyColor");
+
         // La capa de la escena (la cámara de la UI no la ve): la crea UrpProvisioner.
         public const string LayerName = "RowMateScene";
     }

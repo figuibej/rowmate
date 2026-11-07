@@ -127,6 +127,26 @@ ShaderVariantCollection:
       variants:
       - keywords: RM_WATER_EXTRAS
         passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_MEDIUM
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: RM_WATER_EXTRAS _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_MEDIUM
+        passType: 13
   - first: {fileID: 4800000, guid: e7a64e8adf9d3ba4f83d67234037b4a6, type: 3}
     second:
       variants:
@@ -302,6 +322,101 @@ ShaderVariantCollection:
       - keywords: INSTANCING_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_LOW
         passType: 13
       - keywords: INSTANCING_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_MEDIUM
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_MEDIUM
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_MEDIUM
+        passType: 13
+  - first: {fileID: 4800000, guid: ca8bad2342df96b4d8b97f1522448bbb, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_MEDIUM
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_MEDIUM
+        passType: 13
+  - first: {fileID: 4800000, guid: a03334e751d98f34992f12559d6a6588, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+      - keywords: INSTANCING_ON
+        passType: 13
+  - first: {fileID: 4800000, guid: a4fb6adc32c611f4295bf00ed10684c0, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+      - keywords: INSTANCING_ON
+        passType: 13
+  - first: {fileID: 4800000, guid: 9a1be6be596a65d4398b877932a23977, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS _SHADOWS_SOFT_MEDIUM
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_HIGH
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_LOW
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_MEDIUM
+        passType: 13
+  - first: {fileID: 4800000, guid: f82339573864b9b47a8ce389c8ba97e4, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
         passType: 13
       - keywords: _MAIN_LIGHT_SHADOWS
         passType: 13

@@ -96,6 +96,21 @@ namespace RowMate.Core.Scene
         private bool _forcedHourChanged;
         private bool _breathingOffForTest;
 
+        // It. 7: la palada (02-tech-design §2.12). Todo se reserva al construir; SetRower rehace el ajuste fuera del Tick.
+        private readonly Stroke.VisualStrokeClock _clock = new Stroke.VisualStrokeClock();
+        private readonly Stroke.RowerIdle _idle = new Stroke.RowerIdle();
+        private readonly Stroke.PuddleField _puddles = new Stroke.PuddleField();
+        private readonly Stroke.StrokeSpray _spray = new Stroke.StrokeSpray();
+        private readonly Stroke.BuoyTracker _buoy = new Stroke.BuoyTracker();
+        private readonly Stroke.BoatSpec _boat = Stroke.BoatSpec.Real;
+        private Stroke.RowerSpec _rower = Stroke.RowerSpec.Mannequin;
+        private Stroke.RigFit _fit = Stroke.RiggingFit.Solve(Stroke.BoatSpec.Real, Stroke.RowerSpec.Mannequin);
+        private Stroke.RowerRenderTier _tier = Stroke.RowerRenderTier.High;
+        private Stroke.EffortFilter _effort;
+        private Stroke.ShadowSideFader _shadowSide;
+        private BoatCameraFilter _boatCamera;
+        private bool _strokeFrozenForTest;
+
         public SceneSession(ShoreEnvironment environment, SceneSessionOptions options)
         {
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -121,6 +136,26 @@ namespace RowMate.Core.Scene
 
         public bool IsOpen => _opened;
 
+        // El cuerpo del remero (el maniquí o el medido del rig del slot) y su ajuste al bote.
+        public Stroke.RowerSpec Rower => _rower;
+
+        public Stroke.RigFit Fit => _fit;
+
+        public Stroke.BoatSpec Boat => _boat;
+
+        // El remero que resolvió SceneHost (fuera del Tick: calcula el ajuste una vez).
+        public void SetRower(in Stroke.RowerSpec rower)
+        {
+            _rower = rower;
+            _fit = Stroke.RiggingFit.Solve(_boat, rower);
+        }
+
+        // El nivel de calidad para la sombra, las partículas y el hervidero (SceneHost, al armar y al cambiar de nivel).
+        public void SetRenderTier(in Stroke.RowerRenderTier tier)
+        {
+            _tier = tier;
+        }
+
         // La hora que dibuja la escena (NaN antes del primer Tick).
         public double VisibleHour => _hour.Visible;
 
@@ -138,6 +173,14 @@ namespace RowMate.Core.Scene
             _layoutWidth = double.NaN;
             _layoutHeight = double.NaN;
             _stars = default;
+            _clock.Reset();
+            _idle.Reset();
+            _puddles.Clear();
+            _spray.Clear();
+            _buoy.Reset();
+            _effort = default;
+            _shadowSide = default;
+            _boatCamera = default;
             for (var i = 0; i < CabinSlots; i++)
             {
                 _cabinSeeds[i] = int.MinValue;
@@ -170,6 +213,8 @@ namespace RowMate.Core.Scene
             var sceneTime = _frozenTimeForTest ?? State.Time;
             var snap = _snapNext;
             _snapNext = false;
+            var step = dt < 0 || double.IsNaN(dt) ? 0 : (dt > SceneState.MaxStep ? SceneState.MaxStep : dt);
+            TickRower(step, w, sceneTime, snap, ref frame.Rower);
 
             // La hora: la efectiva del cuadro y qué cambió (§2.5).
             var visible = UpdateHour(inputs, snap || _forcedHourChanged);
@@ -194,6 +239,18 @@ namespace RowMate.Core.Scene
             }
 
             var pose = Camera.Evaluate(inputs.Now, sceneTime, cam, inputs.ReduceMotion, _breathingOffForTest);
+
+            // Los términos del bote (AC-SCN-06-03), filtrados y por el multiplicador de la respiración, con el tope de DT7-06.
+            if (snap)
+            {
+                _boatCamera.Snap(frame.Rower.Boat);
+            }
+            else
+            {
+                _boatCamera.Step(step, frame.Rower.Boat);
+            }
+
+            pose = ChaseCameraMotion.AddBoatTerms(pose, cam, _boatCamera.Value, Camera.LastBreathingMultiplier);
             frame.Window = cam;
             frame.Pose = pose;
             frame.Projection = ChaseCameraProjection.Blend(cam, pose.FocalDp, pose.HorizonDp);
@@ -205,6 +262,12 @@ namespace RowMate.Core.Scene
             frame.Palette = palette;
             frame.Celestial = celestial;
             frame.LegacyLight = SceneTimeOfDay.LightFor(visible, cam);
+
+            // La sombra del bote (AC-SCN-08-06; DT7-08): mapa u óvalo, el lado del óvalo con su fundido y su alfa.
+            frame.Rower.ShadowMode = Stroke.BoatShadowRule.Mode(_tier.HasShadows, look.ShadowStrength(_tier.HighTier));
+            _shadowSide.Step(Stroke.BoatShadowRule.LegacySide(frame.LegacyLight.X, cam.CenterX), realDt, snap);
+            frame.Rower.ShadowSide = _shadowSide.Value;
+            frame.Rower.ShadowAlpha = Stroke.BoatShadowRule.OvalAlpha(ambient);
             frame.Moon = moon;
             frame.SouthernMirror = _southern;
             frame.DiskRadiusRad = CelestialPlacement.DiskRadiusRad(celestial.DiskIsMoon);
@@ -335,6 +398,90 @@ namespace RowMate.Core.Scene
             _breathingOffForTest = off;
         }
 
+        // La fase forzada (CAP-01, -02, -05, -12, -13, -17 a -21): c fija, sin eventos ni efectos nuevos. null = la de la sesión.
+        internal void ForceCanonicalForTest(double? canonical)
+        {
+            _clock.ForceCanonicalForTest(canonical);
+            _strokeFrozenForTest = canonical.HasValue;
+        }
+
+        // LT-97/98: un charco visible armado a mano (x y z de mundo, edad).
+        internal void InjectPuddleForTest(double x, double worldZ, double age)
+        {
+            _puddles.InjectForTest(x, worldZ, age);
+        }
+
+        // La palada de un cuadro (02-tech-design §2.12), después de State.Update: el reloj visual, el esfuerzo, el reposo, la pose, el
+        // bote, los eventos (charcos, salpicadura, gotas), los efectos, la boya y los hervideros. Sin asignar. La distancia de escena
+        // no cambia (el surge es un desfase de dibujo).
+        private void TickRower(double step, in SceneInputs w, double sceneTime, bool snap, ref Stroke.RowerFrame rower)
+        {
+            var events = _clock.Step(step, State.StrokePhase, w.Spm, w.IsActive);
+            if (snap && _effort.Value == 0)
+            {
+                _effort.Snap(w.PowerWatts);
+            }
+            else
+            {
+                _effort.Step(step, w.PowerWatts);
+            }
+
+            var effort = _effort.Value;
+            _idle.Step(step, _clock.StillSeconds, sceneTime);
+            var c = _clock.Canonical;
+            Stroke.ScullingKinematics.Evaluate(c, effort, _boat, _rower, _fit, _idle.Sample, ref rower.Pose);
+
+            var phi = _clock.Phase;
+            var spm = _clock.SmoothedSpm;
+            var amplitude = Stroke.BoatSurge.Amplitude(spm, effort);
+            var surge = Stroke.BoatSurge.OffsetMeters(phi, _clock.LatchedRatio, amplitude, State.Speed, spm);
+            rower.Boat = new Stroke.BoatMotionSample(Stroke.BoatMotion.Pitch(phi, sceneTime), Stroke.BoatMotion.Heave(phi),
+                Stroke.BoatMotion.Roll(sceneTime, Stroke.BoatMotion.LakeRollK), surge);
+            var boatWorldZ = State.Distance + SceneCamera.BoatZ + surge;
+
+            if (!_strokeFrozenForTest)
+            {
+                if ((events & Stroke.StrokeEvents.BladeExit) != 0)
+                {
+                    _puddles.OnBladeExit(rower.Pose, boatWorldZ);
+                }
+
+                if ((events & Stroke.StrokeEvents.BladeEntry) != 0)
+                {
+                    _spray.OnBladeEntry(rower.Pose, boatWorldZ, effort, _tier.ParticleScale);
+                }
+
+                // Las gotas: de la salida de la pala (c ≈ 0,381) a c = 0,55, con la palada en marcha.
+                if (w.IsActive && _clock.PhaseSpeed > 0 && c >= DripStart && c < DripEnd)
+                {
+                    _spray.EmitDrips(rower.Pose, boatWorldZ, (c - DripStart) / (DripEnd - DripStart), step, _tier.ParticleScale);
+                }
+            }
+
+            _puddles.Step(step, effort);
+            _spray.Step(step);
+            _buoy.Step(step, w.Buoy, State.Distance, State.Speed, sceneTime);
+
+            rower.ContractPhase = State.StrokePhase;
+            rower.Phase = phi;
+            rower.Canonical = c;
+            rower.Ratio = _clock.LatchedRatio;
+            rower.PhaseSpeed = _clock.PhaseSpeed;
+            rower.Effort = effort;
+            rower.IdleWeight = _idle.Weight;
+            rower.Events = _strokeFrozenForTest ? Stroke.StrokeEvents.None : events;
+            rower.Puddles = _puddles;
+            rower.Spray = _spray;
+            rower.Buoy = _buoy;
+            rower.BoatWorldZ = boatWorldZ;
+            var boil = _tier.Boils && c >= 0.02 && c <= 0.36;
+            rower.BoilLeft = boil;
+            rower.BoilRight = boil;
+        }
+
+        // El tramo de las gotas de la recuperación (ANIMATION_BIBLE §4.2): de la salida de la pala visible a c = 0,55.
+        private const double DripStart = 0.381, DripEnd = 0.55;
+
         private double UpdateHour(in SceneTickInputs inputs, bool instant)
         {
             double effective;
@@ -440,7 +587,8 @@ namespace RowMate.Core.Scene
 
         private void EnsureFrame(ref SceneFrame frame)
         {
-            if (frame.Stars == null || frame.Clouds == null || frame.Lines == null || frame.VisibleProps == null || frame.PropLight == null)
+            if (frame.Stars == null || frame.Clouds == null || frame.Lines == null || frame.VisibleProps == null || frame.PropLight == null
+                || frame.Rower.Pose.Joints == null)
             {
                 throw new ArgumentException("SceneSession: el cuadro se arma con SceneFrame.Create (los arreglos se reservan una vez).", nameof(frame));
             }

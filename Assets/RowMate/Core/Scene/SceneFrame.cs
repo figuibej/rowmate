@@ -110,6 +110,9 @@ namespace RowMate.Core.Scene
         // El nivel de la luz de cada objeto visible (en el mismo orden): 0-1 para las cabañas, 0 para lo demás.
         public double[] PropLight;
 
+        // It. 7: el remero, el bote y el agua (02-tech-design §2.12).
+        public Stroke.RowerFrame Rower;
+
         public double Distance;
         public double Speed;
         public double SceneTime;
@@ -124,6 +127,7 @@ namespace RowMate.Core.Scene
                 VisibleProps = new ShorePropBuffer(maxVisibleProps),
                 PropLight = new double[maxVisibleProps],
                 Projection = SceneMatrix4.Identity,
+                Rower = Stroke.RowerFrame.Create(),
             };
         }
     }

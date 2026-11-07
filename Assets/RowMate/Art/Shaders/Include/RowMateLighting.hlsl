@@ -67,6 +67,13 @@ void RmVertexLight(float3 N, float wrap, out float3 ambientG, out float3 keyG)
     keyG = pow(max(full, 1e-6), e) - ambientG;
 }
 
+// It. 7 · El relleno del frente del remero (ART_BIBLE §7.9): amount·sunColor·saturate(N·V), en gamma 2. El astro casi siempre queda
+// adelante del remero (detrás de la cámara no hay luz clave), así que sin esto el frente es solo ambiente y se lee plano.
+float3 RmFrontFill(float3 N, float3 V, float amount)
+{
+    return sqrt(max(_RmPaletteSunColor.rgb, 0.0)) * (amount * saturate(dot(N, V)));
+}
+
 // La sombra de la luz principal de URP (la fuerza la pone SceneLighting en la luz: de noche 0 en Medio sin apagar el mapa, DT6a-19).
 float RmMainShadow(float3 positionWS)
 {

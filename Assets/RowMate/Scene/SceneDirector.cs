@@ -47,6 +47,46 @@ namespace RowMate.Scene
 
         public GameObject Root { get; }
 
+        // It. 7 (07-remero-palada/02-tech-design §3.1): el remero (se cambia con SceneHost.ForceCharacterForTest), los remos, el agua que
+        // responde, la salpicadura y la boya.
+        public RowerCharacter? Rower { get; set; }
+
+        public OarRig? Oars { get; set; }
+
+        public WaterInteractionRenderer? WaterMarks { get; set; }
+
+        public StrokeVfx? Spray { get; set; }
+
+        public MarkerBuoy? Buoy { get; set; }
+
+        // Con el óvalo (Bajo, o la luz sin fuerza de sombra: Medio de noche) el remero, los remos, los herrajes y el carro no proyectan: el
+        // mapa no se vería y la pasada de sombras cuesta SetPass (B7-04). El casco de la 6a sigue como estaba.
+        private bool? _casting;
+
+        public void CastShadows(bool on)
+        {
+            if (_casting == on && !_rowerChanged)
+            {
+                return;
+            }
+
+            _casting = on;
+            _rowerChanged = false;
+            var mode = on ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            Boat.Fittings.shadowCastingMode = mode;
+            Boat.Seat.shadowCastingMode = mode;
+            Oars?.CastShadows(on);
+            Rower?.CastShadows(on);
+        }
+
+        // El remero cambió (ForceCharacterForTest): el próximo Apply vuelve a poner sus sombras.
+        public void RowerChanged()
+        {
+            _rowerChanged = true;
+        }
+
+        private bool _rowerChanged;
+
         // Cuántas veces se aplicó (pruebas).
         public long Applied { get; private set; }
 
@@ -61,6 +101,13 @@ namespace RowMate.Scene
             Terrain.Apply(frame.Distance);
             Shore.Apply(frame);
             Fill.Apply(frame.Distance, frame.Pose.Z);
+            Boat.Apply(frame.Rower);
+            CastShadows(frame.Rower.ShadowMode == RowMate.Core.Scene.Stroke.BoatShadowMode.Map);
+            Oars?.Apply(frame.Rower.Pose);
+            Rower?.Driver.Apply(frame.Rower.Pose);
+            WaterMarks?.Apply(frame);
+            Spray?.Apply(frame);
+            Buoy?.Apply(frame);
         }
 
         // Los dibujos instanciados de este cuadro (justo antes del pedido de render).
@@ -69,6 +116,8 @@ namespace RowMate.Scene
             Sky.Draw();
             Shore.Draw();
             Fill.Draw();
+            WaterMarks?.Draw();
+            Spray?.Draw();
         }
     }
 }

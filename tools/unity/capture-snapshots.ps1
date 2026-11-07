@@ -4,10 +4,11 @@
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it7|it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it6a por defecto desde la It. 6a: la escena del lago, CAP-01..24, DEMO-01..08, VID-01..11 e it6a-low en
+# -Set: el catalogo (it7 por defecto desde la It. 7: el remero, el bote y la palada, CAP-01..21, VID-01..07 y DEMO-01..06 en
+# docs/migration/iterations/07-remero-palada/snapshots; it6a, el de la It. 6a: la escena del lago, CAP-01..24, DEMO-01..08, VID-01..11 e it6a-low en
 # docs/migration/iterations/06a-escena-lago/snapshots, con el Editor SIN -nographics (Direct3D 11) y la escena real en nivel Alto;
 # it5: los paneles de series, CAP-01..26, DEMO-01..12 y VID-01..09 en
 # docs/migration/iterations/05-series-parciales/snapshots; it4b: el HUD EXR, CAP-01..31, DEMO-01..12 y VID-01..08 en
@@ -33,8 +34,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it6a',
+    [ValidateSet('it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it7',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -158,7 +159,8 @@ function Get-SetFolder {
     if ($Set -eq 'it4a') { return 'docs/migration/iterations/04a-motor-hud-funcional/snapshots' }
     if ($Set -eq 'it4b') { return 'docs/migration/iterations/04b-hud-exr/snapshots' }
     if ($Set -eq 'it5') { return 'docs/migration/iterations/05-series-parciales/snapshots' }
-    return 'docs/migration/iterations/06a-escena-lago/snapshots'
+    if ($Set -eq 'it6a') { return 'docs/migration/iterations/06a-escena-lago/snapshots' }
+    return 'docs/migration/iterations/07-remero-palada/snapshots'
 }
 
 function Invoke-Harness {

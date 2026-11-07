@@ -103,6 +103,42 @@ namespace RowMate.Core.Scene.Art
             new SceneShaderSpec("ScreenOverlay", 3500, 4, 0, false, new[] { "_RmScrimColor", "_RmScrimTop", "_RmScrimBottom" }, None),
         };
 
+        // It. 7 (07-remero-palada/02-tech-design §7.4; 04-design-notes §6): los cinco del remero, aparte de los 13 de la 6a
+        // (SceneShaderIds.RowerShaderNames). El presupuesto de fragmento es el de Medio sin las sombras de URP, como en la 6a; los
+        // charcos ≤ 20 por contrato (DA7-08; el hervidero y el anillo, en bloques condicionales).
+        public static readonly SceneShaderSpec[] Rower =
+        {
+            new SceneShaderSpec("Rower", 2000, 30, 0, false, new[] { "_RmRowerColors", "_RmRimFill" }, None),
+            new SceneShaderSpec("Oar", 2000, 20, 0, false, new[] { "_RmOarColors", "_RmOarLoad", "_RmMinWidthDp", "_RmPixelSize" }, None),
+            new SceneShaderSpec("Spray", 3100, 16, 0, true, new[] { "_RmMinDropDp" }, new[] { "_RmSpray" }),
+            new SceneShaderSpec("WaterMarks", 3050, 20, 0, true, new[] { "_RmEffort" }, new[] { "_RmMarks" }, maxBranchAlu: 32),
+            new SceneShaderSpec("Buoy", 2000, 25, 0, false, new[] { "_RmBuoyColor", "_RmFade" }, None),
+        };
+
+        // Las constantes kRm* de los cinco del remero con su valor en RowerArt (las comprueba RowerShaderContractTests).
+        public static Dictionary<string, double> RowerConstants()
+        {
+            return new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["kRmClothWrap"] = RowerArt.ClothWrap,
+                ["kRmSkinWrap"] = RowerArt.SkinWrap,
+                ["kRmSkinScatter"] = RowerArt.SkinScatter,
+                ["kRmSuitSheen"] = RowerArt.SuitSheen,
+                ["kRmRowerSpecular"] = RowerArt.RowerSpecular,
+                ["kRmGlassesReflect"] = RowerArt.GlassesReflect,
+                ["kRmOarTip"] = RowerArt.OarTipFromPin,
+                ["kRmDropCore"] = RowerArt.DropCore,
+                ["kRmSwirlHalf"] = RowerArt.SwirlSeparation / 2,
+                ["kRmSwirlEye"] = RowerArt.SwirlEye,
+                ["kRmSwirlEyeGrowth"] = RowerArt.SwirlEyeGrowth,
+                ["kRmMarkFoamGain"] = RowerArt.MarkFoamGain,
+                ["kRmMarkEyeAlpha"] = RowerArt.MarkEyeAlpha,
+                ["kRmBuoyGloss"] = RowerArt.BuoyGloss,
+                ["kRmBuoySpecular"] = RowerArt.BuoySpecular,
+                ["kRmBuoyWhite"] = RowerArt.BuoyWhite,
+            };
+        }
+
         public static SceneShaderSpec Find(string name)
         {
             foreach (var spec in Scene)
@@ -197,6 +233,7 @@ namespace RowMate.Core.Scene.Art
                 ["kRmReflectFar"] = WaterArt.ReflectFar,
                 ["kRmShallowInner"] = WaterArt.ShallowInner,
                 ["kRmShallowOuter"] = WaterArt.ShallowOuter,
+                ["kRmShadowDarken"] = RowerArt.ShadowDarken,
 
                 // Terrain (§7.5).
                 ["kRmWetTop"] = MaterialArt.WetTop,

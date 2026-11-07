@@ -97,6 +97,11 @@ namespace RowMate.Core.Scene.Art
         public const double HullDraft = 0.05, HullBowBall = 0.04;
         public const int HullSections = 24;
 
+        // El cockpit agrandado y corrido (It. 7, DA7-02): de z 9,05 a 10,45 (−0,45 / +0,95 del perno).
+        public const double CockpitStartZ = 9.05, CockpitEndZ = 10.45;
+
+        public static bool IsCockpit(double z) => z >= CockpitStartZ && z <= CockpitEndZ;
+
         // ── Colores de referencia (antes de la luz de la hora; shore_painter.dart:89-131; 04-design-notes §7.3-§7.5, §9) ──
         public const uint Trunk = 0xFF5D4037;
         public static readonly uint[] PineGreens =

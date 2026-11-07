@@ -26,6 +26,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 132900981fdd31f46ac2dc16d264f16d, type: 2}
   - {fileID: 11400000, guid: fd97aba3ee7c30f44a7ce13dc9f152fc, type: 2}
   - {fileID: 11400000, guid: df7fa63f906a2cf478458017c91a31ff, type: 2}
+  - {fileID: 11400000, guid: 2a6e6388d236f0f4ab07e65492147e26, type: 2}
+  - {fileID: 11400000, guid: 3d2a953666089104eb90d92c47f64709, type: 2}
+  - {fileID: 11400000, guid: 82a3621c49e3b23428ae99b98e7fe051, type: 2}
+  - {fileID: 11400000, guid: 05addde1602886845b687609a4f878fb, type: 2}
+  - {fileID: 11400000, guid: 4b24de118231f9045a3902399c8082e5, type: 2}
+  - {fileID: 11400000, guid: 3919a367a9018984aba080e8f950b644, type: 2}
+  - {fileID: 11400000, guid: ecb461aef8165b64088bce4b83cd42ea, type: 2}
   _high: {fileID: 11400000, guid: 8cc7cfe9cfdf1984fb6c35f1bd87a2c1, type: 2}
   _medium: {fileID: 11400000, guid: 6d44c08c8fb862d448b06b0f88dfa461, type: 2}
   _low: {fileID: 11400000, guid: 823d27f29d32bff439ea31e57437118b, type: 2}
@@ -45,4 +52,9 @@ MonoBehaviour:
     Hull: {fileID: 2100000, guid: 8512a43e71d67c243a074cb7d67d57e8, type: 2}
     BoatShadow: {fileID: 2100000, guid: 4ade8f106250d1d4bb32e3b540896ea1, type: 2}
     ScreenOverlay: {fileID: 2100000, guid: b574a5740676cc44aa6043e12a5a1dbd, type: 2}
+    Rower: {fileID: 2100000, guid: ca52ff6a205997947a525fe6bf07530b, type: 2}
+    Oar: {fileID: 2100000, guid: 46d28d0cf1598104fb10929235dd5beb, type: 2}
+    Spray: {fileID: 2100000, guid: 80a17e2ac1c41944d8e1ccfa802e0280, type: 2}
+    WaterMarks: {fileID: 2100000, guid: e79addf60f588d743aec3d3f01ae014e, type: 2}
+    Buoy: {fileID: 2100000, guid: 3d63544b74ab84441a4362374c6a2ff1, type: 2}
   _variants: {fileID: 20000000, guid: 5be0a8baf2ba2e347944bbd13d788f18, type: 2}

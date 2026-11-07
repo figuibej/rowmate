@@ -388,6 +388,31 @@ namespace RowMate.Tests.EditMode.Project
 
         // ------------------------------------------------------------------ It. 6a (06a-escena-lago/02-tech-design §2, §6.3)
 
+        // It. 7 (07-remero-palada/02-tech-design §1.1, §6.3): la palada es Core puro y determinista. Core/Scene/Stroke sin Unity, sin
+        // reloj ni System.Random (solo DartRandom con semilla fija: dos corridas del arnés iguales byte a byte).
+        [Test, Category("AC-SCN-08-11"), Category("AC-APP-19-03")]
+        public void TheStrokeCoreIsPureAndDeterministic()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\bUnityEngine\b"),
+                new Regex(@"\bDateTime(Offset)?\s*\.\s*(Now|UtcNow|Today)\b"),
+                new Regex(@"\bStopwatch\b"),
+                new Regex(@"\bEnvironment\s*\.\s*TickCount(64)?\b"),
+                new Regex(@"\bnew\s+(System\s*\.\s*)?Random\s*\("),
+                new Regex(@"\bGuid\s*\.\s*NewGuid\b"),
+            };
+            var files = new List<string>(SourceScan.CsFiles("Core/Scene/Stroke"));
+            Assert.That(files.Count, Is.GreaterThanOrEqualTo(20), "el escaneo encontró Core/Scene/Stroke");
+            var offenders = new List<string>();
+            foreach (var file in files)
+            {
+                offenders.AddRange(SourceScan.Matches(file, patterns, true));
+            }
+
+            Assert.That(offenders, Is.Empty, "Unity, reloj o azar sin semilla en la palada:\n" + string.Join("\n", offenders));
+        }
+
         // Toda regla de la escena es Core puro (Q-69, AC-SCN-01-14): Core/Scene (con Art y Geometry) y las líneas de tiempo y el
         // contraste de Core/Design, sin reloj del sistema, cronómetro, timers ni Unity. El tiempo llega por SceneTickInputs.
         [Test, Category("AC-SCN-01-14"), Category("AC-APP-19-03")]

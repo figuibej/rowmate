@@ -70,6 +70,11 @@ crashlytics-build.properties
 /Assets/ThirdParty/**
 !/Assets/ThirdParty/**/
 !/Assets/ThirdParty/**/*.meta
+# Mixamo (It. 7, DT7-13, QA7-G-04): NADA versionado, ni los .meta (un .meta sin su FBX queda huérfano en el CI y en otros clones).
+# El slot rower.character se versiona siempre en Procedural; la referencia al FBX vive en el binding generado e ignorado
+# (Assets/RowMate/Bootstrap/Generated/Resources/RowerCharacterBinding.asset).
+/Assets/ThirdParty/Mixamo/
+/Assets/ThirdParty/Mixamo.meta
 
 # Unity.gitignore estándar (del commit inicial del repo remoto)
 .utmp/

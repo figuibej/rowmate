@@ -53,8 +53,9 @@ Shader "RowMate/Scene/BoatShadow"
             {
                 Varyings o;
                 float2 c = v.uv * 2.0 - 1.0;
-                float side = _RmDiskDir.x > 0.0 ? -1.0 : 1.0;
-                float3 positionOS = float3(c.x * 0.5 * _RmShadowOffset.z + side * _RmShadowOffset.x, 0.0, c.y * 0.5 * _RmShadowOffset.y);
+                // It. 7 (DA7-10): el lado lo da Core con su signo (ShadowSideFader: +0,35 con el astro a la izquierda de la pantalla,
+                // −0,35 si no, fundido en 1,5 s al cruzar el centro); BoatVisual lo pone en _RmShadowOffset.x en cada cuadro.
+                float3 positionOS = float3(c.x * 0.5 * _RmShadowOffset.z + _RmShadowOffset.x, 0.0, c.y * 0.5 * _RmShadowOffset.y);
                 o.positionCS = TransformObjectToHClip(positionOS);
                 float alpha = _RmShadowAlpha * _RmAmbient;
                 // exp(−r²·caída) = exp2(−(r·√(caída·log2 e))²): la escala va acá y el fragmento hace un producto escalar y un exp2.

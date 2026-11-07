@@ -1054,6 +1054,7 @@ namespace RowMate.Tests.UiSupport
                 RegionCode = options.SceneRegion,
                 SynchronousStreaming = !options.ScenePlayerStreaming,
                 FixedSteps = true,
+                Character = options.SceneCharacter,
             });
             return new SceneBridge(host, _logger);
         }

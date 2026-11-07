@@ -1,7 +1,7 @@
 {
-    "version": 4,
+    "version": 5,
     "editorVersion": "6000.3.27f1",
-    "appliedAtUtc": "2026-11-03T12:51:29.6433067Z",
+    "appliedAtUtc": "2026-11-06T23:54:42.1537471Z",
     "steps": [
         {
             "id": "player.identity",
@@ -66,12 +66,12 @@
         {
             "id": "scene.assets",
             "status": "ok",
-            "detail": "0 asset(s) nuevos; 52 slots (0 con un asset del usuario, el resto procedurales); 3 niveles; Lake y SceneWorld"
+            "detail": "7 asset(s) nuevos; 59 slots (0 con un asset del usuario, el resto procedurales); 3 niveles; Lake y SceneWorld; Mixamo: 0 reimportado(s), binding con Assets/ThirdParty/Mixamo/YBot/YBot.fbx"
         },
         {
             "id": "scene.materials",
             "status": "ok",
-            "detail": "0 asset(s) nuevos; 15 materiales; 138 variantes en la colección"
+            "detail": "5 asset(s) nuevos; 20 materiales; 188 variantes en la colección"
         },
         {
             "id": "scene.boot",

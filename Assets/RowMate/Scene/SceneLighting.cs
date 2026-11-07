@@ -97,6 +97,9 @@ namespace RowMate.Scene
         // La ganancia de lo emisivo (1,6; 1 en la pasada de contrato, RenderWithoutPostForTest).
         public double EmissiveGain { get; set; } = SkyArt.EmissiveGain;
 
+        // It. 7 (DT7-08): la fuerza de sombra de la luz del último cuadro (la que mira BoatShadowRule en Core; las pruebas la comparan).
+        public double ShadowStrength { get; private set; }
+
         public void Apply(in SceneFrame frame)
         {
             var p = frame.Palette;
@@ -153,6 +156,7 @@ namespace RowMate.Scene
             }
 
             _light.shadowStrength = (float)SceneMath.Clamp01(strength);
+            ShadowStrength = _light.shadowStrength;
 
             // El ambiente de URP (lo de terceros), solo si cambió.
             var skyAmbient = Srgb(look.AmbientSky);

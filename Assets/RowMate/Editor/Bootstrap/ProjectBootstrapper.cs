@@ -32,7 +32,10 @@ namespace RowMate.EditorTools
         // 4 = It. 6a (06a-escena-lago/02-tech-design §1.1, §7.2 B0 y B1): los tres niveles de calidad definitivos con sus assets de URP, la
         // capa RowMateScene y Frame Timing Stats (urp.tiers, que reemplaza a urp.provisional), los assets de la escena (scene.assets: niveles,
         // slots con el procedural asignado, Lake y SceneWorld) y sus materiales con la colección de variantes (scene.materials).
-        public const int CurrentVersion = 4;
+        // 5 = It. 7 (07-remero-palada/02-tech-design §1.3, §7.2 B0 y B1): el slot rower.character (RowerCharacterSlot, siempre en Procedural),
+        // la reimportación de los FBX de Mixamo con MixamoImportPostprocessor, el binding generado del personaje (DT7-13) y los materiales del
+        // remero, los remos, la salpicadura, el agua que responde y la boya (scene.materials).
+        public const int CurrentVersion = 5;
         public const string StatePath = "ProjectSettings/RowMateBootstrap.json";
         public const string LogPrefix = "[BOOTSTRAP] ";
 

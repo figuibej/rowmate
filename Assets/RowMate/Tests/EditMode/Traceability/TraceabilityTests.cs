@@ -145,6 +145,16 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(lt.Id);
             }
 
+            foreach (var ac in It07Ids.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
+            foreach (var lt in It07Ids.LegacyCases)
+            {
+                known.Add(lt.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -1447,6 +1457,158 @@ namespace RowMate.Tests.EditMode.Traceability
             var offenders = new List<string>();
             var ids = new List<string>(It06aIds.UnityOnlyIds);
             ids.AddRange(It06aIds.DeviceOnlyIds);
+            foreach (var id in ids)
+            {
+                if (earlier.Contains(id) || !scan.Categories.TryGetValue(id, out var files))
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    if (!file.EndsWith("WorkoutDeviceChecksTests.cs", StringComparison.Ordinal))
+                    {
+                        offenders.Add(id + " en " + file);
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
+        }
+
+        // ------------------------------------------------------------------ It. 7 (07-remero-palada/02-tech-design §6.3, §6.4)
+
+        [Test, Category("AC-BASE-09")]
+        public void It07IdsAreComplete()
+        {
+            // 38 ID = 36 nuevos (SCN-04: 5, SCN-05: 10, SCN-06: 3, SCN-07: 3, SCN-08: 12, también toca: 3) + 2 que cambian (§4);
+            // LT-88 a LT-98 (01-po-spec §5).
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var earlier = new HashSet<string>(It07Ids.FromEarlier, StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance, It06aIds.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            var byCard = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var ac in It07Ids.Acceptance)
+            {
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It07Ids: " + ac.Id);
+                Assert.That(AcPattern.IsMatch(ac.Id), Is.True, ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                if (earlier.Contains(ac.Id))
+                {
+                    Assert.That(before.Contains(ac.Id), Is.True, ac.Id + " figura como de una iteración anterior pero no está en It01Ids a It06aIds");
+                    continue;
+                }
+
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior: va en FromEarlier");
+                var card = ac.Id.Substring(0, ac.Id.LastIndexOf('-'));
+                byCard.TryGetValue(card, out var count);
+                byCard[card] = count + 1;
+            }
+
+            Assert.That(It07Ids.Acceptance.Length, Is.EqualTo(38));
+            Assert.That(It07Ids.FromEarlier.Length, Is.EqualTo(2));
+            var expected = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["AC-SCN-04"] = 5, ["AC-SCN-05"] = 10, ["AC-SCN-06"] = 3, ["AC-SCN-07"] = 3, ["AC-SCN-08"] = 12, ["AC-WKT-17"] = 1, ["AC-WKT-18"] = 1,
+                ["AC-SCN-01"] = 1,
+            };
+            Assert.That(byCard, Is.EquivalentTo(expected), "los 36 nuevos por ficha (§3)");
+
+            Assert.That(It07Ids.LegacyCases.Length, Is.EqualTo(11));
+            for (var i = 0; i < It07Ids.LegacyCases.Length; i++)
+            {
+                var lt = It07Ids.LegacyCases[i];
+                Assert.That(lt.Id, Is.EqualTo("LT-" + (88 + i).ToString("00", System.Globalization.CultureInfo.InvariantCulture)),
+                    "la numeración sigue a la de la 6a (LT-87)");
+                Assert.That(lt.File, Does.StartWith("test/scene/").And.EndWith("_test.dart"), lt.Id);
+                CheckKinds(lt.Id, lt.Checks);
+            }
+
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            var deviceOnly = new List<string>();
+            foreach (var ac in It07Ids.Acceptance)
+            {
+                if (ac.Checks == "eq")
+                {
+                    deviceOnly.Add(ac.Id);
+                    continue;
+                }
+
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            foreach (var lt in It07Ids.LegacyCases)
+            {
+                Classify(lt.Id, lt.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It07Ids.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It07Ids.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(It07Ids.DeviceOnlyIds, Is.EquivalentTo(deviceOnly));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It07DotnetIdsHaveTests()
+        {
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It07Ids.Acceptance)
+            {
+                if ((HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s")) && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            foreach (var lt in It07Ids.LegacyCases)
+            {
+                if (HasKind(lt.Checks, "d") && !categories.ContainsKey(lt.Id))
+                {
+                    missing.Add(lt.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d] de la It. 7 sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It07LegacyCasesKeepTheirNames()
+        {
+            // Los de dotnet (LT-88 a LT-96), en Tests/EditMode; LT-97 y LT-98 son de PlayMode (RowerSceneTests, WP-B1).
+            var scan = Scan();
+            var problems = new List<string>();
+            var dotnet = 0;
+            foreach (var lt in It07Ids.LegacyCases)
+            {
+                if (!HasKind(lt.Checks, "d"))
+                {
+                    continue;
+                }
+
+                dotnet++;
+                CheckLegacyCase(scan, lt.Id, lt.File, lt.Line, lt.Name, problems);
+            }
+
+            Assert.That(dotnet, Is.EqualTo(9), "LT-88 a LT-96");
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It07UnityOnlyIdsHaveNoDotnetResult()
+        {
+            var scan = Scan();
+            var earlier = new HashSet<string>(It07Ids.FromEarlier, StringComparer.Ordinal);
+            var offenders = new List<string>();
+            var ids = new List<string>(It07Ids.UnityOnlyIds);
+            ids.AddRange(It07Ids.DeviceOnlyIds);
             foreach (var id in ids)
             {
                 if (earlier.Contains(id) || !scan.Categories.TryGetValue(id, out var files))

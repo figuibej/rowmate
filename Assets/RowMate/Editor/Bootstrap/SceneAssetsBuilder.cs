@@ -90,6 +90,15 @@ namespace RowMate.EditorTools
                     EditorUtility.SetDirty(slot);
                 }
 
+                if (slot is RowerCharacterSlot rower)
+                {
+                    // DT7-13 (QA7-G-04): el slot del remero se versiona SIEMPRE en Procedural, con sus rutas esperadas; la referencia al FBX
+                    // de Mixamo vive en el binding generado (RowerCharacterBindingBuilder, más abajo).
+                    rower.SetSource(SlotSource.Procedural);
+                    rower.SetExpectedPaths(RowerCharacterSlot.DefaultPaths);
+                    EditorUtility.SetDirty(rower);
+                }
+
                 slots[slotId] = slot;
             }
 
@@ -113,13 +122,32 @@ namespace RowMate.EditorTools
             world.SetSlots(lake, worldSlots, tiers[QualityTier.High], tiers[QualityTier.Medium], tiers[QualityTier.Low]);
             EditorUtility.SetDirty(world);
             AssetDatabase.SaveAssets();
+
+            // It. 7 (DT7-04, DT7-13): los FBX de Mixamo que se importaron antes del postprocesador, otra vez; y el binding del remero.
+            var reimported = MixamoImportPostprocessor.ReimportAll();
+            var binding = RowerCharacterBindingBuilder.Refresh();
             return BootstrapState.Step.Ok(id, created + " asset(s) nuevos; " + SlotIds.All.Count + " slots (" + userAssigned
-                + " con un asset del usuario, el resto procedurales); 3 niveles; Lake y SceneWorld");
+                + " con un asset del usuario, el resto procedurales); 3 niveles; Lake y SceneWorld; Mixamo: " + reimported + " reimportado(s), " + binding);
         }
 
-        // El tipo de cada slot (ASSET_SLOTS §1).
+        // El tipo de cada slot (ASSET_SLOTS §1; It. 7: el remero, su ropa y los efectos).
         public static Type SlotTypeFor(string slotId)
         {
+            if (slotId == SlotIds.RowerCharacter)
+            {
+                return typeof(RowerCharacterSlot);
+            }
+
+            if (slotId == SlotIds.RowerOutfit)
+            {
+                return typeof(MaterialSlot);
+            }
+
+            if (slotId.StartsWith("fx.", StringComparison.Ordinal))
+            {
+                return typeof(TextureSlot);
+            }
+
             if (slotId.StartsWith("terrain.layer.", StringComparison.Ordinal))
             {
                 return typeof(TerrainLayerSlot);
@@ -161,6 +189,11 @@ namespace RowMate.EditorTools
         // Dónde iría el asset de terceros (re-enlace por ruta, RA-17): solo lo del Terrain Sample Asset Pack.
         public static string ExpectedPathFor(string slotId)
         {
+            if (slotId == SlotIds.RowerCharacter)
+            {
+                return RowerCharacterSlot.RealisticPath;
+            }
+
             if (slotId.StartsWith("terrain.layer.", StringComparison.Ordinal))
             {
                 return ThirdPartyPack + "TerrainLayers/" + slotId.Substring("terrain.layer.".Length) + ".terrainlayer";
@@ -191,6 +224,10 @@ namespace RowMate.EditorTools
                     return 512;
                 case SlotIds.WaterFoam:
                     return 256;
+                case SlotIds.RowerCharacter:
+                    return RowerCharacterValidation.MaxTriangles;
+                case SlotIds.PropMarkerBuoy:
+                    return 400;
                 case SlotIds.BoatHull:
                     return 6000;
                 case SlotIds.VegetationGrass:
@@ -240,6 +277,13 @@ namespace RowMate.EditorTools
             yield return SlotIds.BoatStretcher;
             yield return SlotIds.BoatOar;
             yield return SlotIds.BoatLivery;
+            yield return SlotIds.RowerCharacter;
+            yield return SlotIds.RowerOutfit;
+            yield return SlotIds.RowerCap;
+            yield return SlotIds.FxSplash;
+            yield return SlotIds.FxDrips;
+            yield return SlotIds.FxRipple;
+            yield return SlotIds.PropMarkerBuoy;
         }
 
         private static T LoadOrCreate<T>(string path, ref int created) where T : ScriptableObject

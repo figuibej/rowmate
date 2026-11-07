@@ -120,7 +120,7 @@ namespace RowMate.Core.Scene.Geometry
     // El casco provisorio (ART_BIBLE §7.8; 04-design-notes §9; AC-SCN-01-08): un loft de 24 secciones de z 5,3 (popa) a 13,5 (proa),
     // centrado en x 0, con la sección 11 exactamente en z 9,5 (el punto del remero, en la línea de crujía); manga de 0,29 m en la
     // flotación y 0,33 en la borda, francobordo de 0,10 m. Color de vértice: blanco arriba, gris en la obra viva, la línea de borda
-    // celeste y el cockpit oscuro alrededor de z 9,5. ≤ 6 000 triángulos.
+    // celeste y el cockpit oscuro de z 9,05 a 10,45 (It. 7, DA7-02). ≤ 6 000 triángulos.
     public static class HullMesh
     {
         private const int Profile = 12;
@@ -168,7 +168,7 @@ namespace RowMate.Core.Scene.Geometry
                     var down = Math.Sin(a);
                     var x = side * (wl + (gw - wl) * (1 - down));
                     var y = LakeArt.HullFreeboard - (LakeArt.HullFreeboard + LakeArt.HullDraft) * down * taper;
-                    var isCockpit = Math.Abs(z - SceneCamera.BoatZ) < 0.45 && (j == 0 || j == Profile);
+                    var isCockpit = LakeArt.IsCockpit(z) && (j == 0 || j == Profile);
                     var below = y < 0.0;
                     var c = isCockpit ? cockpit : (j == 0 || j == Profile ? stripe : (below ? bottom : white));
                     mesh.AddVertex(x, y, z, side, -down * 0.6, 0, c.R, c.G, c.B, 0, j / (double)Profile, s);
@@ -193,7 +193,7 @@ namespace RowMate.Core.Scene.Geometry
             for (var i = 0; i < sections; i++)
             {
                 var z = SectionZ(i);
-                var c = Math.Abs(z - SceneCamera.BoatZ) < 0.45 ? cockpit : white;
+                var c = LakeArt.IsCockpit(z) ? cockpit : white;
                 mesh.AddVertex(0, LakeArt.HullFreeboard + 0.02, z, 0, 1, 0, c.R, c.G, c.B, 0, 0.5, i / (double)(sections - 1));
             }
 
@@ -201,7 +201,7 @@ namespace RowMate.Core.Scene.Geometry
             for (var i = 0; i < sections; i++)
             {
                 var z = SectionZ(i);
-                var c = Math.Abs(z - SceneCamera.BoatZ) < 0.45 ? cockpit : white;
+                var c = LakeArt.IsCockpit(z) ? cockpit : white;
                 var left = i * (Profile + 1);
                 var right = left + Profile;
                 var s = (z - LakeArt.HullStern) / (LakeArt.HullBow - LakeArt.HullStern);

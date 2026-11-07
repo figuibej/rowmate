@@ -218,9 +218,10 @@ namespace RowMate.Tests.EditMode.Scene
                 Assert.That(SlotIds.All, Does.Contain(id));
             }
 
-            foreach (var id in SlotIds.All)
+            // It. 7 (02-tech-design §1.1): el remero, sus efectos y la boya.
+            foreach (var id in new[] { "rower.character", "rower.outfit", "rower.cap", "fx.splash", "fx.drips", "fx.ripple", "prop.markerBuoy" })
             {
-                Assert.That(id.StartsWith("rower.", StringComparison.Ordinal), Is.False, "el remero es de la It. 7");
+                Assert.That(SlotIds.All, Does.Contain(id));
             }
         }
     }

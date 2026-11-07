@@ -3,8 +3,8 @@ using System.Collections.Generic;
 
 namespace RowMate.Core.Scene
 {
-    // Los ids de los asset slots de la escena (06a-escena-lago/02-tech-design §2.17; ASSET_SLOTS §1.1 a §1.4 sin el remero, que es de
-    // la It. 7) más vegetation.canopyFar (DD6a-22). Un id por PropKind (prop.<nombre del legacy>). Cada uno tiene su .asset en
+    // Los ids de los asset slots de la escena (06a-escena-lago/02-tech-design §2.17; ASSET_SLOTS §1.1 a §1.4; el remero y sus efectos,
+    // It. 7) más vegetation.canopyFar (DD6a-22). Un id por PropKind (prop.<nombre del legacy>). Cada uno tiene su .asset en
     // Slots/ con el procedural asignado (WP-B0).
     public static class SlotIds
     {
@@ -52,6 +52,16 @@ namespace RowMate.Core.Scene
         public const string BoatOar = "boat.oar";
         public const string BoatLivery = "boat.livery";
 
+        // It. 7 (ASSET_SLOTS §2; 02-tech-design §1.1): el remero, la salpicadura, las gotas, los charcos y la boya de 500 m. El id de la
+        // boya es prop.markerBuoy (los ids solo llevan letras: SlotIdsTests).
+        public const string RowerCharacter = "rower.character";
+        public const string RowerOutfit = "rower.outfit";
+        public const string RowerCap = "rower.cap";
+        public const string FxSplash = "fx.splash";
+        public const string FxDrips = "fx.drips";
+        public const string FxRipple = "fx.ripple";
+        public const string PropMarkerBuoy = "prop.markerBuoy";
+
         private static readonly string[] Props = BuildProps();
 
         private static readonly string[] Others =
@@ -63,6 +73,7 @@ namespace RowMate.Core.Scene
             HorizonLake, HorizonRiver, HorizonCoast, HorizonRegatta,
             PropQuayWall, PropRock, PropCrowd, PropSeagull, PropBoatRack,
             BoatHull, BoatRigger, BoatSeat, BoatStretcher, BoatOar, BoatLivery,
+            RowerCharacter, RowerOutfit, RowerCap, FxSplash, FxDrips, FxRipple, PropMarkerBuoy,
         };
 
         // Todos los ids, en un orden estable (los 15 PropKind primero).

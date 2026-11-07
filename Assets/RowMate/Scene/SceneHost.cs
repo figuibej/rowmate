@@ -42,6 +42,12 @@ namespace RowMate.Scene
 
         // El tramo de la orilla por cuadro en la app (ms): un trabajo acotado (un trozo de terreno, un relleno, 5 m de pasto).
         public double StreamingBudgetMs { get; set; } = 1.0;
+
+        // It. 7 (07-remero-palada/02-tech-design §3.2, §3.6): qué remero se arma (Auto = el binding de la app o el maniquí) y, para las
+        // pruebas, un binding en lugar del de Resources.
+        public RowerCharacterKind Character { get; set; } = RowerCharacterKind.Auto;
+
+        public RowMate.Scene.Slots.RowerCharacterBinding? CharacterBinding { get; set; }
     }
 
     // El ciclo de vida de la escena 3D (06a-escena-lago/02-tech-design §3.1 a §3.4, §3.9, §4; ADR 022): Preload (Workout en reposo,
@@ -272,6 +278,7 @@ namespace RowMate.Scene
 
             _nextSession = null;
             _nextFrame = default;
+            ConfigureRower(_session);
             _session.Open(now);
             _lastNow = now;
             _closing = false;
@@ -347,6 +354,12 @@ namespace RowMate.Scene
             _profile = ProfileFor(tier, out _ownsProfile);
             _resolution = Math.Min(_resolution, _profile.Resolution);
             _options.AssetQuality?.ApplyTier(tier);
+            ConfigureRower(_session);
+            ConfigureRower(_nextSession);
+            if (_world?.Director?.WaterMarks != null)
+            {
+                _world.Director.WaterMarks.BoilsEnabled = tier != QualityTier.Low;
+            }
             if (_world?.Director != null)
             {
                 ApplyProfile(_world);
@@ -553,6 +566,10 @@ namespace RowMate.Scene
             director.Sky.StarsEnabled = _stars;
             director.Lighting.EmissiveGain = withoutPost ? 1 : SkyArt.EmissiveGain;
             director.Apply(_frame);
+            if (_sideCamera)
+            {
+                ApplySideCamera(world);
+            }
             director.QueueInstancedDraws();
             if (target == null)
             {
@@ -629,7 +646,11 @@ namespace RowMate.Scene
                 return;
             }
 
-            _builder = new SceneWorldBuilder(_definition, _profile, _slotLog, _logger);
+            _builder = new SceneWorldBuilder(_definition, _profile, _slotLog, _logger)
+            {
+                Character = _options.Character,
+                Binding = _options.CharacterBinding,
+            };
             _builderProfile = _profile;
             _units = _builder.Build();
             _phase = 0;
@@ -719,6 +740,9 @@ namespace RowMate.Scene
                                 ApplyProfile(_world);
                             }
 
+                            // It. 7: el remero que quedó armado (sus largos) y el nivel, a las sesiones que ya existen.
+                            ConfigureRower(_session);
+                            ConfigureRower(_nextSession);
                             _phase = 1;
                         }
 
@@ -822,6 +846,7 @@ namespace RowMate.Scene
             _nextSession = new SceneSession(new LakeEnvironment(), new SceneSessionOptions { RegionCode = region });
             _nextRegion = region;
             _nextFrame = SceneFrame.Create();
+            ConfigureRower(_nextSession);
         }
 
         private SceneSession? _nextSession;
@@ -856,6 +881,11 @@ namespace RowMate.Scene
             }
 
             var now = 1000.0 + step;
+            if (step == 0)
+            {
+                ConfigureRower(scratch);
+            }
+
             if (step == 0)
             {
                 scratch.Open(now);
@@ -903,6 +933,7 @@ namespace RowMate.Scene
             var scratch = new SceneSession(new LakeEnvironment(), new SceneSessionOptions());
             var frame = SceneFrame.Create();
             frame.WarmUpAll = true;
+            ConfigureRower(scratch);
             scratch.Open(0);
             scratch.Camera.ShowInPlace(0);
             var inputs = new SceneTickInputs(0.5, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, new SceneInputs(120, 24, true), 12, false, 411, 914, 1);
@@ -1096,7 +1127,102 @@ namespace RowMate.Scene
             }
         }
 
+        // ── It. 7: el remero ──
+
+        // El remero que quedó armado (sus largos: SetRower calcula el ajuste fuera del Tick) y el nivel (sombras, partículas, hervidero),
+        // a una sesión (07-remero-palada/02-tech-design §2.12, §3.2).
+        private void ConfigureRower(SceneSession? session)
+        {
+            if (session == null)
+            {
+                return;
+            }
+
+            var rower = _world?.Rower;
+            session.SetRower(rower != null ? rower.Spec : RowMate.Core.Scene.Stroke.RowerSpec.Mannequin);
+            session.SetRenderTier(RenderTierOf(_profile));
+        }
+
+        public static RowMate.Core.Scene.Stroke.RowerRenderTier RenderTierOf(QualityTierProfile profile)
+        {
+            switch (profile.Tier)
+            {
+                case QualityTier.High:
+                    return new RowMate.Core.Scene.Stroke.RowerRenderTier(profile.Shadows, true, 1, true);
+                case QualityTier.Medium:
+                    return new RowMate.Core.Scene.Stroke.RowerRenderTier(profile.Shadows, false, 1, true);
+                default:
+                    return new RowMate.Core.Scene.Stroke.RowerRenderTier(false, false, 0.5, false);
+            }
+        }
+
+        // La cámara lateral de prueba (§3.6): 4 m a la derecha del remero (x −4), 1,0 m de alto, mirando al punto medio de los pernos,
+        // perspectiva de 40°. Pisa la cámara del cuadro después de aplicarlo (solo en el dibujo).
+        private void ApplySideCamera(SceneWorld world)
+        {
+            var camera = world.Rig!.Camera;
+            var boat = world.Boat;
+            var pin = boat != null ? boat.Pitch.TransformPoint(new Vector3(0, (float)RowMate.Core.Scene.Stroke.BoatSpec.Real.PinY, 0))
+                : new Vector3(0, 0.31f, (float)SceneCamera.BoatZ);
+            var eye = new Vector3(-SideCameraDistance, SideCameraHeight, pin.z);
+            camera.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(pin - eye, Vector3.up));
+            camera.ResetProjectionMatrix();
+            camera.fieldOfView = SideCameraFovDeg;
+            camera.aspect = _heightPx > 0 ? (float)_widthPx / _heightPx : 1f;
+        }
+
+        public const float SideCameraDistance = 4f, SideCameraHeight = 1f, SideCameraFovDeg = 40f;
+
         // ── Controles de prueba (internal: las pruebas, el anfitrión de pruebas y el arnés; §3.1) ──
+
+        // It. 7 (§3.6): la fase canónica forzada (congela la pose y los efectos nuevos; null la suelta).
+        internal void ForceCanonicalForTest(double? canonical)
+        {
+            _session?.ForceCanonicalForTest(canonical);
+        }
+
+        internal void InjectPuddleForTest(double x, double worldZ, double age)
+        {
+            _session?.InjectPuddleForTest(x, worldZ, age);
+        }
+
+        // El remero: el maniquí, el del slot (el binding o CharacterBinding) o uno inválido (cae al maniquí con un aviso). Rehace el remero
+        // y los herrajes en el mundo armado y pasa sus largos a las sesiones; vale también para los armados que siguen.
+        internal void ForceCharacterForTest(RowerCharacterKind kind)
+        {
+            _options.Character = kind;
+            var world = _world;
+            if (world?.Director == null || world.Boat == null || world.RowerMaterial == null)
+            {
+                return;
+            }
+
+            world.Rower?.Dispose();
+            world.Rower = RowerCharacterResolver.Resolve(kind, _options.CharacterBinding, world.Boat.Pitch, world.Layer, world.RowerMaterial, _slotLog);
+            RowerCharacterResolver.Dress(world.Rower, world.RowerMaterial);
+            SceneWorldBuilder.BuildFittings(world.Fittings!, world.Rower.Spec);
+            world.Director.Rower = world.Rower;
+            world.Director.RowerChanged();
+            ConfigureRower(_session);
+            ConfigureRower(_nextSession);
+        }
+
+        // La cámara lateral de prueba (apaga la respiración).
+        internal void SideCameraForTest(bool on)
+        {
+            _sideCamera = on;
+            _session?.BreathingOffForTest(on);
+        }
+
+        internal bool SideCameraOnForTest => _sideCamera;
+
+        // La regla de 1 m en el perno: la dibuja el arnés (RowerMarks) sobre la toma con la cámara de este cuadro.
+        internal bool ShowRulerForTest { get; set; }
+
+        // Las articulaciones del remero medidas en el rig después del último Apply (marco del bote; índice = RowerJoint).
+        internal Vector3[]? RowerJointsForTest => _world?.Rower?.Driver.Measured;
+
+        private bool _sideCamera;
 
         // "Escena demorada" (AC-SCN-01-07, CAP-24, VID-11): el próximo Open encuentra el mundo sin armar y Ready no llega antes de
         // `seconds` desde el Open; el armado corre por tramos como en producción.

@@ -38,6 +38,12 @@ namespace RowMate.EditorTools
             ("Hull", SceneShaderIds.Hull, false),
             ("BoatShadow", SceneShaderIds.BoatShadow, false),
             ("ScreenOverlay", SceneShaderIds.ScreenOverlay, false),
+            // It. 7 (07-remero-palada/02-tech-design §1.3, §7.4).
+            ("Rower", SceneShaderIds.Rower, false),
+            ("Oar", SceneShaderIds.Oar, false),
+            ("Spray", SceneShaderIds.Spray, true),
+            ("WaterMarks", SceneShaderIds.WaterMarks, true),
+            ("Buoy", SceneShaderIds.Buoy, false),
         };
 
         public static string MaterialPath(string file)
@@ -100,6 +106,11 @@ namespace RowMate.EditorTools
                 Hull = materials["Hull"],
                 BoatShadow = materials["BoatShadow"],
                 ScreenOverlay = materials["ScreenOverlay"],
+                Rower = materials["Rower"],
+                Oar = materials["Oar"],
+                Spray = materials["Spray"],
+                WaterMarks = materials["WaterMarks"],
+                Buoy = materials["Buoy"],
             };
 
             var variants = AssetDatabase.LoadAssetAtPath<ShaderVariantCollection>(VariantsPath);
@@ -175,7 +186,9 @@ namespace RowMate.EditorTools
         {
             collection.Clear();
             var added = 0;
-            foreach (var name in SceneShaderIds.ShaderNames)
+            var names = new List<string>(SceneShaderIds.ShaderNames);
+            names.AddRange(SceneShaderIds.RowerShaderNames);
+            foreach (var name in names)
             {
                 var shader = Shader.Find(name);
                 if (shader == null)

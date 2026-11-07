@@ -224,7 +224,7 @@ namespace RowMate.Snapshots
             Debug.Log("[SNAPSHOT] " + id + " (" + record.File + ")");
             yield return TakeRule(scenario, host);
             yield return new ScenarioScript(host).Frames(3);
-            Capture(scenario, host, record.File, null, new List<PixelProbe>(), checks);
+            Capture(scenario, host, record.File, null, new List<PixelProbe>(), checks, scenario.ShotInspect);
             record.DurationMs = clock.Elapsed.TotalMilliseconds;
             _manifest.Add(record);
             _sequenceTaken.Add(id);

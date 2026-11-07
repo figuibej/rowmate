@@ -704,6 +704,13 @@ namespace RowMate.Bootstrap
                 + host.InViewShoreRebuilds.ToString(CultureInfo.InvariantCulture) + "; orilla terminada en el negro: "
                 + host.CatchUps.ToString(CultureInfo.InvariantCulture) + "; CPU de la escena del último cuadro "
                 + host.LastCpuMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+            // It. 7 (07-remero-palada/02-tech-design §4, §7.2 B2): el remero que se dibujó (el maniquí o el del slot) y sus triángulos.
+            var rower = host.World?.Rower;
+            if (rower != null)
+            {
+                logger.Log(LogLevel.Info, "PERF", "remero (n.º " + entry.ToString(CultureInfo.InvariantCulture) + "): " + (rower.FromSlot ? "slot " + rower.Source : "maniquí")
+                    + ", " + rower.Triangles.ToString(CultureInfo.InvariantCulture) + " triángulos, " + rower.Spec.Height.ToString("0.000", CultureInfo.InvariantCulture) + " m");
+            }
         }
 
         // La unidad más cara de cada fase del armado (QA-V6a-REN-06).

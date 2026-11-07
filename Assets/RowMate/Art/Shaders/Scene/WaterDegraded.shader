@@ -35,6 +35,7 @@ Shader "RowMate/Scene/WaterDegraded"
         HLSLINCLUDE
         #include "../Include/RowMateScene.hlsl"
         #include "../Include/RowMateFog.hlsl"
+        #include "../Include/RowMateLighting.hlsl"
 
         CBUFFER_START(UnityPerMaterial)
             float4 _RmWaterBandTop;
@@ -57,6 +58,9 @@ Shader "RowMate/Scene/WaterDegraded"
         static const float kRmReflectFar = 400;
         static const float kRmShallowInner = 8.4;
         static const float kRmShallowOuter = 9;
+        // It. 7 (DA7-04, DT7-08): el agua recibe la sombra de la luz principal (el remero, el bote, las palas): en sombra plena se
+        // oscurece 0,10 (RowerArt.ShadowDarken), ya teñida por la hora. Con el óvalo (nivel Bajo o la luz sin fuerza) no hay mapa.
+        static const float kRmShadowDarken = 0.1;
 
         // DegradedWater.ScreenAlpha: lo que se ve de una línea = el alfa del legacy × la visibilidad del astro (0 en el cambio de astro).
         float RmShimmerScreenAlpha(float legacyAlpha, float diskVisibility)
@@ -88,6 +92,8 @@ Shader "RowMate/Scene/WaterDegraded"
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
             #pragma shader_feature_local RM_WATER_EXTRAS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             struct Attributes
             {
@@ -105,6 +111,9 @@ Shader "RowMate/Scene/WaterDegraded"
                 float4 line0 : TEXCOORD5;       // (−fase/0,1; fase; 2·(alto del agua) en dp; −)
                 float4 line1 : TEXCOORD6;       // (0,7·ancho; 0,3·ancho + 0,5; alfa en t = 0; caída del alfa con t)
                 float4 extra : TEXCOORD7;       // los agregados: c·w + xyz
+#if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+                float3 positionWS : TEXCOORD8;  // la sombra de la luz principal (It. 7)
+#endif
             };
 
             Varyings WaterVertex(Attributes v)
@@ -113,6 +122,9 @@ Shader "RowMate/Scene/WaterDegraded"
                 float3 positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 float4 clip = TransformWorldToHClip(positionWS);
                 o.positionCS = clip;
+#if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+                o.positionWS = positionWS;
+#endif
 
                 // El horizonte del cuadro (la columna del centro) y la x del disco, con las matrices de la cámara.
                 float3 forward = -UNITY_MATRIX_V[2].xyz;
@@ -182,6 +194,9 @@ Shader "RowMate/Scene/WaterDegraded"
 #if defined(RM_WATER_EXTRAS)
                 // 3: los agregados.
                 c = c * i.extra.w + i.extra.xyz;
+#endif
+#if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+                c *= 1.0 - kRmShadowDarken * (1.0 - RmMainShadow(i.positionWS));
 #endif
                 return half4(c * c, 1.0);
             }

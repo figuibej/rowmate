@@ -17,7 +17,7 @@ El modelo y las rutas los fija el Architect: [ARCHITECTURE §14.4](../architectu
 - **Resolución:** asset asignado y válido → se usa. Falta o no pasa la validación → se usa el placeholder y se escribe **un** aviso `[SLOT]` en el log de diagnóstico. **Nunca** un error que frene el build o la escena. El menú `RowMate/Slots/Validar` lista los slots que están en placeholder y por qué.
 - Los ids viven también como constantes en el Core (`SlotIds`) para poder testear con dotnet que cada tipo de objeto de orilla del catálogo legacy (15) tiene su slot.
 - **Rutas** (ARCHITECTURE §2): instancias de slots (`*.asset`, una por id) en `Assets/RowMate/Slots/`; sus clases en `Assets/RowMate/Scene/`; fuentes en `Assets/RowMate/UI/Fonts/`; íconos en `Assets/RowMate/UI/Icons/`; marca de Strava en `Assets/RowMate/UI/Brand/Strava/`; shaders en `Assets/RowMate/Art/Shaders/`; texturas generadas en `Assets/RowMate/Art/Textures/`.
-- **Terceros y repositorio:** los archivos de Mixamo, del Asset Store y los opcionales CC0 **no se versionan** (sus licencias permiten usarlos en la app, no redistribuirlos sueltos). Van **solo** a `Assets/ThirdParty/`, ignorada por git salvo sus `.meta` (los `.meta` conservan el GUID que referencia el slot y los ajustes de importación; QA-P-01). Cada usuario descarga los archivos con los pasos de este documento. **Cuidado:** si abrís el proyecto en Unity **sin** los archivos descargados, Unity borra los `.meta` huérfanos; antes de copiar los archivos, recuperalos con `git checkout -- Assets/ThirdParty` (ARCHITECTURE §2, RA-17). Las fuentes OFL, los íconos Apache 2.0 y los botones de Strava sí se versionan, junto con su licencia o guía.
+- **Terceros y repositorio:** los archivos de Mixamo, del Asset Store y los opcionales CC0 **no se versionan** (sus licencias permiten usarlos en la app, no redistribuirlos sueltos). Van **solo** a `Assets/ThirdParty/`, ignorada por git salvo sus `.meta` (los `.meta` conservan el GUID que referencia el slot y los ajustes de importación; QA-P-01). **Excepción desde la It. 7:** de `Assets/ThirdParty/Mixamo/` no se versiona nada, ni los `.meta` (gate QA7-G-04): el slot `rower.character` se versiona en `Procedural` y la referencia al FBX la escribe el *bootstrapper* en un *binding* generado e ignorado (`Bootstrap/Generated/Resources/RowerCharacterBinding.asset`). Cada usuario descarga los archivos con los pasos de este documento. **Cuidado:** si abrís el proyecto en Unity **sin** los archivos descargados, Unity borra los `.meta` huérfanos; antes de copiar los archivos, recuperalos con `git checkout -- Assets/ThirdParty` (ARCHITECTURE §2, RA-17). Las fuentes OFL, los íconos Apache 2.0 y los botones de Strava sí se versionan, junto con su licencia o guía.
 
 ### 0.1 Prioridad para el usuario
 
@@ -144,7 +144,7 @@ Todos tienen **3 LOD + impostor**, apoyan en terreno o muro (nada flota) y respe
 | 3 | `RowerRealistic/RowerRealistic.fbx` | el primero que pase la lista de control de §2.3 (primero a revisar: `Kaya`), los mismos ajustes | Opcional (7 o 14) |
 | 4 | `YBot/YBot@SittingIdle.fbx` | **Animations** → `Sitting Idle` con Y Bot elegido, `Without Skin`, 30 fps, sin reducción (§2.4) | Opcional, solo de referencia (`rower.clip.idleRef`; nunca se reproduce) |
 
-En la 7, el slot `rower.character` acepta el 1 o el 3; si falta o no valida (Humanoid, dedos, alto de 1,55 a 2,05 m, ≤ 30 k triángulos), vuelve al maniquí procedural.
+En la 7, el slot `rower.character` acepta el 1 o el 3; si falta o no valida (Humanoid, dedos, alto de 1,55 a 2,05 m, ≤ 60 k triángulos; Y Bot tiene 55,3 k, It. 7 gate QA7-G-01), vuelve al maniquí procedural.
 
 ### 2.1 Cuenta
 
@@ -190,30 +190,23 @@ Alternativa opcional que requiere OK del usuario: generar un atleta con **MakeHu
 
 ### 2.5 Importar en Unity (cada FBX de personaje)
 
-1. Copiá los FBX a `Assets/ThirdParty/Mixamo/<Personaje>/` (p. ej. `Assets/ThirdParty/Mixamo/YBot/YBot.fbx`).
-2. Seleccioná el FBX → **Inspector**:
+**Desde la It. 7 (DT7-04) no hay que tocar el Inspector.** Solo:
+
+1. Copiá el FBX a `Assets/ThirdParty/Mixamo/<Personaje>/` (p. ej. `Assets/ThirdParty/Mixamo/YBot/YBot.fbx`, *FBX for Unity*, *T-pose*, sin animación).
+2. Abrí el proyecto (o, si ya estaba abierto, `RowMate/Bootstrap/Reaplicar`). `MixamoImportPostprocessor` (Editor) importa todo FBX de `Assets/ThirdParty/Mixamo/**` con estos ajustes, y el *bootstrapper* reimporta los que ya estaban (por si Unity los importó antes como Generic):
 
 | Pestaña | Opción | Valor |
 |---|---|---|
-| Model | Scale Factor | `1` |
-| | Convert Units | ✓ |
-| | Import BlendShapes | ✓ |
-| | Import Visibility / Cameras / Lights | ✗ |
-| | Mesh Compression | `Off` |
-| | Read/Write | ✗ |
-| | Optimize Mesh | `Everything` |
-| | Normals / Tangents | `Import` / `Calculate Mikktspace` |
-| Rig | Animation Type | **`Humanoid`** |
-| | Avatar Definition | **`Create From This Model`** |
-| | Skin Weights | `Standard (4 Bones)` |
-| | **Optimize Game Objects** | **✗ (desactivado: Animation Rigging necesita los huesos como transforms)** |
-| Animation | Import Animation | ✗ |
-| Materials | Material Creation Mode / Location | `Standard` / `Use Embedded Materials`; después **Extract Textures…** → carpeta `Textures/` y **Extract Materials…** → carpeta `Materials/` |
+| Model | Import Cameras / Lights | ✗ |
+| | **Read/Write** | **✓** (lo necesita `RowerOutfitBaker`, que viste al personaje con las regiones del shader `RowMate/Scene/Rower`; antes decía ✗) |
+| Rig | Animation Type / Avatar Definition | **`Humanoid`** / **`Create From This Model`** |
+| | **Optimize Game Objects** | **✗** (el solver propio orienta los huesos como transforms; DT7-01) |
+| Animation | Import Animation | ✗ (ninguna animación de Mixamo: la palada es por código) |
+| Materials | Material Creation Mode | `None` (el remero usa `RowMate/Scene/Rower`; texturas y materiales de Mixamo no se usan) |
 
-3. En **Rig** tocá **Apply** y después **Configure…**: todos los huesos obligatorios tienen que estar en verde, incluidos los dedos (pestaña *Left Hand* / *Right Hand*). Menú **Pose → Enforce T-Pose** → **Apply** → **Done**.
-4. Texturas extraídas: en cada una, override de **Android** e **iOS**: Max Size `1024`, Format `ASTC 6x6`; **Default/Standalone**: Max Size `2048`. Las de normal: Texture Type `Normal map`.
-5. Materiales: **Window → Rendering → Render Pipeline Converter** → `Built-in to URP` → marcá **Material Upgrade** → **Initialize And Convert**. (El slot después los reemplaza por los materiales RowMate/Skin, RowMate/Fabric y RowMate/Hair usando estas texturas.)
-6. Asignación: abrí `Assets/RowMate/Slots/rower.character.asset` (tipo `RowerCharacterSlot`) y arrastrá el FBX al campo **Asset**. Al dar Play, el slot valida (Humanoid, huesos de dedos, altura 1,55–2,05 m, ≤ 30 k triángulos en LOD0); si algo falla, vuelve al maniquí y lo avisa en la consola. El slot le pone al personaje el controlador de pose `RowerPose` (ANIMATION_BIBLE §7.3): no hace falta configurar el `Animator` a mano.
+3. Asignación (gate QA7-G-04): no se arrastra nada. Al abrir el proyecto y antes de cada build, `RowerCharacterBindingBuilder` encuentra el FBX en su ruta (`RowerRealistic.fbx` antes que `YBot.fbx`) y escribe el *binding* ignorado `Bootstrap/Generated/Resources/RowerCharacterBinding.asset`; el `rower.character.asset` versionado sigue en `Procedural`. Al armar la escena, el slot valida (avatar Humanoid válido, los 30 huesos de dedos, alto 1,55–2,05 m, ≤ 60 k triángulos, ≤ 75 huesos, malla legible); si algo falla, vuelve al maniquí y escribe **un** `[SLOT] rower.character: <motivo>`. No hay `Animator` que configurar: queda deshabilitado (DT7-01) y el agarre de los dedos sale de `GripPose` (Core; DT7-07), sin clip `RowerPose`.
+
+Si querés comprobarlo a mano: con el FBX seleccionado, **Rig → Configure…** muestra todos los huesos en verde (dedos incluidos). No hace falta *Enforce T-Pose*: el solver mide la pose de reposo que trae el FBX.
 
 ### 2.6 Importar el clip opcional
 

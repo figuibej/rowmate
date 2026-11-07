@@ -8,6 +8,7 @@ Genera los valores esperados de los tests corriendo el **código del legacy** (y
 powershell -NoProfile -File tools/oracle/run-oracle.ps1 [-LegacyPath <ruta>] [-DartExe <ruta>] [-Only <nombre>[,…]] [-L10n]
 powershell -NoProfile -File tools/oracle/run-oracle.ps1 -Engine [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 powershell -NoProfile -File tools/oracle/run-oracle.ps1 -Scene [-LegacyPath <ruta>] [-FlutterExe <ruta>]
+powershell -NoProfile -File tools/oracle/run-oracle.ps1 -Stroke [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 ```
 
 - Por defecto `-LegacyPath` = `../rowmate-legacy` (al lado del repo) y `-DartExe` = `<flutter-sdk>/bin/cache/dart-sdk/bin/dart.exe` (o `dart` del `PATH`).
@@ -34,6 +35,10 @@ Los scripts importan solo `dart:*`, `../lib/golden.dart` y archivos del legacy q
 - Con `-LegacyPath` escribe `engine/pubspec_overrides.yaml` (ignorado: tiene la ruta absoluta); sin `-LegacyPath` lo borra si quedó de antes. `-FlutterExe` (o `ROWMATE_FLUTTER`) elige el `flutter`; si no, el del `PATH` (`<flutter-sdk>/bin/flutter`). Solo corre el motor: los scripts de `bin/` siguen con su comando.
 - Escenarios (spec §0.4, con `R-4`): libre terminado a los 12,3 s; `Corta`; `Corta` con `R-4(19)`; `Prueba 4a`; `Distancia 100` con `R-4`, `R-4R`, `R-4Z` y la pausa de 20 s; la pausa de Q-58; la pausa del muestreo; la sesión de 3 s. Cada uno con los puntos (sin `id`), la fila del alta y la del cierre (sin fechas: el legacy toma la hora real), los objetivos, los cambios de paso y el orden de las operaciones. Los compara `WorkoutGoldenTests` (sin Flutter).
 - Guiones (`scripts`, QA-V4a-L02, al empezar la It. 4b): los 15 caminos que la lente de paridad de la 4a comprobó a mano. Pasos de 0 s, de duración negativa y último de 0 s; sin meta con `Terminar`; terminar en pausa, en el segundo del cambio y en un múltiplo de 5; último paso por distancia; tiempo y distancia; el pulso del sensor en los puntos; pausa antes del primer segundo y pausa que cruza un cambio de paso; dos sesiones seguidas; varias pausas en un mismo segundo, y el monitor que informa la distancia cada 2 s (QA-V4a-L01). Cada guion es una lista de acciones `[ms, tipo, argumento]` con sus rutinas adentro, así `WorkoutGoldenTests` corre lo mismo en el motor nuevo. Diferencias esperadas: DV-37 (el `stepProgress` del legacy lanza con un paso negativo; queda anotado como `-99`) y QA-V4a-L01 (se comparan los puntos hasta el primer cambio de paso).
+
+## La palada del legacy (`-Stroke`, It. 7)
+
+Mismo proyecto `engine/` y mismos controles que `-Scene` (07-remero-palada/02-tech-design §6.2). `engine/test/stroke_vectors_test.dart` corre `StrokeCycle` en 1 001 fases, `BoatPainter.seatZ` / `handle` / `bladeTip` en las mismas y `SceneState.update` paso a paso (24 spm con pasos de 0,05 s; 24 y después 0 spm; 24 y después pausa; 24 spm a 1/60 s) y escribe `Assets/RowMate/Tests/Golden/oracle/scene_stroke.json`. `engine/test/boat_legacy_images_test.dart` dibuja **LEG-01** (`strokePhase` 0) y **LEG-02** (0,36): la LEG-02 de la 6a más el `BoatPainter`, en `docs/migration/iterations/07-remero-palada/snapshots/legacy/`. Los compara `Tests/EditMode/Scene/Stroke/StrokeGoldenTests.cs`: bit a bit la aritmética pura (ramps, barrido, fase, velocidad, distancia, tiempo, edad de los charcos) y `Within(1e-12)` lo que pasa por `sin`/`cos` (cabeceo, geometría, posición de los charcos).
 
 ## La escena del legacy (`-Scene`, It. 6a)
 

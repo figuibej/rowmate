@@ -91,6 +91,10 @@ namespace RowMate.Tests.UiSupport
         public string? SceneRegion;
         public RowMate.Scene.Slots.SceneWorldDefinition? SceneWorld;
 
+        // It. 7: el remero de la escena (por defecto el maniquí: las pruebas dan lo mismo en todas las máquinas; Slot = el binding de la
+        // máquina, Y Bot si está).
+        public RowMate.Scene.RowerCharacterKind SceneCharacter = RowMate.Scene.RowerCharacterKind.Mannequin;
+
         // It. 6a (B6a-19): el armado de la escena con el tramo del player (SceneWarmupPolicy) en lugar de todo en el acto.
         public bool ScenePlayerWarmup;
 

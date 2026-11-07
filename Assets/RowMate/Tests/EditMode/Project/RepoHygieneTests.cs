@@ -49,7 +49,7 @@ namespace RowMate.Tests.EditMode.Project
         [TestCase("d.p12", true, Category = "AC-APP-19-03")]
         [TestCase("e.mobileprovision", true, Category = "AC-APP-19-03")]
         [TestCase("tools/dotnet/.artifacts/bin/x.dll", true, Category = "AC-APP-19-03")]
-        [TestCase("Assets/ThirdParty/Mixamo/YBot/YBot.fbx.meta", false, Category = "AC-APP-19-03")]
+        [TestCase("Assets/ThirdParty/Mixamo/YBot/YBot.fbx.meta", true, Category = "AC-APP-19-03")]
         [TestCase("Assets/RowMate/Core/Design/Tokens.cs", false, Category = "AC-APP-19-03")]
         [TestCase("tools/oracle/bin/fmt_vectors.dart", false, Category = "AC-APP-19-03")]
         [TestCase("tools/oracle/lib/golden.dart", false, Category = "AC-APP-19-03")]
@@ -374,6 +374,87 @@ namespace RowMate.Tests.EditMode.Project
             };
             Assert.That(ThirdPartyReferenceOffenders(files, guids), Is.EqualTo(new[] { "Assets/RowMate/Art/Materials/Scene/Terrain.mat: " + Guid }));
             Assert.That(MetaGuid.Match("fileFormatVersion: 2\nguid: " + Guid + "\n").Groups[1].Value, Is.EqualTo(Guid));
+        }
+
+        // ------------------------------------------------------------------ It. 7 (07-remero-palada/02-tech-design §1.3, §6.3; DT7-13)
+
+        // AC-SCN-08-09: de Assets/ThirdParty/Mixamo/ no se versiona NADA, ni los .meta (QA7-G-04); el binding generado tampoco.
+        [TestCase("Assets/ThirdParty/Mixamo/YBot/YBot.fbx", true, Category = "AC-SCN-08-09")]
+        [TestCase("Assets/ThirdParty/Mixamo/YBot/YBot.fbx.meta", true, Category = "AC-SCN-08-09")]
+        [TestCase("Assets/ThirdParty/Mixamo/YBot.meta", true, Category = "AC-SCN-08-09")]
+        [TestCase("Assets/ThirdParty/Mixamo.meta", true, Category = "AC-SCN-08-09")]
+        [TestCase("Assets/ThirdParty/Mixamo/RowerRealistic/RowerRealistic.fbx.meta", true, Category = "AC-SCN-08-09")]
+        [TestCase("Assets/RowMate/Bootstrap/Generated/Resources/RowerCharacterBinding.asset", true, Category = "AC-SCN-08-09")]
+        [TestCase("Assets/ThirdParty/TerrainSampleAssetPack/Textures/Rock_Albedo.png.meta", false, Category = "AC-SCN-08-09")]
+        [TestCase("Assets/RowMate/Slots/rower.character.asset", false, Category = "AC-SCN-08-09")]
+        public void MixamoIsNeverVersioned(string path, bool ignored)
+        {
+            var exit = RunGit(RepoPaths.Root, out var output, "check-ignore", "-q", "--no-index", path);
+            if (exit != 0 && exit != 1)
+            {
+                Unavailable("git check-ignore salió con " + exit + ": " + output);
+            }
+
+            Assert.That(exit == 0, Is.EqualTo(ignored), path + (ignored ? " tiene que estar ignorado" : " NO tiene que estar ignorado"));
+        }
+
+        [Test, Category("AC-SCN-08-09")]
+        public void NothingUnderMixamoIsTrackedOrAddable()
+        {
+            var candidates = TrackedFiles(RepoPaths.Root);
+            candidates.AddRange(AddableFiles(RepoPaths.Root));
+            var offenders = new List<string>();
+            foreach (var path in candidates)
+            {
+                if (path.StartsWith("Assets/ThirdParty/Mixamo", StringComparison.Ordinal))
+                {
+                    offenders.Add(path);
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, "Mixamo versionado o por versionar:\n" + string.Join("\n", offenders));
+        }
+
+        // Ningún asset versionado (los slots incluidos) nombra un GUID de Mixamo (los .meta de la máquina, si están): el slot
+        // rower.character queda en Procedural en todas las máquinas (lo arma WP-B0).
+        [Test, Category("AC-SCN-08-09")]
+        public void TheRowerSlotIsProceduralAndNothingReferencesMixamo()
+        {
+            var guids = new HashSet<string>(StringComparer.Ordinal);
+            var mixamo = RepoPaths.Combine("Assets/ThirdParty/Mixamo");
+            if (Directory.Exists(mixamo))
+            {
+                foreach (var meta in Directory.GetFiles(mixamo, "*.meta", SearchOption.AllDirectories))
+                {
+                    var guid = MetaGuid.Match(File.ReadAllText(meta));
+                    if (guid.Success)
+                    {
+                        guids.Add(guid.Groups[1].Value);
+                    }
+                }
+            }
+
+            var candidates = TrackedFiles(RepoPaths.Root);
+            candidates.AddRange(AddableFiles(RepoPaths.Root));
+            var offenders = new List<string>();
+            foreach (var path in candidates)
+            {
+                if (!path.StartsWith("Assets/", StringComparison.Ordinal) || !IsUnityTextAsset(path) || !File.Exists(RepoPaths.Combine(path)))
+                {
+                    continue;
+                }
+
+                var text = File.ReadAllText(RepoPaths.Combine(path));
+                foreach (System.Text.RegularExpressions.Match match in GuidReference.Matches(text))
+                {
+                    if (guids.Contains(match.Groups[1].Value))
+                    {
+                        offenders.Add(path + ": " + match.Groups[1].Value);
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, "assets versionados que referencian Mixamo:\n" + string.Join("\n", offenders));
         }
 
         // QA-G6aT-19: el puerto del generador de la VM de Dart (BSD-3) lleva su aviso. Si existe Core/Scene/DartRandom.cs, la raíz
