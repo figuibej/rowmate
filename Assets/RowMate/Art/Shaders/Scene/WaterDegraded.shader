@@ -14,7 +14,10 @@
 //   3. con RM_WATER_EXTRAS (prendida en los tres niveles): el reflejo leve del cielo (0,25·S(30; 400; z) hacia skyHorizon), la franja
 //      somera (0,25·S(8,4; 9,0; |x|) hacia #5A6656·ambiente) y la bruma baja (0,6·m·S(10; 150; z) hacia lerp(fog; sunGlow; 0,25·g)),
 //      pesados en el vértice (la grilla tiene filas y columnas donde cambian) y doblados en un solo c·k + C en el fragmento.
-// Todo en gamma 2 (√ del lineal; al cuadrado al final). Sin niebla propia, sin olas ni estela (AC-SCN-13-01): eso es de la 6b.
+//   4. It. 8: la ola de la costa sobre el color (_RmSwell, AC-SCN-12-01) y la luz bajo el puente (_RmUnderBridge, AC-SCN-16-03), por
+//      fragmento con la posición de cinta; con A = 0 y fuerza 0 (lago, río sin puente cerca, regata) el color es el de la 7.
+// Todo en gamma 2 (√ del lineal; al cuadrado al final). Sin niebla propia, sin olas que muevan la malla ni estela (AC-SCN-13-01): eso
+// es de la 6b.
 Shader "RowMate/Scene/WaterDegraded"
 {
     Properties
@@ -24,7 +27,7 @@ Shader "RowMate/Scene/WaterDegraded"
         _RmWaterBandBottom ("Tramo de abajo (waterNear)", Color) = (0.05, 0.31, 0.56, 1)
         _RmShimmer ("Líneas (fase; x del disco en dp; fuerza; visibilidad del astro)", Vector) = (0, 0, 1, 1)
         _RmShimmerColor ("Color de las líneas (sunColor)", Color) = (1, 0.96, 0.84, 1)
-        _RmWaterExtras ("Agregados (reflejo; somera; bruma; -)", Vector) = (0.25, 0.25, 0.6, 0)
+        _RmWaterExtras ("Agregados (reflejo; somera; bruma; 1 = sin somera a la derecha: mar abierto)", Vector) = (0.25, 0.25, 0.6, 0)
         _RmShallowColor ("Franja somera (× ambiente)", Color) = (0.352941, 0.4, 0.337255, 1)
     }
 
@@ -61,6 +64,10 @@ Shader "RowMate/Scene/WaterDegraded"
         // It. 7 (DA7-04, DT7-08): el agua recibe la sombra de la luz principal (el remero, el bote, las palas): en sombra plena se
         // oscurece 0,10 (RowerArt.ShadowDarken), ya teñida por la hora. Con el óvalo (nivel Bajo o la luz sin fuerza) no hay mapa.
         static const float kRmShadowDarken = 0.1;
+        // It. 8 (08-entornos-selector/04-design-notes §2): la ola de la costa (CoastSwell.ColorGain) y dónde se apaga (CoastArt).
+        static const float kRmSwellColorGain = 0.25;
+        static const float kRmSwellFadeNear = 120;
+        static const float kRmSwellFadeFar = 300;
 
         // DegradedWater.ScreenAlpha: lo que se ve de una línea = el alfa del legacy × la visibilidad del astro (0 en el cambio de astro).
         float RmShimmerScreenAlpha(float legacyAlpha, float diskVisibility)
@@ -111,9 +118,7 @@ Shader "RowMate/Scene/WaterDegraded"
                 float4 line0 : TEXCOORD5;       // (−fase/0,1; fase; 2·(alto del agua) en dp; −)
                 float4 line1 : TEXCOORD6;       // (0,7·ancho; 0,3·ancho + 0,5; alfa en t = 0; caída del alfa con t)
                 float4 extra : TEXCOORD7;       // los agregados: c·w + xyz
-#if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
-                float3 positionWS : TEXCOORD8;  // la sombra de la luz principal (It. 7)
-#endif
+                float3 positionWS : TEXCOORD8;  // la sombra de la luz principal (It. 7), la ola y el puente (It. 8)
             };
 
             Varyings WaterVertex(Attributes v)
@@ -122,9 +127,7 @@ Shader "RowMate/Scene/WaterDegraded"
                 float3 positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 float4 clip = TransformWorldToHClip(positionWS);
                 o.positionCS = clip;
-#if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
                 o.positionWS = positionWS;
-#endif
 
                 // El horizonte del cuadro (la columna del centro) y la x del disco, con las matrices de la cámara.
                 float3 forward = -UNITY_MATRIX_V[2].xyz;
@@ -160,7 +163,9 @@ Shader "RowMate/Scene/WaterDegraded"
 #if defined(RM_WATER_EXTRAS)
                 float z = positionWS.z;
                 float wR = _RmWaterExtras.x * RmSmoothStep(kRmReflectNear, kRmReflectFar, z);
-                float wS = _RmWaterExtras.y * RmSmoothStep(kRmShallowInner, kRmShallowOuter, abs(positionWS.x));
+                // It. 8 (WP-D2): w = 1 con mar abierto a la derecha (la costa): ahí no hay orilla y la franja somera no va.
+                float wS = _RmWaterExtras.y * RmSmoothStep(kRmShallowInner, kRmShallowOuter, abs(positionWS.x))
+                         * (positionWS.x > 0.0 ? 1.0 - _RmWaterExtras.w : 1.0);
                 float wM = _RmWaterExtras.z * _RmLowMist * RmSmoothStep(kRmMistNear, kRmMistFar, z);
                 float3 sky = sqrt(max(_RmPaletteSkyHorizon.rgb, 0.0));
                 float3 shallow = sqrt(max(_RmShallowColor.rgb * _RmAmbient, 0.0));
@@ -183,6 +188,18 @@ Shader "RowMate/Scene/WaterDegraded"
                 // 1: los tres tramos.
                 float3 c = i.top + i.d1 * saturate(s.x) + i.d2 * saturate(s.x - 1.0);
 
+                // It. 8 · La ola de la costa (AC-SCN-12-01; DT8-05, DT8-06): × (1 + h·A·0,25) con la h de water.frag sin ruido, en cinta
+                // con las fases de Core. Se apaga de 120 a 300 m (lejos la cresta mide menos de un píxel y titilaría). Con A = 0 (los otros
+                // escenarios) el factor es 1 exacto.
+                UNITY_BRANCH
+                if (_RmSwell.x > 0.0)
+                {
+                    float3 pw = i.positionWS;
+                    float swellScale = max(_RmSwell.y, 1e-3);
+                    float swell = sin(pw.z / swellScale + _RmSwell.z) * 0.6 + sin((0.7 * pw.z + 1.3 * pw.x) / swellScale + _RmSwell.w) * 0.4;
+                    c *= 1.0 + swell * (_RmSwell.x * kRmSwellColorGain * (1.0 - RmSmoothStep(kRmSwellFadeNear, kRmSwellFadeFar, pw.z)));
+                }
+
                 // 2: la línea más cercana.
                 float n = max(round(sqrt(abs(tp)) / kRmLineSpacing + i.line0.x), 0.0);
                 float t = n * kRmLineSpacing + i.line0.y;
@@ -198,6 +215,8 @@ Shader "RowMate/Scene/WaterDegraded"
 #if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
                 c *= 1.0 - kRmShadowDarken * (1.0 - RmMainShadow(i.positionWS));
 #endif
+                // It. 8 · La luz bajo el puente (DT8-07): el agua bajo el tablero, como el casco y el muro.
+                c *= RmUnderBridgeGamma2(i.positionWS, float3(0.0, 1.0, 0.0));
                 return half4(c * c, 1.0);
             }
             ENDHLSL

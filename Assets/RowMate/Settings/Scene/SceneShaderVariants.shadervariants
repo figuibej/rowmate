@@ -438,3 +438,17 @@ ShaderVariantCollection:
         passType: 13
       - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT_MEDIUM
         passType: 13
+  - first: {fileID: 4800000, guid: 5459db03eff73a545aee9a52c8ce3843, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+      - keywords: INSTANCING_ON
+        passType: 13
+  - first: {fileID: 4800000, guid: b7b40d5f41fd8fe48b3d028a9bb02b6a, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+      - keywords: INSTANCING_ON
+        passType: 13

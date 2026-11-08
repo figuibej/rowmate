@@ -271,6 +271,37 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(offenders, Is.Empty, "FBX fuera de Assets/ThirdParty/:\n" + string.Join("\n", offenders));
         }
 
+        [Test, Category("AC-APP-19-03")]
+        public void RepositoryScanSkipsNestedWorkingCopies()
+        {
+            // It. 8: correr los tests en la copia principal veía el YBot.fbx de un worktree de git anidado en el repo.
+            var root = Path.Combine(Path.GetTempPath(), "rowmate-scan-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var own = Path.Combine(root, "Assets", "ThirdParty", "Mixamo");
+                var worktree = Path.Combine(root, "nested", "wt", "Assets", "ThirdParty");
+                var clone = Path.Combine(root, "nested-clone", "Assets");
+                Directory.CreateDirectory(own);
+                Directory.CreateDirectory(worktree);
+                Directory.CreateDirectory(Path.Combine(clone, "..", ".git"));
+                Directory.CreateDirectory(clone);
+                File.WriteAllText(Path.Combine(root, "nested", "wt", ".git"), "gitdir: x");
+                File.WriteAllText(Path.Combine(own, "a.fbx"), "");
+                File.WriteAllText(Path.Combine(worktree, "b.fbx"), "");
+                File.WriteAllText(Path.Combine(clone, "c.fbx"), "");
+                var found = SourceScan.RepositoryFiles(root, "*.fbx");
+                Assert.That(found.Count, Is.EqualTo(1), string.Join("\n", found));
+                Assert.That(found[0], Does.EndWith("a.fbx"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
         [Test, Category("AC-BASE-08")]
         public void SourceScanStripsCommentsAndLiterals()
         {
@@ -411,6 +442,46 @@ namespace RowMate.Tests.EditMode.Project
             }
 
             Assert.That(offenders, Is.Empty, "Unity, reloj o azar sin semilla en la palada:\n" + string.Join("\n", offenders));
+        }
+
+        // It. 8 (08-entornos-selector/02-tech-design §1.1, §2): los generadores de los 4 escenarios, sus números de arte, sus mallas y
+        // las reglas nuevas son Core puro y deterministas: sin Unity, sin reloj ni System.Random (solo DartRandom con semilla fija, bit
+        // a bit contra el oráculo). La preferencia (App/Scene/SceneEnvironmentChoice) tampoco conoce a Unity.
+        [Test, Category("AC-SCN-14-08"), Category("AC-SCN-20-07"), Category("AC-APP-19-03")]
+        public void TheEnvironmentsCoreIsPureAndDeterministic()
+        {
+            var patterns = new[]
+            {
+                new Regex(@"\bUnityEngine\b"),
+                new Regex(@"\bDateTime(Offset)?\s*\.\s*(Now|UtcNow|Today)\b"),
+                new Regex(@"\bStopwatch\b"),
+                new Regex(@"\bEnvironment\s*\.\s*TickCount(64)?\b"),
+                new Regex(@"\bnew\s+(System\s*\.\s*)?Random\s*\("),
+                new Regex(@"\bGuid\s*\.\s*NewGuid\b"),
+            };
+            var files = new List<string>(SourceScan.CsFiles("Core/Scene/Environments"));
+            Assert.That(files.Count, Is.GreaterThanOrEqualTo(6), "el escaneo encontró Core/Scene/Environments");
+            foreach (var name in new[]
+            {
+                "Core/Scene/Art/RiverArt.cs", "Core/Scene/Art/CoastArt.cs", "Core/Scene/Art/RegattaArt.cs", "Core/Scene/CoastSwell.cs",
+                "Core/Scene/CrowdAtlas.cs", "Core/Scene/DistanceMarkerText.cs", "Core/Scene/EnvironmentFill.cs", "Core/Scene/EnvironmentHorizons.cs",
+                "Core/Scene/FacadeWindows.cs", "Core/Scene/RiverPlacement.cs", "Core/Scene/SeagullFlight.cs", "Core/Scene/ThumbnailRule.cs",
+                "Core/Scene/Geometry/SeagullFlock.cs",
+                "Core/Scene/Geometry/RiverMeshes.cs", "Core/Scene/Geometry/CoastMeshes.cs", "Core/Scene/Geometry/RegattaMeshes.cs",
+                "App/Scene/SceneEnvironmentChoice.cs",
+            })
+            {
+                files.Add(RepoPaths.Combine("Assets/RowMate/" + name));
+            }
+
+            var offenders = new List<string>();
+            foreach (var file in files)
+            {
+                Assert.That(File.Exists(file), Is.True, file);
+                offenders.AddRange(SourceScan.Matches(file, patterns, true));
+            }
+
+            Assert.That(offenders, Is.Empty, "Unity, reloj o azar sin semilla en los escenarios:\n" + string.Join("\n", offenders));
         }
 
         // Toda regla de la escena es Core puro (Q-69, AC-SCN-01-14): Core/Scene (con Art y Geometry) y las líneas de tiempo y el
@@ -676,11 +747,17 @@ namespace RowMate.Tests.EditMode.Project
             return new List<string>(result);
         }
 
-        // Archivos del repositorio con un patrón, sin entrar en .git, Library, Temp ni salidas de compilación.
+        // Archivos del repositorio con un patrón, sin entrar en .git, Library, Temp, salidas de compilación ni otras copias de
+        // trabajo anidadas (un worktree de git anidado trae su propio Assets/ThirdParty/: no es de este repo).
         public static IReadOnlyList<string> RepositoryFiles(string searchPattern)
         {
+            return RepositoryFiles(RepoPaths.Root, searchPattern);
+        }
+
+        public static IReadOnlyList<string> RepositoryFiles(string root, string searchPattern)
+        {
             var result = new List<string>();
-            Collect(new DirectoryInfo(RepoPaths.Root), searchPattern, result);
+            Collect(new DirectoryInfo(root), searchPattern, result);
             result.Sort(StringComparer.Ordinal);
             return result;
         }
@@ -734,7 +811,15 @@ namespace RowMate.Tests.EditMode.Project
             {
                 var name = child.Name;
                 if (name == ".git" || name == ".artifacts" || name == "Library" || name == "Temp" || name == "obj" || name == "bin"
-                    || name == "Logs" || name == "node_modules" || name == ".dart_tool")
+                    || name == "Logs" || name == "node_modules" || name == ".dart_tool"
+                    // Los worktrees locales de git de los agentes (.claude/worktrees/*) son copias del repo, no parte de él.
+                    || (name == "worktrees" && directory.Name == ".claude"))
+                {
+                    continue;
+                }
+
+                // Una carpeta con su propio .git (archivo en un worktree, carpeta en un clon) es otra copia de trabajo.
+                if (File.Exists(Path.Combine(child.FullName, ".git")) || Directory.Exists(Path.Combine(child.FullName, ".git")))
                 {
                     continue;
                 }

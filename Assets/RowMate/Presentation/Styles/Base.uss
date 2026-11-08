@@ -2193,3 +2193,139 @@
     flex-direction: row;
     align-items: center;
 }
+
+/* ── It. 8: selector de escenario (08-entornos-selector/02-tech-design §4; AC-SCN-22-01 a -03). Medidas de la spec; la animación es
+   EnvironmentCardMotion (WP-D1, en línea solo mientras corre: en reposo mandan estas reglas; 08-entornos-selector/04-design-notes §7.2). El anillo y el check son absolutos: elegir no cambia el
+   layout (D8-11). ── */
+.rm-env-title {
+    margin-bottom: 8px;
+    color: var(--rm-text-tertiary);
+    font-size: 13px;
+}
+
+.rm-env-picker {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+}
+
+.rm-env-picker__scroll {
+    flex-shrink: 0;
+}
+
+.rm-env-picker__row {
+    flex-direction: row;
+    align-items: flex-start;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.rm-env-card {
+    width: 152px;
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+
+.rm-env-card--last {
+    margin-right: 4px;
+}
+
+.rm-env-card__frame {
+    width: 152px;
+    height: 96px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.rm-env-card__thumb {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-env-card__thumb--fallback {
+    background-color: var(--rm-backdrop-sky);
+}
+
+.rm-env-card__veil {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--rm-bg-sunken);
+    opacity: 0.15;
+}
+
+.rm-env-card--selected .rm-env-card__veil {
+    display: none;
+}
+
+.rm-env-card__ring {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+}
+
+.rm-env-card--selected .rm-env-card__ring {
+    border-width: 2.5px;
+    border-color: var(--rm-accent-primary);
+}
+
+.rm-env-card__check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    background-color: var(--rm-text-primary);
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+
+.rm-env-card--selected .rm-env-card__check {
+    display: flex;
+}
+
+.rm-env-card__check-glyph {
+    color: var(--rm-accent-primary);
+    font-size: 22px;
+    -unity-text-align: middle-center;
+}
+
+.rm-env-card__names {
+    margin-top: 6px;
+}
+
+.rm-env-card__name {
+    font-size: 13px;
+    color: var(--rm-text-secondary);
+    -unity-font-style: normal;
+    white-space: normal;
+}
+
+.rm-env-card__name--bold {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    color: var(--rm-text-primary);
+    -unity-font-style: bold;
+    opacity: 0;
+}
+
+.rm-env-card--selected .rm-env-card__name {
+    opacity: 0;
+}
+
+.rm-env-card--selected .rm-env-card__name--bold {
+    opacity: 1;
+}

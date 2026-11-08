@@ -69,7 +69,16 @@ namespace RowMate.Core.Scene.Art
             "_RmPaletteSunGlow", "_RmPaletteFog", "_RmAmbient", "_RmAmbientSky", "_RmAmbientEquator", "_RmAmbientGround", "_RmFogParams",
             "_RmLowMist", "_RmGolden", "_RmDiskDir", "_RmDiskParams", "_RmDiskShape", "_RmLightDir", "_RmHorizonY", "_RmFocalDp", "_RmViewDp",
             "_RmDensity", "_RmZonePhase", "_RmSkyTopSrgb", "_RmSkyHorizonSrgb", "_RmHazeSrgb", "_RmEmissiveGain",
+            // It. 8 (08-entornos-selector/02-tech-design §8.4): la ola de la costa y el puente más cercano (0 en los demás).
+            "_RmSwell", "_RmUnderBridge",
         };
+
+        // It. 8 (08-entornos-selector/04-design-notes §6): lo que cuesta lo que solo corre en río, costa o regata, en un salto por un uniforme
+        // (el lago y las tomas de la 6a y la 7 no lo pagan): la luz bajo el puente (Prop; WaterArt.MaxBranchAlu el agua con la ola), el
+        // suelo de cada escenario con el puente (Terrain) y las ventanas del skyline de noche (Horizon).
+        public const int UnderBridgeBranchAlu = 32, TerrainBranchAlu = 76, HorizonBranchAlu = 56;
+        // El horizonte suma la comparación del salto de las ventanas (15 de la 6a + 1).
+        public const int HorizonAlu = 16;
 
         private static readonly string[] None = new string[0];
 
@@ -80,19 +89,22 @@ namespace RowMate.Core.Scene.Art
             new SceneShaderSpec("Stars", 1001, 8, 0, true, None, new[] { "_RmStarDir", "_RmStarAlpha" }),
             new SceneShaderSpec("Clouds", 1002, 12, 2, true, new[] { "_RmCloudAtlas", "_RmCloudLayer" },
                 new[] { "_RmCloudDir", "_RmCloudVariant", "_RmCloudAlpha" }),
-            new SceneShaderSpec("Horizon", 1003, 15, 0, false,
-                new[] { "_RmHorizonTone", "_RmHorizonDepth", "_RmSnowEnabled", "_RmHorizonScale", "_RmSnowParams", "_RmRim", "_RmSnowTone" }, None),
+            new SceneShaderSpec("Horizon", 1003, HorizonAlu, 0, false,
+                new[] { "_RmHorizonTone", "_RmHorizonDepth", "_RmSnowEnabled", "_RmHorizonScale", "_RmSnowParams", "_RmRim", "_RmSnowTone", "_RmSkylineWindows", "_RmSkylineWindow",
+                        "_RmFlagTone0", "_RmFlagTone1", "_RmFlagTone2", "_RmFlagTone3", "_RmFlagMast" },
+                None, maxBranchAlu: HorizonBranchAlu),
             new SceneShaderSpec("WaterDegraded", 2450, WaterArt.MaxAlu, 0, false,
                 new[] { "_RmWaterBandTop", "_RmWaterBandMid", "_RmWaterBandBottom", "_RmShimmer", "_RmShimmerColor", "_RmWaterExtras", "_RmShallowColor" },
-                None),
+                None, maxBranchAlu: WaterArt.MaxBranchAlu),
             new SceneShaderSpec("Terrain", 2000, 35, 2, false,
                 new[]
                 {
                     "_RmNoiseTex", "_RmTerrainPebbles", "_RmTerrainWet", "_RmTerrainContact", "_RmTerrainGrass", "_RmTerrainGrassAlt",
                     "_RmTerrainForest", "_RmTerrainNeedles", "_RmTerrainRock", "_RmTerrainCanopy", "_RmLayerAlbedo", "_RmLayerNormal",
-                }, None),
+                    "_RmTerrainKind", "_RmTerrainCobble", "_RmTerrainWall", "_RmTerrainSand", "_RmTerrainCliff", "_RmTerrainCliffGrass", "_RmTerrainLawn",
+                }, None, maxBranchAlu: TerrainBranchAlu),
             new SceneShaderSpec("Prop", 2000, 30, 0, true, new[] { "_RmPlankParams", "_RmWindowDay", "_RmWindowNight", "_RmWindowMode" },
-                new[] { "_RmFade", "_RmLit" }),
+                new[] { "_RmFade", "_RmLit" }, maxBranchAlu: UnderBridgeBranchAlu),
             new SceneShaderSpec("Foliage", 2000, 25, 0, true, new[] { "_RmTrunkColor", "_RmBushColor", "_RmWind" },
                 new[] { "_RmVariant", "_RmWindPhase", "_RmFade" }),
             new SceneShaderSpec("Grass", 2000, 18, 0, true, new[] { "_RmGrassColorA", "_RmGrassColorB", "_RmFernColor", "_RmGrassEnd", "_RmWind" },
@@ -113,6 +125,18 @@ namespace RowMate.Core.Scene.Art
             new SceneShaderSpec("Spray", 3100, 16, 0, true, new[] { "_RmMinDropDp" }, new[] { "_RmSpray" }),
             new SceneShaderSpec("WaterMarks", 3050, 20, 0, true, new[] { "_RmEffort" }, new[] { "_RmMarks" }, maxBranchAlu: 32),
             new SceneShaderSpec("Buoy", 2000, 25, 0, false, new[] { "_RmBuoyColor", "_RmFade" }, None),
+        };
+
+        // It. 8 (08-entornos-selector/02-tech-design §8.4; 04-design-notes §5): las luces de la noche de los escenarios (halos de faroles,
+        // faro y torre; el haz del faro) y la espuma de la costa (Foam: transparente, instanciada, con el ruido de la escena). Aparte de
+        // los 13 de la 6a y los 5 de la 7: los cubre EnvironmentShaderContractTests, la colección de variantes y SceneShaderTests.
+        // (Facade, Crowd y MarkerText quedaron fuera: los objetos de los kits van horneados por segmento con Prop, B8-01 y B8-05.)
+        public static readonly SceneShaderSpec[] Environment =
+        {
+            new SceneShaderSpec("Glow", 3010, 14, 0, true, new[] { "_RmGlowLamp", "_RmGlowBeacon", "_RmGlowBeam" }, new[] { "_RmGlow" }),
+            // Foam: 62 ALU medidos por SceneShaderTests (D3D11, Medio) en la reconciliación; el 30 del worktree era una estimación. Solo en la
+            // costa y en una tira de 1,6 m (≤ 16 instancias): optimizarlo es para issues.
+            new SceneShaderSpec("Foam", 3020, 64, 1, true, new[] { "_RmNoiseTex", "_RmFoamPulse", "_RmFoamColor" }, new[] { "_RmFoam" }),
         };
 
         // Las constantes kRm* de los cinco del remero con su valor en RowerArt (las comprueba RowerShaderContractTests).
@@ -257,6 +281,60 @@ namespace RowMate.Core.Scene.Art
                 // Hull (§9; WP-D2).
                 ["kRmHullExposure"] = MaterialArt.HullExposure,
                 ["kRmHullAmbientChroma"] = MaterialArt.HullAmbientChroma,
+
+                // It. 8 · Prop: la vida de banderas, sombrillas y boyas marcada en el uv por KitSegmentMesh (00-arte-entornos §1.4).
+                ["kRmFlagWave"] = RegattaArt.FlagWave,
+                ["kRmFlagWaveRate"] = RegattaArt.FlagWaveRate,
+                ["kRmBuoyPitch"] = RegattaArt.BuoyPitch,
+                ["kRmBuoyPitchRate"] = RegattaArt.BuoyPitchRate,
+                ["kRmBuoyHeave"] = RegattaArt.BuoyHeave,
+                ["kRmBuoyHeaveRate"] = RegattaArt.BuoyHeaveRate,
+                ["kRmCrowdSway"] = RegattaArt.CrowdSway,
+                ["kRmCrowdBob"] = RegattaArt.CrowdBob,
+
+                // It. 8 · Horizon: las banderas de la tira lejana de la regata (QA-V8-01; RegattaBackdrop).
+                ["kRmFarFlagWave"] = RegattaBackdrop.FlagWaveP,
+                ["kRmFarFlagRate"] = RegattaBackdrop.FlagWaveRate,
+
+                // It. 8 · RowMateLighting.hlsl: bajo el puente (DT8-07; RiverArt).
+                ["kRmBridgeHalfSpan"] = RiverArt.BridgeEndX,
+                ["kRmBridgeDeckBottom"] = RiverArt.DeckBottom,
+
+                // It. 8 · WaterDegraded: la ola de la costa (CoastSwell, CoastArt).
+                ["kRmSwellColorGain"] = CoastSwell.ColorGain,
+                ["kRmSwellFadeNear"] = CoastArt.SwellFadeNear,
+                ["kRmSwellFadeFar"] = CoastArt.SwellFadeFar,
+
+                // It. 8 · Terrain: los suelos de río, costa y regata.
+                ["kRmCobbleM"] = RiverArt.CobbleSize,
+                ["kRmCobbleJoint"] = RiverArt.CobbleJoint,
+                ["kRmCobbleTone"] = RiverArt.CobbleTone,
+                ["kRmLawnStripeM"] = RegattaArt.LawnStripeWidth,
+                ["kRmLawnStripe"] = RegattaArt.LawnStripeContrast,
+                ["kRmCoastGrassFrom"] = CoastArt.PlateauGrassFrom,
+                ["kRmSandWet"] = CoastArt.WetSandShade,
+
+                // It. 8 · Horizon: las ventanas del skyline del río en px de TV (river_environment.dart:58-66; Skyline).
+                ["kRmLegacyFocalPx"] = LegacyTv.Focal,
+                ["kRmSkylineLeftPx"] = LegacyTv.Width / 2,
+                ["kRmSkylineMaxPx"] = LegacyTv.Height * RiverArt.HorizonFraction,
+                ["kRmSkylineColumnPx"] = Skyline.ColumnPx,
+                ["kRmSkylineCellXPx"] = Skyline.CellWidthPx,
+                ["kRmSkylineCellYPx"] = Skyline.CellHeightPx,
+                ["kRmSkylineWindowXPx"] = Skyline.WindowWidthPx,
+                ["kRmSkylineWindowYPx"] = Skyline.WindowHeightPx,
+                ["kRmSkylineWindowAlpha"] = RiverArt.SkylineWindowAlpha,
+                ["kRmSkylineWindowThreshold"] = RiverArt.SkylineWindowThreshold,
+                ["kRmSkylineNightAmbient"] = RiverArt.WindowLitThreshold,
+
+                // It. 8 · Glow (ShaderArt.Environment).
+                ["kRmGlowPull"] = RiverArt.GlowPull,
+                ["kRmBeamFlashCos"] = Math.Cos(SceneMath.DegToRad(CoastArt.BeamFlashDeg)),
+                ["kRmBeamRootWidth"] = CoastArt.BeamRootWidth,
+
+                // It. 8 · Foam (ShaderArt.Environment): el ruido que la rompe en jirones y el apagado en el cambio de orilla.
+                ["kRmFoamNoiseM"] = CoastArt.FoamNoiseMeters,
+                ["kRmFoamTaperM"] = CoastArt.FoamTaperMeters,
             };
         }
 
@@ -308,6 +386,27 @@ namespace RowMate.Core.Scene.Art
                 ["ScreenOverlay._RmScrimColor"] = Srgb(MaterialArt.ScrimColor),
                 ["ScreenOverlay._RmScrimTop"] = new[] { MaterialArt.ScrimTop[0], MaterialArt.ScrimTop[1], 0, 0 },
                 ["ScreenOverlay._RmScrimBottom"] = new[] { MaterialArt.ScrimBottom[0], MaterialArt.ScrimBottom[1], 0, 0 },
+
+                // It. 8 (04-design-notes §3 a §5).
+                ["Terrain._RmTerrainKind"] = new[] { 0.0 },
+                ["Terrain._RmTerrainCobble"] = Srgb(RiverArt.Cobble),
+                ["Terrain._RmTerrainWall"] = Srgb(RiverArt.WallStone),
+                ["Terrain._RmTerrainSand"] = Srgb(CoastArt.Sand),
+                ["Terrain._RmTerrainCliff"] = Srgb(CoastArt.CliffRock),
+                ["Terrain._RmTerrainCliffGrass"] = Srgb(CoastArt.CliffGrass),
+                ["Terrain._RmTerrainLawn"] = Srgb(RegattaArt.Lawn),
+                ["Horizon._RmSkylineWindows"] = new[] { 0.0 },
+                ["Horizon._RmSkylineWindow"] = Srgb(RiverArt.SkylineWindow),
+                ["Horizon._RmFlagTone0"] = Srgb(RegattaArt.FlagTones[0]),
+                ["Horizon._RmFlagTone1"] = Srgb(RegattaArt.FlagTones[1]),
+                ["Horizon._RmFlagTone2"] = Srgb(RegattaArt.FlagTones[2]),
+                ["Horizon._RmFlagTone3"] = Srgb(RegattaArt.FlagTones[3]),
+                ["Horizon._RmFlagMast"] = Srgb(RegattaArt.BackdropTower),
+                ["Glow._RmGlowLamp"] = Srgb(RiverArt.LampHalo),
+                ["Glow._RmGlowBeacon"] = Srgb(CoastArt.LighthouseHalo),
+                ["Glow._RmGlowBeam"] = new[] { CoastArt.BeamLength, CoastArt.BeamApertureDeg, CoastArt.BeamPeriodSeconds, CoastArt.BeamFlash },
+                ["Foam._RmFoamPulse"] = new[] { CoastArt.FoamPulseSeconds },
+                ["Foam._RmFoamColor"] = Srgb(CoastArt.FoamColor),
             };
         }
 

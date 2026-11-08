@@ -430,6 +430,11 @@ namespace RowMate.Snapshots
                     record.Problems.AddRange(inspect(host, frame, values));
                 }
 
+                if (scenario.SceneProbes != null && scenario.Kind != SnapshotKind.Sequence)
+                {
+                    record.Probes.AddRange(scenario.SceneProbes(host, record.Values ??= new List<string>()));
+                }
+
                 if (cropElement != null)
                 {
                     var element = host.Find(cropElement) ?? throw new InvalidOperationException("recorte: no existe #" + cropElement);

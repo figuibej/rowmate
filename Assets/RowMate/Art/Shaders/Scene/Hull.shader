@@ -80,6 +80,11 @@ Shader "RowMate/Scene/Hull"
                 o.fog = RmVertexFog(positionWS.z, positionWS.y);
                 float3 key = RmKeyLegacy();
                 o.specular = key * key * (_RmGelcoat.x * _RmDiskParams.x);
+                // It. 8: bajo el puente (DT8-07), por vértice (el casco tiene secciones cada pocos cm; la rampa es de 1,5 m).
+                float underBridge = RmUnderBridgeGamma2(positionWS, normalWS);
+                o.ambientG *= underBridge;
+                o.keyG *= underBridge;
+                o.specular *= underBridge * underBridge;
                 return o;
             }
 

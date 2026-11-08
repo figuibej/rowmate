@@ -84,5 +84,77 @@ namespace RowMate.Core.Scene.Geometry
                 mesh.AddTriangle(b, d, e);
             }
         }
+
+        // It. 8: un tronco de cono vertical (sin tapas), de r0 en y0 a r1 en y1: 2·sides triángulos.
+        public static void Frustum(MeshData mesh, double cx, double cz, double r0, double r1, double y0, double y1, int sides, uint color, double material)
+        {
+            var c = SceneColor.FromArgb(color);
+            var first = mesh.VertexCount;
+            var slope = (r0 - r1) / Math.Max(1e-9, y1 - y0);
+            for (var ring = 0; ring < 2; ring++)
+            {
+                var y = ring == 0 ? y0 : y1;
+                var r = ring == 0 ? r0 : r1;
+                for (var j = 0; j <= sides; j++)
+                {
+                    var t = 2 * Math.PI * j / sides;
+                    mesh.AddVertex(cx + Math.Cos(t) * r, y, cz + Math.Sin(t) * r, Math.Cos(t), slope, Math.Sin(t), c.R, c.G, c.B, material, j / (double)sides, ring);
+                }
+            }
+
+            Bands(mesh, first, sides, 1);
+        }
+
+        // Un elipsoide (bandas × gajos; los polos son anillos de radio 0): 2·slices·bands triángulos.
+        public static void Ellipsoid(MeshData mesh, double cx, double cy, double cz, double rx, double ry, double rz, int bands, int slices, uint color,
+                                     double material)
+        {
+            var c = SceneColor.FromArgb(color);
+            var first = mesh.VertexCount;
+            for (var s = 0; s <= bands; s++)
+            {
+                var phi = -Math.PI / 2 + Math.PI * s / bands;
+                var cp = Math.Cos(phi);
+                var sp = Math.Sin(phi);
+                for (var j = 0; j <= slices; j++)
+                {
+                    var t = 2 * Math.PI * j / slices;
+                    var nx = cp * Math.Cos(t);
+                    var nz = cp * Math.Sin(t);
+                    mesh.AddVertex(cx + rx * nx, cy + ry * sp, cz + rz * nz, nx / rx, sp / ry, nz / rz, c.R, c.G, c.B, material, j / (double)slices,
+                        s / (double)bands);
+                }
+            }
+
+            Bands(mesh, first, slices, bands);
+        }
+
+        // Un triángulo con su normal (p0 → p1 → p2 en el sentido del Quad: antihorario visto desde la normal).
+        public static void Triangle(MeshData mesh, double x0, double y0, double z0, double x1, double y1, double z1, double x2, double y2, double z2,
+                                    double nx, double ny, double nz, uint color, double material)
+        {
+            var c = SceneColor.FromArgb(color);
+            var a = mesh.AddVertex(x0, y0, z0, nx, ny, nz, c.R, c.G, c.B, material, 0, 0);
+            var b = mesh.AddVertex(x1, y1, z1, nx, ny, nz, c.R, c.G, c.B, material, 1, 0);
+            var d = mesh.AddVertex(x2, y2, z2, nx, ny, nz, c.R, c.G, c.B, material, 0, 1);
+            mesh.AddTriangle(a, d, b);
+        }
+
+        // Las bandas entre anillos consecutivos de (sides + 1) vértices, con la vuelta del Cylinder.
+        private static void Bands(MeshData mesh, int first, int sides, int bands)
+        {
+            for (var s = 0; s < bands; s++)
+            {
+                for (var j = 0; j < sides; j++)
+                {
+                    var a = first + s * (sides + 1) + j;
+                    var b = a + 1;
+                    var d = a + sides + 1;
+                    var e = d + 1;
+                    mesh.AddTriangle(a, d, b);
+                    mesh.AddTriangle(b, d, e);
+                }
+            }
+        }
     }
 }

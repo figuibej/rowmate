@@ -63,6 +63,14 @@ namespace RowMate.Bootstrap
                 ReserveWrench = options.TopLayer != null,
                 Scene = options.Scene
             };
+            if (options.Thumbnails != null)
+            {
+                for (var i = 0; i < ui.Thumbnails.Length && i < options.Thumbnails.Length; i++)
+                {
+                    ui.Thumbnails[i] = options.Thumbnails[i];
+                }
+            }
+
             var shell = new AppShellView(ui, options.TopLayer);
             root.Add(shell);
             return new ShellHandle(shell, motion, pacing, new BackNavigation(options.BackButton, shell.Popups, shell.Dialogs, shell.Pages), fade);

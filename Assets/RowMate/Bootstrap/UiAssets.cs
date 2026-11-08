@@ -26,6 +26,7 @@ namespace RowMate.Bootstrap
         [SerializeField] private FontAsset? _iconsOutlineFallback;
         [SerializeField] private FontAsset? _emojiFallback;
         [SerializeField] private RowMate.Scene.Slots.SceneWorldDefinition? _sceneWorld;
+        [SerializeField] private Texture2D?[] _thumbnails = new Texture2D?[4];
 
         public PanelSettings? Panel => _panel;
 
@@ -46,6 +47,21 @@ namespace RowMate.Bootstrap
         // It. 6a (06a-escena-lago/02-tech-design §3.4): el mundo de la escena 3D (Scenes/SceneWorld.asset). Sin él (o incompleto, sin
         // los materiales), el inmersivo sigue con el fondo provisorio.
         public RowMate.Scene.Slots.SceneWorldDefinition? SceneWorld => _sceneWorld;
+
+        // It. 8 (08-entornos-selector/02-tech-design §3.4; AC-SCN-22-04): las miniaturas horneadas del selector
+        // (Art/Textures/Thumbnails/{lake,river,coast,regatta}.png), en el orden de EnvironmentId. Las pone BootSceneBuilder y el horneador.
+        public const string ThumbnailsFolder = "Assets/RowMate/Art/Textures/Thumbnails";
+
+        public Texture2D?[] Thumbnails => _thumbnails ??= new Texture2D?[4];
+
+        public void SetThumbnails(Texture2D?[] thumbnails)
+        {
+            _thumbnails = new Texture2D?[4];
+            for (var i = 0; i < _thumbnails.Length && i < thumbnails.Length; i++)
+            {
+                _thumbnails[i] = thumbnails[i];
+            }
+        }
 
         // Para BootSceneBuilder (Editor, It. 6a).
         public void SetSceneWorld(RowMate.Scene.Slots.SceneWorldDefinition? world)

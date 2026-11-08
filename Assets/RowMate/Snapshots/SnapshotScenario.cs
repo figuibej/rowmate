@@ -81,6 +81,10 @@ namespace RowMate.Snapshots
         // puede pintar encima: las marcas de SceneMarks, con Apply) y la lista de valores del manifest; devuelve los problemas.
         public Func<UiTestHost, UnityEngine.Texture2D, List<string>, IEnumerable<string>>? Inspect { get; set; }
 
+        // It. 8 (issue #9): sondas de color de la escena con su registro (las luces de la noche), después de Inspect. Recibe la lista de
+        // valores del manifest; las sondas van a "probes".
+        public Func<UiTestHost, List<string>, List<ProbeRecord>>? SceneProbes { get; set; }
+
         // It. 6a: la toma con la escena todavía preparándose (la escena demorada: CAP-24). Sin esto, una escena abierta que no está
         // lista o con la orilla a medio armar bloquea la toma (SnapshotTakeRule.SceneBlockers).
         public bool SceneMayBeLoading { get; set; }

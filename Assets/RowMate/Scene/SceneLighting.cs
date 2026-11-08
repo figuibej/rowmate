@@ -145,6 +145,15 @@ namespace RowMate.Scene
             Shader.SetGlobalVector(SceneShaderIds.HazeSrgb, Raw(haze));
             Shader.SetGlobalFloat(SceneShaderIds.EmissiveGain, (float)EmissiveGain);
 
+            // It. 8 (02-tech-design §8.4; DT8-05 a DT8-07): la ola de la costa (las fases en [0; 2π) de Core) y el puente más cercano en
+            // cinta (BridgeShade); en 0 fuera de la costa y sin puente, así los shaders saltan lo nuevo y el lago queda como en la 7.
+            Shader.SetGlobalVector(SceneShaderIds.Swell, frame.Swell
+                ? new Vector4((float)frame.SwellAmplitude, (float)frame.SwellScale, (float)frame.SwellPhase1, (float)frame.SwellPhase2)
+                : Vector4.zero);
+            Shader.SetGlobalVector(SceneShaderIds.UnderBridge, double.IsNaN(frame.BridgeStartRelZ) || double.IsNaN(frame.BridgeEndRelZ)
+                ? Vector4.zero
+                : new Vector4((float)frame.BridgeStartRelZ, (float)frame.BridgeEndRelZ, (float)BridgeShade.Ramp, (float)BridgeShade.Strength));
+
             // La luz direccional: hacia el astro (la dirección de la luz va del astro a la escena).
             _light.transform.rotation = Quaternion.LookRotation(new Vector3((float)-lx, (float)-ly, (float)-lz), Vector3.up);
             _light.color = Srgb(look.KeyColor);

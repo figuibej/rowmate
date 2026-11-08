@@ -81,9 +81,16 @@ namespace RowMate.Tests.EditMode.Scene
         }
 
         [Test, Category("AC-SCN-15-07")]
-        public void OnlyTheLakeExistsInSixA()
+        public void SinceEightTheFourEnvironmentsHaveTerrainAndTheLakeIsUnchanged()
         {
-            Assert.Throws<NotSupportedException>(() => TerrainProfile.Height(EnvironmentId.River, 10, 0));
+            // En la 6a solo existía el lago (este test exigía la excepción); desde la It. 8 los cuatro tienen su corte
+            // (TerrainEnvironmentTests) y el del lago no cambia.
+            foreach (EnvironmentId id in Enum.GetValues(typeof(EnvironmentId)))
+            {
+                Assert.That(double.IsNaN(TerrainProfile.Height(id, 10, 0)), Is.False, id.ToString());
+            }
+
+            Assert.That(TerrainProfile.Height(EnvironmentId.Lake, 0, 0), Is.EqualTo(LakeArt.BottomDepth));
         }
     }
 

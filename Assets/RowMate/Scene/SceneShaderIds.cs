@@ -65,13 +65,16 @@ namespace RowMate.Scene
         public static readonly int SkyHorizonSrgb = Shader.PropertyToID("_RmSkyHorizonSrgb");
         public static readonly int HazeSrgb = Shader.PropertyToID("_RmHazeSrgb");
         public static readonly int EmissiveGain = Shader.PropertyToID("_RmEmissiveGain");
+        // It. 8 (08-entornos-selector/02-tech-design §8.4): la ola de la costa y el puente más cercano (en 0 en los demás).
+        public static readonly int Swell = Shader.PropertyToID("_RmSwell");
+        public static readonly int UnderBridge = Shader.PropertyToID("_RmUnderBridge");
 
         public static readonly string[] GlobalNames =
         {
             "_RmSceneTime", "_RmPaletteSkyTop", "_RmPaletteSkyHorizon", "_RmPaletteWaterNear", "_RmPaletteWaterFar", "_RmPaletteSunColor",
             "_RmPaletteSunGlow", "_RmPaletteFog", "_RmAmbient", "_RmAmbientSky", "_RmAmbientEquator", "_RmAmbientGround", "_RmFogParams",
             "_RmLowMist", "_RmGolden", "_RmDiskDir", "_RmDiskParams", "_RmDiskShape", "_RmLightDir", "_RmHorizonY", "_RmFocalDp", "_RmViewDp",
-            "_RmDensity", "_RmZonePhase", "_RmSkyTopSrgb", "_RmSkyHorizonSrgb", "_RmHazeSrgb", "_RmEmissiveGain",
+            "_RmDensity", "_RmZonePhase", "_RmSkyTopSrgb", "_RmSkyHorizonSrgb", "_RmHazeSrgb", "_RmEmissiveGain", "_RmSwell", "_RmUnderBridge",
         };
 
         // ── Sky ──
@@ -99,6 +102,15 @@ namespace RowMate.Scene
         public static readonly int SnowParams = Shader.PropertyToID("_RmSnowParams");
         public static readonly int Rim = Shader.PropertyToID("_RmRim");
         public static readonly int SnowTone = Shader.PropertyToID("_RmSnowTone");
+        public static readonly int SkylineWindows = Shader.PropertyToID("_RmSkylineWindows");
+        public static readonly int SkylineWindow = Shader.PropertyToID("_RmSkylineWindow");
+        // QA-V8-01: las banderas de la tira lejana de la regata (el tono de la hora de cada una y el del mástil).
+        public static readonly int[] FlagTones =
+        {
+            Shader.PropertyToID("_RmFlagTone0"), Shader.PropertyToID("_RmFlagTone1"), Shader.PropertyToID("_RmFlagTone2"), Shader.PropertyToID("_RmFlagTone3"),
+        };
+
+        public static readonly int FlagMast = Shader.PropertyToID("_RmFlagMast");
 
         // ── WaterDegraded ──
         public static readonly int WaterBandTop = Shader.PropertyToID("_RmWaterBandTop");
@@ -122,6 +134,13 @@ namespace RowMate.Scene
         public static readonly int TerrainCanopy = Shader.PropertyToID("_RmTerrainCanopy");
         public static readonly int LayerAlbedo = Shader.PropertyToID("_RmLayerAlbedo");
         public static readonly int LayerNormal = Shader.PropertyToID("_RmLayerNormal");
+        public static readonly int TerrainKind = Shader.PropertyToID("_RmTerrainKind");
+        public static readonly int TerrainCobble = Shader.PropertyToID("_RmTerrainCobble");
+        public static readonly int TerrainWall = Shader.PropertyToID("_RmTerrainWall");
+        public static readonly int TerrainSand = Shader.PropertyToID("_RmTerrainSand");
+        public static readonly int TerrainCliff = Shader.PropertyToID("_RmTerrainCliff");
+        public static readonly int TerrainCliffGrass = Shader.PropertyToID("_RmTerrainCliffGrass");
+        public static readonly int TerrainLawn = Shader.PropertyToID("_RmTerrainLawn");
 
         // ── Prop ──
         public static readonly int PlankParams = Shader.PropertyToID("_RmPlankParams");
@@ -163,6 +182,9 @@ namespace RowMate.Scene
             "_RmTerrainCanopy", "_RmLayerAlbedo", "_RmLayerNormal", "_RmPlankParams", "_RmWindowDay", "_RmWindowNight", "_RmWindowMode",
             "_RmTrunkColor", "_RmBushColor", "_RmWind", "_RmGrassColorA", "_RmGrassColorB", "_RmFernColor", "_RmGrassEnd", "_RmReedBase",
             "_RmReedTip", "_RmGelcoat", "_RmShadowOffset", "_RmShadowAlpha", "_RmScrimColor", "_RmScrimTop", "_RmScrimBottom",
+            // It. 8 (Horizon, Terrain).
+            "_RmSkylineWindows", "_RmSkylineWindow", "_RmTerrainKind", "_RmTerrainCobble", "_RmTerrainWall", "_RmTerrainSand", "_RmTerrainCliff",
+            "_RmTerrainCliffGrass", "_RmTerrainLawn", "_RmFlagTone0", "_RmFlagTone1", "_RmFlagTone2", "_RmFlagTone3", "_RmFlagMast",
         };
 
         public static readonly string[] InstancePropertyNames =
@@ -200,6 +222,24 @@ namespace RowMate.Scene
 
         // Buoy: el naranja (el fundido es _RmFade).
         public static readonly int BuoyColor = Shader.PropertyToID("_RmBuoyColor");
+
+        // ── It. 8 (08-entornos-selector/02-tech-design §8.4; WP-D1): las luces de la noche de los escenarios y la espuma de la costa
+        // (ShaderArt.Environment). Aparte de los 13 de la 6a y los 5 de la 7: los cubre la colección de variantes y SceneShaderTests. ──
+        public const string Glow = "RowMate/Scene/Glow";
+        public const string Foam = "RowMate/Scene/Foam";
+
+        public static readonly string[] EnvironmentShaderNames = { Glow, Foam };
+
+        // Foam (por instancia): (código; z₀ mod 256; ancho; fundido); el latido y el color.
+        public static readonly int FoamInstance = Shader.PropertyToID("_RmFoam");
+        public static readonly int FoamPulse = Shader.PropertyToID("_RmFoamPulse");
+        public static readonly int FoamColor = Shader.PropertyToID("_RmFoamColor");
+
+        // Glow (por instancia): (radio o largo; alfa × nivel de la luz; tipo 0 farol / 1 faro / 2 haz; fase del haz).
+        public static readonly int GlowInstance = Shader.PropertyToID("_RmGlow");
+        public static readonly int GlowLamp = Shader.PropertyToID("_RmGlowLamp");
+        public static readonly int GlowBeacon = Shader.PropertyToID("_RmGlowBeacon");
+        public static readonly int GlowBeam = Shader.PropertyToID("_RmGlowBeam");
 
         // La capa de la escena (la cámara de la UI no la ve): la crea UrpProvisioner.
         public const string LayerName = "RowMateScene";

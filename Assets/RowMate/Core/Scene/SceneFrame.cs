@@ -48,6 +48,26 @@ namespace RowMate.Core.Scene
         public double ScreenY { get; }
     }
 
+    // Una gaviota de la costa lista para dibujar (SeagullFlight): acimut y elevación (rad), aleteo (−1 a 1), tamaño (× la
+    // envergadura) y alfa del fundido de la vuelta.
+    public readonly struct SeagullInstance
+    {
+        public SeagullInstance(double azimuthRad, double elevationRad, double flap, double size, double alpha)
+        {
+            AzimuthRad = azimuthRad;
+            ElevationRad = elevationRad;
+            Flap = flap;
+            Size = size;
+            Alpha = alpha;
+        }
+
+        public double AzimuthRad { get; }
+        public double ElevationRad { get; }
+        public double Flap { get; }
+        public double Size { get; }
+        public double Alpha { get; }
+    }
+
     // Lo que hay que dibujar en un cuadro (06a-escena-lago/02-tech-design §2.15): la cámara (pose y matriz), la paleta, el astro
     // (con los radios del disco y del halo y el espejo del sur), la luz y el post, las 80 estrellas, las 7 nubes, las cordilleras,
     // el agua (los tres colores, las 10 líneas, la fase y la visibilidad del astro), la bruma, los objetos de la orilla visibles con
@@ -55,6 +75,8 @@ namespace RowMate.Core.Scene
     // en Create (o al abrir): Tick solo escribe. Draw = false con la escena oculta (lo pone quien dibuja).
     public struct SceneFrame
     {
+        public const int TrailingCapacity = 4;
+
         public bool Draw;
 
         // Solo el dibujo de calentamiento (§3.4): estrellas, ventanas y nubes a la vista para que el dibujo toque todas las
@@ -107,8 +129,26 @@ namespace RowMate.Core.Scene
 
         public ShorePropBuffer VisibleProps;
 
-        // El nivel de la luz de cada objeto visible (en el mismo orden): 0-1 para las cabañas, 0 para lo demás.
+        // El nivel de la luz de cada objeto visible (en el mismo orden): 0-1 para lo que se enciende de noche (cabañas; desde la
+        // It. 8 también ventanas de edificios, portón del club, faroles, faro y torre), 0 para lo demás.
         public double[] PropLight;
+
+        // It. 8 (02-tech-design §2.2, §2.3, §2.7): el escenario, los puentes que siguen detrás de la cámara (DT8-08) con su luz,
+        // el puente más cercano en cinta (relZ del tablero; NaN sin puente) y su sombra sobre el bote (DT8-07), la ola de la costa
+        // (las fases en double, DT8-06) y las gaviotas.
+        public EnvironmentId Environment;
+        public ShorePropBuffer TrailingProps;
+        public double[] TrailingLight;
+        public double BridgeStartRelZ;
+        public double BridgeEndRelZ;
+        public double UnderBridgeAtBoat;
+        public bool Swell;
+        public double SwellAmplitude;
+        public double SwellScale;
+        public double SwellPhase1;
+        public double SwellPhase2;
+        public SeagullInstance[] Seagulls;
+        public double SeagullOpacity;
 
         // It. 7: el remero, el bote y el agua (02-tech-design §2.12).
         public Stroke.RowerFrame Rower;
@@ -117,10 +157,16 @@ namespace RowMate.Core.Scene
         public double Speed;
         public double SceneTime;
 
-        public static SceneFrame Create(int maxVisibleProps = 120)
+        // 200: el tope más alto de los cuatro escenarios (la regata); alcanza para cualquiera.
+        public static SceneFrame Create(int maxVisibleProps = 200)
         {
             return new SceneFrame
             {
+                TrailingProps = new ShorePropBuffer(TrailingCapacity),
+                TrailingLight = new double[TrailingCapacity],
+                Seagulls = new SeagullInstance[SeagullFlight.Count],
+                BridgeStartRelZ = double.NaN,
+                BridgeEndRelZ = double.NaN,
                 Stars = new StarInstance[StarField.Count],
                 Clouds = new CloudInstance[CloudModel.Count],
                 Lines = new ShimmerLine[DegradedWater.LineCount],

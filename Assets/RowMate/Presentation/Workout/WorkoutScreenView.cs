@@ -59,6 +59,7 @@ namespace RowMate.Presentation.Workout
         private bool _shownLoading;
         private bool? _bannerShown;
         private ImmersiveWorkoutPage? _immersive;
+        private readonly Label _sceneTitle;
 
         public WorkoutScreenView(UiContext ui, ShellLayout layout, int tabIndex)
         {
@@ -115,6 +116,15 @@ namespace RowMate.Presentation.Workout
             _content.Add(_bannerSlot);
             _bannerGrow = new GrowMotion(ui.Motion, _bannerSlot, _banner);
             _bannerCollapse = new CollapseMotion(ui.Motion);
+
+            // It. 8 (AC-SCN-22-01; AC-WKT-12-02 cambia): el título workoutScene (blanco al 54 %, 13), 8, el selector, 16 y el botón.
+            _sceneTitle = new Label { name = "workout-scene-title" };
+            _sceneTitle.AddToClassList("rm-env-title");
+            _sceneTitle.AddToClassList("rm-type-body-s");
+            _sceneTitle.pickingMode = PickingMode.Ignore;
+            _content.Add(_sceneTitle);
+            Picker = new EnvironmentPicker(ui);
+            _content.Add(Picker);
 
             FreeButton = new RmButton("workout-free", "primary tall", Icons.PlayArrow, "", OnFree);
             FreeButton.AddToClassList("rm-workout__free");
@@ -188,6 +198,8 @@ namespace RowMate.Presentation.Workout
             // It. 6a (P-14; 06a-escena-lago/02-tech-design §3.4): con Workout en reposo a la vista, la escena se prepara por tramos
             // (como el legacy precarga el agua en workout_screen.dart:44). Preload es idempotente.
             this.Bind(ui.App.Shell.SelectedIndex, _ => MaybePreloadScene());
+            // It. 8 (§3.2): otra tarjeta en reposo arma el kit de ese escenario por tramos.
+            this.Bind(ui.App.SceneEnvironment.Selected, _ => MaybePreloadScene());
         }
 
         private void MaybePreloadScene()
@@ -203,6 +215,9 @@ namespace RowMate.Presentation.Workout
         public FocusScroller Scroller { get; }
 
         public RmButton FreeButton { get; }
+
+        // It. 8: el selector de escenario (AC-SCN-22-01 a -03).
+        public EnvironmentPicker Picker { get; }
 
         public RmButton RetryButton { get; }
 
@@ -383,6 +398,7 @@ namespace RowMate.Presentation.Workout
         {
             _appBar.SetTitle(texts.Get(L10nKeys.WorkoutTitle));
             _bannerText.text = texts.Get(L10nKeys.WorkoutRowerNotConnected);
+            _sceneTitle.text = texts.Get(L10nKeys.WorkoutScene);
             FreeButton.SetLabel(texts.Get(L10nKeys.WorkoutFree));
             _label.text = texts.Get(L10nKeys.WorkoutOrPickRoutine);
             _errorText.text = texts.Get(L10nKeys.RoutinesLoadError);

@@ -19,6 +19,13 @@ Shader "RowMate/Scene/Horizon"
         _RmSnowParams ("Nieve (umbral; borde; ruido; período en grados)", Vector) = (0.58, 0.03, 0.04, 1.7)
         _RmRim ("Borde encendido (alto en grados; ancho en grados; fuerza; caída en grados)", Vector) = (0.35, 8, 0.6, 6)
         _RmSnowTone ("Color de la nieve (antes de la niebla)", Color) = (0.94902, 0.964706, 0.980392, 1)
+        _RmSkylineWindows ("Ventanas del skyline de noche (1 el río; lo pone HorizonRenderer)", Float) = 0
+        _RmSkylineWindow ("Ventana del skyline (#FFE08A)", Color) = (1, 0.878431, 0.541176, 1)
+        _RmFlagTone0 ("Bandera lejana 0 (roja; la pone HorizonRenderer por hora)", Color) = (0.898039, 0.223529, 0.207843, 1)
+        _RmFlagTone1 ("Bandera lejana 1 (ámbar)", Color) = (1, 0.701961, 0, 1)
+        _RmFlagTone2 ("Bandera lejana 2 (azul)", Color) = (0.117647, 0.533333, 0.898039, 1)
+        _RmFlagTone3 ("Bandera lejana 3 (verde)", Color) = (0.262745, 0.627451, 0.278431, 1)
+        _RmFlagMast ("Mástil de las banderas lejanas (el de la torre)", Color) = (0.721569, 0.752941, 0.8, 1)
     }
 
     SubShader
@@ -39,6 +46,13 @@ Shader "RowMate/Scene/Horizon"
             float4 _RmSnowParams;
             float4 _RmRim;
             float4 _RmSnowTone;
+            float _RmSkylineWindows;
+            float4 _RmSkylineWindow;
+            float4 _RmFlagTone0;
+            float4 _RmFlagTone1;
+            float4 _RmFlagTone2;
+            float4 _RmFlagTone3;
+            float4 _RmFlagMast;
         CBUFFER_END
 
         static const float kRmFlankToSun = 0.12;
@@ -50,6 +64,22 @@ Shader "RowMate/Scene/Horizon"
         static const float kRmSnowFog = 0.3;
         static const float kRmSnowNightBase = 0.55;
         static const float kRmSnowNightPerIllumination = 0.45;
+        // It. 8 · Las ventanas del skyline del río (river_environment.dart:58-66; 08-entornos-selector/04-design-notes §4), en px de TV.
+        static const float kRmLegacyFocalPx = 411;
+        static const float kRmSkylineLeftPx = 205.5;
+        static const float kRmSkylineMaxPx = 109.68;
+        static const float kRmSkylineColumnPx = 34;
+        static const float kRmSkylineCellXPx = 8;
+        static const float kRmSkylineCellYPx = 7;
+        static const float kRmSkylineWindowXPx = 3;
+        static const float kRmSkylineWindowYPx = 4;
+        static const float kRmSkylineWindowAlpha = 0.85;
+        static const float kRmSkylineWindowThreshold = 0.5;
+        static const float kRmSkylineNightAmbient = 0.6;
+        // It. 8 · QA-V8-01: las banderas de la tira lejana de la regata (regatta_environment.dart:56-68; RegattaBackdrop): la punta flamea
+        // sin(3t + i)·2 px de TV, en fracción de hMax.
+        static const float kRmFarFlagWave = 0.0364697301;
+        static const float kRmFarFlagRate = 3;
         ENDHLSL
 
         Pass
@@ -76,6 +106,7 @@ Shader "RowMate/Scene/Horizon"
                 float3 toFog : TEXCOORD2;       // fog − tono (gamma 2)
                 float3 snow : TEXCOORD3;        // la nieve en gamma 2
                 float3 rim : TEXCOORD4;         // sunGlow (gamma 2) × el borde encendido × la fracción de la columna
+                float2 skyline : TEXCOORD5;     // It. 8: (acimut; p): con local.y da el alto del bloque (p/v) para las ventanas
             };
 
             Varyings HorizonVertex(Attributes v)
@@ -83,6 +114,18 @@ Shader "RowMate/Scene/Horizon"
                 Varyings o;
                 float az = v.positionOS.x;
                 float p = v.positionOS.y;
+                // QA-V8-01: z > 0 = una bandera lejana de la regata (1 a 4) o su mástil (5), con su tono de la hora; la punta (r = 1) flamea.
+                float code = v.positionOS.z;
+                float3 baseTone = _RmHorizonTone.rgb;
+                UNITY_BRANCH
+                if (code > 0.5)
+                {
+                    float index = floor(code - 0.5);
+                    p -= v.color.r * kRmFarFlagWave * sin(kRmFarFlagRate * _RmSceneTime + index);
+                    baseTone = index < 0.5 ? _RmFlagTone0.rgb : (index < 1.5 ? _RmFlagTone1.rgb : (index < 2.5 ? _RmFlagTone2.rgb
+                             : (index < 3.5 ? _RmFlagTone3.rgb : _RmFlagMast.rgb)));
+                }
+
                 float tanElevation = _RmHorizonScale.x * _RmHorizonScale.y * _RmHorizonScale.z * p;
                 o.positionCS = TransformWorldToHClip(RmSkyPoint(float3(sin(az), tanElevation, cos(az))));
 
@@ -92,7 +135,7 @@ Shader "RowMate/Scene/Horizon"
                 float facing = v.color.g * clamp((az - sunAz) / kRmFlankRampRad, -1.0, 1.0);
                 float daySun = (1.0 - _RmDiskParams.y) * _RmDiskParams.x;
                 float flank = (facing > 0.0 ? kRmFlankToSun : kRmFlankAway) * abs(facing) * daySun;
-                float3 tone = sqrt(max(_RmHorizonTone.rgb, 0.0)) * (1.0 + flank);
+                float3 tone = sqrt(max(baseTone, 0.0)) * (1.0 + flank);
                 float3 fogG = sqrt(max(_RmPaletteFog.rgb, 0.0));
                 float3 glowG = sqrt(max(_RmPaletteSunGlow.rgb, 0.0));
                 o.tone = tone;
@@ -116,6 +159,7 @@ Shader "RowMate/Scene/Horizon"
                 float rim = _RmRim.z * _RmGolden * daySun * exp(-(dAz * dAz) / (_RmRim.w * _RmRim.w)) * step(abs(dAz), _RmRim.y);
                 o.rim = glowG * (rim * isTop);
                 o.local.w = rim * isTop;
+                o.skyline = float2(az, p);
                 return o;
             }
 
@@ -130,6 +174,29 @@ Shader "RowMate/Scene/Horizon"
                 // era una mancha blanca): lerp(c; sunGlow; rim·v) = c·(1 − rim·v) + sunGlow·rim·v.
                 c = lerp(c, i.snow, snow);
                 c = c * (1.0 - i.local.w) + i.rim;
+
+                // It. 8 · Las ventanas del skyline del río (AC-SCN-20-04): la grilla del legacy (3 × 4 px cada 8 × 7 px desde 4 px del borde y
+                // 6 px del techo, hasta 4 px del horizonte) en px de TV; cada bloque es un cuadrilátero con el techo a la misma p, así que
+                // p/v es su alto. Prendida con la mitad de las celdas (r < 0,5 del legacy, aquí un hash fijo por celda: no titilan) cuando el
+                // ambiente baja de 0,6 (fundido de 0,05). Emisivas: sin la niebla ni el tono de la hora.
+                UNITY_BRANCH
+                if (_RmSkylineWindows > 0.5)
+                {
+                    float night = saturate((kRmSkylineNightAmbient - _RmAmbient) * 20.0);
+                    float xPx = i.skyline.x * kRmLegacyFocalPx + kRmSkylineLeftPx;
+                    float column = floor(xPx / kRmSkylineColumnPx);
+                    float wx = xPx - column * kRmSkylineColumnPx - 4.0;
+                    float yPx = i.skyline.y * kRmSkylineMaxPx;
+                    float topPx = yPx / max(v, 1e-3);
+                    float wy = topPx - yPx - 6.0;
+                    float row = floor(wy / kRmSkylineCellYPx);
+                    float cell = floor(wx / kRmSkylineCellXPx);
+                    float inX = step(0.0, wx) * step(wx - cell * kRmSkylineCellXPx, kRmSkylineWindowXPx);
+                    float inY = step(0.0, wy) * step(wy - row * kRmSkylineCellYPx, kRmSkylineWindowYPx);
+                    float above = step(4.0, topPx - 6.0 - row * kRmSkylineCellYPx);
+                    float lit = step(RmHash((int)(column * 977.0 + row * 31.0 + cell)), kRmSkylineWindowThreshold);
+                    c = lerp(c, sqrt(max(_RmSkylineWindow.rgb, 0.0)), kRmSkylineWindowAlpha * night * inX * inY * above * lit);
+                }
                 return half4(c * c, 1.0);
             }
             ENDHLSL

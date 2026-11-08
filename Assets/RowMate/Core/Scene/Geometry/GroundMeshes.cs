@@ -45,13 +45,15 @@ namespace RowMate.Core.Scene.Geometry
                     var ax = shore + offsets[c];
                     var x = side * ax;
                     var y = TerrainProfile.Height(environment, x, z);
-                    if (far)
+                    // It. 8: el realce lejano de la orilla y la copa del bosque son del lago (el mar de la costa no se levanta).
+                    var lake = environment == EnvironmentId.Lake;
+                    if (far && lake)
                     {
                         y = Math.Max(y, LakeArt.FarShoreLift);
                     }
 
                     var canopy = 0.0;
-                    if (withCanopy && side < 0 && ax >= canopyFromX)
+                    if (lake && withCanopy && side < 0 && ax >= canopyFromX)
                     {
                         var top = TerrainProfile.CanopyHeight(x, z);
                         if (!double.IsNaN(top) && top > y)

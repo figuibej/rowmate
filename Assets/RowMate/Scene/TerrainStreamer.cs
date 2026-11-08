@@ -9,7 +9,7 @@ namespace RowMate.Scene
     // dobles en la costura). Sin asignaciones.
     public sealed class TerrainStreamer
     {
-        private readonly SegmentStore _store;
+        private SegmentStore _store;
         private readonly MeshRenderer[] _near = new MeshRenderer[SegmentStore.Slots * 2];
         private readonly MeshFilter[] _nearFilters = new MeshFilter[SegmentStore.Slots * 2];
         private readonly MeshRenderer[] _far = new MeshRenderer[2];
@@ -30,6 +30,23 @@ namespace RowMate.Scene
             {
                 _far[side] = SceneObjects.Create(side == 0 ? "terrain-far-left" : "terrain-far-right", root.transform, layer, store.FarMeshes[side], material, false, true);
                 _far[side].enabled = false;
+            }
+        }
+
+        // It. 8: el almacén de otro escenario (el cambio de kit; los objetos se reutilizan).
+        public void Rebind(SegmentStore store)
+        {
+            _store = store;
+            for (var side = 0; side < 2; side++)
+            {
+                _far[side].GetComponent<MeshFilter>().sharedMesh = store.FarMeshes[side];
+                _far[side].enabled = false;
+            }
+
+            for (var i = 0; i < _near.Length; i++)
+            {
+                _near[i].enabled = false;
+                _nearFilters[i].sharedMesh = null;
             }
         }
 

@@ -23,6 +23,7 @@ namespace RowMate.Scene
             Fill = new FillBuffer(ShoreFill.SegmentCapacity);
             Terrain = new Mesh?[2];
             TerrainCanopyFrom = new double[2];
+            Kit = new Mesh?[KitSegmentMesh.Lods];
         }
 
         public long K { get; internal set; } = long.MinValue;
@@ -70,6 +71,9 @@ namespace RowMate.Scene
 
         public double[] TerrainCanopyFrom { get; }
 
+        // It. 8 (río, costa y regata): la malla del segmento (KitSegmentMesh) en sus dos LOD (0 cercano, 1 lejano), hecha al entrar.
+        public Mesh?[] Kit { get; }
+
         public bool TerrainReady(int side) => Terrain[side] != null && Stage >= (side == 0 ? SegmentStage.TerrainLeft : SegmentStage.TerrainRight);
     }
 
@@ -97,6 +101,9 @@ namespace RowMate.Scene
     {
         public const int Slots = 16;
         public const int GrassSlots = 6;
+
+        // Las matas de pasto y helechos que caben en el buffer de un segmento.
+        public const int GrassCapacity = 12800;
         public const double GrassStripMeters = 5;
         public const double FarEnd = 1500;
         public const double FarRowStep = 8;
@@ -114,6 +121,12 @@ namespace RowMate.Scene
         private readonly MeshData _farData;
         private readonly MeshData _cabinData;
         private readonly MeshData _pierData;
+        // It. 8: el kit de río, costa y regata (null en el lago).
+        private readonly KitSegmentMesh? _kit;
+        private readonly RiverPlacement? _placement;
+        private readonly MeshData? _kitData;
+        private readonly HouseLayout[] _houses = new HouseLayout[RiverPlacement.MaxHousesPerSegment];
+        private readonly FillBuffer _kitFill = new FillBuffer(EnvironmentFill.SegmentCapacity);
         private readonly Stopwatch _watch = new Stopwatch();
         private long _farStartK = long.MinValue;
         private long _farBuiltK = long.MinValue;
@@ -132,10 +145,10 @@ namespace RowMate.Scene
                 _slots[i] = new SegmentData();
             }
 
-            for (var i = 0; i < GrassSlots; i++)
+            for (var i = 0; i < (environment.Id == EnvironmentId.Lake ? GrassSlots : 0); i++)
             {
                 // La pradera de un segmento: hasta x = 60 a la derecha y el talud a la izquierda, 4 por m², y los helechos.
-                _grass[i] = new FillBuffer(12800);
+                _grass[i] = new FillBuffer(GrassCapacity);
             }
 
             var nearRows = (int)Math.Round(ShoreEnvironment.SegmentLength / NearRowStep);
@@ -145,9 +158,17 @@ namespace RowMate.Scene
             _cabinData = new MeshData(CabinMesh.VertexCapacity(0), CabinMesh.IndexCapacity(0));
             _pierData = new MeshData(PierMesh.VertexCapacity(0), PierMesh.IndexCapacity(0));
             FarMeshes = new[] { MeshUpload.NewMesh("scene-terrain-far-left"), MeshUpload.NewMesh("scene-terrain-far-right") };
+            if (environment.Id != EnvironmentId.Lake)
+            {
+                _kit = new KitSegmentMesh(environment.Id);
+                _kitData = new MeshData(KitSegmentMesh.VertexCapacity, KitSegmentMesh.IndexCapacity);
+                _placement = environment.Id == EnvironmentId.River ? new RiverPlacement(_segments) : null;
+            }
         }
 
         public EnvironmentId Environment => _environment;
+
+        public bool IsKit => _kit != null;
 
         // Las mallas del trozo lejano (izquierda, derecha) y desde qué z de mundo arrancan.
         public Mesh[] FarMeshes { get; }
@@ -263,7 +284,7 @@ namespace RowMate.Scene
             }
 
             // 4. El pasto y los helechos de los segmentos cercanos, de a 5 m.
-            var grassTo = distance + GrassEnd + ShoreEnvironment.SegmentLength;
+            var grassTo = _kit != null ? double.NegativeInfinity : distance + GrassEnd + ShoreEnvironment.SegmentLength;
             for (var k = kMin; k <= kMax && Within(budgetMs, jobs); k++)
             {
                 var seg = Find(k);
@@ -352,6 +373,10 @@ namespace RowMate.Scene
                     BuildTerrain(seg, 1, distance);
                     seg.Stage = SegmentStage.TerrainRight;
                     break;
+                case SegmentStage.TerrainRight when _kit != null:
+                    // El relleno de río, costa y regata ya está en la malla del kit.
+                    seg.Stage = SegmentStage.Ready;
+                    break;
                 case SegmentStage.TerrainRight:
                     ShoreFill.Reeds(_environment, seg.K, new ReadOnlySpan<ShoreProp>(seg.Props, 0, seg.PropCount), _rnd, seg.Fill);
                     seg.Stage = SegmentStage.Reeds;
@@ -387,6 +412,16 @@ namespace RowMate.Scene
             }
 
             var span = new ReadOnlySpan<ShoreProp>(seg.Props, 0, n);
+            if (_kit != null)
+            {
+                for (var i = 0; i < n; i++)
+                {
+                    seg.FootY[i] = PropPlacement.FootY(_environment, seg.Props[i]);
+                }
+
+                return;
+            }
+
             for (var i = 0; i < n; i++)
             {
                 var p = seg.Props[i];
@@ -417,6 +452,12 @@ namespace RowMate.Scene
 
         private void BuildPropMeshes(SegmentData seg)
         {
+            if (_kit != null)
+            {
+                BuildKit(seg);
+                return;
+            }
+
             if (seg.HasCabin)
             {
                 var cabin = seg.Cabin;
@@ -437,6 +478,22 @@ namespace RowMate.Scene
                 _upload.Upload(_pierData, seg.PierLod0, false, null, true);
                 PierMesh.Build(seg.Pier, 1, _pierData);
                 _upload.Upload(_pierData, seg.PierLod1, false, null, true);
+            }
+        }
+
+        // La malla del kit del segmento (KitSegmentMesh) en sus dos LOD: los objetos con su colocación y el relleno.
+        private void BuildKit(SegmentData seg)
+        {
+            var span = new ReadOnlySpan<ShoreProp>(seg.Props, 0, seg.PropCount);
+            var houses = _placement != null ? _placement.Houses(seg.K, _houses) : 0;
+            _kitFill.Clear();
+            EnvironmentFill.Segment(_environment, seg.K, span, _rnd, _kitFill);
+            for (var lod = 0; lod < KitSegmentMesh.Lods; lod++)
+            {
+                _kit!.Build(seg.K, span, new ReadOnlySpan<double>(seg.FootY, 0, seg.PropCount), new ReadOnlySpan<HouseLayout>(_houses, 0, houses),
+                    _kitFill.Items, lod, _kitData!);
+                var mesh = seg.Kit[lod] ??= MeshUpload.NewMesh("scene-kit-" + _environment + "-lod" + lod);
+                _upload.Upload(_kitData!, mesh, false, null, true);
             }
         }
 
@@ -592,6 +649,8 @@ namespace RowMate.Scene
                 MeshUpload.Destroy(seg.PierLod1);
                 MeshUpload.Destroy(seg.Terrain[0]);
                 MeshUpload.Destroy(seg.Terrain[1]);
+                MeshUpload.Destroy(seg.Kit[0]);
+                MeshUpload.Destroy(seg.Kit[1]);
             }
 
             MeshUpload.Destroy(FarMeshes[0]);

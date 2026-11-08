@@ -69,6 +69,26 @@ namespace RowMate.Presentation
         // null = sin escena: el fondo provisorio de siempre (las pruebas y las tomas de las It. 2 a 5).
         public RowMate.Presentation.Workout.IImmersiveScene? Scene { get; set; }
 
+        // It. 8 (08-entornos-selector/02-tech-design §3.4; AC-SCN-22-04): las miniaturas horneadas del selector, en el orden de
+        // EnvironmentId (UiAssets las trae; las pone AppRoot o el anfitrión de pruebas). Una que falta: el degradé de la tarjeta y UN
+        // aviso [SLOT] ui.thumbnail.<escenario>.
+        public Texture2D?[] Thumbnails { get; } = new Texture2D?[4];
+
+        private readonly bool[] _thumbnailWarned = new bool[4];
+
+        public Texture2D? Thumbnail(RowMate.Core.Scene.EnvironmentId id)
+        {
+            var i = (int)id;
+            var texture = i >= 0 && i < Thumbnails.Length ? Thumbnails[i] : null;
+            if (texture == null && i >= 0 && i < _thumbnailWarned.Length && !_thumbnailWarned[i])
+            {
+                _thumbnailWarned[i] = true;
+                Logger.Log(LogLevel.Warning, "SLOT", RowMate.Core.Scene.SlotIds.ForThumbnail(id) + ": falta la miniatura horneada; se usa el degradé");
+            }
+
+            return texture;
+        }
+
         public IAppLogger Logger => App.Logger;
 
         public Localizer Texts => App.Texts.Value;

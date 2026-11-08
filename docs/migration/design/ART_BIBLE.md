@@ -601,6 +601,7 @@ Corte transversal genérico de la orilla (x desde el eje del bote): **agua 0–9
 | Agua | Perfil "Río": oleaje corto y corriente visible hacia la cámara |
 | Noche | Faroles con halo `#FFE082 @35 %` radio 1,5 y **columnas de luz** en el agua (billboards emisivos sobre el agua con ondulación); ventanas del skyline `#FFE08A @85 %` |
 | Presupuesto | ≤ 120 props visibles; fachadas en 1 material con atlas (1 draw call por tipo con instancing) |
+| Estado It. 8 | Hecho ([04-design-notes](../iterations/08-entornos-selector/04-design-notes.md)): bajo el puente −40 % por fragmento en el agua, el casco, el remero, el muro y el malecón (DT8-07, `_RmUnderBridge`); malecón de adoquín de 0,217 m con la fase de cinta y muro de piedra (`Terrain`); halos de faroles (`Glow`); ventanas del skyline de noche (`Horizon`). Fachadas, clubes y ventanas cercanas horneadas por segmento con `Prop` (B8-01). Fuera: columnas de luz (6b, DT8-11), `Facade` con ladrillo y sillares, racks de botes |
 
 ### 7.4 Costa
 
@@ -613,6 +614,7 @@ Corte transversal genérico de la orilla (x desde el eje del bote): **agua 0–9
 | Materiales | Roca sedimentaria triplanar con estratos horizontales; arena `#D8C3A0` con brillo húmedo cerca del agua |
 | Agua | Perfil "Mar": tinte `#0E6B7A` al 30 % [CONTRATO], mar de fondo que mueve el bote |
 | Presupuesto | Tope legacy 60 props; espuma de costa 1 malla |
+| Estado It. 8 | Hecho: tinte y mar de fondo de la spec sobre el color del agua (`_RmSwell`, se apaga de 120 a 300 m) y en el casco (Core); arena con franja mojada, pasto de la meseta y roca (`Terrain`); halo de la linterna con destello y haz de 2 × 60 m a 18 % que gira cada 12 s (`Glow`). Fuera: espuma (`Foam`) y gaviotas (sin renderer, B8-05) |
 
 ### 7.5 Canal de regata — inspiración Bosbaan
 
@@ -624,6 +626,7 @@ Corte transversal genérico de la orilla (x desde el eje del bote): **agua 0–9
 | Materiales | Boyas plástico brillante (smoothness 0,75); tableros mate |
 | Agua | Perfil "Pista" |
 | Presupuesto | Tope legacy 200 props: las boyas van en **una** llamada instanciada; hitos con prioridad (regla legacy) |
+| Estado It. 8 | Hecho: césped con franjas de 3 m ± 4 % a lo largo del canal (`Terrain`); halo de la sala de la torre de noche (`Glow`). Cifras del cartel en 7 segmentos y público en cajas horneados por segmento (B8-01, B8-05). Fuera: `MarkerText` (SDF), `Crowd` (impostores con poses), tela de banderas y cabeceo de boyas |
 
 ### 7.6 Miniaturas del selector
 
@@ -638,6 +641,8 @@ Corte transversal genérico de la orilla (x desde el eje del bote): **agua 0–9
 - Hornear también 6, 18 y 22 h (16 texturas: ≈ 0,4 MB en ASTC 6×6, ≈ 3,7 MB sin comprimir) y mostrar la de la hora más cercana a la hora de escena (real o forzada por el simulador).
 - Fundido cruzado de 240 ms cuando cambia la miniatura elegida.
 - Sigue sin cargar escenas.
+
+**Hecho en la It. 8** ([04-design-notes](../iterations/08-entornos-selector/04-design-notes.md) §7, §8): **456 × 288 px** (render a 1 824 × 1 152 y caja 4×, DT8-02, DA8-14) a las 12:00 con `relZ < 150`; las hornea el arnés (conjunto `thumbs`, `tools/unity/bake-thumbnails.ps1`, B8-04) con los *fallbacks* procedurales y `thumbnails.json` lleva la huella que vigila dotnet (shaders y constantes de Art: cambiar cualquiera pide re-hornear). En la tarjeta, la elegida se acerca 1,03 por las uv de la imagen (la caja no crece) con `EnvironmentCardMotion`. La variante por hora sigue como opcional (Para issues).
 
 ### 7.7 Agua — spec para el shader URP propio
 

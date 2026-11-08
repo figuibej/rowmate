@@ -65,6 +65,22 @@ namespace RowMate.Core.Scene
             bottom = p.WaterNear;
         }
 
+        // It. 8 (AC-SCN-17-01): con el tinte del escenario en el orden del legacy (:80-88): near y far teñidos, y la franja de arriba
+        // lerp(far teñido; fog; 0,5). En el lago, el río y la regata (sin tinte) da lo mismo que Bands(p).
+        public static void Bands(in ScenePalette p, ShoreEnvironment environment, out SceneColor top, out SceneColor middle, out SceneColor bottom)
+        {
+            if (environment == null)
+            {
+                throw new ArgumentNullException(nameof(environment));
+            }
+
+            var near = environment.TintWater(p.WaterNear);
+            var far = environment.TintWater(p.WaterFar);
+            top = SceneColor.Lerp(far, p.Fog, 0.5);
+            middle = far;
+            bottom = near;
+        }
+
         // El alto del rectángulo del agua del legacy: Rect.fromLTWH(0; horizonte; ancho; alto − horizonte).height
         // = (horizonte + (alto − horizonte)) − horizonte, como lo calcula Flutter.
         public static double WaterHeight(in SceneCamera cam)

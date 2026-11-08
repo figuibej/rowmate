@@ -187,7 +187,7 @@ namespace RowMate.Tests.EditMode.Project
             }
 
             var script = Read(Captures);
-            Assert.That(script, Does.Contain("[string]$Set = 'it7',"));
+            Assert.That(script, Does.Contain("[string]$Set = 'it8',"));
             Assert.That(script, Does.Contain("return '" + Snapshots + "'"), "su carpeta de salida");
             Assert.That(script, Does.Contain("'it5'").And.Contain("'it4b'"), "it4b e it5 siguen");
             AssertAscii(Captures);
@@ -206,7 +206,7 @@ namespace RowMate.Tests.EditMode.Project
 
             var inspector = Read(Inspector);
             foreach (var argument in new[] { "-rowmate-perf-scene", "-rowmate-scene-delay", "-rowmate-quality", "-rowmate-perf-hours", "-rowmate-perf-completion",
-                                              "-rowmate-perf-long-series" })
+                                              "-rowmate-perf-long-series", "-rowmate-perf-env", "-rowmate-perf-hour" })
             {
                 var token = "\"" + argument + "\"";
                 var at = root.IndexOf(token, StringComparison.Ordinal);

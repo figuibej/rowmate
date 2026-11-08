@@ -23,7 +23,7 @@ namespace RowMate.Core.Scene.Stroke
     // (scene_state.dart:85) evaluado con la fase visual φ (en régimen φ = p); remero, remos, carro y casco cabecean juntos (DV-69).
     public static class BoatMotion
     {
-        // El rolido del lago (k; río 0,8, costa 2,0 y regata 0,4 son de la It. 8).
+        // El rolido del lago (k; río 0,8, costa 2,0 y regata 0,4: EnvironmentCatalog, It. 8).
         public const double LakeRollK = 0.5;
 
         // 0,02·sin(2πφ) + 0,006·sin(0,8·t) rad.

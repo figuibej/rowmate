@@ -20,8 +20,8 @@ namespace RowMate.Tests.UnityEditMode
         {
             var state = BootstrapState.Load(ProjectBootstrapper.StatePath);
             Assert.That(state, Is.Not.Null);
-            Assert.That(state!.version, Is.EqualTo(5));
-            Assert.That(ProjectBootstrapper.CurrentVersion, Is.EqualTo(5));
+            Assert.That(state!.version, Is.EqualTo(6));
+            Assert.That(ProjectBootstrapper.CurrentVersion, Is.EqualTo(6));
             var ids = new string[state.steps.Count];
             for (var i = 0; i < ids.Length; i++)
             {

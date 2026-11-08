@@ -74,6 +74,39 @@ float3 RmFrontFill(float3 N, float3 V, float amount)
     return sqrt(max(_RmPaletteSunColor.rgb, 0.0)) * (amount * saturate(dot(N, V)));
 }
 
+// It. 8 · Bajo el puente (AC-SCN-16-03; DT8-07; BridgeShade de Core): o = saturate(mín(z − zIni; zFin − z)/rampa + 0,5) debajo del
+// tablero (|x| ≤ 12,5, hasta los estribos, e y ≤ 6, el fondo del tablero) y la luz entera (clave y ambiente) × (1 − fuerza·o) en el
+// espacio del legacy, que en gamma 2 es la potencia 2,2/2. _RmUnderBridge = (zIni; zFin; rampa; fuerza) en cinta, del puente más
+// cercano (SceneLighting). Sin puente la fuerza es 0 y el factor es 1 exacto (sin pow): el lago y las tomas de la 7 no cambian. Las
+// caras del puente que miran afuera (normal hacia −z en zIni, hacia +z en zFin) no se oscurecen: la luz les llega de afuera.
+static const float kRmBridgeHalfSpan = 12.5;
+static const float kRmBridgeDeckBottom = 6;
+
+float RmUnderBridgeOcclusion(float3 positionWS, float3 normalWS)
+{
+    float4 b = _RmUnderBridge;
+    float inside = min(positionWS.z - b.x, b.y - positionWS.z);
+    float o = saturate(inside / max(b.z, 1e-3) + 0.5);
+    float under = step(abs(positionWS.x), kRmBridgeHalfSpan) * step(positionWS.y, kRmBridgeDeckBottom);
+    float outward = step(0.5, -normalWS.z) * step(positionWS.z, b.x + 0.05) + step(0.5, normalWS.z) * step(b.y - 0.05, positionWS.z);
+    return o * under * (1.0 - saturate(outward));
+}
+
+// El factor de la luz bajo el puente en gamma 2 (multiplica ambientG y keyG, o el color del agua). Un salto por un uniforme: sin puente
+// cerca (el lago, la costa, la regata y casi todo el río) no cuesta nada.
+float RmUnderBridgeGamma2(float3 positionWS, float3 normalWS)
+{
+    float g = 1.0;
+    UNITY_BRANCH
+    if (_RmUnderBridge.w > 0.0)
+    {
+        float f = 1.0 - _RmUnderBridge.w * RmUnderBridgeOcclusion(positionWS, normalWS);
+        g = pow(max(f, 1e-4), kRmFactorGamma * 0.5);
+    }
+
+    return g;
+}
+
 // La sombra de la luz principal de URP (la fuerza la pone SceneLighting en la luz: de noche 0 en Medio sin apagar el mapa, DT6a-19).
 float RmMainShadow(float3 positionWS)
 {

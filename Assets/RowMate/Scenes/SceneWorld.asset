@@ -13,6 +13,10 @@ MonoBehaviour:
   m_Name: SceneWorld
   m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Slots.SceneWorldDefinition
   _lake: {fileID: 11400000, guid: 01a73a58d682c73439b6f11af8c789be, type: 2}
+  _environments:
+  - {fileID: 11400000, guid: 6d187d2273f7f5e40ab1045f8a686f6d, type: 2}
+  - {fileID: 11400000, guid: defb7882a65a8b84d9ce522ac3b28dac, type: 2}
+  - {fileID: 11400000, guid: 8e082bd68ac04894eabefdc62a9bac4e, type: 2}
   _slots:
   - {fileID: 11400000, guid: 79aed1a737ccb434aa96b651f878f7db, type: 2}
   - {fileID: 11400000, guid: 4e7ec4fad07bdd448b21d0984db2c821, type: 2}
@@ -57,4 +61,6 @@ MonoBehaviour:
     Spray: {fileID: 2100000, guid: 80a17e2ac1c41944d8e1ccfa802e0280, type: 2}
     WaterMarks: {fileID: 2100000, guid: e79addf60f588d743aec3d3f01ae014e, type: 2}
     Buoy: {fileID: 2100000, guid: 3d63544b74ab84441a4362374c6a2ff1, type: 2}
+    Glow: {fileID: 2100000, guid: 38e8923a9e879a34d82e939fa42ccab6, type: 2}
+    Foam: {fileID: 2100000, guid: 8a1a81f8fc75e224186062c01f254aa2, type: 2}
   _variants: {fileID: 20000000, guid: 5be0a8baf2ba2e347944bbd13d788f18, type: 2}

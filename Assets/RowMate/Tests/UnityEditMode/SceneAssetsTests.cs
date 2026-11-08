@@ -150,6 +150,10 @@ namespace RowMate.Tests.UnityEditMode
             Assert.That(m.Grass!.enableInstancing, Is.True);
             Assert.That(m.Reeds!.enableInstancing, Is.True);
             Assert.That(m.Prop!.enableInstancing, Is.True);
+            Assert.That(m.Glow!.shader.name, Is.EqualTo(SceneShaderIds.Glow), "It. 8");
+            Assert.That(m.Glow.enableInstancing, Is.True);
+            Assert.That(m.Foam!.shader.name, Is.EqualTo(SceneShaderIds.Foam), "It. 8");
+            Assert.That(m.Foam.enableInstancing, Is.True);
             Assert.That(m.Water!.IsKeywordEnabled(SceneShaderIds.WaterExtrasKeyword), Is.True, "DT6a-07 aceptado");
             Assert.That(m.Sky.IsKeywordEnabled(SceneShaderIds.SkyStarFieldKeyword), Is.False, "el .mat sin lo de Alto: lo prende la copia del nivel");
             Assert.That(m.PropWindow!.GetFloat(SceneShaderIds.WindowMode), Is.EqualTo(1f));
@@ -168,8 +172,9 @@ namespace RowMate.Tests.UnityEditMode
             var variants = world!.Variants;
             Assert.That(variants, Is.Not.Null);
             Assert.That(AssetDatabase.GetAssetPath(variants), Is.EqualTo(SceneMaterialsBuilder.VariantsPath));
-            // It. 7: más los 5 del remero (Rower, Oar, Spray, WaterMarks, Buoy; SceneShaderIds.RowerShaderNames).
-            Assert.That(variants!.shaderCount, Is.EqualTo(ShaderArt.Scene.Length + RowMate.Scene.SceneShaderIds.RowerShaderNames.Length), "los 13 y los 5 de la 7");
+            // It. 7: más los 5 del remero (Rower, Oar, Spray, WaterMarks, Buoy; SceneShaderIds.RowerShaderNames); It. 8: Glow.
+            Assert.That(variants!.shaderCount, Is.EqualTo(ShaderArt.Scene.Length + RowMate.Scene.SceneShaderIds.RowerShaderNames.Length
+                + RowMate.Scene.SceneShaderIds.EnvironmentShaderNames.Length), "los 13, los 5 de la 7 y los de la 8");
             Assert.That(variants.variantCount, Is.GreaterThanOrEqualTo(ShaderArt.Scene.Length * 2));
         }
     }

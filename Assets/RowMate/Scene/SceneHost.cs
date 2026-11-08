@@ -202,6 +202,14 @@ namespace RowMate.Scene
         // La CPU de la escena del último cuadro sin el dibujo de URP (ms; el marcador RowMate.Scene.Update; QA-V6a-REN-07).
         public double LastCpuMs { get; private set; }
 
+        // It. 8 (la causa de SceneBudgetTests en Alto): la parte de LastCpuMs que fue armar la orilla (SegmentStore.Step) y la que fue la
+        // sesión de Core (Tick). El resto es aplicar el cuadro y las matrices.
+        public double LastStreamMs { get; private set; }
+
+        public double LastTickMs { get; private set; }
+
+        private readonly Stopwatch _partWatch = new Stopwatch();
+
         // Las veces que la orilla se armó entera, en el acto, en un cuadro con la escena a la vista (un salto de más de un segmento:
         // QA-V6a-REN-04). En la app tiene que quedar en 0: el rebobinado y la escena demorada terminan detrás del negro.
         public long InViewShoreRebuilds { get; private set; }
@@ -222,7 +230,7 @@ namespace RowMate.Scene
 
         public void SetViewport(int widthPx, int heightPx, double density)
         {
-            if (widthPx <= 0 || heightPx <= 0 || !(density > 0))
+            if (_viewportPinned || widthPx <= 0 || heightPx <= 0 || !(density > 0))
             {
                 return;
             }
@@ -234,12 +242,57 @@ namespace RowMate.Scene
 
         public void Preload()
         {
-            if (_disposed || _readiness.Value != SceneReadiness.NotLoaded)
+            if (_disposed)
             {
                 return;
             }
 
+            if (_readiness.Value != SceneReadiness.NotLoaded)
+            {
+                // It. 8 (§3.2): el escenario elegido cambió en reposo: el kit nuevo por tramos (la base común no se rehace).
+                if (_session == null && _world?.Director != null && _phase >= 1 && _world.Environment != SelectedEnvironment)
+                {
+                    SwitchKit(SelectedEnvironment);
+                }
+
+                return;
+            }
+
             StartBuild();
+        }
+
+        // It. 8 (AC-SCN-21-05): el escenario elegido (SceneEnvironmentChoice; el control de prueba lo pisa).
+        public EnvironmentId SelectedEnvironment => _environmentForTest ?? _app.SceneEnvironment.Selected.Value;
+
+        // El escenario del kit armado (el lago hasta que haya mundo).
+        public EnvironmentId KitEnvironment => _world?.Environment ?? EnvironmentId.Lake;
+
+        // Las veces que se cambió de kit (pruebas y [PERF]).
+        public int KitSwitches { get; private set; }
+
+        private EnvironmentId? _environmentForTest;
+
+        // Descarta el kit del escenario anterior y arma el nuevo desde la orilla de 920 m (fase 2): los Tick sintéticos, el dibujo de
+        // calentamiento y la orilla de la sesión vuelven a correr con el escenario nuevo antes de Ready (§3.2; DA8-16).
+        private void SwitchKit(EnvironmentId id)
+        {
+            var world = _world!;
+            world.SetEnvironment(id);
+            ApplyProfile(world);
+            KitSwitches++;
+            _scratch = null;
+            _scratchFrame = default;
+            _syntheticStep = 0;
+            _nextSession = null;
+            _nextFrame = default;
+            _warmupFrame = default;
+            _warmupFrameReady = false;
+            _lastStreamDistance = double.NaN;
+            WorstUnitMs = 0;
+            WorstUnitPhase = "";
+            WorstUnitStep = "";
+            _phase = 2;
+            _readiness.Value = SceneReadiness.Loading;
         }
 
         public void Open(double now)
@@ -261,10 +314,16 @@ namespace RowMate.Scene
             {
                 StartBuild();
             }
+            else if (_world?.Director != null && _phase >= 1 && _world.Environment != SelectedEnvironment)
+            {
+                // El escenario cambió y el kit no llegó a armarse en reposo: la escena demorada hasta que esté (AC-SCN-01-07).
+                SwitchKit(SelectedEnvironment);
+            }
 
             WorstWarmupMs = 0;
             var region = _regionOverridden ? _regionForTest : _options.RegionCode;
-            if (_nextSession != null && string.Equals(_nextRegion, region, StringComparison.Ordinal))
+            var environment = SelectedEnvironment;
+            if (_nextSession != null && string.Equals(_nextRegion, region, StringComparison.Ordinal) && _nextEnvironment == environment)
             {
                 // La que se armó en reposo (QA-V6a-REN-02): en el cuadro del toque, sin armar la sesión ni sus arreglos.
                 _session = _nextSession;
@@ -272,7 +331,7 @@ namespace RowMate.Scene
             }
             else
             {
-                _session = new SceneSession(new LakeEnvironment(), new SceneSessionOptions { RegionCode = region });
+                _session = new SceneSession(EnvironmentCatalog.Create(environment), new SceneSessionOptions { RegionCode = region });
                 _frame = SceneFrame.Create();
             }
 
@@ -379,6 +438,15 @@ namespace RowMate.Scene
             var director = world.Director!;
             SceneQualityApplier.Apply(_profile, world.Rig!.Camera, world.Rig.Data, world.Lighting!, world.Sky!, world.Clouds!, world.Grass!, director.Sky,
                 director.Shore, director.Fill, world.Store!);
+            if (director.Kit != null)
+            {
+                director.Kit.Shadows = _profile.Shadows;
+            }
+
+            if (director.Glow != null)
+            {
+                director.Glow.Beam = _profile.Tier != QualityTier.Low;
+            }
         }
 
         // El perfil con el que armó el SceneWorldBuilder en curso (si LowerTier llega a mitad del armado, se aplica el nuevo al terminar).
@@ -458,6 +526,8 @@ namespace RowMate.Scene
             UpdateMarker.Begin();
             var inputs = Inputs(now);
             UpdatePause(session, now);
+            LastStreamMs = 0;
+            _partWatch.Restart();
             if (_options.FixedSteps)
             {
                 session.Advance(inputs, Math.Max(0, now - _lastNow), ref _frame);
@@ -466,6 +536,8 @@ namespace RowMate.Scene
             {
                 session.Tick(inputs, ref _frame);
             }
+
+            LastTickMs = _partWatch.Elapsed.TotalMilliseconds;
 
             _lastNow = now;
             var showing = IsShowing && _world?.Director != null;
@@ -559,9 +631,38 @@ namespace RowMate.Scene
                 InViewShoreRebuilds++;
             }
 
+            _partWatch.Restart();
             store.Step(_frame.Distance, _options.SynchronousStreaming || jump ? double.PositiveInfinity : _options.StreamingBudgetMs);
+            if (target == null)
+            {
+                LastStreamMs = _partWatch.Elapsed.TotalMilliseconds;
+            }
+
             _lastStreamDistance = _frame.Distance;
             var director = world.Director!;
+            director.HideBoat = _thumbnail;
+            if (director.Kit != null)
+            {
+                director.Kit.MaxRelZ = _thumbnail ? ThumbnailRule.NearRange : double.PositiveInfinity;
+            }
+
+            if (director.Foam != null)
+            {
+                director.Foam.MaxRelZ = _thumbnail ? ThumbnailRule.NearRange : double.PositiveInfinity;
+            }
+
+            if (_thumbnail)
+            {
+                // ThumbnailRule.Filter: solo lo que está a menos de 150 m (thumbnail_painter.dart:33-36).
+                var kept = _thumbnailProps ??= new ShorePropBuffer(_frame.VisibleProps.Capacity);
+                ThumbnailRule.Filter(_frame.VisibleProps.Items, kept);
+                _frame.VisibleProps.Clear();
+                for (var i = 0; i < kept.Count; i++)
+                {
+                    _frame.VisibleProps.Add(kept.Items[i]);
+                }
+            }
+
             director.Overlay.Enabled = _scrims;
             director.Sky.StarsEnabled = _stars;
             director.Lighting.EmissiveGain = withoutPost ? 1 : SkyArt.EmissiveGain;
@@ -650,6 +751,7 @@ namespace RowMate.Scene
             {
                 Character = _options.Character,
                 Binding = _options.CharacterBinding,
+                Environment = SelectedEnvironment,
             };
             _builderProfile = _profile;
             _units = _builder.Build();
@@ -744,6 +846,22 @@ namespace RowMate.Scene
                             ConfigureRower(_session);
                             ConfigureRower(_nextSession);
                             _phase = 1;
+                            if (_world.Environment != SelectedEnvironment)
+                            {
+                                // It. 8: el escenario cambió mientras se armaba el mundo: el kit nuevo antes de seguir (sin orilla armada).
+                                _world.SetEnvironment(SelectedEnvironment);
+                                ApplyProfile(_world);
+                            }
+
+                            if (_session != null && _session.Environment.Id != _world.Environment)
+                            {
+                                // La sesión abierta con otro escenario (el toque llegó antes que el mundo): la del kit armado.
+                                _session = new SceneSession(EnvironmentCatalog.Create(_world.Environment),
+                                    new SceneSessionOptions { RegionCode = _regionOverridden ? _regionForTest : _options.RegionCode });
+                                _frame = SceneFrame.Create();
+                                ConfigureRower(_session);
+                                _session.Open(_lastNow);
+                            }
                         }
 
                         return true;
@@ -843,7 +961,8 @@ namespace RowMate.Scene
         private void PrepareNextSession()
         {
             var region = _regionOverridden ? _regionForTest : _options.RegionCode;
-            _nextSession = new SceneSession(new LakeEnvironment(), new SceneSessionOptions { RegionCode = region });
+            _nextEnvironment = KitEnvironment;
+            _nextSession = new SceneSession(EnvironmentCatalog.Create(_nextEnvironment), new SceneSessionOptions { RegionCode = region });
             _nextRegion = region;
             _nextFrame = SceneFrame.Create();
             ConfigureRower(_nextSession);
@@ -851,6 +970,7 @@ namespace RowMate.Scene
 
         private SceneSession? _nextSession;
         private string? _nextRegion;
+        private EnvironmentId _nextEnvironment;
         private SceneFrame _nextFrame;
 
         // Un trabajo de la orilla en `distance` (acotado: un trozo de terreno, un relleno, 5 m de pasto). Al terminar, la fase siguiente.
@@ -873,7 +993,7 @@ namespace RowMate.Scene
         private bool SyntheticTick(int step)
         {
             var world = _world!;
-            var scratch = _scratch ??= new SceneSession(new LakeEnvironment(), new SceneSessionOptions());
+            var scratch = _scratch ??= new SceneSession(EnvironmentCatalog.Create(KitEnvironment), new SceneSessionOptions());
             var frame = _scratchFrame;
             if (frame.Stars == null)
             {
@@ -930,7 +1050,7 @@ namespace RowMate.Scene
         // (estrellas, ventanas, nubes y velo a la vista), así el dibujo toca todas las variantes de la sesión.
         private void PrepareWarmupFrame()
         {
-            var scratch = new SceneSession(new LakeEnvironment(), new SceneSessionOptions());
+            var scratch = new SceneSession(EnvironmentCatalog.Create(KitEnvironment), new SceneSessionOptions());
             var frame = SceneFrame.Create();
             frame.WarmUpAll = true;
             ConfigureRower(scratch);
@@ -1239,6 +1359,48 @@ namespace RowMate.Scene
         }
 #endif
 
+        // It. 8: el escenario de una prueba sin pasar por la preferencia (null = el elegido). Con el mundo armado, el kit cambia en el
+        // próximo Preload u Open.
+        internal void ForceEnvironmentForTest(EnvironmentId? environment)
+        {
+            _environmentForTest = environment;
+        }
+
+        // La miniatura (ThumbnailRule; AC-SCN-22-04): sin bote, remero, efectos ni boya, y los objetos a menos de 150 m.
+        internal void ThumbnailModeForTest(bool on)
+        {
+            _thumbnail = on;
+        }
+
+        internal bool ThumbnailMode => _thumbnail;
+
+        // La ventana fija de una prueba (la miniatura: 1 824 × 1 152 px a densidad 12 = 152 × 96 dp).
+        internal void ViewportForTest(int widthPx, int heightPx, double density)
+        {
+            _viewportPinned = false;
+            SetViewport(widthPx, heightPx, density);
+            _viewportPinned = true;
+        }
+
+        internal void ReleaseViewportForTest()
+        {
+            _viewportPinned = false;
+        }
+
+        private bool _viewportPinned;
+
+        // El cuadro actual dibujado en `target` con el post de la hora (la miniatura horneada).
+        internal void RenderToForTest(RenderTexture target)
+        {
+            if (_world?.Director != null && _session != null)
+            {
+                DrawFrame(_lastNow, false, target);
+            }
+        }
+
+        private bool _thumbnail;
+        private ShorePropBuffer? _thumbnailProps;
+
         // La región de la luna para la sesión siguiente (§0.4 de la spec).
         internal void ForceRegionForTest(string? region)
         {
@@ -1305,6 +1467,11 @@ namespace RowMate.Scene
         internal void ForceDistanceForTest(double distance)
         {
             _session?.ForceDistanceForTest(distance);
+        }
+
+        internal void StopBoatForTest()
+        {
+            _session?.StopBoatForTest();
         }
 
         internal void FreezeSceneTimeForTest(double? sceneTime)

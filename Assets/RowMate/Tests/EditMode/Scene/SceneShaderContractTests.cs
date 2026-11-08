@@ -60,9 +60,23 @@ namespace RowMate.Tests.EditMode.Scene
             return Regex.Replace(noBlock, @"//[^\n]*", " ");
         }
 
-        private static IEnumerable<string> AllSources()
+        // Los 13 de la 6a y los de los escenarios de la It. 8 (ShaderArt.Environment: Glow).
+        private static IEnumerable<SceneShaderSpec> SceneAndEnvironment()
         {
             foreach (var spec in ShaderArt.Scene)
+            {
+                yield return spec;
+            }
+
+            foreach (var spec in ShaderArt.Environment)
+            {
+                yield return spec;
+            }
+        }
+
+        private static IEnumerable<string> AllSources()
+        {
+            foreach (var spec in SceneAndEnvironment())
             {
                 yield return ShaderPath(spec.Name);
             }
@@ -309,7 +323,7 @@ namespace RowMate.Tests.EditMode.Scene
             var number = new Regex(@"\b(_Rm\w+)\s*\(\s*""[^""]*""\s*,\s*(Float|Range\s*\([^)]*\))\s*\)\s*=\s*([-+0-9.eE]+)");
             var defaults = ShaderArt.MaterialDefaults();
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var spec in ShaderArt.Scene)
+            foreach (var spec in SceneAndEnvironment())
             {
                 var code = Code(ReadShader(spec.Name));
                 foreach (Match m in vector.Matches(code))
@@ -372,7 +386,8 @@ namespace RowMate.Tests.EditMode.Scene
         {
             // 02-tech-design §7.5 con 04-design-notes §14.2 corregida por el gate: el agua ≤ 24 y 0 texturas (DT6a-07); las estrellas
             // ≤ 8 con la máscara del astro (DT6a-17).
-            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(WaterArt.MaxAlu).And.EqualTo(24));
+            // It. 8: + 3 por los saltos de la ola de la costa y de la luz bajo el puente (08-entornos-selector/04-design-notes §6).
+            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(WaterArt.MaxAlu).And.EqualTo(27));
             Assert.That(ShaderArt.Find("WaterDegraded").MaxTextures, Is.EqualTo(0));
             Assert.That(ShaderArt.Find("Stars").MaxAlu, Is.EqualTo(8));
             Assert.That(ShaderArt.Find("ScreenOverlay").Queue, Is.EqualTo(3500));

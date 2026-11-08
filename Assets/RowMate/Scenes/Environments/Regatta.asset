@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9c04ca21183bfd43a627b7890f9e822, type: 3}
+  m_Name: Regatta
+  m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Slots.EnvironmentDefinition
+  _environment: 3
+  _slots:
+  - {fileID: 11400000, guid: ec86c99e8e88a9d4e877bfec51418c69, type: 2}
+  - {fileID: 11400000, guid: 451bfc474239a6f478c79802d1c15248, type: 2}
+  - {fileID: 11400000, guid: 8a5685cef60139c4c99589cea6c71a72, type: 2}
+  - {fileID: 11400000, guid: f3e10ca01b5e02042906c765f9d46c9b, type: 2}
+  - {fileID: 11400000, guid: 491360ed8c9312d438dc63e22ac156e7, type: 2}
+  - {fileID: 11400000, guid: 50ab8bcc7b13e2747b5e09f982b86b29, type: 2}
+  - {fileID: 11400000, guid: ef6684a7aa91cf54db4b5febad0212f4, type: 2}
+  - {fileID: 11400000, guid: 4b9c8aebef1117d45847c388afe7f3d9, type: 2}
+  - {fileID: 11400000, guid: 0aa1c9e708c1ea04589420375007c269, type: 2}

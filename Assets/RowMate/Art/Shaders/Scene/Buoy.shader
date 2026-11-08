@@ -75,6 +75,10 @@ Shader "RowMate/Scene/Buoy"
                 float3 albedoG = sqrt(max(albedo, 0.0));
                 float3 ambientG, keyG;
                 RmVertexLight(normalWS, 0.2, ambientG, keyG);
+                // It. 8: bajo el puente (DT8-07), por vértice, como el casco y los remos.
+                float underBridge = RmUnderBridgeGamma2(positionWS, normalWS);
+                ambientG *= underBridge;
+                keyG *= underBridge;
                 o.ambientG = ambientG * albedoG;
                 o.keyG = keyG * albedoG;
                 o.fog = RmVertexFog(positionWS.z, positionWS.y);

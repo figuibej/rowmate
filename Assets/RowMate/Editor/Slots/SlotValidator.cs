@@ -63,6 +63,23 @@ namespace RowMate.EditorTools
                 }
             }
 
+            // It. 8: los slots de río, costa y regata.
+            foreach (var environment in world.OtherEnvironments)
+            {
+                if (environment == null)
+                {
+                    continue;
+                }
+
+                foreach (var slot in environment.Slots)
+                {
+                    if (slot != null && seen.Add(slot))
+                    {
+                        slots.Add(slot);
+                    }
+                }
+            }
+
             var procedural = 0;
             foreach (var slot in slots)
             {

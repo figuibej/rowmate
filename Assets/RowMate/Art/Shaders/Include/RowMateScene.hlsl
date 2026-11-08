@@ -36,6 +36,9 @@ float4 _RmSkyTopSrgb;                // el telón en sRGB (SetGlobalVector, sin 
 float4 _RmSkyHorizonSrgb;
 float4 _RmHazeSrgb;                  // lerp(skyHorizon; fog; 0,5), la bruma del horizonte
 float  _RmEmissiveGain;              // la ganancia de lo emisivo (1,6; 1 en la pasada de contrato)
+// It. 8 (08-entornos-selector/02-tech-design §8.4; DT8-05 a DT8-07): los dos del escenario, en 0 fuera de la costa y sin puente.
+float4 _RmSwell;                     // la ola de la costa: (amplitud A; escala s; φ₁; φ₂), las fases en [0; 2π) desde Core (CoastSwell)
+float4 _RmUnderBridge;               // el puente más cercano: (zIni; zFin; rampa; fuerza) en cinta (BridgeShade); fuerza 0 sin puente
 
 // ── El halo del legacy (sky_painter.dart:73-82) y el borde del disco (SkyArt) ──
 static const float kRmHaloAlpha0 = 0.7;

@@ -93,8 +93,54 @@ namespace RowMate.Scene
         public Material? SprayMaterial { get; internal set; }
         public Material? WaterMarksMaterial { get; internal set; }
         public Material? BuoyMaterial { get; internal set; }
+        public Material? GlowMaterial { get; internal set; }
+        public Material? FoamMaterial { get; internal set; }
         public RowerCharacter? Rower { get; internal set; }
         public BoatVisual? Boat { get; internal set; }
+
+        // It. 8 (02-tech-design §3.1, DT8-01): el escenario del kit armado (uno en memoria: el almacén de la orilla, sus mallas por
+        // segmento y la silueta lejana) y la tira de la silueta de río, costa o regata (null en el lago).
+        public RowMate.Core.Scene.EnvironmentId Environment { get; private set; } = RowMate.Core.Scene.EnvironmentId.Lake;
+
+        public Mesh? HorizonStrip { get; private set; }
+
+        // Cambia el kit (en reposo, SceneHost.SwitchKit): descarta el almacén del escenario anterior (sus mallas por segmento) y arma el
+        // del nuevo, vacío (la orilla se arma después por tramos); la base común (cielo, agua, bote, remero, materiales) no cambia.
+        internal void SetEnvironment(RowMate.Core.Scene.EnvironmentId id, SegmentStore? built = null)
+        {
+            var store = built ?? new SegmentStore(RowMate.Core.Scene.EnvironmentCatalog.Create(id));
+            var old = ReferenceEquals(Store, store) ? null : Store;
+            Store = store;
+            Environment = id;
+            if (Director != null)
+            {
+                Director.Terrain.Rebind(store);
+                Director.Shore.Rebind(store);
+                Director.Fill.Rebind(store);
+                Director.Kit?.Rebind(store);
+                Director.Foam?.Rebind(store);
+            }
+
+            old?.Dispose();
+            MeshUpload.Destroy(HorizonStrip);
+            HorizonStrip = null;
+            if (id != RowMate.Core.Scene.EnvironmentId.Lake)
+            {
+                var data = new RowMate.Core.Scene.Geometry.MeshData(RowMate.Core.Scene.Geometry.EnvironmentHorizonStrip.VertexCapacity,
+                    RowMate.Core.Scene.Geometry.EnvironmentHorizonStrip.IndexCapacity);
+                RowMate.Core.Scene.Geometry.EnvironmentHorizonStrip.Build(id, data);
+                HorizonStrip = MeshUpload.NewMesh("scene-horizon-" + id);
+                using (var upload = new MeshUpload())
+                {
+                    upload.Upload(data, HorizonStrip, false, SceneObjects.Everywhere);
+                }
+            }
+
+            Director?.Horizon.SetEnvironment(id, HorizonStrip);
+            Director?.Glow?.SetEnvironment(id);
+            // WP-D1: el suelo del escenario (adoquín, arena, césped con franjas; 0 = el lago de la 6a) en la copia del material.
+            Terrain?.SetFloat(SceneShaderIds.TerrainKind, (float)(int)id);
+        }
 
         // Las resoluciones de los slots (SlotValidator, SSL).
         public List<SlotResolution> Slots { get; } = new List<SlotResolution>();
@@ -108,6 +154,8 @@ namespace RowMate.Scene
         public void Dispose()
         {
             Store?.Dispose();
+            MeshUpload.Destroy(HorizonStrip);
+            HorizonStrip = null;
             Rower?.Dispose();
             Rower = null;
             Lighting?.Dispose();
@@ -156,6 +204,9 @@ namespace RowMate.Scene
         public RowerCharacterKind Character { get; set; } = RowerCharacterKind.Auto;
 
         public RowerCharacterBinding? Binding { get; set; }
+
+        // It. 8: el escenario del kit que se arma con el mundo (SceneHost lo pone con el elegido).
+        public EnvironmentId Environment { get; set; } = EnvironmentId.Lake;
 
         public int Units { get; private set; }
 
@@ -218,6 +269,23 @@ namespace RowMate.Scene
             if (_definition.Lake != null)
             {
                 foreach (var slot in _definition.Lake.Slots)
+                {
+                    if (slot != null && !Resolved(slot.SlotId))
+                    {
+                        Resolve(slot.SlotId);
+                    }
+                }
+            }
+
+            // It. 8: los slots de río, costa y regata (todos en Procedural: 0 avisos; uno con un asset que falta, un aviso y el procedural).
+            foreach (var environment in _definition.OtherEnvironments)
+            {
+                if (environment == null)
+                {
+                    continue;
+                }
+
+                foreach (var slot in environment.Slots)
                 {
                     if (slot != null && !Resolved(slot.SlotId))
                     {
@@ -457,6 +525,10 @@ namespace RowMate.Scene
             world.SprayMaterial = Copy(world, m.Spray, "Spray");
             world.WaterMarksMaterial = Copy(world, m.WaterMarks, "WaterMarks");
             world.BuoyMaterial = Copy(world, m.Buoy, "Buoy");
+            world.GlowMaterial = Copy(world, m.Glow, "Glow");
+            world.GlowMaterial.enableInstancing = true;
+            world.FoamMaterial = Copy(world, m.Foam, "Foam");
+            world.FoamMaterial.enableInstancing = true;
             ConfigureRowerMaterials(world);
             Units++;
             yield return false;
@@ -470,6 +542,7 @@ namespace RowMate.Scene
             }
 
             world.Terrain.SetTexture(SceneShaderIds.NoiseTex, world.Noise.Texture);
+            world.FoamMaterial!.SetTexture(SceneShaderIds.NoiseTex, world.Noise.Texture);
             if (world.LayerAlbedo != null && world.LayerNormal != null)
             {
                 world.Terrain.SetTexture(SceneShaderIds.LayerAlbedo, world.LayerAlbedo);
@@ -524,8 +597,8 @@ namespace RowMate.Scene
             yield return false;
 
             Step = "el almacén de la orilla";
-            var environment = new LakeEnvironment();
-            world.Store = new SegmentStore(environment);
+            // It. 8: el almacén del escenario elegido (el kit; la silueta va al final, con el director).
+            world.Store = new SegmentStore(EnvironmentCatalog.Create(Environment));
             Units++;
             yield return false;
 
@@ -536,6 +609,8 @@ namespace RowMate.Scene
 
             Step = "los objetos de la orilla";
             var shore = new ShoreStreamer(world.Store, world.Meshes, world.Foliage, world.Prop, world.PropWindow, world.Rig.Camera, layer);
+            var kit = new KitPropRenderer(world.Store, world.Prop, world.PropWindow, world.Rig.Camera, layer);
+            var glow = new GlowRenderer(world.Quad!, world.GlowMaterial!, world.Rig.Camera, layer);
             Units++;
             yield return false;
 
@@ -553,8 +628,18 @@ namespace RowMate.Scene
                 Spray = vfx,
                 Buoy = buoy,
             };
+            world.Director.Kit = kit;
+            world.Director.Glow = glow;
+            world.Director.Foam = new FoamRenderer(world.Store, world.Own(FoamRenderer.BuildStrip()), world.FoamMaterial!, world.Rig.Camera, layer);
+            var seagulls = new SeagullRenderer(world.Prop, world.Rig.Camera, layer);
+            world.Own(seagulls.Mesh);
+            world.Director.Seagulls = seagulls;
+            glow.Beam = _profile.Tier != QualityTier.Low;   // §5: en Bajo, sin el haz del faro
+            world.SetEnvironment(Environment, world.Store);
+
             marks.BoilsEnabled = _profile.Tier != QualityTier.Low;
             SceneQualityApplier.Apply(_profile, world.Rig.Camera, world.Rig.Data, lighting, world.Sky, world.Clouds, world.Grass, sky, shore, fill, world.Store);
+            kit.Shadows = _profile.Shadows;
             Units++;
             yield return true;
         }

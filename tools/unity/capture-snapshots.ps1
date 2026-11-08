@@ -34,8 +34,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it7',
+    [ValidateSet('it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it8',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -160,6 +160,8 @@ function Get-SetFolder {
     if ($Set -eq 'it4b') { return 'docs/migration/iterations/04b-hud-exr/snapshots' }
     if ($Set -eq 'it5') { return 'docs/migration/iterations/05-series-parciales/snapshots' }
     if ($Set -eq 'it6a') { return 'docs/migration/iterations/06a-escena-lago/snapshots' }
+    if ($Set -eq 'it8') { return 'docs/migration/iterations/08-entornos-selector/snapshots' }
+    if ($Set -eq 'thumbs') { return 'Library/RowMate/thumbs' }
     return 'docs/migration/iterations/07-remero-palada/snapshots'
 }
 

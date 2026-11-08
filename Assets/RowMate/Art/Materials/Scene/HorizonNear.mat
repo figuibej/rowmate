@@ -26,11 +26,13 @@ Material:
     m_Ints: []
     m_Floats:
     - _RmHorizonDepth: 0.3
+    - _RmSkylineWindows: 0
     - _RmSnowEnabled: 0
     m_Colors:
     - _RmHorizonScale: {r: 0.1583844, g: 1, b: 0.7, a: 0}
     - _RmHorizonTone: {r: 0.35999998, g: 0.42999998, b: 0.53999996, a: 1}
     - _RmRim: {r: 0.35, g: 8, b: 0.6, a: 6}
+    - _RmSkylineWindow: {r: 1, g: 0.878431, b: 0.54117596, a: 1}
     - _RmSnowParams: {r: 0.58, g: 0.03, b: 0.04, a: 1.7}
     - _RmSnowTone: {r: 0.94901997, g: 0.964706, b: 0.9803919, a: 1}
   m_BuildTextureStacks: []

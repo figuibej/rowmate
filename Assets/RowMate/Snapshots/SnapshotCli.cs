@@ -36,7 +36,11 @@ namespace RowMate.Snapshots
         public const string It6aOutput = "docs/migration/iterations/06a-escena-lago/snapshots";
         // It. 7 (07-remero-palada/02-tech-design §5): it7 (por defecto desde la 7) = RowerCatalog.
         public const string It7Output = "docs/migration/iterations/07-remero-palada/snapshots";
-        public const string DefaultSet = "it7";
+        // It. 8 (08-entornos-selector/02-tech-design §6): it8 (por defecto desde la 8) = EnvironmentSnapshotCatalog; thumbs = el horneado de
+        // las miniaturas (las escribe en Art/Textures/Thumbnails; las tomas, a Library/RowMate/thumbs, que no se versiona).
+        public const string It8Output = "docs/migration/iterations/08-entornos-selector/snapshots";
+        public const string ThumbsOutput = "Library/RowMate/thumbs";
+        public const string DefaultSet = "it8";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
@@ -64,6 +68,16 @@ namespace RowMate.Snapshots
             if (string.Equals(set, "it6a", StringComparison.OrdinalIgnoreCase))
             {
                 return It6aOutput;
+            }
+
+            if (string.Equals(set, "it8", StringComparison.OrdinalIgnoreCase))
+            {
+                return It8Output;
+            }
+
+            if (string.Equals(set, "thumbs", StringComparison.OrdinalIgnoreCase))
+            {
+                return ThumbsOutput;
             }
 
             return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? It5Output : It7Output;

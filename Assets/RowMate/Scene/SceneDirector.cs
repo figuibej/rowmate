@@ -37,6 +37,20 @@ namespace RowMate.Scene
 
         public TerrainStreamer Terrain { get; }
 
+        // It. 8 (AC-SCN-22-04, ThumbnailRule): la miniatura, sin bote, remero, remos, efectos ni boya.
+        public bool HideBoat { get; set; }
+
+        // It. 8: los objetos de río, costa y regata (null en un mundo de antes de la 8: las pruebas viejas).
+        public KitPropRenderer? Kit { get; set; }
+
+        // It. 8 (WP-D1): los halos y el haz de la noche de los escenarios y la espuma de la costa (null en un mundo de antes de la 8).
+        public GlowRenderer? Glow { get; set; }
+
+        public FoamRenderer? Foam { get; set; }
+
+        // QA-V8-01: las gaviotas de la costa (null en un mundo de antes de la 8).
+        public SeagullRenderer? Seagulls { get; set; }
+
         public ShoreStreamer Shore { get; }
 
         public FillStreamer Fill { get; }
@@ -101,13 +115,26 @@ namespace RowMate.Scene
             Terrain.Apply(frame.Distance);
             Shore.Apply(frame);
             Fill.Apply(frame.Distance, frame.Pose.Z);
+            Kit?.Apply(frame);
+            Glow?.Apply(frame);
+            Foam?.Apply(frame);
+            Seagulls?.Apply(frame);
             Boat.Apply(frame.Rower);
+            if (Boat.Root.gameObject.activeSelf == HideBoat)
+            {
+                Boat.Root.gameObject.SetActive(!HideBoat);
+            }
+
             CastShadows(frame.Rower.ShadowMode == RowMate.Core.Scene.Stroke.BoatShadowMode.Map);
             Oars?.Apply(frame.Rower.Pose);
             Rower?.Driver.Apply(frame.Rower.Pose);
             WaterMarks?.Apply(frame);
             Spray?.Apply(frame);
             Buoy?.Apply(frame);
+            if (HideBoat && Buoy != null)
+            {
+                Buoy.Renderer.enabled = false;
+            }
         }
 
         // Los dibujos instanciados de este cuadro (justo antes del pedido de render).
@@ -116,8 +143,15 @@ namespace RowMate.Scene
             Sky.Draw();
             Shore.Draw();
             Fill.Draw();
-            WaterMarks?.Draw();
-            Spray?.Draw();
+            Kit?.Draw();
+            Glow?.Draw();
+            Foam?.Draw();
+            Seagulls?.Draw();
+            if (!HideBoat)
+            {
+                WaterMarks?.Draw();
+                Spray?.Draw();
+            }
         }
     }
 }

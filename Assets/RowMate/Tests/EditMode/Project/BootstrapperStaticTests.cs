@@ -34,7 +34,7 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(main, Does.Contain("EditorApplication.delayCall"));
             Assert.That(main, Does.Contain("\"ProjectSettings/RowMateBootstrap.json\""));
             Assert.That(main, Does.Contain("[MenuItem(\"RowMate/Bootstrap/Reaplicar\")]"));
-            Assert.That(main, Does.Contain("CurrentVersion = 5"), "It. 7 (WP-B0): bootstrapper v5, 07-remero-palada/02-tech-design §1.3");
+            Assert.That(main, Does.Contain("CurrentVersion = 6"), "It. 8 (WP-B0): bootstrapper v6, 08-entornos-selector/02-tech-design §1.2");
         }
 
         [Test, Category("AC-BASE-10")]

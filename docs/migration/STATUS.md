@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-06 (rowmate-po, al cerrar la It. 7) |
-| Fase | **It. 7 cerrada — esperando OK del usuario.** PO: **aceptada**, sin criterios en FAIL. QA: APROBADO CON OBSERVACIONES en la ronda 2 ([05-qa-verification](iterations/07-remero-palada/05-qa-verification.md), "Ronda 2"), sin mayores: dotnet con 0 avisos y 0 errores, herramientas 192 / 192 y Core 3191 (3152 pasan, 0 fallan, 39 ignoradas); Unity EditMode 3290 / 3245 / 0 / 45 y con simulador 3482 / 3437 / 0 / 45; PlayMode 500 / 500 y con simulador 573 / 573; matriz con 656 en PASA, 0 en FALLA, 4 ignorados y 149 pendientes de Unity (los cubren las suites de Unity); 55 tomas (CAP, VID y DEMO) iguales byte a byte entre corridas, con el maniquí y con Y Bot. De 38 criterios, 37 cumplen y 1 no es verificable (AC-SCN-01-16: los tiempos de cuadro del build, por un tope externo de la PC esa noche, y los 60 fps en Android); LT-88 a LT-98 pasan. Reporte para el usuario: [iterations/07-remero-palada/REPORT.md](iterations/07-remero-palada/REPORT.md). La deuda va a issues de GitHub |
-| Próximo paso | **Usuario**: probar la demo en `Builds/Windows/simulator` ([REPORT de la 7 §2](iterations/07-remero-palada/REPORT.md); el build ya tiene la 7 con Y Bot) y dar el OK al gate de la It. 7 (abajo). Después, **It. 8** (`08-entornos-selector`: Río, Costa, Regata y selector). La 6b sigue postergada (issue #6) |
+| Actualizado | 2026-11-07 (rowmate-po, al cerrar la It. 8) |
+| Fase | **It. 8 cerrada — esperando OK del usuario.** PO: **aceptada**, sin criterios en FAIL. QA: RECHAZADO en la ronda 1 (4 mayores) y APROBADO CON OBSERVACIONES en la ronda 2 ([05-qa-verification](iterations/08-entornos-selector/05-qa-verification.md), "Ronda 2"), sin mayores: dotnet con 0 avisos y 0 errores, herramientas 192 / 192 y Core 3350 (3311 pasan, 0 fallan, 39 omitidos); Unity EditMode 3453 / 3408 / 0 / 45 y con simulador 3645 / 3600 / 0 / 45; PlayMode 551 / 551 y con simulador 624 / 624; matriz con 700 en PASA, 0 en FALLA, 4 ignorados y 157 pendientes de Unity; 57 tomas iguales byte a byte entre corridas. De 40 criterios, 39 cumplen y 1 no es verificable (AC-SCN-01-19 en Android, sin teléfono); LT-99 a LT-138 pasan. Reporte para el usuario: [iterations/08-entornos-selector/REPORT.md](iterations/08-entornos-selector/REPORT.md). La deuda va a issues de GitHub; el issue #9 sigue abierto con un resto chico (la sonda del farol) |
+| Próximo paso | **Usuario**: probar la demo en `Builds/Windows/simulator` ([REPORT de la 8 §2](iterations/08-entornos-selector/REPORT.md); el build ya tiene la 8) y dar el OK al gate de la It. 8 (abajo). Después, **It. 9** (`09-historial`: Historial y detalle con gráficos). La 6b sigue postergada (issue #6) |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs. El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
@@ -20,9 +20,9 @@
 | 5 | Series en vivo: parciales y repeticiones | **Cerrada** ([reporte](iterations/05-series-parciales/REPORT.md)); el usuario aceptó los valores por defecto de su gate (lo registra la [spec de la 6a §11](iterations/06a-escena-lago/01-po-spec.md)). La verificación en el build que quedaba se hizo al empezar la 6a y pasó ([00-deuda-5](iterations/06a-escena-lago/00-deuda-5.md)). Solo sigue la demo (c) del usuario (AC-WKT-02-11) |
 | 6a | Escena: cielo, luz, hora, Lago alpino y agua degradada | **Cerrada** ([reporte](iterations/06a-escena-lago/REPORT.md)); el usuario dio el OK. Su deuda quedó en los issues de GitHub #1 a #10 |
 | 6b | Agua avanzada, desenfoque del vidrio y rendimiento | **Postergada** por decisión del usuario (issue #6). La 7 se hizo sobre el agua degradada |
-| 7 | Remero, bote y palada | **Cerrada — esperando OK del usuario** ([reporte](iterations/07-remero-palada/REPORT.md)). Sin FAIL; AC-SCN-01-16 NO VERIFICABLE |
-| 8 | Río, Costa, Regata y selector | **Próxima** (espera el OK de la 7) |
-| 9 | Historial y detalle | Pendiente |
+| 7 | Remero, bote y palada | **Cerrada** ([reporte](iterations/07-remero-palada/REPORT.md)). Sin FAIL; AC-SCN-01-16 NO VERIFICABLE. El usuario siguió con la 8 sin cambiar nada de su gate: rigen los valores por defecto |
+| 8 | Río, Costa, Regata y selector | **Cerrada — esperando OK del usuario** ([reporte](iterations/08-entornos-selector/REPORT.md)). Sin FAIL; AC-SCN-01-19 NO VERIFICABLE solo en Android |
+| 9 | Historial y detalle | **Próxima** (espera el OK de la 8) |
 | 10a | Bluetooth real en Android y Windows | Pendiente |
 | 10b | Tanda Apple (iOS y macOS) | Flotante: cuando haya Mac |
 | 11 | Pulsómetro real | Pendiente |
@@ -42,9 +42,29 @@
 - **Gate de la It. 5**: valores por defecto de DV-48 a DV-51, P-08 y las decisiones del PO al cerrar ([REPORT de la It. 5 §8](iterations/05-series-parciales/REPORT.md)). Lo registró la [spec de la 6a §11](iterations/06a-escena-lago/01-po-spec.md). La demo (c) de P-17 (AC-WKT-02-11, suspender el equipo a mano) **sigue pendiente**.
 - **Gate de la It. 6a**: el usuario dio el OK (valores por defecto de P-18, QA-V6a-12, DV-57 / P-03, P-19, D-ART-08 / P-01, P-02 y AC-WKT-02-11). Postergó la 6b (issue #6) y pasó la deuda a issues de GitHub (#1 a #10). Detalle en [REPORT de la It. 6a §8](iterations/06a-escena-lago/REPORT.md).
 
-### Para confirmar en el gate de la It. 7
+- **Gate de la It. 7**: el usuario siguió con la It. 8 sin cambiar nada, así que rigen los valores por defecto de la tabla de abajo (DV-68 a DV-78, DT7-09, QA7-V-06 y B7-04). Detalle en [REPORT de la It. 7 §6](iterations/07-remero-palada/REPORT.md).
 
-Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It. 7 §6](iterations/07-remero-palada/REPORT.md) y [01-po-spec §10 y "Al cerrar la iteración"](iterations/07-remero-palada/01-po-spec.md).
+### Para confirmar en el gate de la It. 8
+
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It. 8 §6](iterations/08-entornos-selector/REPORT.md) y [01-po-spec §10 y §12](iterations/08-entornos-selector/01-po-spec.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-79: tarjetas de 152 × 96 con el nombre en 13 | Se acepta | 120 × 80 y 12, como el legacy |
+| DV-80 y QA-P-11: miniatura horneada de la escena 3D a las 12:00 | Se acepta | Miniaturas a la hora actual (4 por escenario, issue) |
+| DV-81 y DV-87: siluetas lejanas que se acercan sin deslizarse, con el tope de 9° | Se acepta | Deslizamiento y alto del legacy |
+| DV-82: el número del cartel siempre en el tablero | Se acepta | Aparece a los ≈ 54 m |
+| DV-83: faro con halo y haz giratorio de 12 s | Se acepta | Solo el halo |
+| DV-84: muro, paseo, espuma, arena, taludes, álamos y público agregados | Se acepta | Sin público ni álamos |
+| DV-85 y DV-86: rolido por escenario; la costa mueve el bote y muestra el oleaje | Se acepta | Rolido del lago y costa calma hasta la 6b |
+| DV-88 y DV-89: boyas que cabecean y gaviotas 3D que aletean | Se acepta | Boyas quietas y gaviotas planas |
+| DT8-10: el faro sobre un promontorio de 2,5 m (no 8 m × escala en ese bloque) | Se acepta | Acantilado entero, con la base del faro más alta que la del legacy |
+| QA-V8-14: en horizontal, a las 22 h, la linterna del faro y la del farol quedan bajo la barra superior | Se acepta como está (issue) | El Designer cambia el encuadre o la altura |
+| D-ART-08: sin texturas CC0 de fachadas | Sigue en No | Texturas CC0 detrás de slots |
+
+**Decididas por el PO al cerrar la It. 8** (no necesitan respuesta): AC-SCN-01-19 queda NO VERIFICABLE solo en Android (en la PC cumple); QA-V8-12 se acepta la medición de la regata remando de 0 a ≈ 250 m (pasa por `E-180` y la tribuna); el issue #9 **no se cierra**: falta una sonda del farol que pase (QA-V8-R2-02), y su resto va con QA-V8-14; el worktree `.claude/worktrees/it08-entornos` y su rama se borran solo cuando el usuario lo diga (ya están en `.gitignore`); el resto de los menores y los "Para issues" de los docs van a issues de GitHub (lista en el REPORT §7).
+
+### Gate de la It. 7 (valores que rigen)
 
 | Decisión | Por defecto | Si se rechaza |
 |---|---|---|
@@ -63,7 +83,8 @@ Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It
 
 | Para | Qué | Estado |
 |---|---|---|
-| It. 7 (recomendado, 10 minutos) | La demo de [REPORT de la 7 §2](iterations/07-remero-palada/REPORT.md) en `Builds/Windows/simulator` (ya tiene la 7, con Y Bot) | Pendiente |
+| It. 8 (recomendado, 15 minutos) | La demo de [REPORT de la 8 §2](iterations/08-entornos-selector/REPORT.md) en `Builds/Windows/simulator` (ya tiene la 8): elegir escenario, remar en los 4, reiniciar la app | Pendiente |
+| Limpieza (cuando quieras) | Decir si se borra el worktree `.claude/worktrees/it08-entornos` y su rama `worktree-it08-entornos` (quedó de las dos corridas en paralelo; todo está fusionado en `main`) | Pendiente |
 | P-17 (recomendado, 5 minutos) | La demo (c) de la 4b: suspender el equipo a mano (Inicio → Encender/apagar → Suspender) con un entrenamiento en marcha ([REPORT de la 6a §3.1 (d)](iterations/06a-escena-lago/REPORT.md)). Cierra AC-WKT-02-11, que QA no puede verificar | Pendiente |
 | It. 4a (opcional, 1 minuto) | `powercfg /requests` en una consola de administrador, con la app abierta y después de cerrarla ([REPORT de la 4a §3.7](iterations/04a-motor-hud-funcional/REPORT.md)). Cierra AC-APP-14-01 a -03 | Pendiente |
 | Cierre de NV (It. 2 a 6a) y rendimiento de la escena | Módulos **Windows Build Support (IL2CPP)** (con Visual Studio 2022 "Desarrollo de escritorio con C++" y Windows SDK 10.0.22621+) y **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), más **un Android de gama media** (clase Galaxy A54 / Pixel 6a, Android 8+ de 64 bits) con depuración USB. Cierran IL2CPP (AC-BASE-01, R3-01; R5-04), AC-SCN-01-09 (60 fps con la escena, 30 min), la fila de 200 píldoras en el teléfono (R4b-02) y las partes Android de las It. 2 a 6a | Pendiente. Sin él, el rendimiento en el teléfono queda NO VERIFICABLE hasta la 14 (regla 9). **Recomendado para la 6b** (60 fps con el agua avanzada) |
@@ -76,7 +97,7 @@ Resueltos: en la It. 2, Unity Hub con el Editor 6000.3.27f1 y Windows Standalone
 
 ## Pendiente de otros responsables
 
-**Desde el OK de la 6a, la deuda vive en los issues de GitHub**: #1 a #10 (de la 6a) y los de la It. 7, que se crean al cerrarla (lista en el [REPORT de la 7 §7](iterations/07-remero-palada/REPORT.md)). Lo de abajo queda como registro del cierre de la 6a.
+**Desde el OK de la 6a, la deuda vive en los issues de GitHub**: #1 a #10 (de la 6a), los de la It. 7 (hasta el #21) y los de la It. 8, que se crean al cerrarla (lista en el [REPORT de la 8 §7](iterations/08-entornos-selector/REPORT.md)). El #9 sigue abierto con un resto chico (la sonda del farol). Lo de abajo queda como registro del cierre de la 6a.
 
 Issues de [05-qa-verification](iterations/06a-escena-lago/05-qa-verification.md) (ronda 3) y lo que quedó de [02-tech-design](iterations/06a-escena-lago/02-tech-design.md) ("Lo que queda"). Los de "Al empezar la 6b" van antes de construir encima.
 
@@ -150,3 +171,5 @@ Riesgos:
 | 2026-11-06 | rowmate-po | **Cierre de la It. 6a**: aceptada por el PO, con AC-WKT-13-15 (QA-V6a-R3-01, la entrada con la precarga de la escena sin terminar) y AC-SCN-13-03 (QA-V6a-PAR-01, la 11.ª línea de brillo) en FAIL, como deuda al empezar la 6b. QA: APROBADO CON OBSERVACIONES en la ronda 3 (dotnet: herramientas 192/192 y Core 3010/3049 pasan, 0 fallan; Unity EditMode con simulador 3284/3329 y PlayMode con simulador 553/553; matriz 758 PASA de 762, 0 FALLA; 98 AC PASS, 2 FAIL, 1 NV; LT-62 a LT-87 pasan). Lentes de paridad y rendimiento: sus mayores, cerrados en la ronda 2. Reporte para el usuario en `iterations/06a-escena-lago/REPORT.md`. Decisiones del PO al cerrar: la deuda de la 6b, DT6a-06 registrado en AC-WKT-17-07, P-07 como permiso y QA-V6a-12 al gate con P-18. Pendientes de la spec §15 hechos: ROADMAP ("También toca" de la 6a con F-WKT-14, -17 y F-APP-05; D-ART-05; la boya en la 7; la deuda de la 6a en la 6b), `immersive-scene` (la precarga) y este STATUS. Spec con "Al cerrar la iteración". Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-06 | coordinador | El usuario dio el OK a la It. 6a, postergó la 6b (issue #6) y pidió llevar la deuda a issues de GitHub (#1 a #10) y entregar rápido. Empieza la It. 7 sobre el agua degradada, con Y Bot en la máquina de desarrollo |
 | 2026-11-06 | rowmate-po | **Cierre de la It. 7**: aceptada por el PO, sin FAIL. QA: APROBADO CON OBSERVACIONES en la ronda 2 (dotnet: herramientas 192/192 y Core 3152/3191 pasan, 0 fallan; Unity EditMode con simulador 3437/3482 y PlayMode con simulador 573/573; matriz 656 PASA, 0 FALLA; 37 AC PASS, 0 FAIL, 1 NV; LT-88 a LT-98 pasan; QA7-V-01, el único mayor, cerrado con DV-78). Reporte para el usuario: `iterations/07-remero-palada/REPORT.md`. Decisiones del PO al cerrar: QA7-V-06 (altura de Y Bot) aclarada en AC-SCN-05-06, AC-SCN-01-16 NO VERIFICABLE, limpieza antes del commit y el resto a issues de GitHub. Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-07 | coordinador | Empieza la It. 8 con los valores por defecto del gate de la 7. Dos corridas trabajaron en paralelo (una en un worktree local); se fusionaron en el árbol principal (02-tech-design §15) |
+| 2026-11-07 | rowmate-po | **Cierre de la It. 8**: aceptada por el PO, sin FAIL. QA: RECHAZADO en la ronda 1 (29 PASS, 9 FAIL, 2 NV; 4 mayores: mundo vivo, 25 casos legacy, paridad en pantalla y tomas con sondas) y APROBADO CON OBSERVACIONES en la ronda 2 (dotnet: herramientas 192/192 y Core 3311/3350 pasan, 0 fallan; Unity EditMode con simulador 3600/3645 y PlayMode con simulador 624/624; matriz 700 PASA, 0 FALLA; 39 AC PASS, 0 FAIL, 1 NV; LT-99 a LT-138 pasan; `EnvironmentParityTests` con 0 dp de diferencia). Reporte para el usuario: `iterations/08-entornos-selector/REPORT.md`. Decisiones del PO al cerrar: AC-SCN-01-19 NV solo en Android, QA-V8-12 aceptado, el #9 sigue abierto con el resto del farol, el worktree espera al usuario y el resto a issues de GitHub. Legacy sin cambios (`git status --porcelain` vacío) |

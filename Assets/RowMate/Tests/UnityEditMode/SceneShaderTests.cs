@@ -194,6 +194,13 @@ namespace RowMate.Tests.UnityEditMode
             MeasureBudgets(ShaderArt.Rower, "costo del fragmento del remero en Medio (D3D11)");
         }
 
+        // It. 8 (WP-D1; 08-entornos-selector/04-design-notes §6): los de los escenarios (Glow) con su presupuesto de ShaderArt.Environment.
+        [Test]
+        public void TheEnvironmentFragmentsFitTheirBudget()
+        {
+            MeasureBudgets(ShaderArt.Environment, "costo del fragmento de los escenarios en Medio (D3D11)");
+        }
+
         private static void MeasureBudgets(IEnumerable<SceneShaderSpec> specs, string title)
         {
             Assume.That(Application.platform, Is.EqualTo(RuntimePlatform.WindowsEditor), "la medida es la del código de Direct3D 11");

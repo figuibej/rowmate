@@ -33,6 +33,13 @@ namespace RowMate.Core.Scene
             MotionSpecs.BreathRollDeg, MotionSpecs.BreathRollFreq, MotionSpecs.BreathRollPhase, MotionSpecs.BreathPitchDeg,
             MotionSpecs.BreathPitchFreq, MotionSpecs.BreathPitchPhase);
 
+        // It. 8 (AC-SCN-06-04): las cuatro amplitudes × gain (la costa, × 1,8); frecuencias y fases iguales. Con 1, idéntica.
+        public BreathingSpec Scaled(double gain)
+        {
+            return new BreathingSpec(LateralA * gain, LateralFreqA, LateralB * gain, LateralFreqB, LateralPhaseB, Vertical * gain, VerticalFreq,
+                VerticalPhase, RollDeg * gain, RollFreq, RollPhase, PitchDeg * gain, PitchFreq, PitchPhase);
+        }
+
         public double LateralA { get; }
         public double LateralFreqA { get; }
         public double LateralB { get; }
@@ -144,6 +151,13 @@ namespace RowMate.Core.Scene
         // hasta 2,95 dp (en rad, con la focal de la pose): el ± 3 dp es la regla dura. Las traslaciones no mueven el horizonte.
         public static CameraPose AddBoatTerms(in CameraPose pose, in SceneCamera cam, in Stroke.BoatMotionSample filtered, double multiplier)
         {
+            return AddBoatTerms(pose, cam, filtered, multiplier, MotionSpecs.CameraHorizonCapDp);
+        }
+
+        // It. 8 (AC-SCN-06-04): el mismo con el tope suave del escenario (2,95 dp; 5,35 en la costa, cuyo tope duro es ± 5,4).
+        public static CameraPose AddBoatTerms(in CameraPose pose, in SceneCamera cam, in Stroke.BoatMotionSample filtered, double multiplier,
+                                              double softCapDp)
+        {
             if (multiplier == 0)
             {
                 return pose;
@@ -151,14 +165,19 @@ namespace RowMate.Core.Scene
 
             var y = pose.Y + multiplier * MotionSpecs.CameraHeaveShare * filtered.HeaveM;
             var z = pose.Z + multiplier * MotionSpecs.CameraSurgeShare * filtered.SurgeM;
-            var pitch = SoftPitchRad(pose, cam, multiplier * MotionSpecs.CameraPitchShare * filtered.PitchRad);
+            var pitch = SoftPitchRad(pose, cam, multiplier * MotionSpecs.CameraPitchShare * filtered.PitchRad, softCapDp);
             return new CameraPose(pose.X, y, z, pose.YawDeg, pose.PitchDeg + pitch * 180 / Math.PI, pose.RollDeg, pose.FocalDp, pose.HorizonDp);
         }
 
         // El tope suave del cabeceo (DT7-06): en TV, V390 y P360 entra casi entero; en W1280, TH y L640, casi en 0.
         public static double SoftPitchRad(in CameraPose pose, in SceneCamera cam, double pitchRad)
         {
-            var room = MotionSpecs.CameraHorizonCapDp - HorizonDeviationDp(cam, pose);
+            return SoftPitchRad(pose, cam, pitchRad, MotionSpecs.CameraHorizonCapDp);
+        }
+
+        public static double SoftPitchRad(in CameraPose pose, in SceneCamera cam, double pitchRad, double softCapDp)
+        {
+            var room = softCapDp - HorizonDeviationDp(cam, pose);
             if (!(room > 0) || pose.FocalDp <= 0)
             {
                 return 0;

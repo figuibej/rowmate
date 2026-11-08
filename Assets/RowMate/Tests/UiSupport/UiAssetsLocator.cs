@@ -54,6 +54,12 @@ namespace RowMate.Tests.UiSupport
             return Assets().EmojiFallback;
         }
 
+        // It. 8: las miniaturas del selector del mismo UiAssets (las que la app muestra).
+        public static Texture2D?[] Thumbnails()
+        {
+            return Assets().Thumbnails;
+        }
+
         public static string StringsEs()
         {
             return Text(UiAssets.StringsEsPath);

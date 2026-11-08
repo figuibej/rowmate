@@ -108,6 +108,43 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(offenders, Is.Empty, "archivos de terceros versionados o por versionar (solo sus .meta):\n" + string.Join("\n", offenders));
         }
 
+        // It. 8 (AC-SCN-20-07; 08-entornos-selector/02-tech-design §1.1): el arte de los escenarios es procedural o propio, sin
+        // terceros versionados (lo cubre ThirdPartyOnlyMetaTracked) y sin nombres de lugares reales en el código (fuera de los
+        // comentarios, que citan la inspiración). Los generadores, sus números y sus mallas existen y son del repositorio.
+        [Test, Category("AC-SCN-20-07")]
+        public void TheEnvironmentArtIsOwnAndBrandless()
+        {
+            var places = new System.Text.RegularExpressions.Regex(@"\b(Bled|Henley|Charles|Bosbaan)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var files = new List<string>(RepoPaths.Files("Assets/RowMate/Core/Scene/Environments", "*.cs"));
+            foreach (var name in new[] { "Art/RiverArt.cs", "Art/CoastArt.cs", "Art/RegattaArt.cs", "Geometry/RiverMeshes.cs", "Geometry/CoastMeshes.cs", "Geometry/RegattaMeshes.cs" })
+            {
+                files.Add(RepoPaths.Combine("Assets/RowMate/Core/Scene/" + name));
+            }
+
+            Assert.That(files.Count, Is.GreaterThanOrEqualTo(12));
+            var offenders = new List<string>();
+            foreach (var file in files)
+            {
+                Assert.That(File.Exists(file), Is.True, file);
+                foreach (var line in File.ReadAllLines(file))
+                {
+                    var code = line;
+                    var comment = code.IndexOf("//", StringComparison.Ordinal);
+                    if (comment >= 0)
+                    {
+                        code = code.Substring(0, comment);
+                    }
+
+                    if (places.IsMatch(code))
+                    {
+                        offenders.Add(RepoPaths.Relative(file) + ": " + line.Trim());
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, "nombres de lugares reales en el código de los escenarios:\n" + string.Join("\n", offenders));
+        }
+
         // QA-V-02: el control funciona de verdad sobre archivos en disco. Repositorio git temporal (fuera del proyecto, así
         // Unity no importa nada): sin .gitignore, un StravaSecrets.json nuevo sin commit aparece como "se agregaría";
         // forzado con `git add -f`, como versionado; y con el .gitignore del proyecto, queda ignorado.

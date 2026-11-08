@@ -93,4 +93,67 @@ namespace RowMate.Tests.Support
             }
         }
     }
+
+    // It. 8 (AC-SCN-14-05, cambia; AC-SCN-14-09): el escenario del tope con el tope y las densidades como parámetros, para los
+    // topes reales de la costa (60: 18/3 boyas, 3/14 hitos) y de la regata (200: 60/10 boyas, 10/45 hitos). Es el mismo de
+    // tools/oracle/engine/test/environment_vectors_test.dart (ToppedEnvironment): cualquier cambio va en los dos lados.
+    public sealed class ToppedEnvironment : ShoreEnvironment
+    {
+        private static readonly PropKind[] Landmarks =
+        {
+            PropKind.Grandstand, PropKind.FinishTower, PropKind.Flag, PropKind.DistanceMarker, PropKind.Lamp, PropKind.Pine,
+        };
+
+        private readonly int _heavyBuoys;
+        private readonly int _lightBuoys;
+        private readonly int _heavyMarks;
+        private readonly int _lightMarks;
+
+        public ToppedEnvironment(int cap, int heavyBuoys, int lightBuoys, int heavyMarks, int lightMarks)
+        {
+            Cap = cap;
+            _heavyBuoys = heavyBuoys;
+            _lightBuoys = lightBuoys;
+            _heavyMarks = heavyMarks;
+            _lightMarks = lightMarks;
+        }
+
+        public static ToppedEnvironment Coast60 => new ToppedEnvironment(60, 18, 3, 3, 14);
+
+        public static ToppedEnvironment Regatta200 => new ToppedEnvironment(200, 60, 10, 10, 45);
+
+        public int Cap { get; }
+
+        public override EnvironmentId Id => EnvironmentId.Regatta;
+
+        public override int MaxVisibleProps => Cap;
+
+        public override int MaxPropsPerSegment => Math.Max(_heavyBuoys + _heavyMarks, _lightBuoys + _lightMarks);
+
+        public override double WaveAmplitude => 0;
+
+        public override double WaveScale => 1;
+
+        public override void Generate(long k, DartRandom rnd, ShorePropBuffer into)
+        {
+            var z0 = k * SegmentLength;
+            var buoyHeavy = k < 20;
+            var buoys = buoyHeavy ? _heavyBuoys : _lightBuoys;
+            for (var i = 0; i < buoys; i++)
+            {
+                var z = z0 + i * (50.0 / buoys) + 0.25 + rnd.NextDouble() * 1.5;
+                var x = (i % 2 == 0 ? -1 : 1) * (1 + rnd.NextDouble() * 6);
+                into.Add(new ShoreProp(x, z, PropKind.LaneBuoy, 1.0, i));
+            }
+
+            var marks = buoyHeavy ? _heavyMarks : _lightMarks;
+            for (var i = 0; i < marks; i++)
+            {
+                var z = z0 + i * (50.0 / marks) + 2.0 + rnd.NextDouble() * 2.0;
+                var kind = Landmarks[rnd.NextInt(Landmarks.Length)];
+                var x = (i % 2 == 0 ? -1 : 1) * (10 + rnd.NextDouble() * 8);
+                into.Add(new ShoreProp(x, z, kind, 1.0, (int)(k * 100 + i)));
+            }
+        }
+    }
 }

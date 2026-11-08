@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9c04ca21183bfd43a627b7890f9e822, type: 3}
+  m_Name: Coast
+  m_EditorClassIdentifier: RowMate.Scene::RowMate.Scene.Slots.EnvironmentDefinition
+  _environment: 2
+  _slots:
+  - {fileID: 11400000, guid: 4d06d610c5e320149ae279a2e0651c0e, type: 2}
+  - {fileID: 11400000, guid: 1b52e877f1d4f8b4193f8c9dbb4b80ad, type: 2}
+  - {fileID: 11400000, guid: b8104718734eae844a2a814991a25436, type: 2}
+  - {fileID: 11400000, guid: a6ad6d39be9ed454aa9da70ea85e7dc4, type: 2}
+  - {fileID: 11400000, guid: 2da83a6593901924dac22379452514c6, type: 2}
+  - {fileID: 11400000, guid: c554da77199b8504fa7045e6c531efa0, type: 2}
+  - {fileID: 11400000, guid: 034f0a0a1f2503f43a873c29fa39f42e, type: 2}

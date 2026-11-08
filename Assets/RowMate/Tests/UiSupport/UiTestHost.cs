@@ -283,6 +283,7 @@ namespace RowMate.Tests.UiSupport
                 TopLayerFor(options, Backend, App, Scheduler), Clipboard, Keyboard)
             {
                 Pipeline = options.Pipeline, BoatZoneOutline = options.BoatZoneOutline, Scene = options.FakeScene ?? _sceneBridge,
+                Thumbnails = UiAssetsLocator.Thumbnails(),
             });
             Handle.Shell.Ui.TextMenuTouchMode = options.TextMenuTouchMode;
             if (options.StartApp)
@@ -476,6 +477,18 @@ namespace RowMate.Tests.UiSupport
                 var card = list.CardAt(i);
                 if (card != null && card.Routine.Name == routineName)
                 {
+                    // It. 8: el selector de escenario empuja la lista hacia abajo; la tarjeta se trae arriba del visor (como el dedo del
+                    // usuario) antes del toque con hit-test.
+                    var scroll = WorkoutScreen!.Scroll;
+                    var y = card.ChangeCoordinatesTo(scroll.contentContainer, Vector2.zero).y;
+                    var target = Mathf.Max(0, y - 16);
+                    if (Mathf.Abs(scroll.scrollOffset.y - target) > 0.5f)
+                    {
+                        scroll.scrollOffset = new Vector2(scroll.scrollOffset.x, target);
+                        TickAll();
+                        TickAll();
+                    }
+
                     TapElement(card, "la tarjeta de \"" + routineName + "\"");
                     return;
                 }

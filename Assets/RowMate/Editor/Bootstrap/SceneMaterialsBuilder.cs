@@ -44,6 +44,9 @@ namespace RowMate.EditorTools
             ("Spray", SceneShaderIds.Spray, true),
             ("WaterMarks", SceneShaderIds.WaterMarks, true),
             ("Buoy", SceneShaderIds.Buoy, false),
+            // It. 8 (08-entornos-selector/02-tech-design §8.4; WP-D1): los halos y el haz de la noche, y la espuma de la costa.
+            ("Glow", SceneShaderIds.Glow, true),
+            ("Foam", SceneShaderIds.Foam, true),
         };
 
         public static string MaterialPath(string file)
@@ -111,6 +114,8 @@ namespace RowMate.EditorTools
                 Spray = materials["Spray"],
                 WaterMarks = materials["WaterMarks"],
                 Buoy = materials["Buoy"],
+                Glow = materials["Glow"],
+                Foam = materials["Foam"],
             };
 
             var variants = AssetDatabase.LoadAssetAtPath<ShaderVariantCollection>(VariantsPath);
@@ -188,6 +193,7 @@ namespace RowMate.EditorTools
             var added = 0;
             var names = new List<string>(SceneShaderIds.ShaderNames);
             names.AddRange(SceneShaderIds.RowerShaderNames);
+            names.AddRange(SceneShaderIds.EnvironmentShaderNames);
             foreach (var name in names)
             {
                 var shader = Shader.Find(name);

@@ -52,6 +52,22 @@ namespace RowMate.Snapshots
                 return SceneCatalog.All;
             }
 
+            // It. 8: it8 (por defecto desde la 8) = EnvironmentSnapshotCatalog; thumbs = el horneado de las miniaturas.
+            if (string.Equals(set, "it8", StringComparison.OrdinalIgnoreCase))
+            {
+                return EnvironmentSnapshotCatalog.All;
+            }
+
+            if (string.Equals(set, "thumbs", StringComparison.OrdinalIgnoreCase))
+            {
+                return EnvironmentSnapshotCatalog.Thumbnails;
+            }
+
+            if (string.Equals(set, "it7", StringComparison.OrdinalIgnoreCase))
+            {
+                return RowerCatalog.All;
+            }
+
             // It. 7: it7 (por defecto desde la 7) = RowerCatalog.
             return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? SeriesCatalog.All : RowerCatalog.All;
         }
@@ -81,6 +97,16 @@ namespace RowMate.Snapshots
             if (string.Equals(set, "it6a", StringComparison.OrdinalIgnoreCase))
             {
                 return "It. 6a (Escena del lago)";
+            }
+
+            if (string.Equals(set, "it8", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 8 (Río, Costa, Regata y selector)";
+            }
+
+            if (string.Equals(set, "thumbs", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 8 (miniaturas horneadas)";
             }
 
             return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? "It. 5 (Series en vivo)" : "It. 7 (Remero, bote y palada)";

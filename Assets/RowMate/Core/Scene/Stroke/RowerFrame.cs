@@ -7,6 +7,11 @@ namespace RowMate.Core.Scene.Stroke
     {
         public ScullingPose Pose;
         public BoatMotionSample Boat;
+
+        // It. 8 (AC-SCN-06-04): la parte de la ola de la costa que ya está sumada en Boat (filtrada, τ 0,3 s); 0 fuera de la costa.
+        public double SwellHeaveM;
+        public double SwellPitchRad;
+
         public double ContractPhase;
         public double Phase;
         public double Canonical;

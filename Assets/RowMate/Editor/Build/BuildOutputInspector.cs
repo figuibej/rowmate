@@ -51,6 +51,9 @@ namespace RowMate.EditorTools
             "-rowmate-perf-long-series",
             // It. 6a, ronda 2 de la verificación (QA-V6a-R2-01): el Profiler con la pila de las asignaciones en Serie larga.
             "-rowmate-perf-profile",
+            // It. 8 (08-entornos-selector/02-tech-design §5): el escenario y la hora de la medida de la escena.
+            "-rowmate-perf-env",
+            "-rowmate-perf-hour",
         };
 
         // It. 6a (QA-G6aT-19): el aviso de licencias de terceros (BSD-3 del SDK de Dart, por DartRandom) viaja con cada build de Windows,

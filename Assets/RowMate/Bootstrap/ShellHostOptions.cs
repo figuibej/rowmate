@@ -46,5 +46,8 @@ namespace RowMate.Bootstrap
 
         // It. 6a (06a-escena-lago/02-tech-design §3.3): la escena del inmersivo (SceneBridge); null = sin escena (el fondo provisorio).
         public RowMate.Presentation.Workout.IImmersiveScene? Scene { get; set; }
+
+        // It. 8 (§3.4): las miniaturas del selector (UiAssets), en el orden de EnvironmentId; null o una que falta = el degradé.
+        public UnityEngine.Texture2D?[]? Thumbnails { get; set; }
     }
 }

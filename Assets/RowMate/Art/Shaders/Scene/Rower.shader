@@ -123,6 +123,13 @@ Shader "RowMate/Scene/Rower"
                     + _RmPaletteSkyHorizon.rgb * ((0.04 + 0.96 * rim4 * rim) * kRmGlassesReflect * glasses);
                 o.fog = RmVertexFog(positionWS.z, positionWS.y);
                 o.cell = float4(kRmRegionCell[region], RmLuma(key * key) * kRmRowerSpecular * _RmDiskParams.x, 0.0);
+                // It. 8: bajo el puente (DT8-07), por vértice.
+                float underBridge = RmUnderBridgeGamma2(positionWS, normalWS);
+                o.ambientG *= underBridge;
+                o.keyG *= underBridge;
+                o.scatterG *= underBridge;
+                o.extra *= underBridge * underBridge;
+                o.cell.z *= underBridge * underBridge;
                 return o;
             }
 

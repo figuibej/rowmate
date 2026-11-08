@@ -76,6 +76,26 @@ namespace RowMate.Core.Scene
     // AC-SCN-15-05, -07; 04-design-notes §7.2): nada flota y nada atraviesa nada.
     public static class PropPlacement
     {
+        // It. 8 (02-tech-design §2.4): el pie de los objetos de río, costa y regata. Boyas y puente apoyan en el agua (0; el puente
+        // baja a sus pilares); el faro, sobre el promontorio de 2,5 m (DT8-10); el acantilado, sobre las rocas de su pie (el suelo
+        // apenas detrás de la pared); el resto, sobre el terreno en su (x, z): el muro del río (1,20), la arena, el talud o el
+        // césped. Nunca más de 2,5 m sobre el agua (AC-SCN-14-10).
+        public static double FootY(EnvironmentId environment, in ShoreProp prop)
+        {
+            switch (prop.Kind)
+            {
+                case PropKind.LaneBuoy:
+                case PropKind.Bridge:
+                    return 0;
+                case PropKind.Lighthouse:
+                    return CoastArt.Promontory;
+                case PropKind.Cliff:
+                    return TerrainProfile.Height(environment, prop.X - 0.01, prop.Z + 1);
+                default:
+                    return TerrainProfile.Height(environment, prop.X, prop.Z);
+            }
+        }
+
         // El pie de un pino: el mínimo del terreno bajo el tronco (radio 0,15·escala) menos 0,20 m.
         public static double PineFootY(EnvironmentId environment, in ShoreProp pine)
         {

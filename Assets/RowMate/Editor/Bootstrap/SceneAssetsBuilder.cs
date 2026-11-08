@@ -22,6 +22,12 @@ namespace RowMate.EditorTools
         public const string SlotsFolder = "Assets/RowMate/Slots";
         public const string EnvironmentsFolder = "Assets/RowMate/Scenes/Environments";
         public const string LakePath = EnvironmentsFolder + "/Lake.asset";
+
+        // It. 8: Scenes/Environments/{River,Coast,Regatta}.asset.
+        public static string EnvironmentPath(EnvironmentId id)
+        {
+            return EnvironmentsFolder + "/" + id + ".asset";
+        }
         public const string ThirdPartyPack = "Assets/ThirdParty/TerrainSampleAssetPack/";
 
         public static string TierPath(QualityTier tier)
@@ -120,6 +126,24 @@ namespace RowMate.EditorTools
             }
 
             world.SetSlots(lake, worldSlots, tiers[QualityTier.High], tiers[QualityTier.Medium], tiers[QualityTier.Low]);
+
+            // It. 8 (WP-B0, 02-tech-design §3.1): río, costa y regata con sus slots, todos en Procedural (0 avisos).
+            var others = new List<EnvironmentDefinition>();
+            foreach (var environment in new[] { EnvironmentId.River, EnvironmentId.Coast, EnvironmentId.Regatta })
+            {
+                var definition = LoadOrCreate<EnvironmentDefinition>(EnvironmentPath(environment), ref created);
+                var environmentSlots = new List<AssetSlotDefinition>();
+                foreach (var slotId in EnvironmentSlotIds(environment))
+                {
+                    environmentSlots.Add(slots[slotId]);
+                }
+
+                definition.Set(environment, environmentSlots);
+                EditorUtility.SetDirty(definition);
+                others.Add(definition);
+            }
+
+            world.SetEnvironments(others);
             EditorUtility.SetDirty(world);
             AssetDatabase.SaveAssets();
 
@@ -127,7 +151,7 @@ namespace RowMate.EditorTools
             var reimported = MixamoImportPostprocessor.ReimportAll();
             var binding = RowerCharacterBindingBuilder.Refresh();
             return BootstrapState.Step.Ok(id, created + " asset(s) nuevos; " + SlotIds.All.Count + " slots (" + userAssigned
-                + " con un asset del usuario, el resto procedurales); 3 niveles; Lake y SceneWorld; Mixamo: " + reimported + " reimportado(s), " + binding);
+                + " con un asset del usuario, el resto procedurales); 3 niveles; Lake, River, Coast, Regatta y SceneWorld; Mixamo: " + reimported + " reimportado(s), " + binding);
         }
 
         // El tipo de cada slot (ASSET_SLOTS §1; It. 7: el remero, su ropa y los efectos).
@@ -261,6 +285,45 @@ namespace RowMate.EditorTools
             yield return SlotIds.VegetationCanopyFar;
             yield return SlotIds.HorizonLake;
             yield return SlotIds.WaterProfileLake;
+        }
+
+        // It. 8 (ASSET_SLOTS §1.3–§1.4): los slots de río, costa y regata (los objetos del legacy de cada uno, su relleno, la silueta y
+        // el perfil del agua).
+        public static IEnumerable<string> EnvironmentSlotIds(EnvironmentId id)
+        {
+            switch (id)
+            {
+                case EnvironmentId.River:
+                    yield return SlotIds.ForProp(PropKind.Building);
+                    yield return SlotIds.ForProp(PropKind.Boathouse);
+                    yield return SlotIds.ForProp(PropKind.Bridge);
+                    yield return SlotIds.ForProp(PropKind.Lamp);
+                    yield return SlotIds.ForProp(PropKind.LaneBuoy);
+                    yield return SlotIds.PropQuayWall;
+                    yield return SlotIds.HorizonRiver;
+                    yield return SlotIds.WaterProfileRiver;
+                    break;
+                case EnvironmentId.Coast:
+                    yield return SlotIds.ForProp(PropKind.Cliff);
+                    yield return SlotIds.ForProp(PropKind.Lighthouse);
+                    yield return SlotIds.ForProp(PropKind.BeachUmbrella);
+                    yield return SlotIds.PropRock;
+                    yield return SlotIds.PropSeagull;
+                    yield return SlotIds.HorizonCoast;
+                    yield return SlotIds.WaterProfileCoast;
+                    break;
+                case EnvironmentId.Regatta:
+                    yield return SlotIds.ForProp(PropKind.LaneBuoy);
+                    yield return SlotIds.ForProp(PropKind.DistanceMarker);
+                    yield return SlotIds.ForProp(PropKind.Grandstand);
+                    yield return SlotIds.ForProp(PropKind.FinishTower);
+                    yield return SlotIds.ForProp(PropKind.Flag);
+                    yield return SlotIds.PropCrowd;
+                    yield return SlotIds.VegetationPoplar;
+                    yield return SlotIds.HorizonRegatta;
+                    yield return SlotIds.WaterProfileRegatta;
+                    break;
+            }
         }
 
         public static IEnumerable<string> WorldSlotIds()

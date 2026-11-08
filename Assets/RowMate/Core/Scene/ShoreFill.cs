@@ -12,13 +12,27 @@ namespace RowMate.Core.Scene
         MeadowBush,
         Grass,
         Fern,
+
+        // It. 8 (EnvironmentFill): manzanas del río, rocas y matas de la costa, álamos y público de la regata.
+        CityBlock,
+        CoastRock,
+        CoastShrub,
+        Poplar,
+        Spectator,
     }
 
     // Una pieza del relleno (lo agregado al legacy): x y z de mundo, la y del pie, el alto, una variante, un rango ∈ [0; 1)
-    // para el raleo por distancia (pasto y helechos) y un tinte ∈ [−1; 1].
+    // para el raleo por distancia (pasto y helechos) y un tinte ∈ [−1; 1]. Las manzanas del río llevan además su planta
+    // (SizeX de ancho en x, SizeZ de frente en z; 0 en lo demás).
     public readonly struct FillItem
     {
         public FillItem(FillKind kind, double x, double z, double baseY, double height, int variant, double rank, double tint)
+            : this(kind, x, z, baseY, height, variant, rank, tint, 0, 0)
+        {
+        }
+
+        public FillItem(FillKind kind, double x, double z, double baseY, double height, int variant, double rank, double tint, double sizeX,
+                        double sizeZ)
         {
             Kind = kind;
             X = x;
@@ -28,7 +42,12 @@ namespace RowMate.Core.Scene
             Variant = variant;
             Rank = rank;
             Tint = tint;
+            SizeX = sizeX;
+            SizeZ = sizeZ;
         }
+
+        public double SizeX { get; }
+        public double SizeZ { get; }
 
         public FillKind Kind { get; }
         public double X { get; }

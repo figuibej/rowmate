@@ -60,6 +60,13 @@ namespace RowMate.EditorTools
                 AssetDatabase.SaveAssets();
             }
 
+            // It. 8 (§3.4): las miniaturas horneadas del selector (si todavía no se hornearon, el degradé de la tarjeta).
+            if (ThumbnailAssets.Assign(assets))
+            {
+                EditorUtility.SetDirty(assets);
+                AssetDatabase.SaveAssets();
+            }
+
             var repaired = "";
             var root = Find(scene, "AppRoot");
             if (root == null)

@@ -34,12 +34,13 @@ namespace RowMate.App.Composition
                             RoutinesStore routines, WorkoutEngine workout, WorkoutStore workoutRest, LanguageState language,
                             DerivedObservable<AppLanguage, Localizer> texts, IReadOnlyObservable<AccessibilitySnapshot> accessibility,
                             IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, ImmersiveSystemBars systemBars,
-                            IPreferences preferences, SeriesPanelPrefs seriesPanels)
+                            IPreferences preferences, SeriesPanelPrefs seriesPanels, SceneEnvironmentChoice sceneEnvironment)
         {
             _devices = devices;
             SystemBars = systemBars;
             Preferences = preferences;
             SeriesPanels = seriesPanels;
+            SceneEnvironment = sceneEnvironment;
             Device = device;
             HeartRate = heartRate;
             Shell = shell;
@@ -86,6 +87,10 @@ namespace RowMate.App.Composition
         // It. 5 (F-WKT-18; §2.7): los dos paneles de series, abiertos o cerrados, con sus preferencias; uno por app, lo comparten
         // todos los inmersivos. Dispose lo dispone.
         public SeriesPanelPrefs SeriesPanels { get; }
+
+        // It. 8 (F-SCN-21; DT8-14): el escenario elegido (scene.environment), uno por app; lo leen Workout en reposo y cada
+        // inmersivo al entrar (AC-SCN-21-05). Dispose lo dispone.
+        public SceneEnvironmentChoice SceneEnvironment { get; }
 
         public LanguageState Language { get; }
 
@@ -185,6 +190,7 @@ namespace RowMate.App.Composition
             _disposed = true;
             // It. 4b: si quedaron ocultas, las barras del sistema se muestran.
             SystemBars.Dispose();
+            SceneEnvironment.Dispose();
             SeriesPanels.Dispose();
             WorkoutRest.Dispose();
             Workout.Dispose();

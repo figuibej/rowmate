@@ -62,6 +62,17 @@ namespace RowMate.Core.Scene
         public const string FxRipple = "fx.ripple";
         public const string PropMarkerBuoy = "prop.markerBuoy";
 
+        // It. 8 (02-tech-design §1.1, §3.4; DT8-15): las miniaturas del selector (el aviso dice ui.thumbnail.<escenario>) y el atlas
+        // de glifos del cartel. Entran en All cuando WP-B0 crea sus .asset en Slots/ (SceneAssetsTests exige uno por id).
+        public const string UiThumbnail = "ui.thumbnail";
+        public const string PropDistanceMarkerGlyphs = "prop.distanceMarker.glyphs";
+
+        // El id del aviso de una miniatura que falta: ui.thumbnail.lake, .river, .coast o .regatta.
+        public static string ForThumbnail(EnvironmentId id)
+        {
+            return UiThumbnail + "." + EnvironmentKeys.ToKey(id);
+        }
+
         private static readonly string[] Props = BuildProps();
 
         private static readonly string[] Others =

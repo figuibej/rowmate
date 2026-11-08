@@ -75,6 +75,12 @@ namespace RowMate.Bootstrap
         public const string PerfHoursArgument = "-rowmate-perf-hours";
         public const string PerfCompletionArgument = "-rowmate-perf-completion";
 
+        // It. 8 (08-entornos-selector/02-tech-design §5; AC-SCN-01-19, DA8-16): con -rowmate-perf-scene, el escenario (lake, river, coast,
+        // regatta) y la hora forzada (Hora escena). Con un escenario que no es el lago: el lago listo en reposo, se elige el escenario y la
+        // entrada va 1 s después (el cambio de kit en reposo; la escena puede quedar demorada).
+        public const string PerfEnvArgument = "-rowmate-perf-env";
+        public const string PerfHourArgument = "-rowmate-perf-hour";
+
         // It. 6a, ronda 1 de la verificación (QA-V6a-13, QA-V6a-REN-03; AC-WKT-14-19): -rowmate-perf-long-series <s>: "Serie larga" (la
         // siembra SnapshotCli.SeedDatabase -seed F4B) con la escena durante <s> s, con sus cambios de paso cada 30 s; FrameTimeProbe
         // escribe sus ventanas de 10 s (los últimos 5 s de cada paso caen adentro de una).
@@ -249,7 +255,7 @@ namespace RowMate.Bootstrap
 
             // 7. La UI (ShellHost). En un build normal SimulatorLayerFactory devuelve null (sin capa).
             _shell = ShellHost.Build(_app, root, new ShellHostOptions(_scheduler, _platform.IsDesktop, _platform.BackButton, _platform.Display,
-                SimulatorLayerFactory.CreateOrNull(_backend, _app, _scheduler), _platform.Clipboard, _platform.Keyboard) { Pipeline = _surface!.Pipeline, Scene = _sceneBridge });
+                SimulatorLayerFactory.CreateOrNull(_backend, _app, _scheduler), _platform.Clipboard, _platform.Keyboard) { Pipeline = _surface!.Pipeline, Scene = _sceneBridge, Thumbnails = _assets!.Thumbnails });
             _pacer = new FramePacer(_shell.Pacing);
 
             // 8. El remo empieza a escuchar (el simulado se conecta), las rutinas se cargan sin esperar (AC-APP-01-09) y el
@@ -691,6 +697,9 @@ namespace RowMate.Bootstrap
                 return;
             }
 
+            // It. 8 (02-tech-design §5): el [PERF] por escenario dice cuál se midió (el del kit armado y el de la sesión, si hay).
+            logger.Log(LogLevel.Info, "PERF", "escenario (n.º " + entry.ToString(CultureInfo.InvariantCulture) + "): kit " + host.KitEnvironment
+                + ", sesión " + (host.Session != null ? host.Session.Environment.Id.ToString() : "ninguna") + ", cambios de kit " + host.KitSwitches.ToString(CultureInfo.InvariantCulture));
             logger.Log(LogLevel.Info, "PERF", "escena (n.º " + entry.ToString(CultureInfo.InvariantCulture) + "): " + host.Readiness.Value + ", peor cuadro de la preparación "
                 + host.WorstWarmupMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms, dibujos " + host.Draws.ToString(CultureInfo.InvariantCulture)
                 + ", nivel " + host.Tier + ", resolución " + host.Resolution.ToString("0.00", CultureInfo.InvariantCulture)
@@ -768,7 +777,30 @@ namespace RowMate.Bootstrap
                 }
 
                 DeviceBackendFactory.SetPerfPreset(_backend!, 280, 30);
-                logger.Log(LogLevel.Info, "PERF", "medición de la escena: libre con Fuerte, " + seconds.ToString(CultureInfo.InvariantCulture) + " s");
+                var envText = ArgumentValue(PerfEnvArgument);
+                var environment = RowMate.Core.Scene.EnvironmentId.Lake;
+                if (envText != null && !RowMate.Core.Scene.EnvironmentKeys.TryParse(envText, out environment))
+                {
+                    logger.Log(LogLevel.Error, "PERF", "medición de la escena: escenario desconocido " + envText);
+                    Application.Quit(1);
+                    return;
+                }
+
+                var hourText = ArgumentValue(PerfHourArgument);
+                if (hourText != null && int.TryParse(hourText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour) && hour >= 0 && hour < 24)
+                {
+                    app.Scene.HourOverride.Value = hour;
+                }
+
+                if (envText != null)
+                {
+                    // DA8-16: el escenario se elige en reposo con el lago listo y la entrada va 1 s después.
+                    app.SceneEnvironment.Select(environment);
+                    await scheduler.Delay(TimeSpan.FromSeconds(1));
+                }
+
+                logger.Log(LogLevel.Info, "PERF", "medición de la escena: libre con Fuerte, " + seconds.ToString(CultureInfo.InvariantCulture) + " s; escenario "
+                    + RowMate.Core.Scene.EnvironmentKeys.ToKey(app.SceneEnvironment.Selected.Value) + "; hora " + (app.Scene.HourOverride.Value?.ToString(CultureInfo.InvariantCulture) ?? "real"));
                 app.WorkoutRest.StartFree();
                 await scheduler.Delay(TimeSpan.FromSeconds(seconds));
                 LogSceneWarmup(logger, 1);

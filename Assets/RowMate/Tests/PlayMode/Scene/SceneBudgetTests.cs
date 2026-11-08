@@ -20,6 +20,8 @@ namespace RowMate.Tests.PlayMode.Scene
     public sealed class SceneBudgetTests : SceneTestBase
     {
         // §4.1 (ARCHITECTURE §20.2): la CPU de la escena por cuadro, sin el dibujo de URP.
+        // It. 8 (08-entornos-selector/02-tech-design §13, B8-11): es reloj de pared; con otras instancias de Unity corriendo en la misma PC
+        // la medida sube 1,2-1,6 veces en los tres niveles (Alto 1,50-2,03 ms contra 1,24-1,30 aislado). Correr la suite sola.
         private const double SceneCpuBudgetMs = 1.5;
 
         private int _levelAtStart;
@@ -290,6 +292,10 @@ namespace RowMate.Tests.PlayMode.Scene
                     var cpu = new List<double>();
                     var tramos = new List<double>();
                     var all = new List<double>();
+                    // It. 8: el desglose (la orilla, la sesión y el resto) de los mismos cuadros, para el registro.
+                    var stream = new List<double>();
+                    var tick = new List<double>();
+                    var rest = new List<double>();
                     for (var tramo = 0; tramo < 3; tramo++)
                     {
                         cpu.Clear();
@@ -298,6 +304,9 @@ namespace RowMate.Tests.PlayMode.Scene
                             H.Step();
                             yield return null;
                             cpu.Add(SceneHost.LastCpuMs);
+                            stream.Add(SceneHost.LastStreamMs);
+                            tick.Add(SceneHost.LastTickMs);
+                            rest.Add(SceneHost.LastCpuMs - SceneHost.LastStreamMs - SceneHost.LastTickMs);
                         }
 
                         all.AddRange(cpu);
@@ -328,7 +337,9 @@ namespace RowMate.Tests.PlayMode.Scene
                     var output = SceneHost.Output!;
                     Debug.Log("[SBT] memoria y CPU " + tier + " (" + profile.Code + "): contenido " + (content / (1024.0 * 1024.0)).ToString("0.00") + " MB (" + (reported / (1024.0 * 1024.0)).ToString("0.00") + " MB según el Editor); RT de la escena "
                               + rtMb.ToString("0.0") + " MB (la de la sesión " + output.width + " × " + output.height + " " + output.graphicsFormat + "); CPU de la escena p95 "
-                              + p95.ToString("0.00") + " ms (la mediana de los p95 de tres tramos: " + tramos[0].ToString("0.00") + " / " + tramos[1].ToString("0.00") + " / " + tramos[2].ToString("0.00") + "), máx " + max.ToString("0.00") + " ms");
+                              + p95.ToString("0.00") + " ms (la mediana de los p95 de tres tramos: " + tramos[0].ToString("0.00") + " / " + tramos[1].ToString("0.00") + " / " + tramos[2].ToString("0.00") + "), máx " + max.ToString("0.00") + " ms"
+                              + "; p95 de la orilla " + P95(stream).ToString("0.00") + " ms (cuadros con orilla > 0,05 ms: " + Count(stream, 0.05) + " de " + stream.Count
+                              + "), de la sesión " + P95(tick).ToString("0.00") + " ms, del resto " + P95(rest).ToString("0.00") + " ms; mediana " + Median(cpu).ToString("0.00") + " ms");
                     Assert.That(rtBytes.Valid, Is.True, "el contador de las RT");
                     // §4.1: ≈ 0,6 MB (+ 0,5 MB de la capa lejana de nubes en Alto), sin la copia de la CPU (las texturas dejan de ser legibles).
                     Assert.That(content, Is.LessThanOrEqualTo(tier == QualityTier.High ? 1600L * 1024 : 1024L * 1024), tier + ": el contenido de la escena sin el pack");
@@ -341,6 +352,34 @@ namespace RowMate.Tests.PlayMode.Scene
                     Assert.That(p95, Is.LessThanOrEqualTo(SceneCpuBudgetMs), tier + ": la CPU de la escena (p95)");
                 }
             }
+        }
+
+        private static double P95(List<double> values)
+        {
+            var sorted = new List<double>(values);
+            sorted.Sort();
+            return sorted.Count == 0 ? 0 : sorted[(int)Math.Ceiling(0.95 * sorted.Count) - 1];
+        }
+
+        private static double Median(List<double> values)
+        {
+            var sorted = new List<double>(values);
+            sorted.Sort();
+            return sorted.Count == 0 ? 0 : sorted[sorted.Count / 2];
+        }
+
+        private static int Count(List<double> values, double above)
+        {
+            var n = 0;
+            foreach (var v in values)
+            {
+                if (v > above)
+                {
+                    n++;
+                }
+            }
+
+            return n;
         }
 
         // Los bytes de una textura en la GPU: Σ mips del tamaño de cada nivel con su formato, por las capas de un arreglo.

@@ -11,7 +11,10 @@ namespace RowMate.Core.Scene.Art
         public const double LineThicknessDp = 1.5, LineSoftDp = 0.5;
         public const int Lines = 10;
         public const double PlaneWidth = 1600, PlaneLength = 1500;
-        public const int MaxAlu = 24;
+        // It. 8: 24 de la 6a + las dos comparaciones de los saltos de la ola y del puente y su producto (27; 08-entornos-selector/04-design-notes §6).
+        public const int MaxAlu = 27;
+        // It. 8: la ola de la costa y la luz bajo el puente, en saltos por uniformes (el lago no los paga; 08-entornos-selector/04-design-notes §6).
+        public const int MaxBranchAlu = 40;
 
         // Las líneas del legacy (water_painter.dart:92-103; contrato, DegradedWater las calcula igual): t = Mod(i·0,1 + fase; 1),
         // medio ancho ancho·(0,15 + 0,35·t), alfa 0,05 + 0,1·(1 − t)·fuerza.

@@ -6,6 +6,7 @@
 #   tools/oracle/run-oracle.ps1 -Engine [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 #   tools/oracle/run-oracle.ps1 -Scene [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 #   tools/oracle/run-oracle.ps1 -Stroke [-LegacyPath <ruta>] [-FlutterExe <ruta>]
+#   tools/oracle/run-oracle.ps1 -Environments [-LegacyPath <ruta>] [-FlutterExe <ruta>]
 #
 # Pasos: guardia R-02 (ningun script menciona el modulo de credenciales del legacy), guardia del legacy ANTES
 # (status --porcelain vacio, listado --ignored archivo por archivo e instantanea de metadatos sin abrir archivos),
@@ -29,6 +30,11 @@
 # -Stroke (It. 7, 07-remero-palada/02-tech-design Sec. 6.2): el oraculo de la palada, en el mismo proyecto engine/ y con los mismos
 # controles. Corre test/stroke_vectors_test.dart (Assets/RowMate/Tests/Golden/oracle/scene_stroke.json) y
 # test/boat_legacy_images_test.dart (LEG-01 y LEG-02 en docs/migration/iterations/07-remero-palada/snapshots/legacy).
+#
+# -Environments (It. 8, 08-entornos-selector/02-tech-design Sec. 7.2): rio, costa y regata del legacy, en el mismo proyecto
+# engine/ y con los mismos controles. Corre test/environment_vectors_test.dart
+# (Assets/RowMate/Tests/Golden/oracle/scene_{river,coast,regatta,horizons}.json) y test/environment_legacy_images_test.dart
+# (LEG-01 a LEG-03 en docs/migration/iterations/08-entornos-selector/snapshots/legacy).
 param(
     [string]$LegacyPath = "",
     [string]$DartExe = "",
@@ -37,6 +43,7 @@ param(
     [switch]$Engine,
     [switch]$Scene,
     [switch]$Stroke,
+    [switch]$Environments,
     [string]$FlutterExe = ""
 )
 
@@ -45,7 +52,7 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $legacyGiven = $LegacyPath -ne ''
 if ($LegacyPath -eq '') { $LegacyPath = Join-Path $repo '..\rowmate-legacy' }
 $legacy = (Resolve-Path $LegacyPath).Path
-$flutterProject = $Engine -or $Scene -or $Stroke
+$flutterProject = $Engine -or $Scene -or $Stroke -or $Environments
 $runBin = (-not $flutterProject) -or ($Only.Count -gt 0)
 $engineDir = Join-Path $PSScriptRoot 'engine'
 $engineIgnores = @(
@@ -249,6 +256,14 @@ try {
                     Write-Host '[oracle] flutter test test/stroke_vectors_test.dart test/boat_legacy_images_test.dart'
                     & $FlutterExe test test/stroke_vectors_test.dart test/boat_legacy_images_test.dart
                     if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO flutter test de la palada (' + $LASTEXITCODE + ')'); $failed++ }
+                }
+                if ($Environments) {
+                    $legOut = Join-Path $repo 'docs\migration\iterations\08-entornos-selector\snapshots\legacy'
+                    New-Item -ItemType Directory -Force -Path $legOut | Out-Null
+                    $env:ROWMATE_LEG_OUT = $legOut
+                    Write-Host '[oracle] flutter test test/environment_vectors_test.dart test/environment_legacy_images_test.dart'
+                    & $FlutterExe test test/environment_vectors_test.dart test/environment_legacy_images_test.dart
+                    if ($LASTEXITCODE -ne 0) { Write-Host ('[oracle] FALLO flutter test de los escenarios (' + $LASTEXITCODE + ')'); $failed++ }
                 }
             }
         }

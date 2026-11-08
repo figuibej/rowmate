@@ -66,7 +66,9 @@ namespace RowMate.Core.Scene
     // escena no sale de acá (AC-SCN-03-05, AC-WKT-13-14). La geometría y los materiales del mundo NO son de la sesión.
     public sealed class SceneSession
     {
-        private const int CabinSlots = 8;
+        // It. 8: una luz por objeto que se enciende (cabañas, ventanas, faroles, faro, torre, portón): 128 alcanzan para lo visible
+        // del río (≈ 90) con margen; la más vieja se recicla.
+        private const int LightSlots = 128;
         private const double FrameStep = 1.0 / 60;
 
         private readonly ShoreEnvironment _environment;
@@ -75,10 +77,16 @@ namespace RowMate.Core.Scene
         private readonly SceneHourTransition _hour = new SceneHourTransition();
         private readonly StarPoint[] _starPoints = new StarPoint[StarField.Count];
         private readonly DartRandom _scratch = new DartRandom(0);
-        private readonly int[] _cabinSeeds = new int[CabinSlots];
-        private readonly NightLightFader[] _cabinFaders = new NightLightFader[CabinSlots];
-        private readonly long[] _cabinSeen = new long[CabinSlots];
+        private readonly long[] _lightKeys = new long[LightSlots];
+        private readonly NightLightFader[] _lightFaders = new NightLightFader[LightSlots];
+        private readonly long[] _lightSeen = new long[LightSlots];
         private readonly bool _southern;
+
+        // It. 8 (02-tech-design §2.3): el perfil del escenario, su silueta y la ola de la costa sobre el casco (τ 0,3 s).
+        private readonly EnvironmentProfile _profile;
+        private readonly HorizonSpec _horizon;
+        private readonly bool _swell;
+        private SwellFilter _swellFilter;
 
         private StarFader _stars;
         private double _lastNow;
@@ -117,12 +125,19 @@ namespace RowMate.Core.Scene
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _segments = new ShoreSegments(environment);
             _southern = MoonPhase.IsSouthernRegion(options.RegionCode);
-            Camera = new ChaseCameraDirector(options.Breathing, options.Flight, options.Aerial);
-            for (var i = 0; i < CabinSlots; i++)
+            _profile = EnvironmentCatalog.Profile(environment.Id);
+            // El lago usa la silueta de las opciones (las pruebas de la 6a la cambian); los otros, la de su perfil.
+            _horizon = environment.Id == EnvironmentId.Lake ? options.Horizon : _profile.Horizon;
+            _swell = EnvironmentCatalog.HasSwell(environment);
+            Camera = new ChaseCameraDirector(options.Breathing.Scaled(_profile.BreathingGain), options.Flight, options.Aerial);
+            for (var i = 0; i < LightSlots; i++)
             {
-                _cabinSeeds[i] = int.MinValue;
+                _lightKeys[i] = long.MinValue;
             }
         }
+
+        // It. 8: el rolido, la respiración, la ola y la silueta del escenario.
+        public EnvironmentProfile Profile => _profile;
 
         public SceneState State { get; } = new SceneState();
 
@@ -181,11 +196,12 @@ namespace RowMate.Core.Scene
             _effort = default;
             _shadowSide = default;
             _boatCamera = default;
-            for (var i = 0; i < CabinSlots; i++)
+            _swellFilter = default;
+            for (var i = 0; i < LightSlots; i++)
             {
-                _cabinSeeds[i] = int.MinValue;
-                _cabinFaders[i] = default;
-                _cabinSeen[i] = 0;
+                _lightKeys[i] = long.MinValue;
+                _lightFaders[i] = default;
+                _lightSeen[i] = 0;
             }
         }
 
@@ -250,7 +266,7 @@ namespace RowMate.Core.Scene
                 _boatCamera.Step(step, frame.Rower.Boat);
             }
 
-            pose = ChaseCameraMotion.AddBoatTerms(pose, cam, _boatCamera.Value, Camera.LastBreathingMultiplier);
+            pose = ChaseCameraMotion.AddBoatTerms(pose, cam, _boatCamera.Value, Camera.LastBreathingMultiplier, _profile.SoftPitchCapDp);
             frame.Window = cam;
             frame.Pose = pose;
             frame.Projection = ChaseCameraProjection.Blend(cam, pose.FocalDp, pose.HorizonDp);
@@ -315,18 +331,19 @@ namespace RowMate.Core.Scene
 
             // Las cordilleras: el alto por ventana y el acercamiento por distancia (en double).
             var distance = State.Distance;
-            frame.HorizonPeakTan = HorizonModel.PeakTan(cam, _options.Horizon);
-            frame.HorizonFarScale = HorizonModel.ApproachScale(distance, true, _options.Horizon);
-            frame.HorizonNearScale = HorizonModel.ApproachScale(distance, false, _options.Horizon);
+            frame.HorizonPeakTan = HorizonModel.PeakTan(cam, _horizon);
+            frame.HorizonFarScale = HorizonModel.ApproachScale(distance, true, _horizon);
+            frame.HorizonNearScale = HorizonModel.ApproachScale(distance, false, _horizon);
             frame.HorizonFar = HorizonModel.FarColor(palette);
             frame.HorizonNear = HorizonModel.NearColor(palette);
             frame.Snow = HorizonModel.SnowColor(palette);
 
             // El agua degradada: los tres tramos y las 10 líneas del legacy, centradas bajo el astro que se ve (DV-59).
-            DegradedWater.Bands(palette, out var top, out var mid, out var bottom);
-            frame.WaterTop = _environment.TintWater(top);
-            frame.WaterMid = _environment.TintWater(mid);
-            frame.WaterBottom = _environment.TintWater(bottom);
+            // El tinte del escenario en el orden del legacy (AC-SCN-17-01): la franja de arriba es lerp(far teñido; fog; 0,5).
+            DegradedWater.Bands(palette, _environment, out var top, out var mid, out var bottom);
+            frame.WaterTop = top;
+            frame.WaterMid = mid;
+            frame.WaterBottom = bottom;
             var centerX = DegradedWater.DiskScreenX(cam, celestial.DiskAzimuthDeg);
             var waterHeight = DegradedWater.WaterHeight(cam);
             for (var i = 0; i < DegradedWater.LineCount; i++)
@@ -338,12 +355,55 @@ namespace RowMate.Core.Scene
             frame.ShimmerVisibility = frame.WarmUpAll ? 1 : celestial.DiskVisibility;
             frame.ShimmerCenterX = centerX;
 
-            // La orilla: la lista del legacy y la luz de cada cabaña.
+            // La orilla: la lista del legacy y la luz de cada objeto que se enciende (DV-60, por tipo).
             _segments.VisibleProps(distance, frame.VisibleProps);
             var props = frame.VisibleProps.Items;
             for (var i = 0; i < props.Length; i++)
             {
-                frame.PropLight[i] = props[i].Kind == PropKind.Cabin ? CabinLight(props[i].Seed, visible, ambient, realDt, snap, frame.WarmUpAll) : 0;
+                frame.PropLight[i] = PropLight(props[i], visible, ambient, realDt, snap, frame.WarmUpAll);
+            }
+
+            // It. 8: el puente que sigue detrás de la cámara (DT8-08), el más cercano en cinta y su sombra sobre el bote (DT8-07).
+            frame.Environment = _environment.Id;
+            _segments.TrailingLandmarks(distance, Art.RiverArt.TrailingBehind, frame.TrailingProps);
+            var trailing = frame.TrailingProps.Items;
+            for (var i = 0; i < trailing.Length; i++)
+            {
+                frame.TrailingLight[i] = 0;
+            }
+
+            NearestBridge(distance, props, trailing, out frame.BridgeStartRelZ, out frame.BridgeEndRelZ);
+            frame.UnderBridgeAtBoat = double.IsNaN(frame.BridgeStartRelZ)
+                ? 0
+                : BridgeShade.Occlusion(SceneCamera.BoatZ, frame.BridgeStartRelZ, frame.BridgeEndRelZ);
+
+            // La ola de la costa (AC-SCN-12-01; DT8-06): las fases en double con el tiempo de escena (sigue en pausa).
+            frame.Swell = _swell;
+            frame.SwellAmplitude = _swell ? _environment.WaveAmplitude : 0;
+            frame.SwellScale = _environment.WaveScale;
+            if (_swell)
+            {
+                CoastSwell.Phases(distance, sceneTime, _environment.WaveScale, out frame.SwellPhase1, out frame.SwellPhase2);
+            }
+            else
+            {
+                frame.SwellPhase1 = 0;
+                frame.SwellPhase2 = 0;
+            }
+
+            // Las gaviotas (AC-SCN-19-04): solo en la costa.
+            frame.SeagullOpacity = _environment.Id == EnvironmentId.Coast ? SeagullFlight.Opacity(ambient) : 0;
+            for (var i = 0; i < SeagullFlight.Count; i++)
+            {
+                if (_environment.Id == EnvironmentId.Coast)
+                {
+                    SeagullFlight.Sample(i, sceneTime, out var az, out var el, out var flap, out var gullAlpha);
+                    frame.Seagulls[i] = new SeagullInstance(az, el, flap, SeagullFlight.SizeScale(i), gullAlpha);
+                }
+                else
+                {
+                    frame.Seagulls[i] = default;
+                }
             }
 
             frame.Distance = distance;
@@ -377,6 +437,12 @@ namespace RowMate.Core.Scene
         internal void ForceDistanceForTest(double distance)
         {
             State.ForceForTest(distance, State.Speed, State.Time);
+        }
+
+        // QA-V8-10 (VID-05): el bote quieto en el acto (la velocidad de escena en 0; la distancia y el tiempo siguen).
+        internal void StopBoatForTest()
+        {
+            State.ForceForTest(State.Distance, 0, State.Time);
         }
 
         // El tiempo de escena fijo de las tomas (3,2 s): las nubes y el titileo quedan en ese instante. null = el de la sesión.
@@ -435,8 +501,30 @@ namespace RowMate.Core.Scene
             var spm = _clock.SmoothedSpm;
             var amplitude = Stroke.BoatSurge.Amplitude(spm, effort);
             var surge = Stroke.BoatSurge.OffsetMeters(phi, _clock.LatchedRatio, amplitude, State.Speed, spm);
-            rower.Boat = new Stroke.BoatMotionSample(Stroke.BoatMotion.Pitch(phi, sceneTime), Stroke.BoatMotion.Heave(phi),
-                Stroke.BoatMotion.Roll(sceneTime, Stroke.BoatMotion.LakeRollK), surge);
+            // It. 8 (AC-SCN-06-04): el rolido con el k del escenario y, en la costa, la ola sobre el casco (τ 0,3 s; también en
+            // pausa: el tiempo de escena corre). La distancia no cambia (AC-SCN-08-11).
+            var swellHeave = 0.0;
+            var swellPitch = 0.0;
+            if (_swell)
+            {
+                CoastSwell.SampleHull(State.Distance, sceneTime, _environment.WaveScale, out var heaveTarget, out var pitchTarget);
+                if (snap)
+                {
+                    _swellFilter.Snap(heaveTarget, pitchTarget);
+                }
+                else
+                {
+                    _swellFilter.Step(step, heaveTarget, pitchTarget);
+                }
+
+                swellHeave = _swellFilter.HeaveM;
+                swellPitch = _swellFilter.PitchRad;
+            }
+
+            rower.Boat = new Stroke.BoatMotionSample(Stroke.BoatMotion.Pitch(phi, sceneTime) + swellPitch, Stroke.BoatMotion.Heave(phi) + swellHeave,
+                Stroke.BoatMotion.Roll(sceneTime, _profile.RollK), surge);
+            rower.SwellHeaveM = swellHeave;
+            rower.SwellPitchRad = swellPitch;
             var boatWorldZ = State.Distance + SceneCamera.BoatZ + surge;
 
             if (!_strokeFrozenForTest)
@@ -530,25 +618,31 @@ namespace RowMate.Core.Scene
             return _hour.Evaluate(inputs.Now);
         }
 
-        private double CabinLight(int seed, double hour, double ambient, double dt, bool snap, bool warmUpAll)
+        private double PropLight(in ShoreProp prop, double hour, double ambient, double dt, bool snap, bool warmUpAll)
         {
+            if (!NightLights.TryKindOf(prop, out var kind, out var seed))
+            {
+                return 0;
+            }
+
             if (warmUpAll)
             {
                 return 1;
             }
 
-            var lit = NightLights.IsLit(seed, hour, ambient);
+            var lit = NightLights.IsLit(kind, seed, hour, ambient);
+            var key = ((long)kind << 32) | (uint)seed;
             var slot = -1;
             var oldest = 0;
-            for (var i = 0; i < CabinSlots; i++)
+            for (var i = 0; i < LightSlots; i++)
             {
-                if (_cabinSeeds[i] == seed)
+                if (_lightKeys[i] == key)
                 {
                     slot = i;
                     break;
                 }
 
-                if (_cabinSeen[i] < _cabinSeen[oldest])
+                if (_lightSeen[i] < _lightSeen[oldest])
                 {
                     oldest = i;
                 }
@@ -556,22 +650,51 @@ namespace RowMate.Core.Scene
 
             if (slot < 0)
             {
-                // Una cabaña que entra en el rango ya tiene la luz de su estado (aparece a 400 m, en la niebla).
+                // Una luz que entra en el rango ya tiene su estado (aparece a 400 m, en la niebla).
                 slot = oldest;
-                _cabinSeeds[slot] = seed;
-                _cabinFaders[slot].Snap(lit);
+                _lightKeys[slot] = key;
+                _lightFaders[slot].Snap(lit);
             }
             else if (snap)
             {
-                _cabinFaders[slot].Snap(lit);
+                _lightFaders[slot].Snap(lit);
             }
             else
             {
-                _cabinFaders[slot].Step(lit, dt);
+                _lightFaders[slot].Step(lit, dt);
             }
 
-            _cabinSeen[slot] = _tickCount;
-            return _cabinFaders[slot].Level;
+            _lightSeen[slot] = _tickCount;
+            return _lightFaders[slot].Level;
+        }
+
+        // El tablero del puente más cercano a la cámara (en la lista o detrás), en cinta; NaN sin puente a la vista.
+        private static void NearestBridge(double distance, ReadOnlySpan<ShoreProp> visible, ReadOnlySpan<ShoreProp> trailing, out double startRelZ,
+                                          out double endRelZ)
+        {
+            startRelZ = double.NaN;
+            endRelZ = double.NaN;
+            var best = double.PositiveInfinity;
+            for (var pass = 0; pass < 2; pass++)
+            {
+                var list = pass == 0 ? trailing : visible;
+                for (var i = 0; i < list.Length; i++)
+                {
+                    if (list[i].Kind != PropKind.Bridge)
+                    {
+                        continue;
+                    }
+
+                    BridgeShade.DeckSpan(list[i].Z - distance, out var s, out var e);
+                    var gap = s > 0 ? s : (e < 0 ? -e : 0);
+                    if (gap < best)
+                    {
+                        best = gap;
+                        startRelZ = s;
+                        endRelZ = e;
+                    }
+                }
+            }
         }
 
         // La dirección del mundo de un punto de la pantalla del legacy con la cámara del contrato (unitaria).
@@ -588,9 +711,15 @@ namespace RowMate.Core.Scene
         private void EnsureFrame(ref SceneFrame frame)
         {
             if (frame.Stars == null || frame.Clouds == null || frame.Lines == null || frame.VisibleProps == null || frame.PropLight == null
-                || frame.Rower.Pose.Joints == null)
+                || frame.Rower.Pose.Joints == null || frame.TrailingProps == null || frame.TrailingLight == null || frame.Seagulls == null)
             {
                 throw new ArgumentException("SceneSession: el cuadro se arma con SceneFrame.Create (los arreglos se reservan una vez).", nameof(frame));
+            }
+
+            if (frame.VisibleProps.Capacity < _environment.MaxVisibleProps || frame.PropLight.Length < _environment.MaxVisibleProps)
+            {
+                throw new ArgumentException("SceneSession: el cuadro tiene lugar para " + frame.VisibleProps.Capacity + " objetos y el escenario "
+                    + _environment.Id + " necesita " + _environment.MaxVisibleProps + ".", nameof(frame));
             }
         }
     }

@@ -26,6 +26,19 @@ namespace RowMate.Core.Scene
             LakeArt.NearD0, LakeArt.NearDMin, LakeArt.ApproachRate, LakeArt.SnowThreshold, LakeArt.SnowEdge, LakeArt.SnowNoise,
             LakeArt.SnowNoisePeriodDeg);
 
+        // It. 8 (02-tech-design §2.5): el hMax del legacy (0,12 / 0,08 / 0,06 del alto), el tope de 9° (DV-87) y el acercamiento
+        // al 4 % (Q-65) de una sola capa (lejana = cercana); sin nieve.
+        public static HorizonSpec River => Single(RiverArt.HorizonFraction, RiverArt.HorizonD0, RiverArt.HorizonDMin);
+
+        public static HorizonSpec Coast => Single(CoastArt.HorizonFraction, CoastArt.HorizonD0, CoastArt.HorizonDMin);
+
+        public static HorizonSpec Regatta => Single(RegattaArt.HorizonFraction, RegattaArt.HorizonD0, RegattaArt.HorizonDMin);
+
+        private static HorizonSpec Single(double fraction, double d0, double dMin)
+        {
+            return new HorizonSpec(fraction, LakeArt.MaxPeakDeg, d0, dMin, d0, dMin, LakeArt.ApproachRate, 2, 0, 0, 1);
+        }
+
         public double PeakScreenFraction { get; }
         public double MaxPeakDeg { get; }
         public double FarD0 { get; }

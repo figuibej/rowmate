@@ -105,6 +105,11 @@ Shader "RowMate/Scene/Oar"
                 float3 key = RmKeyLegacy();
                 o.specular = float4(key * key * (0.5 * tone.a * _RmDiskParams.x), exp2(1.0 + 7.0 * tone.a));
                 o.halfWS = _RmLightDir.xyz + normalize(_WorldSpaceCameraPos - positionWS);
+                // It. 8: bajo el puente (DT8-07), por vértice.
+                float underBridge = RmUnderBridgeGamma2(positionWS, normalWS);
+                o.ambientG *= underBridge;
+                o.keyG *= underBridge;
+                o.specular.rgb *= underBridge * underBridge;
                 return o;
             }
 

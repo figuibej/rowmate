@@ -35,12 +35,17 @@ namespace RowMate.Scene.Slots
         public Material? WaterMarks;
         public Material? Buoy;
 
+        // It. 8 (08-entornos-selector/02-tech-design §8.4; WP-D1): los halos y el haz de la noche, y la espuma de la costa. Sin ellos (un
+        // SceneWorld.asset de antes de la 8) el mundo copia el shader por nombre.
+        public Material? Glow;
+        public Material? Foam;
+
         public Material?[] All()
         {
             return new[]
             {
                 Sky, Stars, Clouds, HorizonFar, HorizonNear, Water, Terrain, Prop, PropWindow, Foliage, Grass, Reeds, Hull, BoatShadow, ScreenOverlay, Rower, Oar,
-                Spray, WaterMarks, Buoy,
+                Spray, WaterMarks, Buoy, Glow, Foam,
             };
         }
 
@@ -71,6 +76,8 @@ namespace RowMate.Scene.Slots
         public const string AssetPath = "Assets/RowMate/Scenes/SceneWorld.asset";
 
         [SerializeField] private EnvironmentDefinition? _lake;
+        // It. 8 (02-tech-design §3.1; WP-B0): río, costa y regata (Scenes/Environments/{River,Coast,Regatta}.asset).
+        [SerializeField] private List<EnvironmentDefinition> _environments = new List<EnvironmentDefinition>();
         [SerializeField] private List<AssetSlotDefinition> _slots = new List<AssetSlotDefinition>();
         [SerializeField] private QualityTierProfile? _high;
         [SerializeField] private QualityTierProfile? _medium;
@@ -103,7 +110,40 @@ namespace RowMate.Scene.Slots
                 }
             }
 
-            return _lake != null ? _lake.Find(slotId) : null;
+            var found = _lake != null ? _lake.Find(slotId) : null;
+            for (var i = 0; found == null && i < _environments.Count; i++)
+            {
+                found = _environments[i] != null ? _environments[i].Find(slotId) : null;
+            }
+
+            return found;
+        }
+
+        // It. 8: los slots de un escenario (el lago o uno de los otros tres; null si falta su asset: el procedural sin aviso por slot).
+        public EnvironmentDefinition? Environment(EnvironmentId id)
+        {
+            if (id == EnvironmentId.Lake)
+            {
+                return _lake;
+            }
+
+            for (var i = 0; i < _environments.Count; i++)
+            {
+                if (_environments[i] != null && _environments[i].Environment == id)
+                {
+                    return _environments[i];
+                }
+            }
+
+            return null;
+        }
+
+        public IReadOnlyList<EnvironmentDefinition> OtherEnvironments => _environments;
+
+        // Para SceneAssetsBuilder (B0 de la It. 8).
+        public void SetEnvironments(IEnumerable<EnvironmentDefinition> environments)
+        {
+            _environments = new List<EnvironmentDefinition>(environments);
         }
 
         public bool HasSlotsAndTiers => _lake != null && _high != null && _medium != null && _low != null;
@@ -133,6 +173,29 @@ namespace RowMate.Scene.Slots
         {
             var copy = Instantiate(this);
             copy._lake = lake;
+            copy.hideFlags = HideFlags.HideAndDontSave;
+            return copy;
+        }
+
+        // Para las pruebas (It. 8, EnvironmentSlotTests): una copia en memoria con otro asset para un escenario que no es el lago.
+        public SceneWorldDefinition WithEnvironment(EnvironmentDefinition environment)
+        {
+            if (environment.Environment == EnvironmentId.Lake)
+            {
+                return WithLake(environment);
+            }
+
+            var copy = Instantiate(this);
+            copy._environments = new List<EnvironmentDefinition>();
+            foreach (var e in _environments)
+            {
+                if (e != null && e.Environment != environment.Environment)
+                {
+                    copy._environments.Add(e);
+                }
+            }
+
+            copy._environments.Add(environment);
             copy.hideFlags = HideFlags.HideAndDontSave;
             return copy;
         }

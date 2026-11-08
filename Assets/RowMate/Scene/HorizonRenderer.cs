@@ -10,14 +10,33 @@ namespace RowMate.Scene
     {
         private readonly Material _far;
         private readonly Material _near;
+        private readonly Mesh _lakeFar;
+        private readonly MeshFilter _farFilter;
+        private RowMate.Core.Scene.EnvironmentId _environment = RowMate.Core.Scene.EnvironmentId.Lake;
 
         public HorizonRenderer(Transform parent, int layer, Mesh farMesh, Mesh nearMesh, Material far, Material near)
         {
             _far = far;
             _near = near;
+            _lakeFar = farMesh;
             Far = SceneObjects.Create("scene-horizon-far", parent, layer, farMesh, far, false, false);
             Near = SceneObjects.Create("scene-horizon-near", parent, layer, nearMesh, near, false, false);
+            _farFilter = Far.GetComponent<MeshFilter>();
         }
+
+        // It. 8 (AC-SCN-19-03 a -05): la silueta del escenario (EnvironmentHorizonStrip en la tira lejana; la cercana es solo del lago).
+        public void SetEnvironment(RowMate.Core.Scene.EnvironmentId environment, Mesh? strip)
+        {
+            _environment = environment;
+            var lake = environment == RowMate.Core.Scene.EnvironmentId.Lake || strip == null;
+            _farFilter.sharedMesh = lake ? _lakeFar : strip;
+            Near.enabled = lake;
+            // WP-D1: las ventanas del skyline de noche solo en el río; la nieve solo en las cordilleras del lago.
+            _far.SetFloat(SceneShaderIds.SkylineWindows, environment == RowMate.Core.Scene.EnvironmentId.River && !lake ? 1f : 0f);
+            _far.SetFloat(SceneShaderIds.SnowEnabled, lake ? 1f : 0f);
+        }
+
+        public RowMate.Core.Scene.EnvironmentId Environment => _environment;
 
         public MeshRenderer Far { get; }
 
@@ -25,12 +44,39 @@ namespace RowMate.Scene
 
         public void Apply(in RowMate.Core.Scene.SceneFrame frame)
         {
-            _far.SetColor(SceneShaderIds.HorizonTone, SceneLighting.Srgb(frame.HorizonFar));
+            _far.SetColor(SceneShaderIds.HorizonTone, SceneLighting.Srgb(FarTone(frame)));
+            if (_environment == RowMate.Core.Scene.EnvironmentId.Regatta)
+            {
+                // QA-V8-01 (AC-SCN-19-05): las banderas lejanas con profundidad 0,5 y el mástil del color de la torre, a la hora del cuadro.
+                for (var i = 0; i < SceneShaderIds.FlagTones.Length; i++)
+                {
+                    _far.SetColor(SceneShaderIds.FlagTones[i], SceneLighting.Srgb(RowMate.Core.Scene.EnvironmentHorizonColors.RegattaFlag(frame.Palette, i)));
+                }
+
+                _far.SetColor(SceneShaderIds.FlagMast, SceneLighting.Srgb(RowMate.Core.Scene.EnvironmentHorizonColors.RegattaTower(frame.Palette)));
+            }
+
             _near.SetColor(SceneShaderIds.HorizonTone, SceneLighting.Srgb(frame.HorizonNear));
             var tan = (float)frame.HorizonPeakTan;
             _far.SetVector(SceneShaderIds.HorizonScale, new Vector4(tan, (float)frame.HorizonFarScale, 1f, 0));
             _near.SetVector(SceneShaderIds.HorizonScale,
                 new Vector4(tan, (float)frame.HorizonNearScale, (float)RowMate.Core.Scene.Art.LakeArt.NearHeightScale, 0));
+        }
+
+        // El tono de la silueta lejana por escenario (environment.dart:127-129 con el tono y la profundidad de cada capa).
+        private RowMate.Core.Scene.SceneColor FarTone(in RowMate.Core.Scene.SceneFrame frame)
+        {
+            switch (_environment)
+            {
+                case RowMate.Core.Scene.EnvironmentId.River:
+                    return RowMate.Core.Scene.EnvironmentHorizonColors.Skyline(frame.Palette);
+                case RowMate.Core.Scene.EnvironmentId.Coast:
+                    return RowMate.Core.Scene.EnvironmentHorizonColors.CoastCliff(frame.Palette);
+                case RowMate.Core.Scene.EnvironmentId.Regatta:
+                    return RowMate.Core.Scene.EnvironmentHorizonColors.RegattaStand(frame.Palette);
+                default:
+                    return frame.HorizonFar;
+            }
         }
     }
 
@@ -40,6 +86,7 @@ namespace RowMate.Scene
     public sealed class WaterSurface
     {
         private readonly Material _material;
+        private bool _openRight;
 
         public WaterSurface(Transform parent, int layer, Mesh grid, Material material)
         {
@@ -57,6 +104,15 @@ namespace RowMate.Scene
             _material.SetVector(SceneShaderIds.Shimmer,
                 new Vector4((float)frame.WaterPhase, (float)frame.ShimmerCenterX, (float)frame.Celestial.LegacyStrength, (float)frame.ShimmerVisibility));
             _material.SetColor(SceneShaderIds.ShimmerColor, SceneLighting.Srgb(frame.Palette.SunColor));
+            // It. 8 (WP-D2): la costa tiene mar abierto a la derecha: sin la franja somera de ese lado (solo al cambiar de escenario).
+            var openRight = frame.Environment == RowMate.Core.Scene.EnvironmentId.Coast;
+            if (openRight != _openRight)
+            {
+                _openRight = openRight;
+                var extras = _material.GetVector(SceneShaderIds.WaterExtras);
+                extras.w = openRight ? 1f : 0f;
+                _material.SetVector(SceneShaderIds.WaterExtras, extras);
+            }
         }
 
         // La grilla del plano (WaterArt.GridX × GridZ) en metros de cinta, con la normal hacia arriba.

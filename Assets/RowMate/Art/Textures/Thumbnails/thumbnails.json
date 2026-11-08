@@ -1,0 +1,9 @@
+{
+  "rule": 1,
+  "width": 456,
+  "height": 288,
+  "hour": 12,
+  "distance": 20,
+  "environments": ["lake", "river", "coast", "regatta"],
+  "fingerprint": "df066f700e4f06c8"
+}

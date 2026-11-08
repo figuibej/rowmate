@@ -51,8 +51,10 @@ namespace RowMate.App.Composition
             // It. 5 (§2.8): las preferencias (en memoria si AppServices no trajo unas) y los dos paneles de series, uno por app.
             var preferences = services.Preferences ?? new MemoryPreferences();
             var seriesPanels = new SeriesPanelPrefs(preferences, logger);
+            // It. 8 (§2.8, DT8-14): el escenario elegido, después de las preferencias (si ya están leídas, el primer cuadro lo ve).
+            var sceneEnvironment = new SceneEnvironmentChoice(preferences, logger);
             return new AppContext(services.Devices, device, heartRate, shell, scene, routines, workout, workoutRest, language, texts,
-                services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars, preferences, seriesPanels);
+                services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars, preferences, seriesPanels, sceneEnvironment);
         }
 
         // Las barras del sistema sin efecto (AppServices.SystemUi = null).

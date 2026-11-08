@@ -1,7 +1,7 @@
 {
-    "version": 5,
+    "version": 6,
     "editorVersion": "6000.3.27f1",
-    "appliedAtUtc": "2026-11-06T23:54:42.1537471Z",
+    "appliedAtUtc": "2026-11-07T16:41:45.8040809Z",
     "steps": [
         {
             "id": "player.identity",
@@ -66,12 +66,12 @@
         {
             "id": "scene.assets",
             "status": "ok",
-            "detail": "7 asset(s) nuevos; 59 slots (0 con un asset del usuario, el resto procedurales); 3 niveles; Lake y SceneWorld; Mixamo: 0 reimportado(s), binding con Assets/ThirdParty/Mixamo/YBot/YBot.fbx"
+            "detail": "0 asset(s) nuevos; 59 slots (0 con un asset del usuario, el resto procedurales); 3 niveles; Lake, River, Coast, Regatta y SceneWorld; Mixamo: 0 reimportado(s), binding con Assets/ThirdParty/Mixamo/YBot/YBot.fbx"
         },
         {
             "id": "scene.materials",
             "status": "ok",
-            "detail": "5 asset(s) nuevos; 20 materiales; 188 variantes en la colección"
+            "detail": "1 asset(s) nuevos; 21 materiales; 190 variantes en la colección"
         },
         {
             "id": "scene.boot",

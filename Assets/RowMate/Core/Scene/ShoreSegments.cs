@@ -168,6 +168,38 @@ namespace RowMate.Core.Scene
             return into.Count;
         }
 
+        // It. 8 (DT8-08; AC-SCN-16-03): los puentes con z ∈ [d − behind; d + 1), los que ya salieron de la lista del legacy
+        // (relZ < 1) pero siguen a la vista hasta pasar detrás de la cámara. No entran en la lista ni en el tope (LT-101 no cambia);
+        // los dibuja ShoreStreamer sin tramado. Vacía `into` y devuelve cuántos dejó, de lejos a cerca. Sin asignar.
+        public int TrailingLandmarks(double distance, double behind, ShorePropBuffer into)
+        {
+            if (into == null)
+            {
+                throw new ArgumentNullException(nameof(into));
+            }
+
+            into.Clear();
+            var zMin = distance - behind;
+            var zMax = distance + 1;
+            var first = Math.Max(0L, (long)Math.Floor(zMin / ShoreEnvironment.SegmentLength));
+            var last = (long)Math.Floor(zMax / ShoreEnvironment.SegmentLength);
+            for (var k = first; k <= last; k++)
+            {
+                var props = PropsForSegment(k);
+                for (var i = 0; i < props.Length; i++)
+                {
+                    var p = props[i];
+                    if (p.Kind == PropKind.Bridge && p.Z >= zMin && p.Z < zMax && into.Count < into.Capacity)
+                    {
+                        into.Add(p);
+                    }
+                }
+            }
+
+            SortFarToNear(into.Writable);
+            return into.Count;
+        }
+
         // :116-120: olvida los segmentos anteriores a k.
         private void EvictBehind(long k)
         {

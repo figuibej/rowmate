@@ -49,7 +49,12 @@ namespace RowMate.Tests.PlayMode
             Assert.That(free.height, Is.GreaterThanOrEqualTo(55.5f), "56 de alto");
             Assert.That(label.yMin - free.yMax, Is.EqualTo(24).Within(0.6f), "24 entre el botón y la etiqueta");
             Assert.That(first.yMin, Is.GreaterThan(label.yMax - 0.5f), "la lista debajo de la etiqueta");
-            Assert.That(H.IsTextVisible("Escenario"), Is.False, "sin workoutScene en la 4a (DV-34)");
+            // It. 8 (AC-WKT-12-02 cambia, AC-SCN-22-01): Escenario, 8, el selector, 16 y Entrenamiento libre.
+            Assert.That(H.IsTextVisible("Escenario"), Is.True, "workoutScene desde la It. 8");
+            var title = Bounds("workout-scene-title");
+            var picker = Bounds("env-picker");
+            Assert.That(picker.yMin - title.yMax, Is.EqualTo(8).Within(0.6f), "8 entre el título y el selector");
+            Assert.That(free.yMin - picker.yMax, Is.EqualTo(16).Within(0.6f), "16 entre el selector y el botón");
             Assert.That(H.TextOf("workout-free"), Is.EqualTo("Entrenamiento libre"));
             Assert.That(Screen.FreeButton.Icon!.Codepoint, Is.EqualTo(RowMate.Core.Design.Icons.PlayArrow));
 

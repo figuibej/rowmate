@@ -849,7 +849,7 @@ public abstract class AssetSlot<T> : AssetSlotDefinition where T : UnityEngine.O
 
 ### 14.5 Miniaturas del selector (F-SCN-22, QA-P-11)
 
-- **Horneadas en el Editor** por `EnvironmentThumbnailBaker` desde la escena real (cámara de persecución a 20 m de escena, sin bote, nivel Alto, 304×192 px): texturas en `Art/Textures/Thumbnails/`, incluidas en el build. Mostrarlas no carga ninguna escena aditiva.
+- **Horneadas en el Editor** desde la escena real (It. 8: el arnés, conjunto `thumbs`, con `tools/unity/bake-thumbnails.ps1`; `ThumbnailRule`: 12:00, 20 m de escena, tiempo 0, sin bote ni remero, objetos a menos de 150 m, nivel Alto) a 1 824 × 1 152 y reducidas 4× (`BoxDownsample`) a **456 × 288**: `Art/Textures/Thumbnails/{lake,river,coast,regatta}.png` con `thumbnails.json` (la huella de DT8-16, que vigila un test de dotnet), BC7 en escritorio y ASTC 4×4 en Android, asignadas a `UiAssets`. Mostrarlas no carga ninguna escena (ADR 023).
 - **Por defecto, a las 12:00** (paridad con el legacy, decisión del PO en ROADMAP §6).
 - **Si el usuario aprueba "hora actual"** en el gate de la It. 8: se hornean 4 por escenario (6, 12, 18 y 22 h) y el selector muestra la más cercana a la hora de escena, con fundido al cambiar. Costo: 16 texturas (≈ 3 MB), sin render en ejecución. Se descarta el render en ejecución a la hora actual (ART_BIBLE §7.6 en su versión anterior), porque obliga a cargar las 4 escenas en Workout.
 

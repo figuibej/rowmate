@@ -114,3 +114,6 @@ InitTestScene*.unity*
 # build termina. Editor/Build/PerformanceTestRunCleaner los saca antes de juntar los activos; si un build se corta, no se
 # versionan.
 /Assets/Resources/PerformanceTestRun*
+
+# QA-V8-09 (It. 8): los worktrees locales de los agentes (otra copia de trabajo con su propio .git) no se versionan.
+/.claude/worktrees/

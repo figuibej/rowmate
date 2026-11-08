@@ -61,7 +61,7 @@ namespace RowMate.Scene
     {
         private const int PineBatches = 4;
 
-        private readonly SegmentStore _store;
+        private SegmentStore _store;
         private readonly ShoreMeshes _meshes;
         private readonly Material _foliage;
         private readonly Material _prop;
@@ -112,6 +112,13 @@ namespace RowMate.Scene
             }
         }
 
+        // It. 8: el almacén de otro escenario (el cambio de kit).
+        public void Rebind(SegmentStore store)
+        {
+            _store = store;
+            Clear();
+        }
+
         // La escala de los LOD del nivel (Bajo × 0,7).
         public double LodScale { get; set; } = 1;
 
@@ -138,7 +145,12 @@ namespace RowMate.Scene
             }
 
             var i = IndexOf(seg, prop);
-            if (prop.Kind == PropKind.Pine && i >= 0)
+            if (_store.IsKit && i >= 0)
+            {
+                // It. 8: río, costa y regata apoyan cada objeto en su pie (PropPlacement.FootY, guardado al colocar el segmento).
+                y = seg.FootY[i];
+            }
+            else if (prop.Kind == PropKind.Pine && i >= 0)
             {
                 y = seg.FootY[i];
             }
