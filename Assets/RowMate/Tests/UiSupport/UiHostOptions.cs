@@ -71,6 +71,18 @@ namespace RowMate.Tests.UiSupport
         public TimeSpan LocalOffset = DefaultLocalOffset;
         public bool IsDesktop = true;
 
+        // It. 9 (DT9-16): la zona de las fechas de las sesiones de una base del historial (HostRoutines.History / UseHistory):
+        // UTC−03:00 fija, la de la spec (§0), en todas las máquinas.
+        public TimeZoneInfo LocalZone = RowMate.Tests.Support.HistorySeeds.Zone;
+
+        // Las rutinas y las sesiones en una base temporal sembrada con HistorySeeds (F-9, F-9V, F-9P), con LocalZone.
+        public UiHostOptions UseHistory(string set, Action<RowMate.Tests.Support.HistorySeedResult>? seeded = null)
+        {
+            Routines = HostRoutines.History(set, LocalZone, seeded);
+            Sessions = HostSessions.SameFileAsRoutines;
+            return this;
+        }
+
         // Política de "Atrás" (falsa en SHT.BackAtRoot…); por defecto, una que solo cuenta.
         public IBackButtonPolicy? BackButton;
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using RowMate.App.Device;
+using RowMate.App.History;
 using RowMate.App.Routines;
 using RowMate.App.Scene;
 using RowMate.App.Shell;
@@ -27,6 +28,8 @@ namespace RowMate.App.Composition
 
         private readonly DeviceBackend _devices;
         private readonly DerivedObservable<AppLanguage, Localizer> _texts;
+        private readonly ISessionRepository _sessions;
+        private readonly IRoutineRepository _routineRepository;
         private bool _started;
         private bool _disposed;
 
@@ -34,13 +37,17 @@ namespace RowMate.App.Composition
                             RoutinesStore routines, WorkoutEngine workout, WorkoutStore workoutRest, LanguageState language,
                             DerivedObservable<AppLanguage, Localizer> texts, IReadOnlyObservable<AccessibilitySnapshot> accessibility,
                             IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, ImmersiveSystemBars systemBars,
-                            IPreferences preferences, SeriesPanelPrefs seriesPanels, SceneEnvironmentChoice sceneEnvironment)
+                            IPreferences preferences, SeriesPanelPrefs seriesPanels, SceneEnvironmentChoice sceneEnvironment,
+                            HistoryStore history, ISessionRepository sessions, IRoutineRepository routineRepository)
         {
             _devices = devices;
             SystemBars = systemBars;
             Preferences = preferences;
             SeriesPanels = seriesPanels;
             SceneEnvironment = sceneEnvironment;
+            History = history;
+            _sessions = sessions;
+            _routineRepository = routineRepository;
             Device = device;
             HeartRate = heartRate;
             Shell = shell;
@@ -92,6 +99,10 @@ namespace RowMate.App.Composition
         // inmersivo al entrar (AC-SCN-21-05). Dispose lo dispone.
         public SceneEnvironmentChoice SceneEnvironment { get; }
 
+        // It. 9 (F-HIS-06; §3.1): la lista del historial, una por app. Start() la carga; recarga con cada toque de la pestaña
+        // Historial, al volver del detalle (lo pide la página) y cuando vuelve el cierre de una sesión. Dispose la dispone.
+        public HistoryStore History { get; }
+
         public LanguageState Language { get; }
 
         // El Localizer del idioma vigente (DerivedObservable sobre Language.Current): cambia en vivo (AC-APP-09-05).
@@ -121,6 +132,8 @@ namespace RowMate.App.Composition
             _started = true;
             _devices.Rower.Start();
             Routines.LoadAsync().Forget(Logger, DbTag);
+            // It. 9 (AC-HIS-06-01; main.dart:84): el historial se carga al arrancar, aunque nadie vaya a Historial.
+            History.LoadAsync().Forget(Logger, DbTag);
 
             Task autoConnect;
             try
@@ -165,6 +178,17 @@ namespace RowMate.App.Composition
             return new WorkoutHudStore(Workout, Texts, Scheduler, Lifecycle, Logger);
         }
 
+        // El detalle de una sesión de la lista (F-HIS-09; §3.2): uno por página; lo dispone la página al salir.
+        public SessionDetailStore CreateSessionDetail(HistoryEntry entry)
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(AppContext));
+            }
+
+            return new SessionDetailStore(entry, _sessions, _routineRepository, Logger);
+        }
+
         // Al recuperar el foco (AC-APP-09-05): la lista de idiomas del sistema se vuelve a resolver; si el idioma cambia,
         // Texts avisa y las vistas cambian de texto sin rearmarse. La accesibilidad la relee Platform (su observable avisa solo).
         public void RefreshSystemSettings(IReadOnlyList<string> languageTags)
@@ -190,6 +214,7 @@ namespace RowMate.App.Composition
             _disposed = true;
             // It. 4b: si quedaron ocultas, las barras del sistema se muestran.
             SystemBars.Dispose();
+            History.Dispose();
             SceneEnvironment.Dispose();
             SeriesPanels.Dispose();
             WorkoutRest.Dispose();

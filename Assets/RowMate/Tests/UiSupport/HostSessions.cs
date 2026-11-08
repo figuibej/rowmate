@@ -20,6 +20,23 @@ namespace RowMate.Tests.UiSupport
         // En memoria (CAP-16: el remo de prueba con los valores largos, sin base).
         public static readonly HostSessionFactory InMemory = (scheduler, logger, routines) => new InMemorySessionRepository();
 
+        // It. 9: en memoria con las sesiones de un conjunto del historial (F-9, F-9V, F-9P) sembradas con HistorySeeds (sin
+        // base: las pruebas que no miran SQLite). Las de SQLite usan HostRoutines.History (UiHostOptions.UseHistory).
+        public static HostSessionFactory Seeded(string set)
+        {
+            if (set == null)
+            {
+                throw new ArgumentNullException(nameof(set));
+            }
+
+            return (scheduler, logger, routines) =>
+            {
+                var repository = new InMemorySessionRepository();
+                HistorySeeds.Apply(routines.Repository, repository, set);
+                return repository;
+            };
+        }
+
         // La base de guion: lenta o con fallas a pedido al crear, al guardar un lote o al cerrar (CAP-29, WPS).
         public static HostSessionFactory Scripted(Action<ScriptedSessionRepository>? configure = null)
         {

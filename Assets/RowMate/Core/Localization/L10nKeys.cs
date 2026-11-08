@@ -260,5 +260,14 @@ namespace RowMate.Core.Localization
         public const string HudRepsTitle = "hudRepsTitle";
         public const string HudRepsEmpty = "hudRepsEmpty";
         public const string HudRepLabel = "hudRepLabel";
+
+        // ── Nuevas de la It. 9 (Q-01; 09-historial/01-po-spec §5): 223 → 228 ──
+        // Las etiquetas fijas de la tarjeta y del resumen (history_screen.dart:113-115, session_detail_screen.dart:164-166, con el
+        // español del legacy) y los errores de carga (Q-13, DV-95; el estilo de routinesLoadError).
+        public const string HistoryStatPower = "historyStatPower";
+        public const string HistoryStatSpm = "historyStatSpm";
+        public const string HistoryStatSplit = "historyStatSplit";
+        public const string HistoryLoadError = "historyLoadError";
+        public const string SessionLoadError = "sessionLoadError";
     }
 }

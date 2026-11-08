@@ -149,10 +149,11 @@ namespace RowMate.Tests.PlayMode
         [UnityTest, Category("AC-APP-02-08")]
         public IEnumerator PlaceholdersShowTitleAndDimIconOnly()
         {
-            Create(new UiHostOptions());
-            // Desde la It. 3 Rutinas ya no es provisoria (RLT.RoutinesIsNotAPlaceholder) y desde la It. 4a tampoco Workout
-            // (WSC.WorkoutIsNotAPlaceholder): sigue Historial.
-            var cases = new[] { ("tab-history", "screen-history", "Historial") };
+            Create(new UiHostOptions { ProfileTab = true });
+            // Desde la It. 3 Rutinas ya no es provisoria (RLT.RoutinesIsNotAPlaceholder), desde la It. 4a tampoco Workout
+            // (WSC.WorkoutIsNotAPlaceholder) y desde la It. 9 tampoco Historial (HistoryScreenTests): sigue Perfil.
+            Assert.That(H.Find("screen-history"), Is.InstanceOf<RowMate.Presentation.History.HistoryScreenView>(), "Historial deja de ser provisoria (It. 9)");
+            var cases = new[] { ("tab-profile", "screen-profile", "Perfil") };
             foreach (var (tab, screen, title) in cases)
             {
                 yield return Tap(tab);

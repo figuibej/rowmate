@@ -2329,3 +2329,381 @@
 .rm-env-card--selected .rm-env-card__name--bold {
     opacity: 1;
 }
+
+/* ════ It. 9 — Historial, detalle y gráfico (09-historial/02-tech-design §5; spec AC-HIS-07 a -15). Estructura y los colores
+   base de la spec; el pulido de aspecto y movimiento es de Skin.uss y Motion.uss (WP-D). ════ */
+
+/* ── Pantalla (§5.1) ── */
+.rm-history__body {
+    flex-grow: 1;
+    position: relative;
+}
+
+.rm-history__center {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.rm-history .rm-empty__icon.rm-history__empty-icon {
+    opacity: 0.12;
+}
+
+.rm-history .rm-empty__title.rm-history__empty-text {
+    max-width: 320px;
+    color: var(--rm-text-tertiary);
+}
+
+.rm-history__error-text {
+    max-width: 280px;
+    color: var(--rm-text-secondary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+#history-retry {
+    margin-top: 16px;
+}
+
+.rm-history__list-host {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-history__scroll {
+    flex-grow: 1;
+}
+
+/* Una columna a todo el ancho con margen 12 y 10 entre tarjetas (AC-HIS-07-06: 5 + 5 del legacy). */
+.rm-history__list {
+    padding-top: 7px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+/* ── Tarjeta (AC-HIS-07-03, -04) ── */
+.rm-history-card {
+    flex-shrink: 0;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: var(--rm-surface-card);
+}
+
+.rm-history-card .rm-button__state {
+    border-radius: 16px;
+}
+
+.rm-history-card > .rm-focus-ring {
+    border-radius: 20px;
+}
+
+.rm-history-card > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 24px;
+}
+
+.rm-history-card__top {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.rm-history-card__icon {
+    color: var(--rm-accent-primary);
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.rm-history-card__name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+    font-size: 15px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-text-scale-085 .rm-history-card__name {
+    font-size: 12.75px;
+}
+
+.rm-text-scale-115 .rm-history-card__name {
+    font-size: 17.25px;
+}
+
+.rm-text-scale-130 .rm-history-card__name {
+    font-size: 19.5px;
+}
+
+.rm-history-card__date {
+    flex-shrink: 0;
+    margin-left: 8px;
+    color: var(--rm-text-tertiary);
+    white-space: nowrap;
+}
+
+.rm-history-card__chevron {
+    flex-shrink: 0;
+    margin-left: 4px;
+    color: var(--rm-text-primary);
+    opacity: 0.24;
+}
+
+.rm-history-card__stats {
+    margin-top: 12px;
+}
+
+/* ── Fila de números (tarjeta y Resumen): columnas del mismo ancho; el valor y la etiqueta se achican juntos ── */
+.rm-stat-row {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+.rm-stat {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+    padding-left: 1px;
+    padding-right: 1px;
+}
+
+.rm-stat__box {
+    flex-shrink: 0;
+}
+
+.rm-stat__label-box {
+    margin-top: 2px;
+}
+
+.rm-stat__value {
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+}
+
+.rm-stat__label {
+    color: var(--rm-text-tertiary);
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+}
+
+/* ── Detalle (§5.3): una columna en todos los tamaños ── */
+.rm-session__body {
+    flex-grow: 1;
+    position: relative;
+}
+
+.rm-session__center {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.rm-session__center-text {
+    color: var(--rm-text-tertiary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.rm-session__error-text {
+    max-width: 280px;
+    color: var(--rm-text-secondary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+#session-retry {
+    margin-top: 16px;
+}
+
+.rm-session__scroll {
+    flex-grow: 1;
+}
+
+.rm-session__content {
+    padding: 16px;
+}
+
+.rm-session-card {
+    flex-shrink: 0;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: var(--rm-surface-card);
+}
+
+.rm-session-card__title {
+    margin-bottom: 12px;
+    font-size: 16px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
+    color: var(--rm-text-primary);
+}
+
+.rm-text-scale-085 .rm-session-card__title {
+    font-size: 13.6px;
+}
+
+.rm-text-scale-115 .rm-session-card__title {
+    font-size: 18.4px;
+}
+
+.rm-text-scale-130 .rm-session-card__title {
+    font-size: 20.8px;
+}
+
+#session-steps {
+    margin-top: 20px;
+}
+
+/* ── Rendimiento por paso (AC-HIS-11-02) ── */
+.rm-step-perf {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+
+}
+
+.rm-step-perf__badge {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    border-radius: 6px;
+
+}
+
+.rm-step-perf__number {
+    font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
+    color: var(--rm-accent-primary);
+    -unity-text-align: middle-center;
+}
+
+.rm-text-scale-085 .rm-step-perf__number {
+    font-size: 10.2px;
+}
+
+.rm-text-scale-115 .rm-step-perf__number {
+    font-size: 13.8px;
+}
+
+.rm-text-scale-130 .rm-step-perf__number {
+    font-size: 15.6px;
+}
+
+.rm-step-perf__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.rm-step-perf__line1 {
+    color: var(--rm-text-secondary);
+    white-space: nowrap;
+}
+
+.rm-step-perf__values {
+    flex-direction: row;
+    margin-top: 2px;
+}
+
+.rm-step-perf__value {
+    margin-right: 12px;
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+}
+
+/* ── Selector de métrica (AC-HIS-12-01; DV-91 13/600; ancho por texto, el relleno y la escala por código) ── */
+.rm-session__metric {
+    margin-top: 20px;
+}
+
+.rm-segmented--chart .rm-segmented__option,
+.rm-segmented--chart .rm-segmented__option:hover,
+.rm-segmented--chart .rm-segmented__option:active,
+.rm-segmented--chart .rm-segmented__option:focus,
+.rm-segmented--chart .rm-segmented__option:hover:active {
+    flex-direction: row;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+    min-width: 0;
+}
+
+.rm-segmented__label--chart {
+    font-size: 13px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset");
+    flex-shrink: 0;
+}
+
+.rm-text-scale-085 .rm-segmented__label--chart {
+    font-size: 11.05px;
+}
+
+.rm-text-scale-115 .rm-segmented__label--chart {
+    font-size: 14.95px;
+}
+
+.rm-text-scale-130 .rm-segmented__label--chart {
+    font-size: 16.9px;
+}
+
+/* ── Gráfico (§5.4, arte §3): 220 de alto, bg.sunken r 12 ── */
+.rm-chart {
+    position: relative;
+    height: 220px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background-color: var(--rm-bg-sunken);
+    overflow: hidden;
+}
+
+.rm-session__chart {
+    margin-top: 8px;
+}
+
+.rm-chart__axis {
+    font-size: 11px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-SemiBold-SDF.asset");
+    color: var(--rm-text-tertiary);
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0;
+}
+
+.rm-chart__axis--y {
+    -unity-text-align: middle-right;
+}
+
+.rm-chart__tooltip {
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    background-color: var(--rm-glass-fallback);
+}

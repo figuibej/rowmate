@@ -10,6 +10,7 @@ using RowMate.Core.Models;
 using RowMate.Infrastructure.Database;
 using RowMate.Infrastructure.Sessions;
 using RowMate.Infrastructure.Threading;
+using RowMate.Tests.Support;
 
 namespace RowMate.SessionList
 {
@@ -17,6 +18,7 @@ namespace RowMate.SessionList
     // la más nueva arriba, SIN tocar la base del usuario.
     //
     //   dotnet run --project tools/dotnet/RowMate.SessionList -- [--variant simulator|normal | --db <archivo>] [--verbose]
+    //   dotnet run --project tools/dotnet/RowMate.SessionList -- seed F-9|F-9V|F-9P --data-dir <carpeta> [--variant simulator|normal]
     //
     // 1. Nunca abre el archivo original con SQLite: copia la base (y su -wal, si está) a una carpeta temporal propia, con
     //    FileShare.ReadWrite (no bloquea a la app), abre la copia y la borra al terminar. Ni el contenido ni la fecha de la
@@ -35,6 +37,9 @@ namespace RowMate.SessionList
         public const int ExitError = 2;
 
         private const int CopyAttempts = 3;
+
+        private const string Usage = "[sessions] uso: RowMate.SessionList [--variant simulator|normal | --db <archivo>] [--verbose]"
+            + " | seed F-9|F-9V|F-9P --data-dir <carpeta> [--variant simulator|normal]";
 
         // Con la salida redirigida (un informe, una prueba) escribe UTF-8; en la consola, la de la consola en UTF-8 si se puede
         // (el "—" de una sesión cortada).
@@ -68,9 +73,14 @@ namespace RowMate.SessionList
 
         public static int Run(string[] args, TextWriter output, TextWriter error)
         {
+            if (args.Length > 0 && args[0] == "seed")
+            {
+                return Seed(args, output, error);
+            }
+
             if (!TryParse(args, out var source, out var verbose))
             {
-                error.WriteLine("[sessions] uso: RowMate.SessionList [--variant simulator|normal | --db <archivo>] [--verbose]");
+                error.WriteLine(Usage);
                 return ExitUsage;
             }
 
@@ -132,6 +142,98 @@ namespace RowMate.SessionList
             {
                 Delete(work);
             }
+        }
+
+        // It. 9 (02-tech-design DT9-15): siembra un conjunto del historial (HistorySeeds: F-9, F-9V o F-9P) en una carpeta de
+        // datos NUEVA para el [PERF] y las demos con ROWMATE_DATA_DIR: arma la base con un nombre neutro (TempDatabase.Guard:
+        // nunca en la carpeta de datos de la app) y la deja con el nombre de la variante (rower_app_dev.db por defecto). Reemplaza
+        // una base que ya esté en esa carpeta. Sin rutas en la salida ni en los errores.
+        private static int Seed(string[] args, TextWriter output, TextWriter error)
+        {
+            string? set = null;
+            string? dir = null;
+            var simulator = true;
+            for (var i = 1; i < args.Length; i++)
+            {
+                switch (args[i])
+                {
+                    case "--data-dir":
+                        if (i + 1 >= args.Length || dir != null)
+                        {
+                            return SeedUsage(error);
+                        }
+
+                        dir = args[++i];
+                        break;
+                    case "--variant":
+                        if (i + 1 >= args.Length || (args[i + 1] != "simulator" && args[i + 1] != "normal"))
+                        {
+                            return SeedUsage(error);
+                        }
+
+                        simulator = args[++i] == "simulator";
+                        break;
+                    default:
+                        if (set != null || args[i].StartsWith("--", StringComparison.Ordinal))
+                        {
+                            return SeedUsage(error);
+                        }
+
+                        set = args[i];
+                        break;
+                }
+            }
+
+            if (dir == null || dir.Length == 0 || (set != HistorySeeds.F9 && set != HistorySeeds.F9V && set != HistorySeeds.F9P))
+            {
+                return SeedUsage(error);
+            }
+
+            var name = DatabaseFiles.NameFor(simulator);
+            try
+            {
+                var folder = Path.GetFullPath(dir);
+                Directory.CreateDirectory(folder);
+                var staging = Path.Combine(folder, "seed-" + Guid.NewGuid().ToString("N") + ".db");
+                var result = HistorySeeds.WriteFile(staging, set!);
+                var target = Path.Combine(folder, name);
+                foreach (var suffix in new[] { "", "-wal", "-shm" })
+                {
+                    if (File.Exists(target + suffix))
+                    {
+                        File.Delete(target + suffix);
+                    }
+                }
+
+                File.Move(staging, target);
+                foreach (var suffix in new[] { "-wal", "-shm" })
+                {
+                    if (File.Exists(staging + suffix))
+                    {
+                        File.Delete(staging + suffix);
+                    }
+                }
+
+                output.WriteLine("[sessions] seed " + set + ": " + result.SessionIds.Count.ToString(CultureInfo.InvariantCulture)
+                    + (result.SessionIds.Count == 1 ? " sesión" : " sesiones") + " en " + name);
+                return ExitOk;
+            }
+            catch (InvalidOperationException)
+            {
+                error.WriteLine("[sessions] no se siembra la carpeta de datos de la app");
+                return ExitError;
+            }
+            catch (Exception problem) when (problem is IOException || problem is UnauthorizedAccessException)
+            {
+                error.WriteLine("[sessions] no se pudo escribir " + name);
+                return ExitError;
+            }
+        }
+
+        private static int SeedUsage(TextWriter error)
+        {
+            error.WriteLine(Usage);
+            return ExitUsage;
         }
 
         // La carpeta de datos de la app (Application.persistentDataPath de Unity con empresa y producto de AppIdentity), en el

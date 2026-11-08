@@ -15,7 +15,8 @@ namespace RowMate.Presentation.Shell
     // salteando lo que ya está saliendo (como Flutter, donde la ruta que sale ya no es la actual):
     //   1. menú o ayuda abiertos → se cierran (= tocar afuera)
     //   2. diálogo abierto → se cancela
-    //   3. Escape: nada más (P-08: Escape no cierra pantallas; en el legacy solo cierra lo que se cierra tocando afuera)
+    //   3. Escape: nada más (P-08: Escape no cierra pantallas; en el legacy solo cierra lo que se cierra tocando afuera), salvo
+    //      una página IClosesOnEscape arriba (el detalle de sesión, It. 9: AC-HIS-09-01)
     //   4. página arriba → OnBackRequested() (el editor cierra sin preguntar)
     //   5. raíz → policy.OnBackAtRoot() (Android: al fondo o salir; escritorio: nada), una vez por pulsación, sin cambiar de
     //      pestaña
@@ -55,12 +56,18 @@ namespace RowMate.Presentation.Shell
                 return;
             }
 
+            var top = _pages?.Top;
             if (source == BackSource.Escape)
             {
+                // It. 9: el detalle de sesión sí se cierra con Escape (AC-HIS-09-01); el resto no (P-08).
+                if (top is IClosesOnEscape)
+                {
+                    top.OnBackRequested();
+                }
+
                 return;
             }
 
-            var top = _pages?.Top;
             if (top != null)
             {
                 top.OnBackRequested();

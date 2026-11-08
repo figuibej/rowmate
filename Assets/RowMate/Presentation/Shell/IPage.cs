@@ -19,3 +19,13 @@ namespace RowMate.Presentation.Shell
         void OnBackRequested();
     }
 }
+
+namespace RowMate.Presentation.Shell
+{
+    // It. 9 (AC-HIS-09-01): una página que también se cierra con Escape en el escritorio (el detalle de sesión). Las demás siguen
+    // la regla P-08 (Escape no cierra pantallas). BackNavigation la consulta después de los menús y los diálogos: una pulsación
+    // sigue cerrando un solo nivel.
+    public interface IClosesOnEscape
+    {
+    }
+}

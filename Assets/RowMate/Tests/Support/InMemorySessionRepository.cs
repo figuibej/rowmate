@@ -111,6 +111,31 @@ namespace RowMate.Tests.Support
             return Task.FromResult<IReadOnlyList<DataPoint>>(points);
         }
 
+        // Lo mismo que HistoryQuery (It. 9, DT9-01): todas las sesiones por inicio descendente (el id mayor primero en un
+        // empate), con las estadísticas de sus puntos (SessionStats.Empty sin puntos).
+        public Task<IReadOnlyList<HistoryEntry>> GetHistoryAsync()
+        {
+            return Task.FromResult(History());
+        }
+
+        public IReadOnlyList<HistoryEntry> History()
+        {
+            var sessions = new List<WorkoutSession>(_sessions);
+            sessions.Sort((a, b) =>
+            {
+                var byStart = b.StartedAt.UtcDateTime.CompareTo(a.StartedAt.UtcDateTime);
+                return byStart != 0 ? byStart : Nullable.Compare(b.Id, a.Id);
+            });
+            var entries = new HistoryEntry[sessions.Count];
+            for (var i = 0; i < sessions.Count; i++)
+            {
+                var points = PointsOf(sessions[i].Id!.Value);
+                entries[i] = new HistoryEntry(sessions[i], points.Count == 0 ? SessionStats.Empty : SessionStats.Compute(points));
+            }
+
+            return entries;
+        }
+
         public Task<IReadOnlyList<SessionListing>> ListAsync()
         {
             var list = new List<SessionListing>();

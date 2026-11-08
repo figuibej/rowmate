@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-07 (rowmate-po, al cerrar la It. 8) |
-| Fase | **It. 8 cerrada — esperando OK del usuario.** PO: **aceptada**, sin criterios en FAIL. QA: RECHAZADO en la ronda 1 (4 mayores) y APROBADO CON OBSERVACIONES en la ronda 2 ([05-qa-verification](iterations/08-entornos-selector/05-qa-verification.md), "Ronda 2"), sin mayores: dotnet con 0 avisos y 0 errores, herramientas 192 / 192 y Core 3350 (3311 pasan, 0 fallan, 39 omitidos); Unity EditMode 3453 / 3408 / 0 / 45 y con simulador 3645 / 3600 / 0 / 45; PlayMode 551 / 551 y con simulador 624 / 624; matriz con 700 en PASA, 0 en FALLA, 4 ignorados y 157 pendientes de Unity; 57 tomas iguales byte a byte entre corridas. De 40 criterios, 39 cumplen y 1 no es verificable (AC-SCN-01-19 en Android, sin teléfono); LT-99 a LT-138 pasan. Reporte para el usuario: [iterations/08-entornos-selector/REPORT.md](iterations/08-entornos-selector/REPORT.md). La deuda va a issues de GitHub; el issue #9 sigue abierto con un resto chico (la sonda del farol) |
-| Próximo paso | **Usuario**: probar la demo en `Builds/Windows/simulator` ([REPORT de la 8 §2](iterations/08-entornos-selector/REPORT.md); el build ya tiene la 8) y dar el OK al gate de la It. 8 (abajo). Después, **It. 9** (`09-historial`: Historial y detalle con gráficos). La 6b sigue postergada (issue #6) |
+| Actualizado | 2026-11-08 (rowmate-po, al cerrar la It. 9) |
+| Fase | **It. 9 cerrada con OK del usuario (rigen los valores por defecto de su gate). It. 10a en curso.** PO: **aceptada**, sin criterios en FAIL. QA: APROBADO CON OBSERVACIONES ([05-qa-verification](iterations/09-historial/05-qa-verification.md)), sin bloqueantes ni mayores: dotnet `-Matrix` 3500 (3461 pasan, 0 fallan, 39 omitidos), herramientas 192 / 192, matriz con 737 en PASA, 0 en FALLA, 4 ignorados y 163 pendientes de Unity; Unity EditMode 3603 / 3556 / 0 / 47 y con simulador 3795 / 3748 / 0 / 47; PlayMode 588 / 588 y con simulador 663 / 663; build de simulador con exit 0. De 43 criterios, 42 cumplen y 1 no es verificable (AC-HIS-19-05: el peor cuadro de recarga y los 60 fps en el build, sin sonda). Reporte para el usuario: [iterations/09-historial/REPORT.md](iterations/09-historial/REPORT.md). La deuda va a issues de GitHub |
+| Próximo paso | **It. 10a** (`10a-ble-android-windows`: Bluetooth real en Android y Windows), que necesita el remo AMS-670B (u otro FTMS) y la PC con Bluetooth LE. La 6b sigue postergada (issue #6) |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs. El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
@@ -21,9 +21,9 @@
 | 6a | Escena: cielo, luz, hora, Lago alpino y agua degradada | **Cerrada** ([reporte](iterations/06a-escena-lago/REPORT.md)); el usuario dio el OK. Su deuda quedó en los issues de GitHub #1 a #10 |
 | 6b | Agua avanzada, desenfoque del vidrio y rendimiento | **Postergada** por decisión del usuario (issue #6). La 7 se hizo sobre el agua degradada |
 | 7 | Remero, bote y palada | **Cerrada** ([reporte](iterations/07-remero-palada/REPORT.md)). Sin FAIL; AC-SCN-01-16 NO VERIFICABLE. El usuario siguió con la 8 sin cambiar nada de su gate: rigen los valores por defecto |
-| 8 | Río, Costa, Regata y selector | **Cerrada — esperando OK del usuario** ([reporte](iterations/08-entornos-selector/REPORT.md)). Sin FAIL; AC-SCN-01-19 NO VERIFICABLE solo en Android |
-| 9 | Historial y detalle | **Próxima** (espera el OK de la 8) |
-| 10a | Bluetooth real en Android y Windows | Pendiente |
+| 8 | Río, Costa, Regata y selector | **Cerrada** ([reporte](iterations/08-entornos-selector/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Sin FAIL; AC-SCN-01-19 NO VERIFICABLE solo en Android |
+| 9 | Historial y detalle | **Cerrada** ([reporte](iterations/09-historial/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Deuda en los issues #32 a #39. Sin FAIL; AC-HIS-19-05 NO VERIFICABLE en parte (cuadro de 50 ms y 60 fps en el build) |
+| 10a | Bluetooth real en Android y Windows | **En curso** (la prueba con el remo real queda para la demo del usuario) |
 | 10b | Tanda Apple (iOS y macOS) | Flotante: cuando haya Mac |
 | 11 | Pulsómetro real | Pendiente |
 | 12 | Strava: conexión y subida | Pendiente |
@@ -44,9 +44,25 @@
 
 - **Gate de la It. 7**: el usuario siguió con la It. 8 sin cambiar nada, así que rigen los valores por defecto de la tabla de abajo (DV-68 a DV-78, DT7-09, QA7-V-06 y B7-04). Detalle en [REPORT de la It. 7 §6](iterations/07-remero-palada/REPORT.md).
 
-### Para confirmar en el gate de la It. 8
+- **Gate de la It. 8**: el usuario dio el OK, así que rigen los valores por defecto de la tabla de abajo (DV-79 a DV-89, DT8-10, QA-V8-14, D-ART-08). También pidió borrar el worktree `it08-entornos` y su rama (ya no están: `git worktree list` solo muestra `main`), commitear, pushear y empezar la It. 9.
 
-Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It. 8 §6](iterations/08-entornos-selector/REPORT.md) y [01-po-spec §10 y §12](iterations/08-entornos-selector/01-po-spec.md).
+### Para confirmar en el gate de la It. 9
+
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It. 9 §5](iterations/09-historial/REPORT.md) y [01-po-spec §10](iterations/09-historial/01-po-spec.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-90 y DV-91: fecha, etiquetas y ejes en blanco al 54 % y ejes en 11 (legacy: 38 % y 9); tamaños del tablero EXR y área en degradé | Se aceptan | Colores y tamaños del legacy |
+| DV-92 / Q-22: la lista no parpadea al recargar y también recarga al terminar una sesión | Se acepta | Indicador en cada recarga, como el legacy |
+| DV-93 / Q-24: el split con lo rápido arriba, las paradas en el piso y el objetivo invertido | Se acepta | Split sin invertir, como el legacy |
+| DV-94: el tooltip muestra solo el valor de la curva | Se acepta | Agrega el de la línea objetivo cercana |
+| DV-95 / Q-13: los errores de carga se avisan con `Reintentar` | Se acepta | Indicador para siempre, como el legacy |
+| Tiempo y distancia de la tarjeta = los del monitor (máximo de los puntos), como el legacy: con el simulador sin reconectar, la segunda sesión arranca desde lo acumulado | Paridad | Restar el primer punto (cambio de producto, issue) |
+| Etiquetas X de los bordes que se pisan (`3:44` con `5:00`) | Paridad con `fl_chart` (issue con prioridad) | Se ocultan las marcas intermedias que chocan |
+
+**Decididas por el PO al cerrar la It. 9** (no necesitan respuesta): AC-HIS-19-05 queda NO VERIFICABLE en la parte del build (la lista a 0,25 s y el detalle a 0,5 s sí se vieron; falta una sonda `-rowmate-perf-history`); el dato del cursor del §13 del diseño se corrige en el REPORT (asigna en 3 de 60 cuadros, no 0); VID-01 y VID-02 no se miraron por falta de `ffmpeg`, pero sus AC están cubiertos por tests y por el build; los menores de QA, del gate, del diseño y del arte van a issues de GitHub (8, agrupados; lista en el REPORT §7).
+
+### Gate de la It. 8 (valores que rigen)
 
 | Decisión | Por defecto | Si se rechaza |
 |---|---|---|
@@ -83,8 +99,8 @@ Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It
 
 | Para | Qué | Estado |
 |---|---|---|
-| It. 8 (recomendado, 15 minutos) | La demo de [REPORT de la 8 §2](iterations/08-entornos-selector/REPORT.md) en `Builds/Windows/simulator` (ya tiene la 8): elegir escenario, remar en los 4, reiniciar la app | Pendiente |
-| Limpieza (cuando quieras) | Decir si se borra el worktree `.claude/worktrees/it08-entornos` y su rama `worktree-it08-entornos` (quedó de las dos corridas en paralelo; todo está fusionado en `main`) | Pendiente |
+| It. 9 (recomendado, 15 minutos) | La demo de [REPORT de la 9 §2](iterations/09-historial/REPORT.md) en `Builds/Windows/simulator` (ya tiene la 9): una libre, la rutina `Demo 9`, el detalle con las 5 métricas y una sesión cortada | Pendiente |
+| It. 10a (necesario) | Remo AMS-670B (u otro FTMS) y la PC con Windows con Bluetooth LE; para Android, el teléfono con depuración USB | Pendiente |
 | P-17 (recomendado, 5 minutos) | La demo (c) de la 4b: suspender el equipo a mano (Inicio → Encender/apagar → Suspender) con un entrenamiento en marcha ([REPORT de la 6a §3.1 (d)](iterations/06a-escena-lago/REPORT.md)). Cierra AC-WKT-02-11, que QA no puede verificar | Pendiente |
 | It. 4a (opcional, 1 minuto) | `powercfg /requests` en una consola de administrador, con la app abierta y después de cerrarla ([REPORT de la 4a §3.7](iterations/04a-motor-hud-funcional/REPORT.md)). Cierra AC-APP-14-01 a -03 | Pendiente |
 | Cierre de NV (It. 2 a 6a) y rendimiento de la escena | Módulos **Windows Build Support (IL2CPP)** (con Visual Studio 2022 "Desarrollo de escritorio con C++" y Windows SDK 10.0.22621+) y **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), más **un Android de gama media** (clase Galaxy A54 / Pixel 6a, Android 8+ de 64 bits) con depuración USB. Cierran IL2CPP (AC-BASE-01, R3-01; R5-04), AC-SCN-01-09 (60 fps con la escena, 30 min), la fila de 200 píldoras en el teléfono (R4b-02) y las partes Android de las It. 2 a 6a | Pendiente. Sin él, el rendimiento en el teléfono queda NO VERIFICABLE hasta la 14 (regla 9). **Recomendado para la 6b** (60 fps con el agua avanzada) |
@@ -93,7 +109,7 @@ Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It
 | CI de Unity (opcional) | Licencia Personal de Unity como secreto del repositorio (P-08) | Pendiente. El repositorio está en GitHub, público, y `ci-core` corre en verde |
 | It. 10a / 10b / 11 / 12 | Remo AMS-670B, Mac con Xcode + iPhone, pulsómetro, cuenta de Strava | Pendiente |
 
-Resueltos: en la It. 2, Unity Hub con el Editor 6000.3.27f1 y Windows Standalone (Mono), y las fuentes e íconos. Entre la It. 2 y la 3, el repositorio en GitHub ([figuibej/rowmate](https://github.com/figuibej/rowmate), público, con `ci-core` en verde). Entre la It. 3 y la 4a, los avisos del Firewall. Entre la 4a y la 4b, el `RowMate.exe` que había quedado abierto. Al empezar la 6a, el build de la 5 (el `RowMate.exe` ya no estaba abierto: QA verificó la 5 en el build). Para la 7, Y Bot de Mixamo en `Assets/ThirdParty/Mixamo/YBot/` (no se versiona).
+Resueltos: en la It. 2, Unity Hub con el Editor 6000.3.27f1 y Windows Standalone (Mono), y las fuentes e íconos. Entre la It. 2 y la 3, el repositorio en GitHub ([figuibej/rowmate](https://github.com/figuibej/rowmate), público, con `ci-core` en verde). Entre la It. 3 y la 4a, los avisos del Firewall. Entre la 4a y la 4b, el `RowMate.exe` que había quedado abierto. Al empezar la 6a, el build de la 5 (el `RowMate.exe` ya no estaba abierto: QA verificó la 5 en el build). Para la 7, Y Bot de Mixamo en `Assets/ThirdParty/Mixamo/YBot/` (no se versiona). Al cerrar la 8, el worktree `it08-entornos` y su rama (borrados a pedido del usuario).
 
 ## Pendiente de otros responsables
 
@@ -173,3 +189,5 @@ Riesgos:
 | 2026-11-06 | rowmate-po | **Cierre de la It. 7**: aceptada por el PO, sin FAIL. QA: APROBADO CON OBSERVACIONES en la ronda 2 (dotnet: herramientas 192/192 y Core 3152/3191 pasan, 0 fallan; Unity EditMode con simulador 3437/3482 y PlayMode con simulador 573/573; matriz 656 PASA, 0 FALLA; 37 AC PASS, 0 FAIL, 1 NV; LT-88 a LT-98 pasan; QA7-V-01, el único mayor, cerrado con DV-78). Reporte para el usuario: `iterations/07-remero-palada/REPORT.md`. Decisiones del PO al cerrar: QA7-V-06 (altura de Y Bot) aclarada en AC-SCN-05-06, AC-SCN-01-16 NO VERIFICABLE, limpieza antes del commit y el resto a issues de GitHub. Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-07 | coordinador | Empieza la It. 8 con los valores por defecto del gate de la 7. Dos corridas trabajaron en paralelo (una en un worktree local); se fusionaron en el árbol principal (02-tech-design §15) |
 | 2026-11-07 | rowmate-po | **Cierre de la It. 8**: aceptada por el PO, sin FAIL. QA: RECHAZADO en la ronda 1 (29 PASS, 9 FAIL, 2 NV; 4 mayores: mundo vivo, 25 casos legacy, paridad en pantalla y tomas con sondas) y APROBADO CON OBSERVACIONES en la ronda 2 (dotnet: herramientas 192/192 y Core 3311/3350 pasan, 0 fallan; Unity EditMode con simulador 3600/3645 y PlayMode con simulador 624/624; matriz 700 PASA, 0 FALLA; 39 AC PASS, 0 FAIL, 1 NV; LT-99 a LT-138 pasan; `EnvironmentParityTests` con 0 dp de diferencia). Reporte para el usuario: `iterations/08-entornos-selector/REPORT.md`. Decisiones del PO al cerrar: AC-SCN-01-19 NV solo en Android, QA-V8-12 aceptado, el #9 sigue abierto con el resto del farol, el worktree espera al usuario y el resto a issues de GitHub. Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-08 | coordinador | El usuario dio el OK a la It. 8 (rigen los valores por defecto de su gate), pidió borrar el worktree `it08-entornos` y su rama, commitear, pushear y empezar la It. 9 |
+| 2026-11-08 | rowmate-po | **Cierre de la It. 9**: aceptada por el PO, sin FAIL. QA: APROBADO CON OBSERVACIONES (dotnet `-Matrix` 3461/3500 pasan, 0 fallan; herramientas 192/192; matriz 737 PASA, 0 FALLA; Unity EditMode con simulador 3748/3795 y PlayMode con simulador 663/663; build de simulador OK; 42 AC PASS, 0 FAIL, 1 NV: AC-HIS-19-05 en el build). Reporte para el usuario: `iterations/09-historial/REPORT.md`. Decisiones del PO al cerrar: AC-HIS-19-05 NV en la parte del build, el dato del cursor corregido en el REPORT, VID-01 y VID-02 cubiertos por tests y los menores a 8 issues de GitHub. Próxima: la 10a (la 6b sigue postergada). Legacy sin cambios (`git status --porcelain` vacío) |

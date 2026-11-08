@@ -12,5 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
     <ProjectReference Include="../RowMate.Infrastructure/RowMate.Infrastructure.csproj" />
+    <!-- It. 9 (DT9-15): el comando seed usa HistorySeeds (Tests/Support). -->
+    <ProjectReference Include="../RowMate.Tests.Support/RowMate.Tests.Support.csproj" />
   </ItemGroup>
 </Project>

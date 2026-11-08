@@ -35,6 +35,12 @@ namespace RowMate.Core.Ports
         // AC-HIS-19-02 (:263-287): por el tiempo del monitor, de menor a mayor (con el id para desempatar, DT4a-05).
         Task<IReadOnlyList<DataPoint>> GetPointsAsync(long sessionId);
 
+        // AC-HIS-19-03, AC-HIS-07-02, -05 (database_service.dart:248-252 + :273-321; 02-tech-design DT9-01 de la It. 9): todas
+        // las sesiones (terminadas, cortadas y sin puntos), de la más nueva a la más vieja (con el mismo inicio, el id mayor
+        // primero), cada una con SessionStats.Compute de sus puntos (un pulso que falta cuenta 0; sin puntos, SessionStats.Empty).
+        // Se calcula en el hilo de la base: el hilo principal recibe la lista lista.
+        Task<IReadOnlyList<HistoryEntry>> GetHistoryAsync();
+
         // La herramienta de la demo y QA (§3.6): la más nueva arriba.
         Task<IReadOnlyList<SessionListing>> ListAsync();
 

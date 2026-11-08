@@ -1,5 +1,6 @@
 using System;
 using RowMate.App.Device;
+using RowMate.App.History;
 using RowMate.App.Routines;
 using RowMate.App.Scene;
 using RowMate.App.Shell;
@@ -53,8 +54,11 @@ namespace RowMate.App.Composition
             var seriesPanels = new SeriesPanelPrefs(preferences, logger);
             // It. 8 (§2.8, DT8-14): el escenario elegido, después de las preferencias (si ya están leídas, el primer cuadro lo ve).
             var sceneEnvironment = new SceneEnvironmentChoice(preferences, logger);
+            // It. 9 (§3.1): la lista del historial, una por app; recarga con los toques de la pestaña y con el cierre de una sesión.
+            var history = new HistoryStore(services.Sessions, shell, workout.State, logger);
             return new AppContext(services.Devices, device, heartRate, shell, scene, routines, workout, workoutRest, language, texts,
-                services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars, preferences, seriesPanels, sceneEnvironment);
+                services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars, preferences, seriesPanels, sceneEnvironment,
+                history, services.Sessions, services.Routines);
         }
 
         // Las barras del sistema sin efecto (AppServices.SystemUi = null).

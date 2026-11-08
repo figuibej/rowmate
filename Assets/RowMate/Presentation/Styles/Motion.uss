@@ -188,3 +188,14 @@
    animando algo que ya no está (AC-WKT-13-09). Terminar del diálogo es .rm-button.rm-button--primary y toma las de arriba:
    la capa y la escala 0,97 solo con el puntero apoyado (el clic simulado del arnés no las dispara), sin escala con
    .rm-reduce-motion. ════ */
+
+/* ════ It. 9 (09-historial/04-design-notes §3): una sola regla. La capa de la tarjeta del historial va hacia el estado en
+   dur.micro ease.enter (la vuelta, dur.fast ease.exit, es la de .rm-button__state); sin escala, como la tarjeta de rutina. El
+   selector de métrica es un .rm-segmented y toma las de la It. 3; el cambio de elegida (ColorFade 160 ease.move), la entrada
+   del gráfico, el cambio de métrica, el cursor y el tooltip van por código con el reloj del MotionDriver (ChartTimeline,
+   HistoryMotion): ninguna de esas piezas (.rm-chart*, .rm-history__slot, .rm-session-card) tiene una transición de USS. ════ */
+.rm-desktop .rm-history-card:hover > .rm-button__state,
+.rm-history-card:hover:active > .rm-button__state {
+    transition-duration: var(--rm-dur-micro);
+    transition-timing-function: var(--rm-ease-enter);
+}

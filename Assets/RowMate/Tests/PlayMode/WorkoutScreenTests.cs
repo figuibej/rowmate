@@ -29,7 +29,7 @@ namespace RowMate.Tests.PlayMode
             var screen = H.Find(WorkoutScreenView.ScreenName)!;
             Assert.That(screen, Is.InstanceOf<WorkoutScreenView>());
             Assert.That(screen.Q(className: "rm-placeholder__icon"), Is.Null, "sin el ícono provisorio");
-            Assert.That(H.Find("screen-history"), Is.InstanceOf<PlaceholderScreenView>(), "Historial sigue provisoria");
+            Assert.That(H.Find("screen-history"), Is.InstanceOf<RowMate.Presentation.History.HistoryScreenView>(), "Historial deja de ser provisoria (It. 9)");
             Assert.That(H.App.Shell.SelectedIndex.Value, Is.EqualTo(1), "destino 1");
             Assert.That(H.IsTextVisible("Entrenamiento"), Is.True, "workoutTitle");
             Assert.That(Screen.AppBar.Actions.childCount, Is.EqualTo(0), "sin acciones");

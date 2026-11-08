@@ -478,7 +478,7 @@ namespace RowMate.Tests.PlayMode
             Assert.That(screen.Q(className: "rm-placeholder__icon"), Is.Null, "Rutinas deja de ser provisoria");
             // Desde la It. 4a Workout tampoco es provisoria (WSC.WorkoutIsNotAPlaceholder).
             Assert.That(H.Find("screen-workout"), Is.InstanceOf<WorkoutScreenView>(), "Workout deja de ser provisoria (It. 4a)");
-            Assert.That(H.Find("screen-history"), Is.InstanceOf<PlaceholderScreenView>(), "Historial sigue provisoria");
+            Assert.That(H.Find("screen-history"), Is.InstanceOf<RowMate.Presentation.History.HistoryScreenView>(), "Historial deja de ser provisoria (It. 9)");
         }
 
         [UnityTest, Category("AC-APP-05-05")]

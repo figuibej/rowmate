@@ -5,6 +5,7 @@ using RowMate.Core.Ports;
 using RowMate.Presentation.Binding;
 using RowMate.Presentation.Controls;
 using RowMate.Presentation.Device;
+using RowMate.Presentation.History;
 using RowMate.Presentation.Placeholder;
 using RowMate.Presentation.Routines;
 using RowMate.Presentation.Workout;
@@ -18,7 +19,8 @@ namespace RowMate.Presentation.Shell
     // Shell de la app (F-APP-01, F-APP-02, F-APP-03; 02-tech-design §3.2 de la It. 2; 03-rutinas/02-tech-design §4.1; legacy
     // MainShell, main.dart:116-181). Los nombres son contrato:
     //   #app-root .rm-app .rm-text-scale-<n> [.rm-reduce-motion] [.rm-desktop] [.rm-keyboard-nav]   sin padding
-    //   ├── #tab-content .rm-tab-content       capa 0 (TabHost: las 4/5 pantallas, construidas una vez; Rutinas =
+    //   ├── #tab-content .rm-tab-content       capa 0 (TabHost: las 4/5 pantallas, construidas una vez; desde la It. 9
+    //   │                                      Historial = HistoryScreenView; Rutinas =
     //   │                                      RoutinesScreenView; desde la It. 4a, Workout = WorkoutScreenView)
     //   ├── #tab-bar .rm-tab-bar               capa 1 (absoluta abajo, sobre el contenido)
     //   ├── #page-stack .rm-layer              capa 2 (PageStack: el editor)
@@ -69,6 +71,12 @@ namespace RowMate.Presentation.Shell
                 {
                     RoutinesScreen = new RoutinesScreenView(ui, Layout, i);
                     Tabs.AddScreen(RoutinesScreen);
+                }
+                else if (destination.Id == TabDestinationId.History)
+                {
+                    // Desde la It. 9 Historial deja de ser provisoria (AC-HIS-06-01, AC-APP-02-08).
+                    HistoryScreen = new HistoryScreenView(ui, Layout, i);
+                    Tabs.AddScreen(HistoryScreen);
                 }
                 else if (destination.Id == TabDestinationId.Workout)
                 {
@@ -128,6 +136,8 @@ namespace RowMate.Presentation.Shell
         public RoutinesScreenView? RoutinesScreen { get; }
 
         public WorkoutScreenView? WorkoutScreen { get; }
+
+        public HistoryScreenView? HistoryScreen { get; }
 
         public VisualElement? TopLayer { get; }
 

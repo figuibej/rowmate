@@ -88,3 +88,9 @@ Con `--check` no escribe y sale con 1 si el archivo difiere. (`dotnet run --proj
 ```
 
 Sin `--variant` ni `--db`, la base del simulador (`rower_app_dev.db`) en la carpeta de datos de la app (en Windows, `LocalLow/iguisoft/RowMate`, calculada en el momento). `--verbose` agrega el tipo de la excepción de un error (nunca su mensaje, que trae la ruta). `SessionListToolTests` la corre como proceso sobre bases de prueba.
+
+**Sembrar el historial (It. 9, DT9-15).** `seed F-9|F-9V|F-9P --data-dir <carpeta> [--variant simulator|normal]` arma una base nueva con un conjunto de `HistorySeeds` (`Tests/Support`; spec §6 de la It. 9) y la deja como `rower_app_dev.db` (o `rower_app.db` con `--variant normal`) en esa carpeta, para correr el build con `ROWMATE_DATA_DIR` apuntando ahí (el `[PERF]` con `F-9P`). Reemplaza la base que haya en la carpeta y nunca escribe en la carpeta de datos de la app (`TempDatabase.Guard`). Sin rutas en la salida.
+
+```
+"C:/Program Files/dotnet/dotnet.exe" tools/dotnet/.artifacts/bin/RowMate.SessionList/release/RowMate.SessionList.dll seed F-9P --data-dir <scratch>/perf-data
+```

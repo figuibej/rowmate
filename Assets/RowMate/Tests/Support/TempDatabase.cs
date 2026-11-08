@@ -64,10 +64,11 @@ namespace RowMate.Tests.Support
         }
 
         // La base local de la app (It. 4a, §3.5): rutinas y sesiones sobre la MISMA RowMateDatabase, en el archivo de esta
-        // prueba. Se dispone con LocalStore.Dispose (el ejecutor termina lo encolado y cierra la conexión).
-        public LocalStore Store(IAppLogger logger, IDbExecutor? executor = null, string? fileName = null)
+        // prueba. Se dispone con LocalStore.Dispose (el ejecutor termina lo encolado y cierra la conexión). localZone: la zona de
+        // las fechas de las sesiones (It. 9, DT9-16: HistorySeeds.Zone, UTC−03:00); null = la del equipo.
+        public LocalStore Store(IAppLogger logger, IDbExecutor? executor = null, string? fileName = null, TimeZoneInfo? localZone = null)
         {
-            return new LocalStore(Open(logger, executor, fileName), logger);
+            return new LocalStore(Open(logger, executor, fileName), logger, localZone);
         }
 
         // Lanza InvalidOperationException si la ruta cae en los datos del usuario (ver arriba). Lo usan también las fábricas

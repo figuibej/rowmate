@@ -11,7 +11,8 @@ namespace RowMate.App.Shell
     // - 4 destinos en orden (Dispositivo, Workout, Rutinas, Historial) y Perfil al final solo con ShellOptions.ProfileTabEnabled
     //   (AC-APP-02-01, -02); Historial queda siempre en el índice 3.
     // - Al abrir está elegido el 0 y la selección no se guarda (:124, AC-APP-01-01). Elegir el ya elegido no cambia nada
-    //   (AC-APP-02-03). La recarga de Historial al tocarla (Q-22) es de la It. 9.
+    //   (AC-APP-02-03). Tocar una pestaña (Tap, It. 9, DT9-04) elige y SIEMPRE avisa con Tapped, también si ya estaba elegida:
+    //   así Historial recarga en cada toque (Q-22, AC-HIS-06-02).
     // legacy: lib/main.dart:116-181 (MainShell)
     public sealed class ShellStore
     {
@@ -78,6 +79,17 @@ namespace RowMate.App.Shell
             }
 
             _selected.Value = index; // el mismo índice no avisa
+        }
+
+        // It. 9 (DT9-04): la barra de pestañas llama Tap en cada toque. Elige como Select (el mismo índice no cambia
+        // SelectedIndex, AC-APP-02-03) y después avisa con Tapped, siempre (main.dart:146-148: onDestinationSelected recarga el
+        // historial aunque ya esté elegido).
+        public event Action<int>? Tapped;
+
+        public void Tap(int index)
+        {
+            Select(index);
+            Tapped?.Invoke(index);
         }
 
         // Índice de un destino, o −1 si no está (Perfil sin Strava).

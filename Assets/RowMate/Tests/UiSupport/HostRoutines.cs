@@ -144,6 +144,38 @@ namespace RowMate.Tests.UiSupport
             };
         }
 
+        // It. 9 (09-historial/02-tech-design §7, DT9-15, DT9-16): una base temporal sembrada POR CÓDIGO con HistorySeeds a través de
+        // los repositorios reales (F-9, F-9V o F-9P) y la zona de las fechas de las sesiones (UiHostOptions.LocalZone, UTC−03:00 por
+        // defecto). Rutinas y sesiones en el mismo LocalStore con InlineDbExecutor, como Seeded. Reopen vuelve a abrir el archivo
+        // con la misma zona. Seed: lo que dejó la siembra (los ids por número de la spec), en el set que se devuelve.
+        public static HostRoutineFactory History(string set, TimeZoneInfo? zone = null, Action<HistorySeedResult>? seeded = null,
+                                                 string fileName = TempDatabase.DefaultFileName)
+        {
+            if (set == null)
+            {
+                throw new ArgumentNullException(nameof(set));
+            }
+
+            var localZone = zone ?? HistorySeeds.Zone;
+            return (scheduler, logger) =>
+            {
+                var database = new TempDatabase(fileName);
+                try
+                {
+                    var store = database.Store(logger, null, fileName, localZone);
+                    var result = HistorySeeds.Apply(store, set);
+                    seeded?.Invoke(result);
+                    var path = database.PathOf(fileName);
+                    return new HostRoutineSet(store, database, path, l => database.Store(l, null, fileName, localZone));
+                }
+                catch
+                {
+                    database.Dispose();
+                    throw;
+                }
+            };
+        }
+
         // F-ROTA: un archivo con el nombre de la base que no es una base de SQLite (el texto queda igual: lo mira CAP-03).
         public static HostRoutineFactory Rota(string fileName = TempDatabase.DefaultFileName)
         {

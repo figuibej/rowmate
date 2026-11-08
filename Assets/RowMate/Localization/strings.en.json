@@ -480,5 +480,10 @@
         "type": "String"
       }
     }
-  }
+  },
+  "historyStatPower": "Watts",
+  "historyStatSpm": "SPM",
+  "historyStatSplit": "Split",
+  "historyLoadError": "Couldn't load history",
+  "sessionLoadError": "Couldn't load the session"
 }

@@ -68,8 +68,13 @@ namespace RowMate.Snapshots
                 return RowerCatalog.All;
             }
 
-            // It. 7: it7 (por defecto desde la 7) = RowerCatalog.
-            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? SeriesCatalog.All : RowerCatalog.All;
+            if (string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase))
+            {
+                return SeriesCatalog.All;
+            }
+
+            // It. 9: it9 (por defecto desde la 9) = HistoryCatalog.
+            return HistoryCatalog.All;
         }
 
         public static string TitleFor(string set)
@@ -109,7 +114,12 @@ namespace RowMate.Snapshots
                 return "It. 8 (miniaturas horneadas)";
             }
 
-            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? "It. 5 (Series en vivo)" : "It. 7 (Remero, bote y palada)";
+            if (string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 5 (Series en vivo)";
+            }
+
+            return string.Equals(set, "it7", StringComparison.OrdinalIgnoreCase) ? "It. 7 (Remero, bote y palada)" : "It. 9 (Historial y detalle con gráficos)";
         }
 
         public static IReadOnlyList<SnapshotScenario> All

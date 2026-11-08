@@ -17,7 +17,8 @@ namespace RowMate.Presentation.Shell
     //   └── #tab-<destino> .rm-tab [.rm-tab--selected] (Button) × 4 o 5
     //       ├── .rm-tab__icon-box (56 × 32) > .rm-tab__state + .rm-tab__icon .rm-icon + .rm-focus-ring
     //       └── .rm-tab__label .rm-type-label
-    // Tocar el elegido no hace nada (ShellStore). Al cambiar (cuadro 0): el glifo del nuevo pasa a su variante elegida (y
+    // Tocar una pestaña llama a ShellStore.Tap (It. 9, DT9-04): elige (el elegido no cambia nada) y SIEMPRE avisa con Tapped (Historial
+    // recarga también si ya estaba elegido, AC-HIS-06-02). Al cambiar (cuadro 0): el glifo del nuevo pasa a su variante elegida (y
     // .rm-icon--filled en Workout y Perfil); la píldora va al nuevo con el resorte, conservando su velocidad; el ícono nuevo
     // escala 1 → 1,12 (0-90) → 1 (90-260); el color del ícono y la etiqueta funde en 160 ms ease.move por código y al
     // terminar se borra el estilo en línea (en reposo, los colores son de Base.uss) (DN-11). Reducir movimiento: la píldora
@@ -233,7 +234,7 @@ namespace RowMate.Presentation.Shell
             public Tab(TabBarView bar, int index, TabDestination destination)
             {
                 Destination = destination;
-                Button = new Button(() => bar._shell.Select(index)) { name = destination.ElementName, text = "" };
+                Button = new Button(() => bar._shell.Tap(index)) { name = destination.ElementName, text = "" };
                 RmButton.StripUnityChrome(Button);
                 Button.AddToClassList("rm-tab");
                 Button.focusable = true;

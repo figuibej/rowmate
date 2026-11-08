@@ -193,6 +193,12 @@ namespace RowMate.Infrastructure.Sessions
             });
         }
 
+        // La lista del historial con sus estadísticas, en una sola tarea del ejecutor (HistoryQuery; DT9-01 de la It. 9).
+        public Task<IReadOnlyList<HistoryEntry>> GetHistoryAsync()
+        {
+            return _database.RunAsync(connection => HistoryQuery.Read(connection, _localZone));
+        }
+
         public Task<IReadOnlyList<SessionListing>> ListAsync()
         {
             return _database.RunAsync<IReadOnlyList<SessionListing>>(connection =>

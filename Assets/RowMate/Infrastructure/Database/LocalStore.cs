@@ -13,7 +13,9 @@ namespace RowMate.Infrastructure.Database
     {
         private bool _disposed;
 
-        public LocalStore(RowMateDatabase database, IAppLogger logger)
+        // localZone: la zona en que vuelven las fechas de las sesiones (null = la del equipo). Las pruebas y el arnés pasan
+        // UTC−03:00 (DT9-16 de la It. 9).
+        public LocalStore(RowMateDatabase database, IAppLogger logger, TimeZoneInfo? localZone = null)
         {
             Database = database ?? throw new ArgumentNullException(nameof(database));
             if (logger == null)
@@ -22,7 +24,7 @@ namespace RowMate.Infrastructure.Database
             }
 
             Routines = new SqliteRoutineRepository(database, logger, ownsDatabase: false);
-            Sessions = new SqliteSessionRepository(database, logger);
+            Sessions = new SqliteSessionRepository(database, logger, localZone);
         }
 
         public RowMateDatabase Database { get; }

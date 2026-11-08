@@ -40,7 +40,9 @@ namespace RowMate.Snapshots
         // las miniaturas (las escribe en Art/Textures/Thumbnails; las tomas, a Library/RowMate/thumbs, que no se versiona).
         public const string It8Output = "docs/migration/iterations/08-entornos-selector/snapshots";
         public const string ThumbsOutput = "Library/RowMate/thumbs";
-        public const string DefaultSet = "it8";
+        // It. 9 (09-historial/02-tech-design §7): it9 (por defecto desde la 9) = HistoryCatalog.
+        public const string It9Output = "docs/migration/iterations/09-historial/snapshots";
+        public const string DefaultSet = "it9";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
@@ -80,7 +82,12 @@ namespace RowMate.Snapshots
                 return ThumbsOutput;
             }
 
-            return string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase) ? It5Output : It7Output;
+            if (string.Equals(set, "it5", StringComparison.OrdinalIgnoreCase))
+            {
+                return It5Output;
+            }
+
+            return string.Equals(set, "it7", StringComparison.OrdinalIgnoreCase) ? It7Output : It9Output;
         }
 
         public static void Run()

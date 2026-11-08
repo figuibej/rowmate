@@ -15,6 +15,8 @@ namespace RowMate.Presentation.Controls
     //   elegida por código (USS no aplica transparencia a un var()).
     //   .rm-segmented [--tiles]
     //   └── #<nombre> .rm-segmented__option [--selected]   Button: .rm-button__state, [.rm-icon], .rm-segmented__label, anillo
+    // - Gráfico (.rm-segmented--chart, It. 9; EnableChartVariant ANTES de AddOption): ancho según el texto, relleno de 12 a 6,
+    //   textos que se achican hasta 0,70 y el tilde en la elegida (ver la sección de la variante).
     // Enter/Espacio o un toque eligen; Changed avisa con el índice (no avisa si ya estaba elegida).
     // Con un MotionDriver, la opción elegida cruza fondo, borde (mosaicos) y etiqueta en 160 ease.move, y la anterior al revés
     // (ColorFade; 04-design-notes §5.7; QA-V3-02). Sin él, o antes de estar en un panel, en el acto.
@@ -74,15 +76,25 @@ namespace RowMate.Presentation.Controls
                 button.Add(icon);
             }
 
+            CheckView? check = null;
+            if (_chart)
+            {
+                // El tilde de la elegida (variante del gráfico), antes del texto.
+                button.AddToClassList(OptionClass + "--chart");
+                check = new CheckView();
+                check.style.display = DisplayStyle.None;
+                button.Add(check);
+            }
+
             var text = new Label(label);
             text.AddToClassList("rm-segmented__label");
-            text.AddToClassList(_tiles ? "rm-type-button-s" : "rm-type-button");
+            text.AddToClassList(_chart ? "rm-segmented__label--chart" : _tiles ? "rm-type-button-s" : "rm-type-button");
             text.pickingMode = PickingMode.Ignore;
             button.Add(text);
             button.Add(RmButton.FocusRing());
             button.clicked += () => Select(index, true);
             Add(button);
-            _options.Add(new Option(button, text, icon, tileBase, _motion != null ? new ColorFade(_motion) : null));
+            _options.Add(new Option(button, text, icon, tileBase, _motion != null ? new ColorFade(_motion) : null) { Check = check });
             Paint(index);
             return button;
         }
@@ -98,6 +110,10 @@ namespace RowMate.Presentation.Controls
             if (_options[index].Label.text != label)
             {
                 _options[index].Label.text = label;
+                if (_chart)
+                {
+                    FitChart(true);
+                }
             }
         }
 
@@ -139,6 +155,11 @@ namespace RowMate.Presentation.Controls
         {
             var option = _options[index];
             var selected = index == _selected;
+            if (option.Check != null)
+            {
+                option.Check.style.display = selected ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
             var fade = option.Fade != null && option.Button.panel != null && _motion!.Armed;
             if (fade)
             {
@@ -178,6 +199,227 @@ namespace RowMate.Presentation.Controls
             style.borderTopColor = border;
             style.borderBottomColor = border;
             style.backgroundColor = Background(option, selected);
+        }
+
+
+        // ── Variante del gráfico (.rm-segmented--chart; It. 9, AC-HIS-12-01; 02-tech-design §1.2, gate M-02; arte §2.4, D9-12) ──
+        // Cada opción mide según su texto (flex-grow 1 con base en el texto) con un relleno de 12 que baja hasta 6; si igual no
+        // entra, los textos se achican juntos hasta 0,70 (el tope del FitBox de las cifras; nunca "…"). La elegida lleva el tilde
+        // (CheckGlyph dibujado, DT9-14) antes del texto. Las flechas izquierda y derecha mueven el foco entre las opciones; Enter
+        // o Espacio eligen (AC-HIS-12-02).
+        public const string ChartClass = UssClass + "--chart";
+        public const double ChartMinScale = 0.70;
+        public const float ChartMaxPadding = 12;
+        public const float ChartMinPadding = 6;
+        public const float ChartCheckSize = 12;
+        public const float ChartCheckGap = 4;
+
+        private bool _chart;
+        private Label? _probe;
+        private float _chartWidth = -1;
+        private float _chartBase = -1;
+
+        public bool IsChart => _chart;
+
+        // La escala de los textos y el relleno de cada lado que dejó el último ajuste (pruebas: ≥ 0,70 y sin "…").
+        public double ChartScale { get; private set; } = 1;
+
+        public float ChartPadding { get; private set; } = ChartMaxPadding;
+
+        public VisualElement? CheckOf(int index)
+        {
+            return index >= 0 && index < _options.Count ? _options[index].Check : null;
+        }
+
+        public void EnableChartVariant()
+        {
+            if (_chart)
+            {
+                return;
+            }
+
+            _chart = true;
+            AddToClassList(ChartClass);
+            // La medida natural de los textos sale de una etiqueta oculta con la misma clase de tipo (sin el tamaño en línea de
+            // las opciones): cambia con la escala de letra y su cambio de tamaño vuelve a ajustar.
+            _probe = new Label("Split 500m");
+            _probe.AddToClassList("rm-segmented__label");
+            _probe.AddToClassList("rm-segmented__label--chart");
+            _probe.pickingMode = PickingMode.Ignore;
+            _probe.style.position = Position.Absolute;
+            _probe.style.visibility = Visibility.Hidden;
+            _probe.style.left = 0;
+            _probe.style.top = 0;
+            hierarchy.Add(_probe);
+            _probe.RegisterCallback<GeometryChangedEvent>(_ => FitChart(true));
+            RegisterCallback<GeometryChangedEvent>(_ => FitChart(false));
+            RegisterCallback<NavigationMoveEvent>(OnChartNavigation);
+            RegisterCallback<KeyDownEvent>(OnChartKey);
+        }
+
+        // Las flechas por tecla (el teclado de la PC): mueven el foco. La navegación que el sistema arma con la misma tecla en ese
+        // cuadro no lo vuelve a mover (_arrowFrame).
+        private int _arrowFrame = -1;
+
+        private void OnChartKey(KeyDownEvent evt)
+        {
+            if (evt.keyCode != KeyCode.LeftArrow && evt.keyCode != KeyCode.RightArrow)
+            {
+                return;
+            }
+
+            if (MoveFocus(evt.target, evt.keyCode == KeyCode.LeftArrow ? -1 : 1))
+            {
+                _arrowFrame = Time.frameCount;
+                evt.StopPropagation();
+            }
+        }
+
+        private bool MoveFocus(IEventHandler target, int step)
+        {
+            var focused = -1;
+            for (var i = 0; i < _options.Count; i++)
+            {
+                if (ReferenceEquals(_options[i].Button, target))
+                {
+                    focused = i;
+                    break;
+                }
+            }
+
+            if (focused < 0)
+            {
+                return false;
+            }
+
+            var next = focused + step;
+            if (next >= 0 && next < _options.Count)
+            {
+                _options[next].Button.Focus();
+            }
+
+            return true;
+        }
+
+        private void FitChart(bool force)
+        {
+            if (!_chart || _probe == null || _options.Count == 0 || _probe.panel == null)
+            {
+                return;
+            }
+
+            var available = contentRect.width;
+            var baseSize = _probe.resolvedStyle.fontSize;
+            if (!(available > 0) || !(baseSize > 0))
+            {
+                return;
+            }
+
+            if (!force && Math.Abs(available - _chartWidth) < 0.01f && Math.Abs(baseSize - _chartBase) < 0.01f)
+            {
+                return;
+            }
+
+            _chartWidth = available;
+            _chartBase = baseSize;
+            var n = _options.Count;
+            double text = 0;
+            for (var i = 0; i < n; i++)
+            {
+                var size = _probe.MeasureTextSize(_options[i].Label.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
+                text += Math.Ceiling(size.x) + 1;
+            }
+
+            // Lo fijo: el tilde de la elegida y los separadores de 1 dp.
+            var fixedWidth = ChartCheckSize + ChartCheckGap + (n - 1);
+            double padding = ChartMaxPadding;
+            double scale = 1;
+            if (text + 2 * n * ChartMaxPadding + fixedWidth > available)
+            {
+                padding = (available - fixedWidth - text) / (2.0 * n);
+                if (padding < ChartMinPadding)
+                {
+                    padding = ChartMinPadding;
+                    scale = Math.Max(ChartMinScale, (available - fixedWidth - 2 * n * ChartMinPadding) / text);
+                }
+            }
+
+            ChartScale = Math.Min(1, scale);
+            ChartPadding = (float)Math.Floor(padding * 4) / 4;
+            var fontSize = (float)(baseSize * ChartScale);
+            for (var i = 0; i < n; i++)
+            {
+                var option = _options[i];
+                option.Button.style.paddingLeft = ChartPadding;
+                option.Button.style.paddingRight = ChartPadding;
+                option.Label.style.fontSize = fontSize;
+            }
+        }
+
+        private void OnChartNavigation(NavigationMoveEvent evt)
+        {
+            if (evt.direction != NavigationMoveEvent.Direction.Left && evt.direction != NavigationMoveEvent.Direction.Right)
+            {
+                return;
+            }
+
+            if (_arrowFrame == Time.frameCount)
+            {
+                evt.StopPropagation();
+                return;
+            }
+
+            if (MoveFocus(evt.target, evt.direction == NavigationMoveEvent.Direction.Left ? -1 : 1))
+            {
+                evt.StopPropagation();
+            }
+        }
+
+        // El tilde de la opción elegida (DT9-14): el trazo del check de CheckGlyph, sin disco, en el color del texto.
+        private sealed class CheckView : VisualElement
+        {
+            public CheckView()
+            {
+                AddToClassList("rm-segmented__check");
+                pickingMode = PickingMode.Ignore;
+                style.width = ChartCheckSize;
+                style.height = ChartCheckSize;
+                style.flexShrink = 0;
+                style.marginRight = ChartCheckGap;
+                generateVisualContent += Draw;
+            }
+
+            private void Draw(MeshGenerationContext context)
+            {
+                var w = contentRect.width;
+                var h = contentRect.height;
+                if (!(w > 0) || !(h > 0))
+                {
+                    return;
+                }
+
+                var radius = Math.Min(w, h) / 2f;
+                var points = CheckGlyph.Partial(1, w / 2f, h / 2f, radius, out var x0, out var y0, out var x1, out var y1, out var x2, out var y2);
+                if (points < 2)
+                {
+                    return;
+                }
+
+                var painter = context.painter2D;
+                painter.strokeColor = TokenColors.ToColor(Tokens.TextPrimary);
+                painter.lineWidth = Math.Max(1.5f, (float)(CheckGlyph.StrokeRadii * radius * 1.2));
+                painter.lineJoin = LineJoin.Miter;
+                painter.lineCap = LineCap.Butt;
+                painter.BeginPath();
+                painter.MoveTo(new Vector2((float)x0, (float)y0));
+                painter.LineTo(new Vector2((float)x1, (float)y1));
+                if (points > 2)
+                {
+                    painter.LineTo(new Vector2((float)x2, (float)y2));
+                }
+
+                painter.Stroke();
+            }
         }
 
         private bool IsTile(Option option)
@@ -227,6 +469,8 @@ namespace RowMate.Presentation.Controls
             public ColorToken? TileBase { get; }
 
             public ColorFade? Fade { get; }
+
+            public VisualElement? Check { get; set; }
         }
     }
 }

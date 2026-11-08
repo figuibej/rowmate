@@ -4,10 +4,12 @@
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it7|it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it9|it8|it7|it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it7 por defecto desde la It. 7: el remero, el bote y la palada, CAP-01..21, VID-01..07 y DEMO-01..06 en
+# -Set: el catalogo (it9 por defecto desde la It. 9: el historial, el detalle y el grafico, CAP-01..17, VID-01..02 y DEMO-01..05 en
+# docs/migration/iterations/09-historial/snapshots, con bases temporales sembradas por codigo (HistorySeeds); it8, el de la It. 8;
+# it7, el de la It. 7: el remero, el bote y la palada, CAP-01..21, VID-01..07 y DEMO-01..06 en
 # docs/migration/iterations/07-remero-palada/snapshots; it6a, el de la It. 6a: la escena del lago, CAP-01..24, DEMO-01..08, VID-01..11 e it6a-low en
 # docs/migration/iterations/06a-escena-lago/snapshots, con el Editor SIN -nographics (Direct3D 11) y la escena real en nivel Alto;
 # it5: los paneles de series, CAP-01..26, DEMO-01..12 y VID-01..09 en
@@ -34,8 +36,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it8',
+    [ValidateSet('it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it9',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -162,7 +164,8 @@ function Get-SetFolder {
     if ($Set -eq 'it6a') { return 'docs/migration/iterations/06a-escena-lago/snapshots' }
     if ($Set -eq 'it8') { return 'docs/migration/iterations/08-entornos-selector/snapshots' }
     if ($Set -eq 'thumbs') { return 'Library/RowMate/thumbs' }
-    return 'docs/migration/iterations/07-remero-palada/snapshots'
+    if ($Set -eq 'it7') { return 'docs/migration/iterations/07-remero-palada/snapshots' }
+    return 'docs/migration/iterations/09-historial/snapshots'
 }
 
 function Invoke-Harness {

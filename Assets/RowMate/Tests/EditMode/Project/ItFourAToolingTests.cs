@@ -27,7 +27,7 @@ namespace RowMate.Tests.EditMode.Project
             // registro de las tomas reemplazadas).
             var script = File.ReadAllText(RepoPaths.Combine(CaptureScript));
             // It. 5: it5 se suma adelante; It. 6a: it6a adelante (el por defecto desde la 6a); it4a, it3 e it2 siguen.
-            Assert.That(script, Does.Contain("[ValidateSet('it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]"));
+            Assert.That(script, Does.Contain("[ValidateSet('it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]"));
             Assert.That(script, Does.Contain("if ($Set -eq 'it4a') { return '" + Snapshots + "' }"), "su carpeta de salida");
             Assert.That(script, Does.Contain("if ($Set -eq 'it3') { return 'docs/migration/iterations/03-rutinas/snapshots' }"), "it3 sigue igual");
             Assert.That(script, Does.Contain("if ($Set -eq 'it2') { return 'docs/migration/iterations/02-dispositivo-simulador/snapshots' }"), "it2 también");
@@ -43,7 +43,7 @@ namespace RowMate.Tests.EditMode.Project
         {
             var cli = File.ReadAllText(RepoPaths.Combine(Cli));
             Assert.That(cli, Does.Contain("public const string It4aOutput = \"" + Snapshots + "\";"));
-            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it8\";"), "it4b fue el por defecto en la 4b, it5 en la 5; desde la 6a, it6a");
+            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it9\";"), "it4b fue el por defecto en la 4b, it5 en la 5; desde la 6a, it6a");
             Assert.That(File.Exists(RepoPaths.Combine(Catalog)), Is.True, "WorkoutCatalog");
         }
 

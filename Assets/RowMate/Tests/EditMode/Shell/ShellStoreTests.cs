@@ -125,5 +125,27 @@ namespace RowMate.Tests.EditMode.Shell
             Assert.Throws<ArgumentOutOfRangeException>(() => shell.Select(-1));
             Assert.That(shell.SelectedIndex.Value, Is.EqualTo(0));
         }
+
+        // It. 9 (DT9-04; AC-HIS-06-02): Tap elige como Select y SIEMPRE avisa, también con la pestaña ya elegida (Historial recarga
+        // en cada toque); SelectedIndex sigue sin avisar si el índice no cambia (AC-APP-02-03).
+        [Test, Category("AC-HIS-06-02"), Category("AC-APP-02-03")]
+        public void TapAlwaysNotifiesButSelectionOnlyWhenItChanges()
+        {
+            var shell = new ShellStore(new ShellOptions(false), new RecordingLogger());
+            var selections = 0;
+            var taps = new System.Collections.Generic.List<int>();
+            using (shell.SelectedIndex.Subscribe(_ => selections++, emitCurrent: false))
+            {
+                shell.Tapped += taps.Add;
+                shell.Tap(ShellStore.HistoryIndex);
+                shell.Tap(ShellStore.HistoryIndex);
+                shell.Tap(1);
+                Assert.That(taps, Is.EqualTo(new[] { 3, 3, 1 }));
+                Assert.That(selections, Is.EqualTo(2), "el segundo toque en Historial no cambia la selección");
+                Assert.That(shell.SelectedIndex.Value, Is.EqualTo(1));
+                Assert.Throws<ArgumentOutOfRangeException>(() => shell.Tap(9));
+                Assert.That(taps.Count, Is.EqualTo(3), "un índice que no existe no avisa");
+            }
+        }
     }
 }

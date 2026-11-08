@@ -165,6 +165,11 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(lt.Id);
             }
 
+            foreach (var ac in It09Ids.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -1792,6 +1797,102 @@ namespace RowMate.Tests.EditMode.Traceability
                     {
                         offenders.Add(id + " en " + file);
                     }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
+        }
+
+        // ------------------------------------------------------------------ It. 9 (09-historial/02-tech-design §8.3)
+
+        [Test, Category("AC-BASE-09")]
+        public void It09IdsAreComplete()
+        {
+            // 43 AC nuevos (§3): HIS-05: 4, HIS-06: 4, HIS-07: 7, HIS-09: 4, HIS-10: 1, HIS-11: 4, HIS-12: 2, HIS-13: 7, HIS-14: 3,
+            // HIS-15: 3, RUT-20: 1, HIS-19: 3. Ninguno es de una iteración anterior y no hay casos legacy (spec §0).
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance, It06aIds.Acceptance, It07Ids.Acceptance, It08Ids.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            var byCard = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var ac in It09Ids.Acceptance)
+            {
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It09Ids: " + ac.Id);
+                Assert.That(AcPattern.IsMatch(ac.Id), Is.True, ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior");
+                var card = ac.Id.Substring(0, ac.Id.LastIndexOf('-'));
+                byCard.TryGetValue(card, out var count);
+                byCard[card] = count + 1;
+            }
+
+            Assert.That(It09Ids.Acceptance.Length, Is.EqualTo(43));
+            Assert.That(It09Ids.FromEarlier, Is.Empty);
+            var expected = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["AC-HIS-05"] = 4, ["AC-HIS-06"] = 4, ["AC-HIS-07"] = 7, ["AC-HIS-09"] = 4, ["AC-HIS-10"] = 1, ["AC-HIS-11"] = 4,
+                ["AC-HIS-12"] = 2, ["AC-HIS-13"] = 7, ["AC-HIS-14"] = 3, ["AC-HIS-15"] = 3, ["AC-RUT-20"] = 1, ["AC-HIS-19"] = 3,
+            };
+            Assert.That(byCard, Is.EquivalentTo(expected), "los 43 por ficha (§3)");
+
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            var deviceOnly = new List<string>();
+            foreach (var ac in It09Ids.Acceptance)
+            {
+                if (ac.Checks == "eq")
+                {
+                    deviceOnly.Add(ac.Id);
+                    continue;
+                }
+
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It09Ids.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It09Ids.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(It09Ids.DeviceOnlyIds, Is.EquivalentTo(deviceOnly));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It09DotnetIdsHaveTests()
+        {
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It09Ids.Acceptance)
+            {
+                if ((HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s")) && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d] de la It. 9 sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It09UnityOnlyIdsHaveNoDotnetResult()
+        {
+            var scan = Scan();
+            var offenders = new List<string>();
+            var ids = new List<string>(It09Ids.UnityOnlyIds);
+            ids.AddRange(It09Ids.DeviceOnlyIds);
+            foreach (var id in ids)
+            {
+                if (!scan.Categories.TryGetValue(id, out var files))
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    offenders.Add(id + " en " + file);
                 }
             }
 

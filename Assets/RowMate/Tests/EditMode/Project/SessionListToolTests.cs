@@ -135,6 +135,49 @@ namespace RowMate.Tests.EditMode.Project
             }
         }
 
+        // It. 9 (DT9-15): seed arma un conjunto del historial en una carpeta de datos nueva (el [PERF] con ROWMATE_DATA_DIR), con
+        // el nombre de la variante, sin rutas en la salida; nunca en la carpeta de datos de la app.
+        [Test, Category("AC-HIS-19-03"), Category("AC-HIS-20-04")]
+        public void SeedWritesAHistorySet()
+        {
+            var dir = Path.Combine(_temp.Folder, "datos ñ");
+            var run = RunTool("seed", "F-9", "--data-dir", dir);
+            Assert.That(run.Code, Is.EqualTo(0), run.Error);
+            Assert.That(Lines(run.Output), Is.EqualTo(new[] { "[sessions] seed F-9: 6 sesiones en rower_app_dev.db" }));
+            AssertNoPaths(run);
+            var db = Path.Combine(dir, "rower_app_dev.db");
+            Assert.That(File.Exists(db), Is.True);
+            Assert.That(Directory.GetFiles(dir, "seed-*"), Is.Empty, "sin restos del nombre neutro");
+            var list = RunTool("--db", db);
+            Assert.That(list.Code, Is.EqualTo(0), list.Error);
+            Assert.That(Lines(list.Output)[0], Is.EqualTo("[sessions] rower_app_dev.db: 6 sesiones"));
+            Assert.That(RunTool("seed", "F-9V", "--data-dir", dir, "--variant", "normal").Code, Is.EqualTo(0));
+            Assert.That(File.Exists(Path.Combine(dir, "rower_app.db")), Is.True);
+            foreach (var args in new[] { new[] { "seed" }, new[] { "seed", "F-X", "--data-dir", dir }, new[] { "seed", "F-9" } })
+            {
+                var bad = RunTool(args);
+                Assert.That(bad.Code, Is.EqualTo(1), string.Join(" ", args));
+                Assert.That(bad.Error, Does.StartWith("[sessions] uso: RowMate.SessionList"));
+            }
+        }
+
+        [Test, Category("AC-HIS-20-04")]
+        public void SeedNeverWritesTheAppDataFolder()
+        {
+            var appData = Path.Combine(_temp.Folder, AppIdentityFolder());
+            var run = RunTool("seed", "F-9", "--data-dir", appData);
+            Assert.That(run.Code, Is.EqualTo(2));
+            Assert.That(Lines(run.Error), Is.EqualTo(new[] { "[sessions] no se siembra la carpeta de datos de la app" }));
+            AssertNoPaths(run);
+            Assert.That(Directory.Exists(appData) ? Directory.GetFiles(appData) : new string[0], Is.Empty);
+        }
+
+        // <empresa>/<producto>: la marca de la carpeta de datos de la app que reconoce TempDatabase.Guard.
+        private static string AppIdentityFolder()
+        {
+            return Path.Combine(RowMate.Core.Common.AppIdentity.CompanyName, RowMate.Core.Common.AppIdentity.ProductName);
+        }
+
         // ── La herramienta como proceso ──
 
         private static ToolRun RunTool(params string[] args)

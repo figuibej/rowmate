@@ -406,3 +406,34 @@
 .rm-dialog--compact.rm-dialog--completion .rm-dialog__actions {
     padding-top: 20px;
 }
+
+/* ════ It. 9 — Historial, detalle y gráfico (09-historial/04-design-notes §2; 00-arte-historial §1.2, §2.4; contrato de
+   02-tech-design §5 y §10.2). La estructura, los colores base de la spec (AC-HIS-07-04, -11-02), los radios de tarjeta y del
+   gráfico, el tooltip y los anillos de la tarjeta están en Base.uss (WP-B); los colores de la malla y sus alfas, en ChartSpecs
+   (Core). Acá van las capas de estado y los anillos del selector de 5 opciones. ════ */
+
+/* Tarjeta del historial (§1.2 del arte): la capa común r.card, hover 4 % (solo escritorio) y presionado 8 %, sin escala
+   (superficie grande, como la tarjeta de rutina). El chevron @24 % no cambia (AC-HIS-07-03). */
+.rm-desktop .rm-history-card:hover > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-history-card:hover:active > .rm-button__state,
+.rm-desktop .rm-history-card:hover:active > .rm-button__state {
+    opacity: 0.08;
+}
+
+/* Selector de métrica (§2.4): la capa de estado y el anillo blanco de la elegida son los de .rm-segmented (arriba). Las reglas
+   del anillo de arriba suponen 2 opciones (la segunda redondeada a la derecha); con 5, las del medio van casi rectas (2 dp) y
+   solo la última (Pulso) se redondea a la derecha. Alto 40 con borde 1: el radio de adentro es 19 y el anillo, a 2 dp, 17. */
+.rm-segmented--chart .rm-segmented__option--divided > .rm-focus-ring {
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+
+.rm-segmented--chart #session-metric-hr > .rm-focus-ring {
+    border-top-right-radius: 17px;
+    border-bottom-right-radius: 17px;
+}

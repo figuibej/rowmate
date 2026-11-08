@@ -150,12 +150,21 @@ namespace RowMate.Tests.EditMode.Localization
             new[] { "hudRepLabel", "Rep {rep}", "Rep {rep}" },
         };
 
+        private static readonly string[][] ItNineKeys =
+        {
+            new[] { "historyStatPower", "Watts", "Watts" },
+            new[] { "historyStatSpm", "SPM", "SPM" },
+            new[] { "historyStatSplit", "Split", "Split" },
+            new[] { "historyLoadError", "No se pudo cargar el historial", "Couldn't load history" },
+            new[] { "sessionLoadError", "No se pudo cargar la sesión", "Couldn't load the session" },
+        };
+
         private static LocalizationCatalog Es => LocalizationFixture.Catalog("es");
 
         private static LocalizationCatalog En => LocalizationFixture.Catalog("en");
 
-        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12: 223 claves en es y las mismas 223 en en (159 del legacy + 15 de la
-        // It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5).
+        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12: 228 claves en es y las mismas 228 en en (159 del legacy + 15 de la
+        // It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5 + 5 de la It. 9).
         [Test, Category("AC-APP-10-01"), Category("AC-APP-10-10"), Category("AC-APP-10-11"), Category("AC-APP-10-12")]
         public void SameKeysInBothLanguages()
         {
@@ -163,9 +172,9 @@ namespace RowMate.Tests.EditMode.Localization
             var en = En;
             Assert.That(es.Locale, Is.EqualTo("es"));
             Assert.That(en.Locale, Is.EqualTo("en"));
-            Assert.That(es.Keys.Count, Is.EqualTo(223));
-            Assert.That(en.Keys.Count, Is.EqualTo(223));
-            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(223), "claves repetidas en es");
+            Assert.That(es.Keys.Count, Is.EqualTo(228));
+            Assert.That(en.Keys.Count, Is.EqualTo(228));
+            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(228), "claves repetidas en es");
             Assert.That(en.Keys, Is.EquivalentTo(es.Keys), "una clave existe en un solo idioma");
             Assert.That(en.Keys, Is.EqualTo(es.Keys), "mismo orden en los dos archivos");
             Assert.That(LocalizationFixture.LegacyTexts("es").Count, Is.EqualTo(159));
@@ -514,6 +523,33 @@ namespace RowMate.Tests.EditMode.Localization
                 MessageArg.Text("meters", "1.112 m")), Is.EqualTo("Rep 2/3 · 1.112 m"));
             Assert.That(LocalizationFixture.Es.Format(L10nKeys.HudRepLabel, MessageArg.Text("rep", "999")), Is.EqualTo("Rep 999"));
             Assert.That(LocalizationFixture.Es.Get(L10nKeys.HudUnitMeters), Is.EqualTo("m"), "se reusa");
+        }
+
+        // 09-historial/01-po-spec §5: las 5 claves de la It. 9 con sus textos es/en, al final del catálogo y sin parámetros. Las tres
+        // etiquetas son los textos fijos del legacy (history_screen.dart:113-115, session_detail_screen.dart:164-166), con el
+        // español idéntico; historyStatWatts ("Vatios") y historyStatCalories siguen sin uso. Los errores copian el estilo de
+        // routinesLoadError (Q-13).
+        [Test, Category("AC-HIS-07-04"), Category("AC-HIS-06-04"), Category("AC-HIS-09-04")]
+        public void FiveItNineKeys()
+        {
+            var es = Es;
+            var en = En;
+            var legacy = ToDictionary(LocalizationFixture.LegacyTexts("es"));
+            Assert.That(ItNineKeys.Length, Is.EqualTo(5));
+            for (var i = 0; i < ItNineKeys.Length; i++)
+            {
+                var key = ItNineKeys[i][0];
+                Assert.That(legacy.ContainsKey(key), Is.False, key + " no existía en el legacy");
+                Assert.That(es.Message(key), Is.EqualTo(ItNineKeys[i][1]), "es/" + key);
+                Assert.That(en.Message(key), Is.EqualTo(ItNineKeys[i][2]), "en/" + key);
+                Assert.That(es.Keys[223 + i], Is.EqualTo(key), "las de la It. 9 van al final, en el orden de la spec");
+                Assert.That(en.Keys[223 + i], Is.EqualTo(key));
+                Assert.That(es.Placeholders(key), Is.Empty, "es/" + key);
+                Assert.That(en.Placeholders(key), Is.Empty, "en/" + key);
+            }
+
+            Assert.That(LocalizationFixture.Es.Get(L10nKeys.HistoryStatWatts), Is.EqualTo("Vatios"), "sigue sin uso, como en el legacy");
+            Assert.That(LocalizationFixture.Es.Get(L10nKeys.Retry), Is.EqualTo("Reintentar"), "se reusa");
         }
 
         // AC-APP-10-08: no se pierde ninguna de las 159 claves del legacy (incluidas las sin uso y las de código muerto).

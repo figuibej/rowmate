@@ -56,6 +56,21 @@ namespace RowMate.Tests.Support
 
         public int WaitCalls { get; private set; }
 
+        // It. 9 (02-tech-design §4): las lecturas del historial y del detalle. Las N siguientes fallan y después responden; con
+        // demora, la respuesta llega al avanzar el programador y se lee EN ESE MOMENTO (así ve lo escrito mientras tanto).
+        public int HistoryFailures { get; set; }
+
+        public int SessionFailures { get; set; }
+
+        public int PointsFailures { get; set; }
+
+        public TimeSpan HistoryDelay { get; set; }
+
+        public TimeSpan ReadDelay { get; set; }
+
+        // Cuántas veces se pidió la lista del historial.
+        public int HistoryCalls { get; private set; }
+
         public Task<long> CreateAsync(WorkoutSession session)
         {
             _calls.Add("create");
@@ -125,12 +140,45 @@ namespace RowMate.Tests.Support
 
         public Task<WorkoutSession?> GetByIdAsync(long id)
         {
-            return Store.GetByIdAsync(id);
+            return Read(ReadDelay, () =>
+            {
+                if (SessionFailures > 0)
+                {
+                    SessionFailures--;
+                    throw new InvalidOperationException("base de guion: falla la lectura de la sesión");
+                }
+
+                return Store.Session(id);
+            });
         }
 
         public Task<IReadOnlyList<DataPoint>> GetPointsAsync(long sessionId)
         {
-            return Store.GetPointsAsync(sessionId);
+            return Read(ReadDelay, () =>
+            {
+                if (PointsFailures > 0)
+                {
+                    PointsFailures--;
+                    throw new InvalidOperationException("base de guion: falla la lectura de los puntos");
+                }
+
+                return Store.GetPointsAsync(sessionId).Result;
+            });
+        }
+
+        public Task<IReadOnlyList<HistoryEntry>> GetHistoryAsync()
+        {
+            HistoryCalls++;
+            return Read(HistoryDelay, () =>
+            {
+                if (HistoryFailures > 0)
+                {
+                    HistoryFailures--;
+                    throw new InvalidOperationException("base de guion: falla la lista del historial");
+                }
+
+                return Store.History();
+            });
         }
 
         public Task<IReadOnlyList<SessionListing>> ListAsync()
@@ -143,6 +191,33 @@ namespace RowMate.Tests.Support
         {
             WaitCalls++;
             return _queue.Count == 0;
+        }
+
+        // Una lectura fuera de la cola de escrituras: en el acto (demora 0) o al avanzar el programador; la falla, en la tarea.
+        private Task<T> Read<T>(TimeSpan delay, Func<T> read)
+        {
+            var source = new TaskCompletionSource<T>();
+            Action run = () =>
+            {
+                try
+                {
+                    source.TrySetResult(read());
+                }
+                catch (Exception error)
+                {
+                    source.TrySetException(error);
+                }
+            };
+            if (delay > TimeSpan.Zero)
+            {
+                _scheduler.Schedule(delay, run);
+            }
+            else
+            {
+                run();
+            }
+
+            return source.Task;
         }
 
         private void CheckBatch(int number)
