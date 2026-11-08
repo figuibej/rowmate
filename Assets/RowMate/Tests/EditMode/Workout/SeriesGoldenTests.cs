@@ -105,7 +105,7 @@ namespace RowMate.Tests.EditMode.Workout
             var compared = 0;
             foreach (var script in GoldenVectors.Load(FileName).Section("scripts").Items)
             {
-                compared += Replay(script["name"].AsString(), script, problems);
+                compared += Replay(script["name"].AsString(), script, problems, GapCutoff(script));
             }
 
             Assert.That(compared, Is.GreaterThan(20000), "todos los segundos de todos los guiones");
@@ -122,12 +122,15 @@ namespace RowMate.Tests.EditMode.Workout
                 var run = RunEngine(script);
                 var ops = Ops(script);
                 var steps = Steps(script);
-                if (run.Calls.Count != ops.Count)
+                var cutoff = GapCutoff(script);
+                if (cutoff == null && run.Calls.Count != ops.Count)
                 {
                     problems.Add(name + ": " + run.Calls.Count + " llamadas del motor y " + ops.Count + " del guion");
                 }
 
-                for (var i = 0; i < Math.Min(run.Calls.Count, ops.Count); i++)
+                // R-4D (It. 10a): las entradas son las mismas hasta la primera lectura después del corte, inclusive.
+                var last = cutoff == null ? ops.Count : Math.Min(ops.Count, cutoff.Value.Op + 1);
+                for (var i = 0; i < Math.Min(run.Calls.Count, last); i++)
                 {
                     var call = run.Calls[i];
                     var op = ops[i];
@@ -153,8 +156,15 @@ namespace RowMate.Tests.EditMode.Workout
                 var name = script["name"].AsString();
                 var run = RunEngine(script);
                 var expected = ExpectedPerSecond(script);
+                var cutoff = GapCutoff(script);
                 foreach (var entry in run.SnapshotPerSecond)
                 {
+                    if (cutoff != null && entry.Key >= cutoff.Value.Time)
+                    {
+                        // R-4D (It. 10a): desde la lectura después del corte, la regla nueva suma lo que el legacy perdía.
+                        break;
+                    }
+
                     if (!expected.TryGetValue(entry.Key, out var state))
                     {
                         problems.Add(name + ": el motor publicó el segundo " + entry.Key + " que el guion no tiene");
@@ -170,7 +180,7 @@ namespace RowMate.Tests.EditMode.Workout
                     }
                 }
 
-                if (run.SnapshotPerSecond.Count != expected.Count)
+                if (cutoff == null && run.SnapshotPerSecond.Count != expected.Count)
                 {
                     problems.Add(name + ": " + run.SnapshotPerSecond.Count + " fotos por segundo y " + expected.Count + " segundos del guion");
                 }
@@ -344,13 +354,43 @@ namespace RowMate.Tests.EditMode.Workout
 
         // ── (1) El tracker de la app con las ops ──
 
-        private static int Replay(string name, JsonNode item, List<string> problems)
+        // It. 10a (QA-V4a-L01, AC-WKT-03-11, DV-103; R-07 de 10a 02-tech-design §11): el tope de 10 m/s cuenta desde el último
+        // CAMBIO de la distancia. Con una lectura por segundo da lo mismo que el legacy (todos los guiones salvo R-4D siguen enteros);
+        // R-4D es justo el caso que cambia: tras el corte de 3 lecturas (L(101) a L(103)), la de L(104) avanza 16 m en 4 s desde el
+        // último cambio y ahora suma (el legacy la tiraba por "16 m en 1 s"). Esos guiones se comparan hasta esa lectura (op, t); lo
+        // de después lo fijan SeriesTrackerTests y SeriesEngineTests con los valores nuevos.
+        private static (int Op, int Time)? GapCutoff(JsonNode script)
+        {
+            if (script["rower"].AsString() != "R-4D")
+            {
+                return null;
+            }
+
+            var jumpRaw = RowerScripts.R4(104).DistanceMeters;
+            var ops = Ops(script);
+            for (var i = 0; i < ops.Count; i++)
+            {
+                if (ops[i].Kind == "u" && ops[i].Raw == jumpRaw)
+                {
+                    return (i, ops[i].Time);
+                }
+            }
+
+            return null;
+        }
+
+        private static int Replay(string name, JsonNode item, List<string> problems, (int Op, int Time)? cutoff = null)
         {
             var steps = Steps(item);
             var ops = Ops(item);
             var tracker = new SeriesTracker();
             for (var i = 0; i < ops.Count; i++)
             {
+                if (cutoff != null && i >= cutoff.Value.Op)
+                {
+                    return i;
+                }
+
                 var op = ops[i];
                 switch (op.Kind)
                 {

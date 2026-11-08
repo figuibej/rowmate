@@ -96,6 +96,10 @@ namespace RowMate.Snapshots
         // pero no bloquea.
         public bool MotionMayRun { get; set; }
 
+        // It. 10a (AUX-10a-02): un cuadro a mitad de una transición de vista (la entrante viene desplazada unos dp): lo que la auditoría de
+        // desbordes encuentra va al manifest como dato ("en tránsito"), sin hacer fallar la toma. Los textos cortados siguen fallando.
+        public bool OverflowMayRun { get; set; }
+
         public SnapshotScenario Shot(string id, string stem, string state)
         {
             SequenceShots.Add((id, stem, state));

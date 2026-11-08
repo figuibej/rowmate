@@ -278,7 +278,8 @@ namespace RowMate.Tests.EditMode.Workout
         [TestCase("R-4", 250, 125.0, 125.0, TestName = "Trabajo 1000 con R-4: #1 2:05.0 a los 125 y #2 2:05.0 a los 250")]
         [TestCase("R-4R", 251, 126.0, 125.0, TestName = "Trabajo 1000 con R-4R: #1 2:06.0 y #2 2:05.0, termina en 251")]
         [TestCase("R-4Z", 252, 127.0, 125.0, TestName = "Trabajo 1000 con R-4Z: #1 2:07.0 y #2 2:05.0, termina en 252")]
-        [TestCase("R-4D", 254, 129.0, 125.0, TestName = "Trabajo 1000 con R-4D: #1 2:09.0 y #2 2:05.0, termina en 254")]
+        // It. 10a (QA-V4a-L01, AC-WKT-03-11): el tope cuenta desde el último cambio; tras el corte de R-4D nada se pierde (era 2:09.0 y 254).
+        [TestCase("R-4D", 250, 125.0, 125.0, TestName = "Trabajo 1000 con R-4D: #1 2:05.0 y #2 2:05.0, termina en 250")]
         [Category("AC-WKT-07-06"), Category("AC-WKT-07-09"), Category("AC-WKT-07-02")]
         public void TrabajoMilWithFailingMonitors(string rower, int end, double first, double second)
         {
@@ -494,17 +495,29 @@ namespace RowMate.Tests.EditMode.Workout
         [Test, Category("AC-WKT-08-06")]
         public void TheWorkSplitCountsTheSecondsOfAJumpButNotItsMeters()
         {
-            // AC-WKT-08-06: Series 600 con R-4: 150 s y 600 m dan 2:05; con R-4D, 154 s y 600 m dan 128,3 s: 2:08; Corta con R-4P
-            // (parado): —.
+            // AC-WKT-08-06: Series 600 con R-4: 150 s y 600 m dan 2:05; Corta con R-4P (parado): —. Hasta la It. 9 el salto era el de
+            // R-4D (154 s y 600 m: 2:08); desde la It. 10a (QA-V4a-L01, AC-WKT-03-11) el avance tras el corte de R-4D suma (16 m en 4 s
+            // desde el último cambio) y da lo mismo que R-4. El salto que sigue sin sumar es el de un paquete sin distancia dentro del
+            // trabajo (el de R-4Z, en L(100)): se pierden 8 m (esa lectura y la vuelta), 152 s y 600 m dan 126,7 s: 2:07.
             using (var h = new WorkoutHarness(RowerScripts.ByName("R-4D")))
             {
                 h.Routine(RoutineSeeds.SeriesSeiscientos());
                 h.At(205.25);
                 var rep = h.Engine.Series.State.PreviousReps[0];
                 Assert.That(rep.WorkMeters, Is.EqualTo(600));
-                Assert.That(rep.WorkSeconds, Is.EqualTo(154));
-                Assert.That(rep.WorkSplitSeconds, Is.EqualTo(128.333).Within(0.001));
-                Assert.That(WorkoutFormats.RepSplit(rep.WorkSplitSeconds), Is.EqualTo("2:08"));
+                Assert.That(rep.WorkSeconds, Is.EqualTo(150));
+                Assert.That(WorkoutFormats.RepSplit(rep.WorkSplitSeconds), Is.EqualTo("2:05"));
+            }
+
+            using (var h = new WorkoutHarness(k => k == 100 ? RowerScripts.R4(k).CopyWith(distanceMeters: 0) : RowerScripts.R4(k)))
+            {
+                h.Routine(RoutineSeeds.SeriesSeiscientos());
+                h.At(205.25);
+                var rep = h.Engine.Series.State.PreviousReps[0];
+                Assert.That(rep.WorkMeters, Is.EqualTo(600));
+                Assert.That(rep.WorkSeconds, Is.EqualTo(152));
+                Assert.That(rep.WorkSplitSeconds, Is.EqualTo(126.667).Within(0.001));
+                Assert.That(WorkoutFormats.RepSplit(rep.WorkSplitSeconds), Is.EqualTo("2:07"));
             }
 
             using (var h = new WorkoutHarness(k => RowerScripts.R4P(k)))

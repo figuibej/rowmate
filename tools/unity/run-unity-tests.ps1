@@ -214,6 +214,10 @@ if ($Category -ne '') { $testArgs += @('-testCategory', $Category) }
 
 # Carpeta de datos propia de la corrida (AC-HIS-20-04): la hereda Unity y se borra en finally. El bloque de la corrida
 # va sin sangria adentro del try a proposito (es el mismo texto de la It. 1, que revisa SimulatorInUnityTests).
+# It. 10a (02-tech-design Sec. 5.1): ninguna prueba toca la radio. ROWMATE_BLE=off deja el remo sin plugin nativo (BleAdapterFactory);
+# se restaura en finally.
+$previousBle = $env:ROWMATE_BLE
+$env:ROWMATE_BLE = 'off'
 $previousDataDir = $env:ROWMATE_DATA_DIR
 $dataDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\unity-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
@@ -246,6 +250,7 @@ else {
 }
 finally {
     if ($null -eq $previousDataDir) { Remove-Item Env:ROWMATE_DATA_DIR -ErrorAction SilentlyContinue } else { $env:ROWMATE_DATA_DIR = $previousDataDir }
+    if ($null -eq $previousBle) { Remove-Item Env:ROWMATE_BLE -ErrorAction SilentlyContinue } else { $env:ROWMATE_BLE = $previousBle }
     Remove-Item -Recurse -Force -Path $dataDir -ErrorAction SilentlyContinue
 }
 

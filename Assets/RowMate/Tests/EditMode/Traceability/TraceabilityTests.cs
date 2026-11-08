@@ -170,6 +170,11 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(ac.Id);
             }
 
+            foreach (var ac in It10aIds.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -1883,6 +1888,105 @@ namespace RowMate.Tests.EditMode.Traceability
             var offenders = new List<string>();
             var ids = new List<string>(It09Ids.UnityOnlyIds);
             ids.AddRange(It09Ids.DeviceOnlyIds);
+            foreach (var id in ids)
+            {
+                if (!scan.Categories.TryGetValue(id, out var files))
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    offenders.Add(id + " en " + file);
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
+        }
+
+        [Test, Category("AC-BASE-09")]
+        public void It10aIdsAreComplete()
+        {
+            // 43 AC nuevos (10a §3): BLE-04: 7, APP-13: 3, BLE-05: 7, BLE-06: 8, BLE-07: 1, BLE-11: 1, BLE-08: 6, BLE-09: 3, BLE-12: 2,
+            // BLE-91: 2, APP-14: 1, WKT-03: 1, BLE-SEC: 1. AC-WKT-03-10 (4a) cambia y va en FromEarlier.
+            var pattern = new Regex(@"^AC-[A-Z]+(-[A-Z]+)?-\d\d(-\d\d)?$");
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance, It06aIds.Acceptance, It07Ids.Acceptance, It08Ids.Acceptance, It09Ids.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            var byCard = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var ac in It10aIds.Acceptance)
+            {
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It10aIds: " + ac.Id);
+                Assert.That(pattern.IsMatch(ac.Id), Is.True, ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior");
+                var card = ac.Id.Substring(0, ac.Id.LastIndexOf('-'));
+                byCard.TryGetValue(card, out var count);
+                byCard[card] = count + 1;
+            }
+
+            Assert.That(It10aIds.Acceptance.Length, Is.EqualTo(43));
+            foreach (var id in It10aIds.FromEarlier)
+            {
+                Assert.That(before.Contains(id), Is.True, id + " figura como de antes pero no está en ninguna lista anterior");
+            }
+
+            var expected = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["AC-BLE-04"] = 7, ["AC-APP-13"] = 3, ["AC-BLE-05"] = 7, ["AC-BLE-06"] = 8, ["AC-BLE-07"] = 1, ["AC-BLE-11"] = 1, ["AC-BLE-08"] = 6,
+                ["AC-BLE-09"] = 3, ["AC-BLE-12"] = 2, ["AC-BLE-91"] = 2, ["AC-APP-14"] = 1, ["AC-WKT-03"] = 1, ["AC-BLE-SEC"] = 1,
+            };
+            Assert.That(byCard, Is.EquivalentTo(expected), "los 43 por ficha (§3)");
+
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            var deviceOnly = new List<string>();
+            foreach (var ac in It10aIds.Acceptance)
+            {
+                if (ac.Checks == "eq")
+                {
+                    deviceOnly.Add(ac.Id);
+                    continue;
+                }
+
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It10aIds.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It10aIds.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(It10aIds.DeviceOnlyIds, Is.EquivalentTo(deviceOnly));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It10aDotnetIdsHaveTests()
+        {
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It10aIds.Acceptance)
+            {
+                if ((HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s")) && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d] de la It. 10a sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It10aUnityOnlyIdsHaveNoDotnetResult()
+        {
+            var scan = Scan();
+            var offenders = new List<string>();
+            var ids = new List<string>(It10aIds.UnityOnlyIds);
+            ids.AddRange(It10aIds.DeviceOnlyIds);
             foreach (var id in ids)
             {
                 if (!scan.Categories.TryGetValue(id, out var files))

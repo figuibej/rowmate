@@ -1,7 +1,7 @@
 # Builds de RowMate por linea de comandos (ARCHITECTURE Sec. 19, 02-tech-design Sec. 1.1): Unity -batchmode -executeMethod
 # RowMate.EditorTools.BuildCli.Build. Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 #
-#   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-Out <carpeta>]
+#   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-BleSmoke] [-Out <carpeta>]
 #                         [-AllowNewFolder] [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
 #
 # - Builds de DESARROLLO (-Simulator, -SmokeTest o -DbSmoke) en Windows: SIEMPRE en la misma carpeta (QA-V3-08 de la It. 3).
@@ -15,6 +15,13 @@
 #   finally): crea la base v8, guarda y relee Escalera SPM y borra. Pasa si el registro del player dice "[DB] humo: ok".
 #   Solo Windows (en Android hace falta el telefono: NO VERIFICABLE). Codigo 4 si el humo falla.
 #
+# - -BleSmoke (It. 10a, 10a-ble-android-windows/02-tech-design Sec. 5.3; AC-BLE-04-07, -05-10, -91-02): build de DESARROLLO de la
+#   variante normal (Builds/Windows/dev-smoke) y despues corre el player con -rowmate-ble-smoke, en ventana (la segunda busqueda la
+#   minimiza y la restaura) y con ROWMATE_DATA_DIR en una carpeta temporal propia (borrada en finally; nunca la base del usuario).
+#   El player lee el estado del adaptador REAL y hace 3 busquedas de 10 s con RowerService, sin conectar, emparejar ni cambiar la
+#   radio, y escribe solo contadores: "[BLE] humo: estado=On busquedas=3 ftms=N fallas=0 colgado=no soloFtms=si". Pasa con esa
+#   linea; codigo 6 si no (o si el player no termina en 90 s). Solo Windows.
+# - Windows: si el RowMate.exe de la carpeta de salida esta en uso, espera 2 min y reintenta, hasta 20 veces, sin cerrar nada.
 # - Con -Simulator: BuildCli pasa ROWMATE_SIMULATOR por extraScriptingDefines (nunca a PlayerSettings) y fuerza Development
 #   (R-01, AC-BLE-13-01). Sin -Simulator: al terminar, BuildOutputInspector busca rastros del simulador en la carpeta del
 #   build y el build falla (codigo 2) si encuentra alguno (AC-BLE-13-02).
@@ -22,7 +29,7 @@
 # - Si falta el modulo de la plataforma o el de IL2CPP (-Backend IL2CPP): NO VERIFICABLE, codigo 3, sin compilar nada.
 # Salida por defecto: Builds/<Target>/<normal|simulator|dev-smoke>/RowMate.exe (Builds/ esta en .gitignore).
 # Codigos: 0 bien; 1 el build fallo; 2 rastros del simulador en un build normal; 3 falta un modulo; 4 el humo de -DbSmoke
-# fallo; 5 build de desarrollo con otra carpeta (QA-V3-08); 10 proyecto abierto en otro Editor; 12 no encuentra Unity.exe.
+# fallo; 5 build de desarrollo con otra carpeta (QA-V3-08); 6 el humo de -BleSmoke fallo; 10 proyecto abierto en otro Editor; 12 no encuentra Unity.exe.
 param(
     [ValidateSet('Windows', 'Android')]
     [string]$Target = 'Windows',
@@ -31,6 +38,7 @@ param(
     [string]$Backend = 'Mono',
     [switch]$SmokeTest,
     [switch]$DbSmoke,
+    [switch]$BleSmoke,
     [string]$Out = '',
     [switch]$AllowNewFolder,
     [string]$Unity = '',
@@ -77,7 +85,7 @@ function Quote-Arg([string]$Value) {
 $variant = 'normal'
 if ($Simulator) { $variant = 'simulator' }
 # QA-V3-08: la carpeta fija de cada build de desarrollo (antes de abrir Unity: una negativa no toca nada).
-$development = $Simulator -or $SmokeTest -or $DbSmoke
+$development = $Simulator -or $SmokeTest -or $DbSmoke -or $BleSmoke
 $fixedOut = 'Builds/' + $Target + '/' + $variant
 if ($development -and -not $Simulator) { $fixedOut = 'Builds/' + $Target + '/dev-smoke' }
 if ($Out -eq '') {
@@ -114,7 +122,21 @@ $log = Join-Path $artifacts ('build-' + $Target.ToLowerInvariant() + '-' + $vari
 $unityArgs = @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $buildMethod, '-logFile', $log,
     '-rowmateTarget', $Target, '-rowmateBackend', $Backend, '-rowmateOutput', (Get-FullPath $Out))
 if ($Simulator) { $unityArgs += '-rowmateSimulator' }
-if ($SmokeTest -or $DbSmoke) { $unityArgs += '-rowmateSmokeTest' }
+if ($SmokeTest -or $DbSmoke -or $BleSmoke) { $unityArgs += '-rowmateSmokeTest' }
+
+# It. 10a: si el RowMate.exe de la salida esta en uso (un build abierto), se espera: cada 2 min, hasta 20 veces. Nunca se cierra nada.
+if ($Target -eq 'Windows') {
+    $outExe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    for ($attempt = 1; $attempt -le 20; $attempt++) {
+        if (-not (Test-Path $outExe)) { break }
+        $busy = $false
+        try { $s = [System.IO.File]::Open($outExe, 'Open', 'ReadWrite', 'None'); $s.Close() } catch { $busy = $true }
+        if (-not $busy) { break }
+        if ($attempt -eq 20) { Write-Host '[build] la carpeta de salida sigue en uso despues de 20 intentos'; exit 1 }
+        Write-Host ('[build] ' + $Out + ' en uso (RowMate.exe abierto): reintento ' + $attempt + ' de 20 en 2 min')
+        Start-Sleep -Seconds 120
+    }
+}
 
 $line = ($unityArgs | ForEach-Object { Quote-Arg $_ }) -join ' '
 Write-Host ('"' + $unityExe + '" ' + $line)
@@ -169,4 +191,45 @@ if ($DbSmoke -and $code -eq 0) {
         Remove-Item -Recurse -Force -Path $smokeDir -ErrorAction SilentlyContinue
     }
 }
+# Humo del Bluetooth real en el player (solo con -BleSmoke, en un build de desarrollo de Windows que salio bien).
+if ($BleSmoke -and $code -eq 0) {
+    if ($Target -ne 'Windows') {
+        Write-Host '[build] -BleSmoke: solo en Windows (en Android: NO VERIFICABLE sin telefono).'
+        exit 3
+    }
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $bleDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\ble-smoke-' + [guid]::NewGuid().ToString('N'))
+    $bleLog = Join-Path $artifacts ('ble-smoke-' + $Backend.ToLowerInvariant() + '.log')
+    New-Item -ItemType Directory -Force -Path $bleDir | Out-Null
+    try {
+        $bleArgs = @('-logFile', $bleLog, '-screen-fullscreen', '0', '-screen-width', '800', '-screen-height', '480', '-rowmate-ble-smoke')
+        $bleInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $bleInfo.FileName = $exe
+        $bleInfo.Arguments = (($bleArgs | ForEach-Object { Quote-Arg $_ }) -join ' ')
+        $bleInfo.UseShellExecute = $false
+        $bleInfo.EnvironmentVariables['ROWMATE_DATA_DIR'] = $bleDir
+        if ($bleInfo.EnvironmentVariables.ContainsKey('ROWMATE_BLE')) { $bleInfo.EnvironmentVariables.Remove('ROWMATE_BLE') }
+        $ble = [System.Diagnostics.Process]::Start($bleInfo)
+        if (-not $ble.WaitForExit(90000)) {
+            Write-Host '[build] -BleSmoke: el player no termino en 90 s (se cierra el que lanzo este script).'
+            $ble.Kill()
+            $code = 6
+        }
+        $lines = @()
+        if (Test-Path $bleLog) { $lines = @(Select-String -Path $bleLog -Pattern '\[BLE\] humo' | ForEach-Object { $_.Line }) }
+        foreach ($l in $lines) { Write-Host ('  ' + $l) }
+        $ok = @($lines | Where-Object { $_ -match 'humo: estado=On busquedas=3 ftms=\d+ fallas=0 colgado=no soloFtms=si' }).Count -gt 0
+        if (-not $ok) {
+            Write-Host '[build] -BleSmoke: el humo del Bluetooth fallo (ver el registro del player; no lleva nombres ni direcciones).'
+            $code = 6
+        }
+        else {
+            Write-Host '[build] -BleSmoke: ok'
+        }
+    }
+    finally {
+        Remove-Item -Recurse -Force -Path $bleDir -ErrorAction SilentlyContinue
+    }
+}
+
 exit $code

@@ -505,7 +505,7 @@ namespace RowMate.Tests.EditMode.Project
         public void TextFacesFreezeTheirFontFeatures()
         {
             var faces = FontAssetPaths.TextFaces;
-            Assert.That(faces.Count, Is.EqualTo(7));
+            Assert.That(faces.Count, Is.EqualTo(8), "It. 10a: + JetBrains Mono");
             foreach (var face in faces)
             {
                 var relative = FontAssetPaths.For(face.Family, face.Weight);

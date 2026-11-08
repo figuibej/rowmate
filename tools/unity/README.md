@@ -170,3 +170,23 @@ Nada cambia en el orden: la restauración sigue en `finally`, se verifica igual 
 
 - **`capture-snapshots.ps1` usa `-Set it9` por defecto** (09-historial/02-tech-design §7): `Snapshots/HistoryCatalog.cs`, en `docs/migration/iterations/09-historial/snapshots` (CAP-01 a -17, VID-01 y -02, DEMO-01 a -05 en una secuencia), con su `manifest.json` e `INDEX.md`. Cada toma abre una `TempDatabase` en el `ROWMATE_DATA_DIR` temporal y la siembra por código con `HistorySeeds` a través de los repositorios reales (`UiHostOptions.UseHistory`: F-9, F-9V, F-9P; CAP-17 usa `HostRoutines.Rota()`), con el reloj de prueba y la zona `UiHostOptions.LocalZone` (UTC−03:00). Las CAP y los VID van sin la capa del simulador; la DEMO, con el simulador sin ruido. Para comparar dos corridas, la segunda va con `-Out <scratch>/…` y se comparan los SHA-256 de los PNG y MP4.
 - **La base de 200 sesiones para el `[PERF]`**: `tools/dotnet/RowMate.SessionList seed F-9P --data-dir <carpeta temporal>` y el build de simulador con `ROWMATE_DATA_DIR` en esa carpeta.
+
+## It. 10a: Bluetooth real (ninguna prueba toca la radio)
+
+- `run-unity-tests.ps1` y `capture-snapshots.ps1` exportan **`ROWMATE_BLE=off`** durante la corrida (y la sacan en `finally`): `Platform/Ble/BleAdapterFactory` no crea el plugin nativo y la app queda con el remo "sin Bluetooth" de la It. 2. Las pruebas del Bluetooth usan el remo REAL (`RowerService`) sobre el adaptador **falso** (`HostBackends.FakeBle`, equipos ficticios K-10): `DeviceBleTests`, `HudLinkNoticeTests` y `BleAllocationTests` (PlayMode). `WindowsDllContractTests` (EditMode, también en dotnet) carga `RowMateBle.dll` pero nunca llama `rm_ble_init`.
+- **Capturas**: `capture-snapshots.ps1 -Set it10a -NoSimulator` (por defecto desde la 10a) escribe CAP-01 a CAP-20 (a/b cuando la spec pide dos tamaños) y AUX-10a-01 y -02 en `docs/migration/iterations/10a-ble-android-windows/snapshots` (`Snapshots/BleCatalog.cs`). Sin el simulador: el catálogo no lo necesita. Dos corridas seguidas dan los mismos bytes.
+- **Humo en un player**: `tools/build/build.ps1 -Target Windows -BleSmoke` hace un build de desarrollo en `Builds/Windows/dev-smoke` y lo corre con `-rowmate-ble-smoke` y `ROWMATE_DATA_DIR` temporal: estado del adaptador real, 3 búsquedas de 10 s (la segunda con la ventana minimizada), sin conectar; el registro lleva solo contadores. Código 6 si falla.
+- El build normal de Windows **exige** `RowMate_Data/Plugins/x86_64/RowMateBle.dll` (`BuildOutputInspector.FindMissingBlePlugin`); el de `simulator` lleva la DLL pero nunca la carga (`DeviceBackendFactory`).
+- En el Editor, `RowMate.EditorTools.NativeBleReload` cierra el plugin antes de recargar el dominio si esta sesión lo inició. Para recompilar la DLL hay que cerrar el Editor (`native/windows/README.md`).
+
+## It. 10a: el plugin de Android (Kotlin) y el módulo "Android Build Support"
+
+Esta PC no tiene el módulo de Android de Unity: el Kotlin se compila y se revisa con `native/android/check.ps1 -Golden` (el `kotlinc` y el JBR de Android Studio contra el `android.jar` del SDK; [native/android/README.md](../../native/android/README.md)), y el APK, los permisos en el teléfono, la vibración, el segundo plano y la pantalla encendida quedan **NO VERIFICABLE** hasta instalarlo. Para compilar el APK:
+
+1. **Unity Hub → Installs → 6000.3.27f1 → ⚙ → Add modules → "Android Build Support"**, con sus dos subitems "OpenJDK" y "Android SDK & NDK Tools" (aceptar las licencias). No hace falta tocar nada del Android Studio ni del SDK propios: Unity usa los suyos.
+2. Abrir el proyecto una vez en el Editor (importa `Assets/Plugins/Android/RowMateBle/*.kt` y `RowMateBle.androidlib` para Android) y cerrarlo.
+3. `powershell -NoProfile -File tools/build/build.ps1 -Target Android -Backend IL2CPP` (ARM64 pide IL2CPP; sale en `Builds/Android/normal/`). No cambia `ProjectSettings`: API 26 y ARM64 ya están; los permisos vienen del manifiesto del `.androidlib`, que Gradle fusiona con el de Unity.
+4. Revisar el manifiesto fusionado (AC-APP-13-01): `aapt2 dump xmltree <apk> --file AndroidManifest.xml` (el `aapt2` de `build-tools` del SDK) tiene que traer exactamente `BLUETOOTH_SCAN` (`neverForLocation`), `BLUETOOTH_CONNECT`, `BLUETOOTH`/`BLUETOOTH_ADMIN`/`ACCESS_FINE_LOCATION` con `maxSdkVersion` 30, `WAKE_LOCK` y `uses-feature bluetooth_le` requerido, sin `VIBRATE`.
+5. Instalar con `adb install -r <apk>` y seguir la demo de Android de la spec (§1): primer toque en "Buscar dispositivos" → diálogo; negar → vista de permiso denegado; reabrir la app → sigue denegado; "Activar Bluetooth" → ajustes de la app.
+
+Si el Gradle de Unity no toma los `.kt` (riesgo R-01), el mismo código va en un `.aar`: es el pedido abierto en los issues de la 10a.

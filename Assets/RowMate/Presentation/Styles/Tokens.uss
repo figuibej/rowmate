@@ -59,6 +59,7 @@
     --rm-metric-time-hud: #E0E0E0;
     --rm-metric-watts: #FFD60A;
     --rm-metric-watts-hud: #FFD60A;
+    --rm-mono-size: 12px;
     --rm-nav-indicator: rgba(0, 180, 216, 0.18);
     --rm-num-band-size: 34px;
     --rm-num-hero-size: 64px;

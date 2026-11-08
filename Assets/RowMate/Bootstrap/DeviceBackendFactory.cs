@@ -1,5 +1,7 @@
 using RowMate.App.Composition;
+using RowMate.Core.Ble;
 using RowMate.Core.Common;
+using RowMate.Core.Ports;
 #if ROWMATE_SIMULATOR
 using RowMate.Simulator;
 #endif
@@ -7,16 +9,19 @@ using RowMate.Simulator;
 namespace RowMate.Bootstrap
 {
     // El ÚNICO lugar que elige la variante de servicios de la app (= main.dart:51-54; AC-APP-01-02, AC-BLE-13-03, R-06).
-    // Con ROWMATE_SIMULATOR: remo y pulsómetro simulados sobre un solo RowingSimulator (con ruido, como la app del legacy).
-    // Sin el define: HardwareBackend (It. 2: equipo sin BLE; 10a/11: servicios reales). Las pantallas no se enteran.
+    // Con ROWMATE_SIMULATOR: remo y pulsómetro simulados sobre un solo RowingSimulator (con ruido, como la app del legacy); nunca
+    // crea el adaptador nativo ni carga la DLL (AC-APP-13-03). Sin el define: HardwareBackend (It. 10a: el remo real sobre el plugin
+    // nativo, con su bomba de eventos; sin plugin, el equipo sin BLE de la It. 2). Las pantallas no se enteran.
     internal static class DeviceBackendFactory
     {
-        public static DeviceBackend Create(IScheduler scheduler, IAppLogger logger)
+        public static DeviceBackend Create(IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, MainThreadQueue mainThread,
+                                           out IBleEventPump? pump)
         {
 #if ROWMATE_SIMULATOR
+            pump = null;
             return SimulatorBackend.Create(scheduler, logger, noise: true);
 #else
-            return HardwareBackend.Create(logger);
+            return HardwareBackend.Create(scheduler, lifecycle, logger, mainThread, out pump);
 #endif
         }
 

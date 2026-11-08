@@ -72,6 +72,11 @@
     letter-spacing: 8px;
 }
 
+.rm-type-mono {
+    font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/JetBrainsMono-Regular-SDF.asset");
+}
+
 .rm-type-num-band {
     font-size: 34px;
     -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-Bold-SDF.asset");
@@ -181,6 +186,10 @@
     font-size: 10.2px;
 }
 
+.rm-text-scale-085 .rm-type-mono {
+    font-size: 10.2px;
+}
+
 .rm-text-scale-085 .rm-type-num-band {
     font-size: 28.9px;
 }
@@ -277,6 +286,10 @@
     font-size: 13.8px;
 }
 
+.rm-text-scale-115 .rm-type-mono {
+    font-size: 13.8px;
+}
+
 .rm-text-scale-115 .rm-type-num-band {
     font-size: 39.1px;
 }
@@ -370,6 +383,10 @@
 }
 
 .rm-text-scale-130 .rm-type-label {
+    font-size: 15.6px;
+}
+
+.rm-text-scale-130 .rm-type-mono {
     font-size: 15.6px;
 }
 

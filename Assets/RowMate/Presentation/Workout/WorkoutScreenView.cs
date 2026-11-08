@@ -194,6 +194,9 @@ namespace RowMate.Presentation.Workout
 
             this.Bind(ui.App.WorkoutRest.State, Render);
             this.Bind(ui.App.WorkoutRest.Toasts, OnToast);
+            // It. 10a (02-tech-design §6.3; AC-BLE-08-06, -09-02): los avisos del enlace con el remo, sobre el HUD.
+            this.Bind(ui.App.Device.LinkNotices, OnLinkNotice);
+            this.Bind(ui.App.Workout.State, OnWorkoutPhase);
             this.Bind(ui.App.Texts, OnTexts);
             // It. 6a (P-14; 06a-escena-lago/02-tech-design §3.4): con Workout en reposo a la vista, la escena se prepara por tramos
             // (como el legacy precarga el agua en workout_screen.dart:44). Preload es idempotente.
@@ -424,6 +427,40 @@ namespace RowMate.Presentation.Workout
             }
 
             _ui.Toasts.Show(_ui.Texts.Get(key));
+        }
+
+        // It. 10a (§6.3; DV-98, DV-99): "Reconectando…" fijo, "Reconectado" 2 s y "El monitor dejó de enviar datos" 4 s en el lugar del aviso
+        // común (ToastLayer.ShowLink), solo con el inmersivo arriba y antes de confirmar Terminar (00-arte §4.2: no se suma al guardado, al
+        // sello ni al diálogo de completado). Cleared, o una sesión que termina, quita el fijo.
+        private void OnLinkNotice(RowMate.App.Device.LinkNotice notice)
+        {
+            if (notice.Kind == RowMate.App.Device.LinkNoticeKind.Cleared || !ShowsLinkNotices())
+            {
+                if (_ui.Toasts.StickyLink != null || _ui.Toasts.CurrentLink != null)
+                {
+                    _ui.Toasts.ShowLink(null);
+                }
+
+                return;
+            }
+
+            Immersive?.SetLinkNoticeObstacle(true);
+            _ui.Toasts.ShowLink(RowMate.App.Device.LinkNoticeText.Toast(notice, _ui.Texts));
+        }
+
+        private void OnWorkoutPhase(RowMate.Core.Workout.WorkoutSnapshot state)
+        {
+            if (!ShowsLinkNotices() && _ui.Toasts.StickyLink != null)
+            {
+                _ui.Toasts.ShowLink(null);
+            }
+        }
+
+        private bool ShowsLinkNotices()
+        {
+            var page = Immersive;
+            var phase = _ui.App.Workout.State.Value.Phase;
+            return page != null && page.Completion == null && (phase == RowMate.Core.Workout.WorkoutPhase.Active || phase == RowMate.Core.Workout.WorkoutPhase.Paused);
         }
 
         private readonly System.Collections.Generic.List<string> _heldToasts = new System.Collections.Generic.List<string>();

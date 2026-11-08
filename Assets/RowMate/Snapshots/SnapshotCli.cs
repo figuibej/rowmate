@@ -42,11 +42,18 @@ namespace RowMate.Snapshots
         public const string ThumbsOutput = "Library/RowMate/thumbs";
         // It. 9 (09-historial/02-tech-design §7): it9 (por defecto desde la 9) = HistoryCatalog.
         public const string It9Output = "docs/migration/iterations/09-historial/snapshots";
-        public const string DefaultSet = "it9";
+        // It. 10a (10a-ble-android-windows/02-tech-design §8.4): it10a (por defecto desde la 10a) = BleCatalog, con el adaptador falso.
+        public const string It10aOutput = "docs/migration/iterations/10a-ble-android-windows/snapshots";
+        public const string DefaultSet = "it10a";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
         {
+            if (string.Equals(set, "it10a", StringComparison.OrdinalIgnoreCase))
+            {
+                return It10aOutput;
+            }
+
             if (string.Equals(set, "it2", StringComparison.OrdinalIgnoreCase))
             {
                 return It2Output;

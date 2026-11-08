@@ -142,6 +142,37 @@ namespace RowMate.Tests.EditMode.Composition
             _backend.Dispose();
         }
 
+        // It. 10a (AC-APP-13-03; 02-tech-design §5.1): el build normal arma la app con RowerService sobre el adaptador (acá, el falso):
+        // Dispositivo ve el adaptador y sus estados, la vibración de "Listo" llega por AppServices.Haptics y la hora del diagnóstico
+        // es la del programador. El simulador no cambia (sus suites de la It. 2 siguen) y nunca toca el adaptador.
+        [Test, Category("AC-APP-13-03")]
+        public void NormalUsesRowerService()
+        {
+            var lifecycle = new FakeAppLifecycle(_logger);
+            var adapter = new FakeBleAdapter(_scheduler, _logger, initial: BleAdapterState.Off);
+            var rower = new RowerService(adapter, _scheduler, lifecycle, _logger);
+            _backend = new DeviceBackend(rower, new UnavailableHeartRateService(_logger), adapter);
+            var haptics = new FakeHaptics();
+            var app = AppComposer.Compose(new AppServices(_backend, _routines, _sessions, _scheduler, _logger, LocalizationFixture.Set, _locale,
+                _accessibility, new ShellOptions(false)) { Lifecycle = lifecycle, Haptics = haptics });
+            app.Start();
+            Assert.That(DeviceScreenRules.ViewFor(app.Device.State.Value.Status, app.Device.State.Value.AdapterState), Is.EqualTo(DeviceViewKind.BluetoothState));
+            adapter.SetState(BleAdapterState.On);
+            Assert.That(DeviceScreenRules.ViewFor(app.Device.State.Value.Status, app.Device.State.Value.AdapterState), Is.EqualTo(DeviceViewKind.Scan));
+            app.Device.StartScanAsync();
+            adapter.Advertise(FakeBleDevices.Row);
+            app.Device.ConnectAsync(FakeBleDevices.RowId);
+            _scheduler.Advance(TimeSpan.FromMilliseconds(300));
+            Assert.That(app.Device.State.Value.IsConnected, Is.True);
+            Assert.That(haptics.Confirms, Is.EqualTo(1));
+            adapter.Notify(FakeBleDevices.RowId, FtmsUuids.RowerData, FakeBleDevices.RowerData);
+            Assert.That(app.Device.State.Value.Diagnostics.LastReceived, Is.EqualTo(_scheduler.LocalNow));
+            app.Dispose();
+            _backend.Dispose();
+            Assert.That(adapter.Disposed, Is.True, "el dueño del backend dispone el adaptador");
+            Assert.That(_scheduler.PendingTimers, Is.EqualTo(0), "sin timers vivos");
+        }
+
         [Test, Category("AC-APP-01-08")]
         public void DisposeLeavesNoTimers()
         {

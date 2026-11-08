@@ -30,11 +30,25 @@ namespace RowMate.Tests.EditMode.Design
         [Test, Category("AC-BASE-04"), Category("AC-WKT-18-04"), Category("AC-WKT-18-07")]
         public void ItFiveTypeTokens()
         {
-            Assert.That(TokenCatalog.All.Count, Is.EqualTo(137));
+            Assert.That(TokenCatalog.All.Count, Is.EqualTo(138), "It. 10a: + mono (A10-10)");
             AssertType(Tokens.NumLap, "num.lap", 28, 28);
             AssertType(Tokens.NumRow, "num.row", 20, 22);
             AssertType(Tokens.NumXs, "num.xs", 13, 16);
             AssertType(Tokens.NumStat, "num.stat", 16, 20);
+        }
+
+        // It. 10a (00-arte-bluetooth §5.3, A10-10): el único token nuevo, JetBrains Mono 400 12/18.
+        [Test, Category("A10-10"), Category("AC-BLE-12-02")]
+        public void ItTenAMonoToken()
+        {
+            Assert.That(Tokens.Mono.Name, Is.EqualTo("mono"));
+            Assert.That(Tokens.Mono.Family, Is.EqualTo(FontFamilyRole.Mono));
+            Assert.That(Tokens.Mono.SizeDp, Is.EqualTo(12));
+            Assert.That(Tokens.Mono.LineHeightDp, Is.EqualTo(18));
+            Assert.That(Tokens.Mono.Weight, Is.EqualTo(400));
+            Assert.That(FontAssetPaths.For(FontFamilyRole.Mono, 400), Does.EndWith("/JetBrainsMono-Regular-SDF.asset"));
+            Assert.That(FontAssetPaths.SourceFor(FontFamilyRole.Mono, 400), Is.EqualTo("Assets/RowMate/UI/Fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"));
+            Assert.That(FontAssetPaths.KerningFor(FontFamilyRole.Mono, 400), Is.Null, "monoespaciada: sin tabla");
         }
 
         private static void AssertType(TypeScaleToken token, string name, double size, double lineHeight)

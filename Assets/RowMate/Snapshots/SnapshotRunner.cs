@@ -470,7 +470,17 @@ namespace RowMate.Snapshots
             }
 
             var audit = host.Audit();
-            record.Overflows.AddRange(audit.Overflows);
+            if (scenario.OverflowMayRun)
+            {
+                foreach (var overflow in audit.Overflows)
+                {
+                    (record.Values ??= new List<string>()).Add("en tránsito: " + overflow);
+                }
+            }
+            else
+            {
+                record.Overflows.AddRange(audit.Overflows);
+            }
             record.ClippedTexts.AddRange(audit.ClippedTexts);
             if (checks != null)
             {

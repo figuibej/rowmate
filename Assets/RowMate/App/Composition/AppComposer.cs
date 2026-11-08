@@ -36,7 +36,8 @@ namespace RowMate.App.Composition
             var logger = services.Logger;
             var language = new LanguageState(services.Locale.PreferredLanguageTags, logger);
             var texts = new DerivedObservable<AppLanguage, Localizer>(language.Current, services.Texts.For, logger);
-            var device = new DeviceStore(services.Devices.Rower, logger);
+            // It. 10a (§6.2): la hora del diagnóstico con el programador y la vibración de "Listo".
+            var device = new DeviceStore(services.Devices.Rower, logger, services.Scheduler, services.Haptics);
             var heartRate = new HeartRateStore(services.Devices.HeartRate, logger);
             var shell = new ShellStore(services.Shell, logger);
             var scene = new SceneSettings(logger);

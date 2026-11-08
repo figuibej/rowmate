@@ -117,6 +117,11 @@ namespace RowMate.Tests.EditMode.Localization
             { "hudLapNumber", "number:String" },
             { "hudRepProgress", "rep:String, count:String, meters:String" },
             { "hudRepLabel", "rep:String" },
+            // Las 4 de la It. 10a (10a-ble-android-windows/01-po-spec §4): el detalle del sistema y el nombre del remo, como texto.
+            { "deviceScanError", "error:String" },
+            { "deviceConnectError", "error:String" },
+            { "deviceReconnecting", "name:String" },
+            { "deviceReconnected", "name:String" },
         };
 
         // Las 12 claves de la It. 4b (04b-hud-exr/01-po-spec §11.2), en su orden, con es y en.
@@ -159,12 +164,30 @@ namespace RowMate.Tests.EditMode.Localization
             new[] { "sessionLoadError", "No se pudo cargar la sesión", "Couldn't load the session" },
         };
 
+        // Las 12 claves de la It. 10a (10a-ble-android-windows/01-po-spec §4), en su orden, con es y en.
+        private static readonly string[][] ItTenAKeys =
+        {
+            new[] { "deviceUnknown", "Dispositivo desconocido", "Unknown device" },
+            new[] { "deviceRowerFallback", "Rower", "Rower" },
+            new[] { "deviceScanError", "Error al escanear: {error}", "Scan error: {error}" },
+            new[] { "deviceConnectError", "Error al conectar: {error}", "Connection error: {error}" },
+            new[] { "deviceStepConnecting", "Conectando…", "Connecting…" },
+            new[] { "deviceStepControl", "Tomando control del monitor…", "Taking control of the monitor…" },
+            new[] { "deviceStepReady", "Listo", "Ready" },
+            new[] { "deviceReconnecting", "Reconectando con {name}…", "Reconnecting to {name}…" },
+            new[] { "deviceReconnected", "Reconectado con {name}", "Reconnected to {name}" },
+            new[] { "deviceMonitorStopped", "El monitor dejó de enviar datos", "The monitor stopped sending data" },
+            new[] { "deviceBleUnsupported", "Este equipo no tiene Bluetooth LE", "This device doesn't have Bluetooth LE" },
+            new[] { "deviceBleUnsupportedHint", "RowMate necesita Bluetooth LE para conectar\nel remo y el pulsómetro",
+                "RowMate needs Bluetooth LE to connect\nthe rower and the heart rate monitor" },
+        };
+
         private static LocalizationCatalog Es => LocalizationFixture.Catalog("es");
 
         private static LocalizationCatalog En => LocalizationFixture.Catalog("en");
 
-        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12: 228 claves en es y las mismas 228 en en (159 del legacy + 15 de la
-        // It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5 + 5 de la It. 9).
+        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12: 240 claves en es y las mismas 240 en en (159 del legacy + 15 de la
+        // It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5 + 5 de la It. 9 + 12 de la It. 10a).
         [Test, Category("AC-APP-10-01"), Category("AC-APP-10-10"), Category("AC-APP-10-11"), Category("AC-APP-10-12")]
         public void SameKeysInBothLanguages()
         {
@@ -172,9 +195,9 @@ namespace RowMate.Tests.EditMode.Localization
             var en = En;
             Assert.That(es.Locale, Is.EqualTo("es"));
             Assert.That(en.Locale, Is.EqualTo("en"));
-            Assert.That(es.Keys.Count, Is.EqualTo(228));
-            Assert.That(en.Keys.Count, Is.EqualTo(228));
-            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(228), "claves repetidas en es");
+            Assert.That(es.Keys.Count, Is.EqualTo(240));
+            Assert.That(en.Keys.Count, Is.EqualTo(240));
+            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(240), "claves repetidas en es");
             Assert.That(en.Keys, Is.EquivalentTo(es.Keys), "una clave existe en un solo idioma");
             Assert.That(en.Keys, Is.EqualTo(es.Keys), "mismo orden en los dos archivos");
             Assert.That(LocalizationFixture.LegacyTexts("es").Count, Is.EqualTo(159));
@@ -381,8 +404,8 @@ namespace RowMate.Tests.EditMode.Localization
             }
 
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
-            Assert.That(withParameters, Is.EqualTo(2 * 33), "30 hasta la It. 4b + 3 de la It. 5");
-            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(33));
+            Assert.That(withParameters, Is.EqualTo(2 * 37), "30 hasta la It. 4b + 3 de la It. 5 + 4 de la It. 10a");
+            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(37));
         }
 
         // AC-APP-10-07: las 15 claves nuevas con los textos de la spec y los tipos de §3.3, al final del catálogo.
@@ -550,6 +573,38 @@ namespace RowMate.Tests.EditMode.Localization
 
             Assert.That(LocalizationFixture.Es.Get(L10nKeys.HistoryStatWatts), Is.EqualTo("Vatios"), "sigue sin uso, como en el legacy");
             Assert.That(LocalizationFixture.Es.Get(L10nKeys.Retry), Is.EqualTo("Reintentar"), "se reusa");
+        }
+
+        // 10a-ble-android-windows/01-po-spec §4: las 12 claves de la It. 10a con sus textos es/en, al final del catálogo; 4 con
+        // parámetros de texto. Los ... de las claves existentes no cambian (deviceSearching sigue "Buscando..."); las nuevas usan …
+        // (U+2026). {error} es el detalle del sistema sin traducir; {name}, el nombre del remo.
+        [Test, Category("AC-BLE-05-08"), Category("AC-BLE-06-06"), Category("AC-BLE-06-07"), Category("AC-BLE-04-06")]
+        public void TwelveItTenAKeys()
+        {
+            var es = Es;
+            var en = En;
+            var legacy = ToDictionary(LocalizationFixture.LegacyTexts("es"));
+            Assert.That(ItTenAKeys.Length, Is.EqualTo(12));
+            for (var i = 0; i < ItTenAKeys.Length; i++)
+            {
+                var key = ItTenAKeys[i][0];
+                Assert.That(legacy.ContainsKey(key), Is.False, key + " no existía en el legacy");
+                Assert.That(es.Message(key), Is.EqualTo(ItTenAKeys[i][1]), "es/" + key);
+                Assert.That(en.Message(key), Is.EqualTo(ItTenAKeys[i][2]), "en/" + key);
+                Assert.That(es.Keys[228 + i], Is.EqualTo(key), "las de la It. 10a van al final, en el orden de la spec");
+                Assert.That(en.Keys[228 + i], Is.EqualTo(key));
+                ExpectedPlaceholders.TryGetValue(key, out var expected);
+                Assert.That(LocalizationFixture.Describe(es.Placeholders(key)), Is.EqualTo(expected ?? ""), "es/" + key);
+                Assert.That(LocalizationFixture.Describe(en.Placeholders(key)), Is.EqualTo(expected ?? ""), "en/" + key);
+            }
+
+            Assert.That(LocalizationFixture.Es.Format(L10nKeys.DeviceScanError, MessageArg.Text("error", "scan: error 2")),
+                Is.EqualTo("Error al escanear: scan: error 2"));
+            Assert.That(LocalizationFixture.En.Format(L10nKeys.DeviceReconnecting, MessageArg.Text("name", "AMS-670B")),
+                Is.EqualTo("Reconnecting to AMS-670B…"));
+            Assert.That(LocalizationFixture.Es.Get(L10nKeys.DeviceSearching), Is.EqualTo("Buscando..."), "las existentes no cambian");
+            Assert.That(LocalizationFixture.Es.Get(L10nKeys.DeviceBleUnsupportedHint).Split('\n').Length, Is.EqualTo(2));
+            Assert.That(LocalizationFixture.Es.Get(L10nKeys.Retry), Is.EqualTo("Reintentar"), "se reusa (AC-BLE-09-02)");
         }
 
         // AC-APP-10-08: no se pierde ninguna de las 159 claves del legacy (incluidas las sin uso y las de código muerto).

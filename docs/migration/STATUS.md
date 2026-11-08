@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-08 (rowmate-po, al cerrar la It. 9) |
-| Fase | **It. 9 cerrada con OK del usuario (rigen los valores por defecto de su gate). It. 10a en curso.** PO: **aceptada**, sin criterios en FAIL. QA: APROBADO CON OBSERVACIONES ([05-qa-verification](iterations/09-historial/05-qa-verification.md)), sin bloqueantes ni mayores: dotnet `-Matrix` 3500 (3461 pasan, 0 fallan, 39 omitidos), herramientas 192 / 192, matriz con 737 en PASA, 0 en FALLA, 4 ignorados y 163 pendientes de Unity; Unity EditMode 3603 / 3556 / 0 / 47 y con simulador 3795 / 3748 / 0 / 47; PlayMode 588 / 588 y con simulador 663 / 663; build de simulador con exit 0. De 43 criterios, 42 cumplen y 1 no es verificable (AC-HIS-19-05: el peor cuadro de recarga y los 60 fps en el build, sin sonda). Reporte para el usuario: [iterations/09-historial/REPORT.md](iterations/09-historial/REPORT.md). La deuda va a issues de GitHub |
-| Próximo paso | **It. 10a** (`10a-ble-android-windows`: Bluetooth real en Android y Windows), que necesita el remo AMS-670B (u otro FTMS) y la PC con Bluetooth LE. La 6b sigue postergada (issue #6) |
+| Actualizado | 2026-11-08 (rowmate-po, al cerrar la It. 10a) |
+| Fase | **It. 10a cerrada con OK del usuario (rigen los valores por defecto de su gate; la demo con el remo queda pendiente). It. 11 en curso.** PO: **aceptada**, sin criterios en FAIL. QA: APROBADO CON OBSERVACIONES ([05-qa-verification](iterations/10a-ble-android-windows/05-qa-verification.md)), sin bloqueantes ni mayores (6 menores): dotnet `-Matrix` 3632 (3593 pasan, 0 fallan, 39 omitidos), herramientas 192 / 192, matriz con 772 en PASA, 0 en FALLA, 4 ignorados, 165 pendientes de Unity y 6 sin test (todos de equipo o de remo); Unity EditMode 3736 / 3688 / 0 / 48 y con simulador 3928 / 3880 / 0 / 48; PlayMode 622 / 622 y con simulador 697 / 697; builds normal, `-BleSmoke` (3 búsquedas reales, `ftms=0`, `fallas=0`, sin colgarse) y `-Simulator` con exit 0; Kotlin compilado contra android-36 (`check.ps1 -Golden`), DLL de Windows reproducible y sin rutas. De 43 criterios, 37 cumplen y 6 no son verificables (4 esperan el remo y 2 el módulo de Android). El reporte para el usuario lo devolvió el PO al coordinador. La deuda va a issues de GitHub |
+| Próximo paso | **It. 11** (`11-ble-pulsometro`: pulsómetro real), en curso. La demo de la 10a con el AMS-670B queda pendiente del usuario. Necesita un pulsómetro BLE (banda o reloj que transmita `0x180D`). La 6b sigue postergada (issue #6) y la 10b, flotante hasta que haya Mac |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs. El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
@@ -22,8 +22,8 @@
 | 6b | Agua avanzada, desenfoque del vidrio y rendimiento | **Postergada** por decisión del usuario (issue #6). La 7 se hizo sobre el agua degradada |
 | 7 | Remero, bote y palada | **Cerrada** ([reporte](iterations/07-remero-palada/REPORT.md)). Sin FAIL; AC-SCN-01-16 NO VERIFICABLE. El usuario siguió con la 8 sin cambiar nada de su gate: rigen los valores por defecto |
 | 8 | Río, Costa, Regata y selector | **Cerrada** ([reporte](iterations/08-entornos-selector/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Sin FAIL; AC-SCN-01-19 NO VERIFICABLE solo en Android |
-| 9 | Historial y detalle | **Cerrada** ([reporte](iterations/09-historial/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Deuda en los issues #32 a #39. Sin FAIL; AC-HIS-19-05 NO VERIFICABLE en parte (cuadro de 50 ms y 60 fps en el build) |
-| 10a | Bluetooth real en Android y Windows | **En curso** (la prueba con el remo real queda para la demo del usuario) |
+| 9 | Historial y detalle | **Cerrada** ([reporte](iterations/09-historial/REPORT.md)); el usuario dio el OK ("pushea y pasa a la 10"): rigen los valores por defecto de su gate. Deuda en los issues #32 a #39. Sin FAIL; AC-HIS-19-05 NO VERIFICABLE en parte (cuadro de 50 ms y 60 fps en el build) |
+| 10a | Bluetooth real en Android y Windows | **Cerrada** ([reporte](iterations/10a-ble-android-windows/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Deuda en los issues #40 a #56. La demo con el remo queda pendiente. Sin FAIL; 37 PASS y 6 NO VERIFICABLE: AC-BLE-06-08, -08-07, -09-03 y -91-02 esperan el AMS-670B; AC-APP-13-02 y -14-05, el módulo "Android Build Support" y un teléfono |
 | 10b | Tanda Apple (iOS y macOS) | Flotante: cuando haya Mac |
 | 11 | Pulsómetro real | Pendiente |
 | 12 | Strava: conexión y subida | Pendiente |
@@ -46,9 +46,30 @@
 
 - **Gate de la It. 8**: el usuario dio el OK, así que rigen los valores por defecto de la tabla de abajo (DV-79 a DV-89, DT8-10, QA-V8-14, D-ART-08). También pidió borrar el worktree `it08-entornos` y su rama (ya no están: `git worktree list` solo muestra `main`), commitear, pushear y empezar la It. 9.
 
-### Para confirmar en el gate de la It. 9
+- **Gate de la It. 9**: el usuario dio el OK ("pushea y pasa a la 10"), así que rigen los valores por defecto de la tabla "Gate de la It. 9" de abajo (DV-90 a DV-95, tiempo y distancia del monitor, etiquetas X como `fl_chart` con issue prioritario).
 
-Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It. 9 §5](iterations/09-historial/REPORT.md) y [01-po-spec §10](iterations/09-historial/01-po-spec.md).
+### Para confirmar en el gate de la It. 10a
+
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en el reporte de la 10a (§6) y en [01-po-spec §8](iterations/10a-ble-android-windows/01-po-spec.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-96 / Q-29: la reconexión reintenta 3 s después de cada fallo, sin límite, y `Buscar dispositivos` también la cancela | Se acepta | Un solo intento, como el legacy |
+| DV-97: con el Bluetooth apagado durante la reconexión, reconecta solo al encenderlo | Se acepta | Deja de reconectar, como el legacy |
+| DV-98 / Q-31: `El monitor dejó de enviar datos` queda en Dispositivo con `Reintentar` y 4 s sobre el HUD; la sesión sigue | Se acepta | Sin aviso, como el legacy |
+| DV-99 / Q-34 y DD10-02: `Reconectando con {remo}…` sobre el HUD y `Reconectado con {remo}` 2 s, en el lugar de los avisos (cápsula de vidrio) | Se acepta | Sin aviso sobre el HUD, como el legacy |
+| DV-100 y DT10-15: en Android, un permiso negado muestra la vista "sin permiso" (y se recuerda al reabrir), no `Error al escanear` | Se acepta | El banner de error del legacy |
+| DV-101: `Dispositivo desconocido` traducido, también en la cabecera | Se acepta | `Unknown device` fijo |
+| DV-102: `Activar Bluetooth` en todas las plataformas; en Windows abre los ajustes de Bluetooth; las pistas siguen hablando de iOS | Se acepta (issue para pistas por plataforma) | Pistas por plataforma ya |
+| DV-103 / QA-V4a-L01: tope de 10 m por segundo desde el último cambio de distancia, en el paso y los parciales | Se acepta | Tope de 10 m por lectura |
+| DV-104 / Q-37: el diagnóstico también se abre manteniendo presionada la cabecera del remo 0,5 s | Se acepta | Solo los 3 desplazamientos |
+| DT10-12: sin servicio en primer plano en Android hasta que la demo muestre que el sistema mata el proceso | Se acepta | Servicio con notificación ya |
+| DT10-18 / RA-19: el reloj de la app sigue sin contar el sueño profundo; se mide en el teléfono | Se acepta | `elapsedRealtime` en la app y en el plugin |
+| `RowMateBle.dll` compilada por script y versionada en el repo, sin LFS (reproducible, sin rutas) | Se acepta | Se compila en cada máquina |
+
+**Decididas por el PO al cerrar la It. 10a** (no necesitan respuesta): los 6 NO VERIFICABLE quedan para la demo del usuario (4 con el remo, 2 con Android); AC-BLE-04-04 pasa en Windows por código (no se apagó la radio, regla del workflow); QA-G10a-06: AC-APP-13-01 se lee como "los permisos de Bluetooth y ubicación, exactamente estos" (Unity puede sumar otros, como `INTERNET`), y se revisa con `aapt2` en la demo de Android; los 6 menores de QA (m-01 a m-06) y los "Para issues" de la spec, el diseño, el arte y el gate van a issues de GitHub (agrupados), sin corregirlos antes del commit. Ya quedaron resueltos en el código y **no** van a issue: `.gitattributes` (la DLL sin LFS), los constructores de WP-C, QA-G10a-07, -08, -10, -11, -12, -13 (búfer de 4 MB) y -14, y lo principal de WP-D (sonar, ilustración, check, token mono).
+
+### Gate de la It. 9 (valores que rigen)
 
 | Decisión | Por defecto | Si se rechaza |
 |---|---|---|
@@ -99,8 +120,10 @@ Si el usuario no dice nada, se aplica "Por defecto". Detalle en [REPORT de la It
 
 | Para | Qué | Estado |
 |---|---|---|
-| It. 9 (recomendado, 15 minutos) | La demo de [REPORT de la 9 §2](iterations/09-historial/REPORT.md) en `Builds/Windows/simulator` (ya tiene la 9): una libre, la rutina `Demo 9`, el detalle con las 5 métricas y una sesión cortada | Pendiente |
-| It. 10a (necesario) | Remo AMS-670B (u otro FTMS) y la PC con Windows con Bluetooth LE; para Android, el teléfono con depuración USB | Pendiente |
+| It. 9 (opcional, 15 minutos) | La demo de [REPORT de la 9 §2](iterations/09-historial/REPORT.md) en `Builds/Windows/simulator` (ya tiene la 9): una libre, la rutina `Demo 9`, el detalle con las 5 métricas y una sesión cortada | Pendiente |
+| It. 10a (demo, recomendado) | Con el AMS-670B: la demo de Windows del reporte de la 10a en `Builds/Windows/normal` (Bluetooth apagado, buscar, conectar, diagnóstico, entrenar, minimizar, corte breve, monitor apagado) y anotar la cadencia (`[BLE] Cadencia` del `Player.log`, que no se sube). Cierra AC-BLE-06-08, -08-07, -09-03 y la parte de remo de -91-02 | Pendiente |
+| It. 10a, Android | Módulo **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), `build.ps1 -Target Android -Backend IL2CPP` y un teléfono con Android 12+ y depuración USB ([tools/unity/README.md](../../tools/unity/README.md) §It. 10a). Cierra AC-APP-13-01 (APK), -13-02, -14-05, la vibración y Android de AC-BLE-04-04 y -91-02 | Pendiente |
+| It. 11 (necesario) | Un pulsómetro BLE (banda o reloj que transmita `0x180D`) | Pendiente |
 | P-17 (recomendado, 5 minutos) | La demo (c) de la 4b: suspender el equipo a mano (Inicio → Encender/apagar → Suspender) con un entrenamiento en marcha ([REPORT de la 6a §3.1 (d)](iterations/06a-escena-lago/REPORT.md)). Cierra AC-WKT-02-11, que QA no puede verificar | Pendiente |
 | It. 4a (opcional, 1 minuto) | `powercfg /requests` en una consola de administrador, con la app abierta y después de cerrarla ([REPORT de la 4a §3.7](iterations/04a-motor-hud-funcional/REPORT.md)). Cierra AC-APP-14-01 a -03 | Pendiente |
 | Cierre de NV (It. 2 a 6a) y rendimiento de la escena | Módulos **Windows Build Support (IL2CPP)** (con Visual Studio 2022 "Desarrollo de escritorio con C++" y Windows SDK 10.0.22621+) y **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), más **un Android de gama media** (clase Galaxy A54 / Pixel 6a, Android 8+ de 64 bits) con depuración USB. Cierran IL2CPP (AC-BASE-01, R3-01; R5-04), AC-SCN-01-09 (60 fps con la escena, 30 min), la fila de 200 píldoras en el teléfono (R4b-02) y las partes Android de las It. 2 a 6a | Pendiente. Sin él, el rendimiento en el teléfono queda NO VERIFICABLE hasta la 14 (regla 9). **Recomendado para la 6b** (60 fps con el agua avanzada) |
@@ -191,3 +214,6 @@ Riesgos:
 | 2026-11-07 | rowmate-po | **Cierre de la It. 8**: aceptada por el PO, sin FAIL. QA: RECHAZADO en la ronda 1 (29 PASS, 9 FAIL, 2 NV; 4 mayores: mundo vivo, 25 casos legacy, paridad en pantalla y tomas con sondas) y APROBADO CON OBSERVACIONES en la ronda 2 (dotnet: herramientas 192/192 y Core 3311/3350 pasan, 0 fallan; Unity EditMode con simulador 3600/3645 y PlayMode con simulador 624/624; matriz 700 PASA, 0 FALLA; 39 AC PASS, 0 FAIL, 1 NV; LT-99 a LT-138 pasan; `EnvironmentParityTests` con 0 dp de diferencia). Reporte para el usuario: `iterations/08-entornos-selector/REPORT.md`. Decisiones del PO al cerrar: AC-SCN-01-19 NV solo en Android, QA-V8-12 aceptado, el #9 sigue abierto con el resto del farol, el worktree espera al usuario y el resto a issues de GitHub. Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-08 | coordinador | El usuario dio el OK a la It. 8 (rigen los valores por defecto de su gate), pidió borrar el worktree `it08-entornos` y su rama, commitear, pushear y empezar la It. 9 |
 | 2026-11-08 | rowmate-po | **Cierre de la It. 9**: aceptada por el PO, sin FAIL. QA: APROBADO CON OBSERVACIONES (dotnet `-Matrix` 3461/3500 pasan, 0 fallan; herramientas 192/192; matriz 737 PASA, 0 FALLA; Unity EditMode con simulador 3748/3795 y PlayMode con simulador 663/663; build de simulador OK; 42 AC PASS, 0 FAIL, 1 NV: AC-HIS-19-05 en el build). Reporte para el usuario: `iterations/09-historial/REPORT.md`. Decisiones del PO al cerrar: AC-HIS-19-05 NV en la parte del build, el dato del cursor corregido en el REPORT, VID-01 y VID-02 cubiertos por tests y los menores a 8 issues de GitHub. Próxima: la 10a (la 6b sigue postergada). Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-08 | coordinador | El usuario dio el OK a la It. 9 ("pushea y pasa a la 10"): rigen los valores por defecto de su gate. Empieza la It. 10a |
+| 2026-11-08 | rowmate-po | **Cierre de la It. 10a**: aceptada por el PO, sin FAIL; esperando OK y demo del usuario con el remo. QA: APROBADO CON OBSERVACIONES (dotnet `-Matrix` 3593/3632 pasan, 0 fallan; herramientas 192/192; matriz 772 PASA, 0 FALLA; Unity EditMode con simulador 3880/3928 y PlayMode con simulador 697/697; builds normal, `-BleSmoke` y `-Simulator` OK; Kotlin y DLL verificados; 37 AC PASS, 0 FAIL, 6 NV: 4 [BLE-HW] y 2 [Device-Android]). Decisiones del PO al cerrar: los NV a la demo, QA-G10a-06 precisado, m-01 a m-06 y los "Para issues" a issues de GitHub. Próxima: la It. 11 (la 6b sigue postergada y la 10b, flotante). Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-08 | coordinador | El usuario dio el OK a la It. 10a ("pushea y arranca la proxima iteracion"): rigen los valores por defecto de su gate. Empieza la It. 11 |

@@ -31,7 +31,7 @@ namespace RowMate.Tests.EditMode.Design
         [Test, Category("DD4a-06"), Category("QA-V4a-06")]
         public void TextFacesHaveNoRuntimeFontFeatures()
         {
-            Assert.That(FontAssetPaths.TextFaces.Count, Is.EqualTo(7), "Inter ×4 y la derivada ×3");
+            Assert.That(FontAssetPaths.TextFaces.Count, Is.EqualTo(8), "Inter ×4, la derivada ×3 y JetBrains Mono (It. 10a)");
             foreach (var face in FontAssetPaths.TextFaces)
             {
                 var relative = FontAssetPaths.For(face.Family, face.Weight);
@@ -51,7 +51,7 @@ namespace RowMate.Tests.EditMode.Design
                 var listPath = FontAssetPaths.KerningFor(face.Family, face.Weight);
                 if (listPath == null)
                 {
-                    Assert.That(face.Family, Is.EqualTo(FontFamilyRole.Numeric), "solo las derivadas que dibuja TabularNumber van sin tabla");
+                    Assert.That(face.Family == FontFamilyRole.Numeric || face.Family == FontFamilyRole.Mono, Is.True, "solo las derivadas que dibuja TabularNumber y la monoespaciada van sin tabla");
                     Assert.That(records, Is.Empty, relative + ": sin tabla (K4)");
                     Assert.That(text, Does.Contain("\n    m_GlyphPairAdjustmentRecords: []\n"), relative + " (K4)");
                     continue;
@@ -157,7 +157,7 @@ namespace RowMate.Tests.EditMode.Design
                 Assert.That(FontAssetPaths.SourceFor(FontFamilyRole.Numeric, weight), Does.StartWith("Assets/RowMate/UI/Fonts/RowMateNumericSC/"));
             }
 
-            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(10), "7 de texto y número, 2 de íconos y el respaldo de emojis");
+            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(11), "8 de texto, número y mono, 2 de íconos y el respaldo de emojis");
             foreach (var retired in FontAssetPaths.RetiredFontAssets)
             {
                 Assert.That(File.Exists(RepoPaths.Combine(retired)), Is.False, retired + " ya no existe (WP-B0)");

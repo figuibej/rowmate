@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using RowMate.App.Device;
 using RowMate.Core.Design;
 using RowMate.Core.Localization;
@@ -14,20 +15,25 @@ namespace RowMate.Presentation.Device
     //   #device-search-hint (solo con el remo buscando)
     //   #device-empty-area (ScrollView, flex 1 1 0) > .rm-empty (ícono 48 @24 %, deviceNoResults, deviceNoResultsHint)
     //   #hrm-card-slot-scan (ScrollView, flex 1 1 0): la tarjeta del pulsómetro arriba de su mitad (Expanded + Flexible).
-    // La lista de remos encontrados es de la It. 10a.
+    // It. 10a (02-tech-design §6.1): arriba, #device-link-banner (LinkBanner: reconectando o monitor apagado); la lista de remos
+    // encontrados (#device-results, ScanResultList) va en #device-empty-area, arriba, en lugar del estado vacío.
     public sealed class ScanView : VisualElement
     {
         public const float Padding = 16;
 
         private readonly UiContext _ui;
         private readonly VisualElement _empty;
+        private int _lastCount;
 
-        public ScanView(UiContext ui, ShellLayout layout, Action onSearch)
+        public ScanView(UiContext ui, ShellLayout layout, Action onSearch, Action<string>? onTapResult = null, Action<LinkBannerKind>? onLinkAction = null)
         {
             _ui = ui;
             name = "device-scan-view";
             AddToClassList("rm-device-scan");
             layout.RegisterBottomPadding(this, Padding);
+
+            LinkBanner = new LinkBanner(ui, onLinkAction ?? (_ => { }));
+            Add(LinkBanner);
 
             Search = new RmButton("device-search", "primary", Icons.BluetoothSearching, "", onSearch);
             Add(Search);
@@ -38,10 +44,16 @@ namespace RowMate.Presentation.Device
             Hint.pickingMode = PickingMode.Ignore;
             Add(Hint);
 
+            // WP-D (00-arte §1.2, D10-02): la banda del sonar entre la ayuda y la lista, solo buscando y sin alto compacto.
+            Sonar = new SonarView(ui.Motion);
+            Add(Sonar);
+
             EmptyArea = new ScrollView(ScrollViewMode.Vertical) { name = "device-empty-area" };
             EmptyArea.AddToClassList("rm-device-empty");
             EmptyArea.AddToClassList("rm-scroll");
             ScrollPolicy.Apply(EmptyArea, ui.IsDesktop);
+            Results = new ScanResultList(ui, onTapResult ?? (_ => { }));
+            EmptyArea.Add(Results);
             _empty = new VisualElement();
             _empty.AddToClassList("rm-empty");
             _empty.pickingMode = PickingMode.Ignore;
@@ -67,7 +79,20 @@ namespace RowMate.Presentation.Device
             CardSlot.AddToClassList("rm-scroll");
             ScrollPolicy.Apply(CardSlot, ui.IsDesktop);
             Add(CardSlot);
+            RegisterCallback<GeometryChangedEvent>(evt =>
+            {
+                if (evt.newRect.height > 0)
+                {
+                    Sonar.SetCompact(evt.newRect.height < RowMate.Core.Design.BleMotionSpecs.CompactHeightDp);
+                }
+            });
         }
+
+        public SonarView Sonar { get; }
+
+        public LinkBanner LinkBanner { get; }
+
+        public ScanResultList Results { get; }
 
         public RmButton Search { get; }
 
@@ -91,6 +116,24 @@ namespace RowMate.Presentation.Device
             _empty.style.display = spec.ShowEmptyState ? DisplayStyle.Flex : DisplayStyle.None;
             EmptyTitle.text = texts.Get(L10nKeys.DeviceNoResults);
             EmptyHint.text = texts.Get(L10nKeys.DeviceNoResultsHint);
+        }
+
+        // It. 10a: la lista de remos (AC-BLE-05-07) y la caja del enlace (AC-BLE-08-05, AC-BLE-09-02).
+        public void Render(ScanViewSpec spec, IReadOnlyList<ScanItemSpec> items, LinkBannerSpec link, Localizer texts)
+        {
+            Render(spec, texts);
+            var searching = spec.ShowSearchHint;
+            Sonar.SetSearching(searching);
+            if (searching && items.Count > _lastCount)
+            {
+                Sonar.Echo();
+            }
+
+            _lastCount = items.Count;
+            Results.Render(items);
+            Results.style.display = items.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            EmptyArea.EnableInClassList("rm-device-empty--list", items.Count > 0);
+            LinkBanner.Render(link);
         }
     }
 }

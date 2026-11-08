@@ -8,6 +8,8 @@
 *.yml text eol=lf
 *.dart text eol=lf
 *.sh text eol=lf
+# It. 10a: el formato binario de los eventos BLE (Tests/Golden/ble/events-v1.bin), byte por byte.
+*.bin binary
 
 # Binarios propios con Git LFS (en la It. 1 no habia ninguno; la It. 2 suma los videos del arnes de capturas).
 *.png filter=lfs diff=lfs merge=lfs -text
@@ -20,3 +22,6 @@
 *.ttf filter=lfs diff=lfs merge=lfs -text
 *.otf filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
+# It. 10a: el plugin de Bluetooth de Windows va SIN LFS (un clon sin LFS lo tiene igual; native/windows/build.ps1 -Check
+# compara su SHA-256 con el que compila).
+Assets/Plugins/Windows/x86_64/RowMateBle.dll -filter -diff -merge -text

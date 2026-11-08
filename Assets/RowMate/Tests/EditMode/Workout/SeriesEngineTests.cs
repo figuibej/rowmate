@@ -120,14 +120,15 @@ namespace RowMate.Tests.EditMode.Workout
         [TestCase("R-4", 250)]
         [TestCase("R-4R", 251)]
         [TestCase("R-4Z", 252)]
-        [TestCase("R-4D", 254)]
+        // It. 10a (QA-V4a-L01, AC-WKT-03-11): con R-4D la lectura después del corte suma (16 m en 4 s desde el último cambio): 250.
+        [TestCase("R-4D", 250)]
         [TestCase("R-4X", -1)]
         [Category("AC-WKT-07-09"), Category("AC-WKT-03-03")]
         public void TheSameMetersAsTheDistanceStepSecondBySecond(string rower, int end)
         {
             // AC-WKT-07-09: los metros del paso que cuentan los parciales y los que deciden el fin del paso por distancia son los
             // mismos, segundo a segundo: el paso termina en el primer segundo en que SeriesState.StepMeters llega a su meta. Trabajo
-            // 1000 termina en 250, 251, 252 y 254; con R-4X (la distancia quieta) nunca.
+            // 1000 termina en 250, 251, 252 y (R-4D, desde la It. 10a) 250; con R-4X (la distancia quieta) nunca.
             using (var h = new WorkoutHarness(RowerScripts.ByName(rower)))
             {
                 var steps = new List<(int Second, int Step, double StepMeters)>();

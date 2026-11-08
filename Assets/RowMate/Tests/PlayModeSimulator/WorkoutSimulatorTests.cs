@@ -130,7 +130,7 @@ namespace RowMate.Tests.PlayMode.Simulator
             Assert.That(H.TextOf("hud-spm-value"), Is.EqualTo(spm), "el HUD queda con la última lectura");
             Assert.That(H.TextOf("hud-time-value"), Is.EqualTo("00:42"), "el reloj avanza");
             Assert.That(H.TextOf("hud-countdown"), Is.EqualTo("0:48"), "y el paso por tiempo también");
-            Assert.That(H.Shell.Toasts.ShowCount, Is.EqualTo(shown), "sin aviso (el de caída es de la It. 10a)");
+            Assert.That(H.Shell.Toasts.ShowCount, Is.EqualTo(shown), "el simulador no tiene enlace real (Link = Idle): sin aviso; con el remo real el aviso sí sale (It. 10a, HudLinkNoticeTests)");
             yield return AdvanceTo(50.05);
             Assert.That(H.App.Device.State.Value.IsConnected, Is.True, "el remo vuelve");
             Assert.That(Phase(), Is.EqualTo(WorkoutPhase.Active));

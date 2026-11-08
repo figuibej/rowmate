@@ -39,6 +39,10 @@ namespace RowMate.Core.Workout
     // referencia nueva. Al reanudar, Rebase fija la referencia sin contar el salto.
     // It. 5: hay UNO por sesión y es del SeriesTracker (spec §12 punto 2); el motor lee SeriesTracker.Meters para el paso por
     // distancia. Update devuelve la DistanceSample que el tracker necesita (la regla no cambió).
+    // It. 10a (QA-V4a-L01, AC-WKT-03-11, DV-103; 02-tech-design §7): el tope de 10 m/s se mide desde la ÚLTIMA VEZ QUE LA
+    // DISTANCIA CAMBIÓ (o desde que se fijó la referencia: Begin, un salto rechazado o Rebase), no desde la lectura anterior. Un
+    // monitor que manda la distancia cada 2 s con una lectura por segundo ya no traba el paso. Con una lectura nueva por segundo
+    // da lo mismo que el legacy. Dt, TimeBefore y LastTime de la DistanceSample no cambian (el tracker interpola con ellos).
     // legacy: lib/features/workout/series_tracker.dart:43-46 (tope), :86-102 (begin), :104-108 (rebase), :118-127 y :143.
     public sealed class SanitizedDistance
     {
@@ -46,6 +50,9 @@ namespace RowMate.Core.Workout
         public const double MaxSpeedMetersPerSecond = 10.0;
 
         private double _lastRaw;
+
+        // El reloj activo de la última vez que la distancia cruda cambió o se fijó la referencia (It. 10a).
+        private double _lastChangeTime;
 
         // Metros saneados desde Begin (_distance del legacy).
         public double Meters { get; private set; }
@@ -62,16 +69,19 @@ namespace RowMate.Core.Workout
             _lastRaw = rawMeters;
             Meters = 0;
             LastTime = activeSeconds;
+            _lastChangeTime = activeSeconds;
         }
 
-        // :106-108: al reanudar, lo remado en pausa no cuenta.
+        // :106-108: al reanudar, lo remado en pausa no cuenta. It. 10a: la referencia nueva se fija en el reloj activo de la
+        // última lectura (el reloj no corrió en la pausa).
         public void Rebase(int rawMeters)
         {
             _lastRaw = rawMeters;
+            _lastChangeTime = LastTime;
         }
 
-        // :120-127, :143: dt = t − último; Δ = crudo − último crudo; Δ < 0 o Δ > 10 · max(dt; 1) → no suma. Las expresiones,
-        // en el orden del legacy (ADR 012).
+        // :120-127, :143: dt = t − último; Δ = crudo − último crudo; Δ < 0 o Δ > 10 · max(t − último cambio; 1) → no suma (It. 10a:
+        // el tope cuenta desde el último cambio). Las expresiones, en el orden del legacy (ADR 012).
         public DistanceSample Update(int rawMeters, int activeSeconds)
         {
             double t = activeSeconds;
@@ -79,9 +89,16 @@ namespace RowMate.Core.Workout
             var timeBefore = LastTime;
             var dt = t - timeBefore;
             var rawDelta = rawMeters - _lastRaw;
-            var maxDelta = MaxSpeedMetersPerSecond * (dt < 1 ? 1 : dt);
+            var sinceChange = t - _lastChangeTime;
+            var maxDelta = MaxSpeedMetersPerSecond * (sinceChange < 1 ? 1 : sinceChange);
             var delta = rawDelta < 0 || rawDelta > maxDelta ? 0.0 : rawDelta;
             Meters = before + delta;
+            if (rawDelta != 0)
+            {
+                // Cambió la distancia: sumó (avance) o es la referencia nueva (salto rechazado).
+                _lastChangeTime = t;
+            }
+
             _lastRaw = rawMeters;
             LastTime = t;
             return new DistanceSample(before, timeBefore, delta, dt, t);

@@ -54,6 +54,8 @@ namespace RowMate.EditorTools
             // It. 8 (08-entornos-selector/02-tech-design §5): el escenario y la hora de la medida de la escena.
             "-rowmate-perf-env",
             "-rowmate-perf-hour",
+            // It. 10a (02-tech-design §5.3): el humo del Bluetooth real, solo en desarrollo.
+            "-rowmate-ble-smoke",
         };
 
         // It. 6a (QA-G6aT-19): el aviso de licencias de terceros (BSD-3 del SDK de Dart, por DartRandom) viaja con cada build de Windows,
@@ -70,6 +72,16 @@ namespace RowMate.EditorTools
 
             var text = File.ReadAllText(path);
             return text.Contains("Dart") && text.Contains("Redistribution") ? null : NoticesFile + " sin la licencia del SDK de Dart";
+        }
+
+        // It. 10a (02-tech-design §5.3): el build de Windows que no es del simulador lleva el plugin de Bluetooth LE en
+        // RowMate_Data/Plugins/x86_64/. null si está; si no, el motivo.
+        public const string BlePluginRelative = "RowMate_Data/Plugins/x86_64/RowMateBle.dll";
+
+        public static string? FindMissingBlePlugin(string buildFolder)
+        {
+            var path = Path.Combine(buildFolder, BlePluginRelative.Replace('/', Path.DirectorySeparatorChar));
+            return File.Exists(path) ? null : "falta " + BlePluginRelative + " (el remo quedaría sin Bluetooth)";
         }
 
         public static readonly string[] TestNeedles =

@@ -485,5 +485,45 @@
   "historyStatSpm": "SPM",
   "historyStatSplit": "Split",
   "historyLoadError": "No se pudo cargar el historial",
-  "sessionLoadError": "No se pudo cargar la sesión"
+  "sessionLoadError": "No se pudo cargar la sesión",
+  "deviceUnknown": "Dispositivo desconocido",
+  "deviceRowerFallback": "Rower",
+  "deviceScanError": "Error al escanear: {error}",
+  "@deviceScanError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceConnectError": "Error al conectar: {error}",
+  "@deviceConnectError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceStepConnecting": "Conectando…",
+  "deviceStepControl": "Tomando control del monitor…",
+  "deviceStepReady": "Listo",
+  "deviceReconnecting": "Reconectando con {name}…",
+  "@deviceReconnecting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceReconnected": "Reconectado con {name}",
+  "@deviceReconnected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceMonitorStopped": "El monitor dejó de enviar datos",
+  "deviceBleUnsupported": "Este equipo no tiene Bluetooth LE",
+  "deviceBleUnsupportedHint": "RowMate necesita Bluetooth LE para conectar\nel remo y el pulsómetro"
 }

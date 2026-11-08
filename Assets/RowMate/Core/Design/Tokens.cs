@@ -171,6 +171,9 @@ namespace RowMate.Core.Design
         public static readonly TypeScaleToken Caption = TypeScaleToken.Of("caption", FontFamilyRole.Ui, 11, 14, 500);    // fechas, ayudas, ejes (mínimo legible)
         public static readonly TypeScaleToken Button = TypeScaleToken.Of("button", FontFamilyRole.Ui, 14, 20, 600);      // etiqueta de botones, chips y acciones de texto (It. 2, DN-01; M3 labelLarge 14)
 
+        // ── 4.3 Tipografía: monoespaciada (JetBrains Mono 400; It. 10a, 00-arte-bluetooth §5.3, A10-10) ────
+        public static readonly TypeScaleToken Mono = TypeScaleToken.Of("mono", FontFamilyRole.Mono, 12, 18, 400);         // valores y bytes del diagnóstico BLE (avance 0,6 em = 7,2 dp)
+
         // ── 4.3 Tipografía: números (RowMate Numeric SC: Barlow Semi Condensed con tnum, DD4a-07) ────
         public static readonly TypeScaleToken NumHero = TypeScaleToken.Of("num.hero", FontFamilyRole.Numeric, 64, 64, 800);  // SPM del HUD (D-ART-02)
         public static readonly TypeScaleToken NumXl = TypeScaleToken.Of("num.xl", FontFamilyRole.Numeric, 52, 52, 700);      // tablero de Dispositivo, pulso

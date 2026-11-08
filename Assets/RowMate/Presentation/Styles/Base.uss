@@ -2707,3 +2707,305 @@
     border-color: var(--rm-border-default);
     background-color: var(--rm-glass-fallback);
 }
+
+/* ── It. 10a (02-tech-design §6; WP-B1): Bluetooth real. Estructura y colores de tokens; el arte fino y el movimiento son de WP-D ── */
+.rm-device-error {
+    flex-shrink: 0;
+    margin: 12px 16px 0 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+}
+
+/* El fondo rojo al 15 %: un relleno state.danger con opacidad (no hay token del rojo translúcido; para issues). */
+.rm-device-error__fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 12px;
+    background-color: var(--rm-state-danger);
+    opacity: 0.15;
+}
+
+.rm-device-error__text {
+    color: var(--rm-state-danger-text);
+    white-space: normal;
+}
+
+.rm-device-state {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rm-device-state__scroll {
+    flex-grow: 1;
+}
+
+.rm-device-state__scroll .unity-scroll-view__content-container {
+    min-height: 100%;
+    justify-content: center;
+}
+
+.rm-device-state__column {
+    align-items: center;
+    align-self: center;
+    width: 100%;
+    max-width: 368px;
+    padding: 24px 24px;
+}
+
+.rm-device-state__icon {
+    color: var(--rm-text-tertiary);
+}
+
+.rm-device-state__icon--danger {
+    color: var(--rm-state-danger);
+}
+
+.rm-device-state__title {
+    margin-top: 24px;
+    align-self: stretch;
+    font-size: 18px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/Inter-Bold-SDF.asset");
+    color: var(--rm-text-primary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.rm-device-state__hint {
+    margin-top: 8px;
+    align-self: stretch;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.rm-device-state__enable {
+    margin-top: 24px;
+    min-width: 220px;
+}
+
+.rm-link-banner {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 48px;
+    margin-bottom: 12px;
+    padding: 6px 4px 6px 16px;
+    border-radius: 12px;
+    background-color: var(--rm-surface-card);
+}
+
+.rm-link-banner--stopped {
+    background-color: var(--rm-state-warning-bg);
+}
+
+.rm-link-banner__indicator {
+    margin-right: 12px;
+    color: var(--rm-accent-primary);
+}
+
+.rm-link-banner--stopped .rm-link-banner__indicator {
+    color: var(--rm-state-warning);
+}
+
+.rm-link-banner__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-link-banner--stopped .rm-link-banner__text {
+    color: var(--rm-state-warning);
+}
+
+.rm-link-banner__action {
+    margin-left: 8px;
+}
+
+.rm-device-empty--list .unity-scroll-view__content-container {
+    justify-content: flex-start;
+}
+
+.rm-scan-results {
+    flex-shrink: 0;
+}
+
+.rm-scan-card,
+.rm-scan-card:hover,
+.rm-scan-card:active,
+.rm-scan-card:focus,
+.rm-scan-card:hover:active {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 64px;
+    margin: 0 0 8px 0;
+    padding: 10px 12px 10px 16px;
+    border-width: 0;
+    border-radius: 12px;
+    background-color: var(--rm-surface-card);
+}
+
+.rm-scan-card .rm-button__state {
+    border-radius: 12px;
+}
+
+.rm-scan-card--active:disabled {
+    opacity: 1;
+}
+
+.rm-scan-card__icon {
+    color: var(--rm-accent-primary);
+    margin-right: 16px;
+}
+
+.rm-scan-card__texts {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.rm-scan-card__name {
+    color: var(--rm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-left;
+}
+
+.rm-scan-card__line2 {
+    margin-top: 2px;
+    color: var(--rm-text-tertiary);
+    white-space: nowrap;
+    -unity-text-align: middle-left;
+}
+
+.rm-scan-card__line2--step {
+    color: var(--rm-text-secondary);
+}
+
+.rm-scan-card__chevron {
+    color: var(--rm-text-tertiary);
+    margin-left: 8px;
+}
+
+.rm-scan-card__spinner {
+    margin-left: 8px;
+}
+
+.rm-ble-debug-toggle {
+    align-self: center;
+    opacity: 0.24;
+}
+
+.rm-ble-debug-toggle .rm-button__label,
+.rm-ble-debug-toggle .rm-icon {
+    color: var(--rm-text-primary);
+}
+
+.rm-ble-debug {
+    flex-shrink: 0;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    padding: 12px;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: var(--rm-border-default);
+    background-color: var(--rm-dev-ble-debug-bg);
+}
+
+.rm-ble-debug__header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.rm-ble-debug__icon {
+    color: var(--rm-text-tertiary);
+    margin-right: 6px;
+}
+
+.rm-ble-debug__title {
+    flex-grow: 1;
+    color: var(--rm-text-tertiary);
+    letter-spacing: 1px;
+}
+
+.rm-ble-debug__badge {
+    padding: 2px 8px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--rm-state-danger-text);
+    color: var(--rm-state-danger-text);
+}
+
+.rm-ble-debug__badge--receiving {
+    border-width: 0;
+    color: var(--rm-state-connected);
+    background-color: var(--rm-state-connected-bg);
+}
+
+.rm-ble-debug__row {
+    flex-direction: row;
+    justify-content: space-between;
+    min-height: 20px;
+    margin-top: 4px;
+}
+
+.rm-ble-debug__label {
+    color: var(--rm-text-tertiary);
+}
+
+.rm-ble-debug__value {
+    color: var(--rm-text-primary);
+}
+
+.rm-ble-debug__separator {
+    height: 1px;
+    margin: 8px 0;
+    background-color: var(--rm-border-default);
+}
+
+.rm-ble-debug__hex {
+    margin-top: 4px;
+    min-height: 36px;
+    color: var(--rm-dev-ble-debug);
+    white-space: normal;
+}
+
+.rm-link-indicator {
+    color: var(--rm-accent-primary);
+}
+
+.rm-link-indicator--check {
+    color: var(--rm-state-connected);
+}
+
+.rm-link-indicator--link-off {
+    color: var(--rm-state-warning);
+}
+
+.rm-toast--link {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.rm-toast__indicator {
+    margin-right: 8px;
+}
+
+.rm-toast__indicator.rm-link-indicator--spinner {
+    color: var(--rm-metric-spm-hud);
+}
+
+.rm-toast--link .rm-toast__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+}

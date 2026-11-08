@@ -49,6 +49,10 @@ namespace RowMate.Bootstrap
         public const string ColorProbeArgument = "-rowmate-color-probe";
         public const string DbSmokeArgument = "-rowmate-db-smoke";
         public const string DbRoundTripArgument = "-rowmate-db-roundtrip";
+
+        // It. 10a (02-tech-design §5.3; AC-BLE-04-07, -05-10, -91-02): el humo del Bluetooth real (build.ps1 -BleSmoke): 3 búsquedas de
+        // 10 s sin conectar, la segunda con la ventana minimizada; solo contadores en el registro.
+        public const string BleSmokeArgument = BleSmoke.Argument;
         public const string RoundTripName = "Ida y vuelta";
 
         // It. 5 (QA-V4b-06; 05-series-parciales/00-deuda-4b §2): la medida de la entrada al inmersivo en el build. Sin
@@ -100,6 +104,9 @@ namespace RowMate.Bootstrap
         private AppLifecycle? _lifecycle;
         private ScreenKeepAwake? _keepAwake;
         private DeviceBackend? _backend;
+        // It. 10a (§5.2): lo que llega de otros hilos (permisos de Android) y la bomba de eventos del plugin BLE (null = sin plugin).
+        private RowMate.Core.Common.MainThreadQueue? _mainThread;
+        private RowMate.Core.Ble.IBleEventPump? _blePump;
         private LocalStore? _store;
         private AppContext? _app;
         private ShellHandle? _shell;
@@ -172,8 +179,10 @@ namespace RowMate.Bootstrap
             _keepAwake = new ScreenKeepAwake(_platform.WakeLock, _lifecycle, logger);
             _keepAwake.Start();
 
-            // 4. Remo y pulsómetro: el único #if ROWMATE_SIMULATOR (DeviceBackendFactory).
-            _backend = DeviceBackendFactory.Create(_scheduler, logger);
+            // 4. Remo y pulsómetro: el único #if ROWMATE_SIMULATOR (DeviceBackendFactory). It. 10a: en el build normal, el remo real sobre
+            //    el plugin nativo y su bomba de eventos (que Update drena antes del Tick).
+            _mainThread = new RowMate.Core.Common.MainThreadQueue(logger);
+            _backend = DeviceBackendFactory.Create(_scheduler, _lifecycle, logger, _mainThread, out _blePump);
 
             // 4b. Base local (F-HIS-17, F-HIS-20): una por variante (rower_app.db o rower_app_dev.db), en la carpeta privada de
             //     la app (03-rutinas/02-tech-design §2.2, §2.4). El ÚNICO lugar del código que elige el archivo. Se abre en el
@@ -192,7 +201,7 @@ namespace RowMate.Bootstrap
             // 5. La app pura. Perfil apagado (su regla real es de la It. 12, D-20).
             var texts = LocalizationSet.Load(_assets.StringsEs!.text, _assets.StringsEn!.text);
             _app = AppComposer.Compose(new AppServices(_backend, _store.Routines, _store.Sessions, _scheduler, logger, texts, _platform.Locale,
-                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle, SystemUi = _platform.SystemUi, Preferences = _preferences });
+                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle, SystemUi = _platform.SystemUi, Preferences = _preferences, Haptics = RowMate.Platform.Haptics.HapticsFactory.Create(logger) });
 
             // 6. Superficie: copia del panel con sus respaldos de fuente (RuntimePanelFactory: el asset no se toca, R2-05;
             //    QA-G3-12), RT limpia a bg.app y presentador (S-B1). El documento de la escena no tiene panel: se engancha a la
@@ -262,6 +271,12 @@ namespace RowMate.Bootstrap
             //    pulsómetro intenta su reconexión (main.dart:68-83). Corre antes del primer Update: el scheduler no avanza antes
             //    de que la UI esté suscripta.
             _app.Start();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (HasArgument(BleSmokeArgument))
+            {
+                _ = BleSmoke.RunAsync(_backend.Rower, _scheduler, _logger!);
+            }
+#endif
 
             // 9. It. 5 (QA-V4b-06; 05-series-parciales/00-deuda-4b §2): la primera vez del HUD (el JIT, los estilos y el texto) en
             //    este cuadro, el del arranque, y no en el del toque que abre el primer inmersivo. Lo desarma Update en el cuadro
@@ -309,6 +324,10 @@ namespace RowMate.Bootstrap
 
         private void Update()
         {
+            // It. 10a (§5.2, QA-G10a-17): primero lo que llegó de otros hilos, después los eventos del plugin BLE (sin asignar si no hay) y
+            // recién ahí el programador.
+            _mainThread?.Drain();
+            _blePump?.Drain(false);
             _scheduler?.Tick();
             _surface?.Update();
             if (_shell == null)
@@ -480,6 +499,9 @@ namespace RowMate.Bootstrap
 
             if (_scheduler.InBackground)
             {
+                // It. 10a (§5.2): los eventos BLE de la pausa se agendan en su instante virtual ANTES del alcance (desfase congelado).
+                _mainThread?.Drain();
+                _blePump?.Drain(true);
                 var fired = _scheduler.ResumeFromBackground();
                 _logger?.Log(LogLevel.Debug, Tag, "vuelta del segundo plano: " + fired.ToString(CultureInfo.InvariantCulture) + " disparos en el alcance");
             }

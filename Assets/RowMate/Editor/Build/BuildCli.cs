@@ -127,6 +127,17 @@ namespace RowMate.EditorTools
                     }
 
                     Debug.Log(Prefix + BuildOutputInspector.NoticesFile + " junto al ejecutable.");
+                    if (!request.Simulator)
+                    {
+                        var plugin = BuildOutputInspector.FindMissingBlePlugin(request.OutputFolder);
+                        if (plugin != null)
+                        {
+                            Debug.LogError(Prefix + plugin);
+                            return 2;
+                        }
+
+                        Debug.Log(Prefix + "RowMateBle.dll en el build (Bluetooth real).");
+                    }
                 }
 
                 if (!request.Simulator)

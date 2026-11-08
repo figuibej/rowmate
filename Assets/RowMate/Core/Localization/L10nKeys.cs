@@ -269,5 +269,22 @@ namespace RowMate.Core.Localization
         public const string HistoryStatSplit = "historyStatSplit";
         public const string HistoryLoadError = "historyLoadError";
         public const string SessionLoadError = "sessionLoadError";
+
+        // ── Nuevas de la It. 10a (Q-01; 10a-ble-android-windows/01-po-spec §4): 228 → 240 ──
+        // El nombre de un equipo sin nombre y la cabecera sin remo (device_screen.dart:98, :452; DV-101), los banners de error con
+        // el detalle del sistema sin traducir (device_provider.dart:111, :125), los pasos de la conexión (AC-BLE-06-07), los avisos
+        // del enlace (Q-31, Q-34) y la vista sin Bluetooth LE (Q-47). Las nuevas usan … (U+2026).
+        public const string DeviceUnknown = "deviceUnknown";
+        public const string DeviceRowerFallback = "deviceRowerFallback";
+        public const string DeviceScanError = "deviceScanError";
+        public const string DeviceConnectError = "deviceConnectError";
+        public const string DeviceStepConnecting = "deviceStepConnecting";
+        public const string DeviceStepControl = "deviceStepControl";
+        public const string DeviceStepReady = "deviceStepReady";
+        public const string DeviceReconnecting = "deviceReconnecting";
+        public const string DeviceReconnected = "deviceReconnected";
+        public const string DeviceMonitorStopped = "deviceMonitorStopped";
+        public const string DeviceBleUnsupported = "deviceBleUnsupported";
+        public const string DeviceBleUnsupportedHint = "deviceBleUnsupportedHint";
     }
 }

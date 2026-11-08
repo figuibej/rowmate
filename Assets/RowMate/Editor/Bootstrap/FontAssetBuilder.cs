@@ -11,7 +11,7 @@ using AtlasPopulationMode = UnityEngine.TextCore.Text.AtlasPopulationMode;
 
 namespace RowMate.EditorTools
 {
-    // Paso ui.fonts del bootstrapper v3 (02-tech-design §1.3): crea los 10 FontAsset SOLO si no existen (desde la It. 3, también
+    // Paso ui.fonts del bootstrapper v3 (02-tech-design §1.3): crea los 11 FontAsset SOLO si no existen (It. 10a: + JetBrains Mono 400, 48 / 5, 1024², sin tabla de kerning) (desde la It. 3, también
     // el respaldo de emojis Noto Emoji, DN3-21: 64 / 6, 512²), con atlas y material
     // como subassets (verificado en S-0), y después reimporta los USS que los nombran (un USS importado antes de que exista
     // el FontAsset queda con MissingAssetReference y no se arregla solo, S-0). Las rutas salen de FontAssetPaths (las mismas

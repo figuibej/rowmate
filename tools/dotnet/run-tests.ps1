@@ -16,7 +16,7 @@
 # -Demo    solo TestCategory=Demo. Cada linea [DEMO] sale UNA vez (QA-V-07 de la It. 1): el adaptador de NUnit la manda a la
 #          consola en vivo (NUnit.ConsoleOut=1) y con verbosity=normal no se repite en "Standard Output Messages"
 #          (con detailed salia dos veces).
-# -Matrix  la lista de IDs sale de TODOS los Assets/RowMate/Tests/EditMode/Traceability/It0*Ids.cs (It. 2, QA-G2-16). Los IDs
+# -Matrix  la lista de IDs sale de TODOS los Assets/RowMate/Tests/EditMode/Traceability/It*Ids.cs (It. 2, QA-G2-16). Los IDs
 #          del bloque UnityOnlyIds (solo PlayMode, Unity EditMode, captura o equipo) figuran como PENDIENTE UNITY y los de
 #          WorkPackageBIds como PENDIENTE WP-B mientras no tengan resultado, en vez de SIN TEST.
 # -UnityResults  carpeta con los XML de NUnit que escribe Unity (run-unity-tests.ps1, -testResults): se suman a la matriz
@@ -92,13 +92,13 @@ function Add-NUnitResults([string]$Path, [hashtable]$ById, [string]$Origin) {
 # IDs entre comillas de un texto (AC-XXX-nn-nn, AC-BASE-nn, LT-nn), sin repetir, en orden de aparicion.
 function Get-QuotedIds([string]$Text) {
     $ids = New-Object System.Collections.Generic.List[string]
-    foreach ($m in [regex]::Matches($Text, '"((?:AC-[A-Z]+-\d\d(?:-\d\d)?)|(?:LT-\d\d))"')) {
+    foreach ($m in [regex]::Matches($Text, '"((?:AC-[A-Z]+(?:-[A-Z]+)?-\d\d(?:-\d\d)?)|(?:LT-\d\d))"')) {
         if (-not $ids.Contains($m.Groups[1].Value)) { $ids.Add($m.Groups[1].Value) }
     }
     return ,$ids
 }
 
-# IDs del bloque "<Nombre> = { ... };" de un It0*Ids.cs (UnityOnlyIds, WorkPackageBIds). Vacio si no esta.
+# IDs del bloque "<Nombre> = { ... };" de un It*Ids.cs (UnityOnlyIds, WorkPackageBIds). Vacio si no esta.
 function Get-BlockIds([string]$Text, [string]$Name) {
     $m = [regex]::Match($Text, $Name + '\s*=\s*\{([^}]*)\}')
     if (-not $m.Success) { return ,(New-Object System.Collections.Generic.List[string]) }
@@ -122,13 +122,13 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
         foreach ($xml in $unityFiles) { Add-NUnitResults $xml.FullName $byId 'unity' }
     }
 
-    # Lista completa de las specs: TODOS los It0*Ids.cs (It. 1: 139 AC y 19 LT; It. 2: 125 AC y 15 LT; It. 3: 102 AC; It. 4a: 162 AC y 11 LT), con sus bloques
+    # Lista completa de las specs: TODOS los It*Ids.cs (It. 1: 139 AC y 19 LT; It. 2: 125 AC y 15 LT; It. 3: 102 AC; It. 4a: 162 AC y 11 LT), con sus bloques
     # UnityOnlyIds (PENDIENTE UNITY) y WorkPackageBIds (PENDIENTE WP-B).
     $traceDir = Join-Path $repo 'Assets\RowMate\Tests\EditMode\Traceability'
     $expected = New-Object System.Collections.Generic.List[string]
     $unityOnly = New-Object System.Collections.Generic.List[string]
     $pendingB = New-Object System.Collections.Generic.List[string]
-    $idsFiles = @(Get-ChildItem -Path $traceDir -Filter 'It0*Ids.cs' -File -ErrorAction SilentlyContinue | Sort-Object Name)
+    $idsFiles = @(Get-ChildItem -Path $traceDir -Filter 'It*Ids.cs' -File -ErrorAction SilentlyContinue | Sort-Object Name)
     foreach ($f in $idsFiles) {
         $text = [System.IO.File]::ReadAllText($f.FullName)
         foreach ($id in (Get-QuotedIds $text)) { if (-not $expected.Contains($id)) { $expected.Add($id) } }
@@ -143,7 +143,7 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
     $lines.Add('')
     $source = 'Generada por tools/dotnet/run-tests.ps1 -Matrix desde ' + $xmlFiles.Count + ' resultado(s) de NUnit de dotnet'
     if ($UnityDir -ne '') { $source += ' y ' + $unityFiles.Count + ' de Unity (' + $UnityDir + ')' }
-    $lines.Add($source + ' (' + (Get-Date -Format 'yyyy-MM-dd HH:mm') + '), con los IDs de ' + $idsFiles.Count + ' archivo(s) It0*Ids.cs.')
+    $lines.Add($source + ' (' + (Get-Date -Format 'yyyy-MM-dd HH:mm') + '), con los IDs de ' + $idsFiles.Count + ' archivo(s) It*Ids.cs.')
     $lines.Add('PASA = al menos un test paso y ninguno fallo; IGNORADO = solo tests [Ignore] (NO VERIFICABLE); PENDIENTE UNITY = se')
     $lines.Add('verifica solo en Unity (PlayMode, EditMode con UnityEditor, captura) y no se pasaron sus resultados (-UnityResults);')
     $lines.Add('PENDIENTE WP-B = su test de dotnet es de un archivo de WP-B que todavia no existe.')

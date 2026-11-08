@@ -53,6 +53,12 @@ namespace RowMate.Tests.Support
 
         public FakeAppLifecycle Lifecycle { get; }
 
+        // It. 10a (02-tech-design §5.2): lo que AppRoot corre en cada cuadro ANTES del Tick (MainThreadQueue y la bomba de eventos BLE,
+        // resuming: false) y al volver del segundo plano ANTES del alcance (la bomba, resuming: true). null = nada.
+        public Action? BeforeFrame { get; set; }
+
+        public Action? BeforeResume { get; set; }
+
         // El instante actual de la spec (el monótono despierto − 0,5).
         public double Now => Scheduler.MonotonicSeconds - 0.5;
 
@@ -108,6 +114,7 @@ namespace RowMate.Tests.Support
         public void Foreground(double instant)
         {
             _raw = Instant(instant) + Scheduler.SleepBias;
+            BeforeResume?.Invoke();
             Scheduler.ResumeFromBackground(Clock());
             Lifecycle.SetBackground(false);
         }
@@ -132,6 +139,7 @@ namespace RowMate.Tests.Support
             var wall = _raw + _wallExtra + utcSeconds;
             _raw += monotonicSeconds;
             _wallExtra = wall - _raw;
+            BeforeResume?.Invoke();
             Scheduler.ResumeFromBackground(Clock());
             Lifecycle.SetBackground(false);
         }
@@ -195,6 +203,7 @@ namespace RowMate.Tests.Support
             _raw += _frame;
             if (viaBackground)
             {
+                BeforeResume?.Invoke();
                 Scheduler.ResumeFromBackground(Clock());
                 Lifecycle.SetBackground(false);
             }
@@ -235,6 +244,7 @@ namespace RowMate.Tests.Support
 
         private void Tick()
         {
+            BeforeFrame?.Invoke();
             Scheduler.Tick(Clock());
         }
 

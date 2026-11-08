@@ -1,6 +1,7 @@
 using System;
 using RowMate.App.Composition;
 using RowMate.Bootstrap;
+using RowMate.Core.Ble;
 using RowMate.Core.Common;
 using RowMate.Tests.Support;
 #if ROWMATE_SIMULATOR
@@ -13,6 +14,24 @@ namespace RowMate.Tests.UiSupport
     // del host y su dueño (DeviceBackend.Dispose los libera).
     public delegate DeviceBackend HostBackendFactory(IScheduler scheduler, IAppLogger logger);
 
+    // It. 10a: el backend de HostBackends.FakeBle, con el adaptador falso a mano (UiTestHost.FakeBle).
+    public sealed class FakeBleBackend : DeviceBackend
+    {
+        public FakeBleBackend(FakeBleAdapter adapter, RowerService rower, FakeAppLifecycle lifecycle, IHeartRateService heartRate)
+            : base(rower, heartRate, adapter)
+        {
+            Adapter = adapter;
+            RealRower = rower;
+            Lifecycle = lifecycle;
+        }
+
+        public FakeBleAdapter Adapter { get; }
+
+        public RowerService RealRower { get; }
+
+        public FakeAppLifecycle Lifecycle { get; }
+    }
+
     public static class HostBackends
     {
         // "Prueba": ControllableRowerService + ScriptedHeartRateService (spec §0.4).
@@ -20,7 +39,22 @@ namespace RowMate.Tests.UiSupport
             new DeviceBackend(new ControllableRowerService(logger), new ScriptedHeartRateService(logger), null);
 
         // Build normal de la It. 2 (equipo sin BLE): HardwareBackend (CAP-22).
-        public static readonly HostBackendFactory Unavailable = (scheduler, logger) => HardwareBackend.Create(logger);
+        public static readonly HostBackendFactory Unavailable = (scheduler, logger) => HardwareBackend.Unavailable(logger);
+
+        // It. 10a (02-tech-design §8.2, §8.4): el remo REAL (RowerService, Core) sobre el adaptador falso (FakeBleAdapter) con los equipos
+        // ficticios K-10 y el reloj del host; el pulsómetro, el de prueba. setup prepara el adaptador antes de crear el servicio (estado
+        // inicial, permiso, conducta de cada equipo). Ninguna toma toca la radio (ROWMATE_BLE=off).
+        public static HostBackendFactory FakeBle(Action<FakeBleAdapter>? setup = null, BleAdapterState initial = BleAdapterState.On)
+        {
+            return (scheduler, logger) =>
+            {
+                var adapter = new FakeBleAdapter(scheduler, logger, false, false, initial);
+                setup?.Invoke(adapter);
+                var lifecycle = new FakeAppLifecycle(logger);
+                var rower = new RowerService(adapter, scheduler, lifecycle, logger);
+                return new FakeBleBackend(adapter, rower, lifecycle, new ScriptedHeartRateService(logger));
+            };
+        }
 
         // El remo de prueba de la It. 4a (spec §0.4; 02-tech-design §4.5, §7.1): L(k) cada segundo por un timer del reloj del
         // host (ScriptedRower), conectado, y el pulsómetro de prueba (bpm y estados a pedido).

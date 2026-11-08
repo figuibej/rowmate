@@ -437,3 +437,258 @@
     border-top-right-radius: 17px;
     border-bottom-right-radius: 17px;
 }
+
+/* ════ It. 10a — Bluetooth real: búsqueda, conexión, estados y avisos del enlace (10a-ble-android-windows/04-design-notes; 00-arte-bluetooth
+   §1-§5). La estructura y los colores de contrato están en Base.uss (WP-B1); acá va el aspecto: tarjetas de r.card con el disco del
+   ícono, el sonar, la ilustración de la vista de estado, la caja del enlace, el diagnóstico en mono y el aviso del HUD en cápsula de
+   vidrio. Los tamaños y tiempos que mueve el código están en BleMotionSpecs (Core). ════ */
+
+/* Tarjeta de remo (§1.3): r.card 16, relleno 12 / 16, 64 de alto mínimo y 8 entre tarjetas. */
+.rm-scan-card,
+.rm-scan-card:hover,
+.rm-scan-card:active,
+.rm-scan-card:focus,
+.rm-scan-card:hover:active {
+    padding: 12px 16px 12px 12px;
+    border-radius: 16px;
+    background-color: var(--rm-surface-card);
+}
+
+.rm-scan-card .rm-button__state {
+    border-radius: 16px;
+}
+
+.rm-scan-card > .rm-focus-ring {
+    border-radius: 20px;
+}
+
+.rm-scan-card > .rm-focus-ring > .rm-focus-ring__halo {
+    border-radius: 24px;
+}
+
+/* Capa de estado: text.primary al 4 % con hover (escritorio) y al 8 % al presionar, sin escala (la de la tarjeta de rutina). */
+.rm-desktop .rm-scan-card:hover > .rm-button__state {
+    opacity: 0.04;
+}
+
+.rm-scan-card:hover:active > .rm-button__state,
+.rm-desktop .rm-scan-card:hover:active > .rm-button__state {
+    opacity: 0.08;
+}
+
+.rm-scan-card:disabled > .rm-button__state,
+.rm-desktop .rm-scan-card:hover:disabled > .rm-button__state {
+    opacity: 0;
+}
+
+/* Disco de 40 en accent.tonalBg con rowing 24 en accent.primary (5,60:1 sobre la tarjeta) y 12 de aire. */
+.rm-scan-card__disc {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    margin-right: 12px;
+    border-radius: 20px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--rm-accent-tonal-bg);
+}
+
+.rm-scan-card__icon {
+    margin-right: 0;
+    color: var(--rm-accent-primary);
+}
+
+/* Renglón 2 (a 2 del nombre): la dirección en text.tertiary; el paso en text.secondary; "Listo" en state.connected. El texto
+   anterior cruza encima (.rm-scan-card__ghost, absoluto). */
+.rm-scan-card__line {
+    margin-top: 2px;
+}
+
+.rm-scan-card__line2 {
+    margin-top: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-scan-card__line2--ready {
+    color: var(--rm-state-connected);
+}
+
+.rm-scan-card__ghost {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+}
+
+.rm-scan-card__chevron {
+    margin-left: 12px;
+}
+
+.rm-scan-card__spinner,
+.rm-scan-card__check {
+    margin-left: 12px;
+}
+
+.rm-scan-card__spinner {
+    color: var(--rm-accent-primary);
+}
+
+/* Sonar (§1.2): la banda de 152 (8 + 136 + 8) a todo el ancho; el disco y los anillos son la malla de SonarView; el ícono va en el
+   centro de la caja (8 + 68 − 14 = 62 desde arriba). */
+.rm-sonar {
+    align-self: stretch;
+    flex-shrink: 0;
+}
+
+.rm-sonar__icon {
+    position: absolute;
+    left: 50%;
+    top: 62px;
+    margin-left: -14px;
+    color: var(--rm-accent-on-tonal);
+}
+
+/* Vista de estado (§3.1): la ilustración de 176 (112 con alto compacto) con el ícono de 64 centrado; título a 24, ayuda a 8 y el botón
+   a 24 (16, 8 y 16 con alto compacto). El título queda en 18 negrita (DT10-13). La ayuda mide 320 de ancho máximo por la columna
+   (368 − 2 × 24, Base.uss). */
+.rm-bt-art {
+    align-self: center;
+    flex-shrink: 0;
+}
+
+.rm-bt-art__icon {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+}
+
+.rm-bt-art__icon--wake {
+    color: var(--rm-accent-primary);
+}
+
+.rm-device-state--compact .rm-device-state__title {
+    margin-top: 16px;
+}
+
+.rm-device-state--compact .rm-device-state__enable {
+    margin-top: 16px;
+}
+
+.rm-device-state--compact .rm-device-state__column {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* Caja del enlace (§4.1): r.l 12, relleno 12 / 12 / 12 / 16 (el botón de texto de 36 se come 6 arriba y abajo) y un borde sutil. */
+.rm-link-banner {
+    padding: 6px 6px 6px 16px;
+    border-width: 1px;
+    border-color: var(--rm-border-subtle);
+}
+
+.rm-link-banner--stopped {
+    border-color: var(--rm-state-warning-bg);
+}
+
+/* Cabecera de la vista conectada: la capa que sube del 0 al 8 % mientras se mantiene presionada (§5.1). */
+.rm-device-header__press {
+    position: absolute;
+    left: -12px;
+    right: -12px;
+    top: -6px;
+    bottom: -6px;
+    border-radius: 12px;
+    background-color: var(--rm-text-primary);
+}
+
+/* Diagnóstico (§5.2): consola prolija. Encabezado en label con su tracking (0,08 em); la insignia es una píldora con el punto que
+   late; etiquetas en bodyXs text.tertiary y valores en mono text.primary alineados a la derecha; el hex en mono dev.bleDebug con 2
+   líneas de alto mínimo (36) y corte solo en los espacios. */
+.rm-ble-debug__title {
+    letter-spacing: 8px;
+}
+
+.rm-ble-debug__pill {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--rm-state-danger-text);
+}
+
+.rm-ble-debug--receiving .rm-ble-debug__pill {
+    border-width: 0;
+    background-color: var(--rm-state-connected-bg);
+}
+
+.rm-ble-debug__badge,
+.rm-ble-debug__badge--receiving {
+    padding: 0;
+    border-width: 0;
+    border-radius: 0;
+    background-color: initial;
+}
+
+.rm-ble-debug__dot {
+    width: 6px;
+    height: 6px;
+    margin-right: 6px;
+    border-radius: 3px;
+    background-color: var(--rm-state-connected);
+}
+
+.rm-ble-debug__row {
+    align-items: center;
+    min-height: 20px;
+    margin-top: 2px;
+}
+
+.rm-ble-debug__value {
+    -unity-text-align: middle-right;
+}
+
+.rm-ble-debug__raw-label {
+    margin-top: 0;
+}
+
+.rm-ble-debug__hex {
+    margin-top: 4px;
+    min-height: 36px;
+    white-space: normal;
+}
+
+/* Aviso del enlace sobre el HUD (§4.2): cápsula de vidrio plano (glass.fallback, sin desenfoque), borde 1 en border.default, el
+   indicador de 16 y el texto en titleXs text.hudPrimary, en una línea, centrados. Los rellenos (13 + 17), el borde (1 + 1) y el aire del indicador (8)
+   suman lo que mide ToastLayer.Resize (TextPaddingDp 32 + LinkIndicatorDp 24): el texto no se corta en escritorio. */
+.rm-toast--link {
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 17px 10px 13px;
+    border-radius: 22px;
+    border-color: var(--rm-border-default);
+    background-color: var(--rm-glass-fallback);
+}
+
+.rm-toast--link .rm-toast__text {
+    flex-grow: 0;
+    color: var(--rm-text-hud-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-toast__indicator {
+    margin-right: 8px;
+}
+
+.rm-toast__indicator.rm-link-indicator--check {
+    color: var(--rm-state-connected);
+}
+
+.rm-toast__indicator.rm-link-indicator--link-off {
+    color: var(--rm-state-warning);
+}

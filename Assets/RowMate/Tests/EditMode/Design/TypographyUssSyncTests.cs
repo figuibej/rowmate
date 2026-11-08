@@ -145,8 +145,10 @@ namespace RowMate.Tests.EditMode.Design
             Assert.That(File.Exists(RepoPaths.Combine(FontAssetPaths.IconsOutlineSource)), Is.True);
             Assert.That(File.Exists(RepoPaths.Combine(FontAssetPaths.IconsFilledSource)), Is.True);
             Assert.That(File.Exists(RepoPaths.Combine(FontAssetPaths.EmojiFallbackSource)), Is.True, "Noto Emoji (P-09, DN3-21)");
-            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(10), "7 de texto y número + 2 de íconos + el respaldo de emojis (It. 3)");
-            Assert.Throws<ArgumentOutOfRangeException>(() => FontAssetPaths.For(FontFamilyRole.Mono, 400), "ningún token usa Mono todavía");
+            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(11), "8 de texto, número y mono (It. 10a) + 2 de íconos + el respaldo de emojis (It. 3)");
+            Assert.That(rules[".rm-type-mono"], Does.Contain("JetBrainsMono-Regular-SDF.asset"), "token mono (It. 10a, A10-10)");
+            Assert.That(rules[".rm-type-mono"], Does.Contain("font-size: 12px;"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => FontAssetPaths.For(FontFamilyRole.Mono, 700), "solo Mono 400");
         }
 
         [TestCase("title", "rm-type-title")]

@@ -41,7 +41,8 @@ namespace RowMate.Core.Design
         // It. 4b (WP-B0 de la 4a, DD4a-07) el rol numérico es RowMate Numeric SC: Barlow Semi Condensed con las cifras tabulares
         // (tnum) congeladas en el cmap. Kerned = la cara dibuja texto y lleva su tabla K2 (las Inter y la derivada 700, la de
         // num.stat del panel del simulador, DN4a-22); la derivada 600 y 800 solo las dibuja TabularNumber, celda por celda, sin
-        // tabla (K4).
+        // tabla (K4). It. 10a (A10-10): JetBrains Mono 400, el token mono del diagnóstico BLE, sin tabla de kerning (monoespaciada:
+        // cada glifo avanza 0,6 em y no hay pares que ajustar).
         private static readonly (FontFamilyRole Family, int Weight, string Folder, string Stem, bool Kerned)[] Faces =
         {
             (FontFamilyRole.Ui, 400, "Inter", "Inter-Regular", true),
@@ -51,10 +52,11 @@ namespace RowMate.Core.Design
             (FontFamilyRole.Numeric, 600, "RowMateNumericSC", "RowMateNumericSC-SemiBold", false),
             (FontFamilyRole.Numeric, 700, "RowMateNumericSC", "RowMateNumericSC-Bold", true),
             (FontFamilyRole.Numeric, 800, "RowMateNumericSC", "RowMateNumericSC-ExtraBold", false),
+            (FontFamilyRole.Mono, 400, "JetBrainsMono", "JetBrainsMono-Regular", false),
         };
 
         // FontAsset de una familia y un peso ("Assets/RowMate/UI/Fonts/Generated/Inter-SemiBold-SDF.asset").
-        // ArgumentOutOfRangeException si esa combinación no se genera (por ejemplo, Mono: ningún token la usa todavía).
+        // ArgumentOutOfRangeException si esa combinación no se genera (por ejemplo, Inter 800 o Mono 700).
         public static string For(FontFamilyRole family, int weight)
         {
             return GeneratedFonts + "/" + Face(family, weight).Stem + "-SDF.asset";
@@ -75,7 +77,7 @@ namespace RowMate.Core.Design
             return face.Kerned ? KerningFolder + "/" + face.Stem + ".pairs.json" : null;
         }
 
-        // Los 10 FontAsset que crea el bootstrapper: 7 de texto y número, los 2 de íconos y el respaldo de emojis (It. 3,
+        // Los 11 FontAsset que crea el bootstrapper: 8 de texto, número y mono (It. 10a), los 2 de íconos y el respaldo de emojis (It. 3,
         // QA-G3-12: así GeneratedAssetGuard también lo protege).
         public static IReadOnlyList<string> All
         {

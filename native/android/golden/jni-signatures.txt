@@ -1,0 +1,26 @@
+# Firmas JNI de com.rowmate.ble.RmBle (nombre y descriptor, orden ordinal). Las genera native/android/check.ps1 -Update
+# con javap -s; JniSignatureTests las compara con Core/Ble/Native/RmBleJniSignatures.cs.
+adapterState ()I
+apiVersion ()I
+connect (Ljava/lang/String;Z)I
+disconnect (Ljava/lang/String;)I
+discover (Ljava/lang/String;)I
+drain ()[B
+haptic ()V
+hasScanPermission ()Z
+init (Landroid/app/Activity;)I
+keepAliveStart (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[BI)I
+keepAliveStop (Ljava/lang/String;)I
+monotonicSeconds ()D
+openAppSettings ()V
+pending ()I
+requestEnable ()I
+sdkInt ()I
+setDenied (Z)V
+setNotify (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)I
+shouldShowRationale (Ljava/lang/String;)Z
+shutdown ()V
+startScan (Ljava/lang/String;)I
+stopScan ()I
+wasDenied ()Z
+write (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[BZ)I

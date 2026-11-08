@@ -1,0 +1,20 @@
+// Biblioteca de Android SOLO con el manifiesto de permisos del Bluetooth (It. 10a, AC-APP-13-01) y las reglas de R8 del plugin.
+// El código Kotlin vive en Assets/Plugins/Android/RowMateBle/*.kt y lo compila el Gradle de Unity en unityLibrary.
+// compileSdk: el de Unity si lo expone en gradle.properties; si no, 34. NO VERIFICABLE hasta "Android Build Support".
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.rowmate.ble.manifest'
+    compileSdkVersion((project.findProperty('unity.compileSdkVersion') ?: '34').toString().toInteger())
+
+    defaultConfig {
+        minSdkVersion 26
+        // Las reglas de R8 que entran al APK: RmBle se llama solo por JNI (Platform/Ble/AndroidBleApi).
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

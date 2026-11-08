@@ -73,6 +73,10 @@ namespace RowMate.Presentation.Workout
         private bool _holdingWrench;
         private bool _revealed;
         private HudLayout? _lastLayout;
+        // It. 10a (02-tech-design §6.3, plan B de R-08): la banda tiempo-distancia como obstáculo inferior mientras el aviso del enlace
+        // está a la vista (en L640 el aviso centrado se cruzaba con ella; así sube por encima con 8 de aire).
+        private readonly object _bandOwner = new object();
+        private bool _bandObstacle;
 
         // It. 6a (06a-escena-lago/02-tech-design §3.9): la escena 3D (null sin escena: el fondo provisorio de siempre).
         private readonly IImmersiveScene? _scene;
@@ -811,6 +815,7 @@ namespace RowMate.Presentation.Workout
         {
             _layout.SetSurface(this, null);
             _layout.SetBottomObstacle(this, null);
+            _layout.SetBottomObstacle(_bandOwner, null);
             HoldWrench(false);
             if (_pacing)
             {
@@ -873,6 +878,7 @@ namespace RowMate.Presentation.Workout
             var controls = layout.Controls;
             var height = layout.WindowHeight;
             _layout.SetBottomObstacle(this, new BottomObstacle(controls.Left, controls.Right, height - controls.Bottom, controls.Height));
+            PublishBand(layout);
             if (layout.Wrench.HasValue)
             {
                 var dialog = DialogRect();
@@ -883,6 +889,38 @@ namespace RowMate.Presentation.Workout
             }
 
             HookWrench();
+        }
+
+        // It. 10a: la banda como obstáculo del aviso del enlace (lo pide WorkoutScreenView al mostrarlo; se saca al salir).
+        public void SetLinkNoticeObstacle(bool on)
+        {
+            if (_bandObstacle == on)
+            {
+                return;
+            }
+
+            _bandObstacle = on;
+            var layout = _zones?.Layout ?? _lastLayout;
+            if (layout != null && !_exiting && !_popped)
+            {
+                PublishBand(layout);
+            }
+            else if (!on)
+            {
+                _layout.SetBottomObstacle(_bandOwner, null);
+            }
+        }
+
+        private void PublishBand(HudLayout layout)
+        {
+            if (!_bandObstacle)
+            {
+                _layout.SetBottomObstacle(_bandOwner, null);
+                return;
+            }
+
+            var band = layout.Band;
+            _layout.SetBottomObstacle(_bandOwner, new BottomObstacle(band.Left, band.Left + band.Width, layout.WindowHeight - (band.Top + band.Height), band.Height));
         }
 
         // El rectángulo del diálogo de completado abierto, en dp de ventana (null sin diálogo o antes de su layout).

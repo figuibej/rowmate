@@ -186,6 +186,123 @@ namespace RowMate.Tests.EditMode.Workout
             Assert.That(resumed.MetersBefore, Is.EqualTo(0));
         }
 
+        // ── SDZ, It. 10a (QA-V4a-L01, AC-WKT-03-11, DV-103): el tope cuenta desde el ÚLTIMO CAMBIO de la distancia ──
+
+        // Un monitor que manda la distancia cada 2 s (+11 m) con una lectura por segundo (la misma distancia la mitad de las veces):
+        // con la regla del legacy (10 m por segundo desde la lectura anterior) nunca sumaba; ahora suma y el paso de 100 m termina
+        // en el segundo 20.
+        [Test, Category("AC-WKT-03-11")]
+        public void EveryTwoSecondsPlusElevenEndsAt20()
+        {
+            var meter = new SanitizedDistance();
+            meter.Begin(1000, 0);
+            var end = -1;
+            for (var t = 1; t <= 30 && end < 0; t++)
+            {
+                meter.Update(1000 + 11 * (t / 2), t);
+                if (meter.Meters >= 100)
+                {
+                    end = t;
+                }
+            }
+
+            Assert.That(end, Is.EqualTo(20));
+            Assert.That(meter.Meters, Is.EqualTo(110));
+        }
+
+        [Test, Category("AC-WKT-03-11")]
+        public void SameSecondBothCount()
+        {
+            var meter = new SanitizedDistance();
+            meter.Begin(1000, 0);
+            meter.Update(1004, 5);
+            meter.Update(1010, 5);
+            Assert.That(meter.Meters, Is.EqualTo(10), "dos lecturas en el mismo segundo suman las dos (tope 10 · max(Δ; 1))");
+        }
+
+        [Test, Category("AC-WKT-03-11")]
+        public void FiftyAfterFiveSeconds()
+        {
+            var meter = new SanitizedDistance();
+            meter.Begin(1000, 0);
+            for (var t = 1; t <= 4; t++)
+            {
+                meter.Update(1000, t);
+            }
+
+            var sample = meter.Update(1050, 5);
+            Assert.That(meter.Meters, Is.EqualTo(50), "+50 m después de 5 s sin cambio suman");
+            Assert.That(sample.Dt, Is.EqualTo(1), "Dt sigue siendo desde la lectura anterior (el tracker interpola con él)");
+            Assert.That(sample.TimeBefore, Is.EqualTo(4));
+            var meter2 = new SanitizedDistance();
+            meter2.Begin(1000, 0);
+            for (var t = 1; t <= 4; t++)
+            {
+                meter2.Update(1000, t);
+            }
+
+            meter2.Update(1051, 5);
+            Assert.That(meter2.Meters, Is.EqualTo(0), "51 m en 5 s: más de 10 m/s");
+        }
+
+        [Test, Category("AC-WKT-03-11")]
+        public void ResetToZero()
+        {
+            var meter = new SanitizedDistance();
+            meter.Begin(1000, 0);
+            meter.Update(1008, 2);
+            meter.Update(0, 3);
+            Assert.That(meter.Meters, Is.EqualTo(8), "un reinicio a 0 no suma");
+            meter.Update(0, 4);
+            meter.Update(0, 5);
+            meter.Update(25, 6);
+            Assert.That(meter.Meters, Is.EqualTo(33), "el 0 es la referencia: +25 en 3 s desde el cambio suma");
+        }
+
+        [Test, Category("AC-WKT-03-11")]
+        public void TwoHundredInOne()
+        {
+            var meter = new SanitizedDistance();
+            meter.Begin(1000, 0);
+            meter.Update(1200, 1);
+            Assert.That(meter.Meters, Is.EqualTo(0), "+200 m en 1 s no suma");
+            meter.Update(1204, 2);
+            Assert.That(meter.Meters, Is.EqualTo(4), "y la lectura rechazada es la referencia");
+        }
+
+        [Test, Category("AC-WKT-03-11")]
+        public void RebaseFixesTheReferenceAtTheLastReading()
+        {
+            var meter = new SanitizedDistance();
+            meter.Begin(1000, 0);
+            meter.Update(1004, 1);
+            meter.Update(1004, 10);
+            meter.Rebase(1100);
+            meter.Update(1112, 11);
+            Assert.That(meter.Meters, Is.EqualTo(4), "12 m en 1 s desde la referencia de la reanudación: no suma");
+        }
+
+        [Test, Category("AC-WKT-03-11")]
+        public void OneReadingPerSecondIsTheLegacyRule()
+        {
+            // Con una lectura nueva por segundo, t − último cambio = dt: la regla de siempre (los goldens de la 4a y la 5 lo fijan).
+            var legacyLike = new SanitizedDistance();
+            legacyLike.Begin(0, 0);
+            var meters = 0.0;
+            var raw = 0;
+            for (var t = 1; t <= 200; t++)
+            {
+                var step = t % 17 == 0 ? 12 : t % 23 == 0 ? -5 : 4;
+                var before = raw;
+                raw += step;
+                legacyLike.Update(raw, t);
+                var delta = raw - before;
+                meters += delta < 0 || delta > 10 ? 0 : delta;
+            }
+
+            Assert.That(legacyLike.Meters, Is.EqualTo(meters));
+        }
+
         // El _Raw del legacy (test/series_tracker_test.dart:133-152): begin(startRaw) y una lectura por segundo.
         private sealed class Raw
         {

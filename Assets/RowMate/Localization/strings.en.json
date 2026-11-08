@@ -485,5 +485,45 @@
   "historyStatSpm": "SPM",
   "historyStatSplit": "Split",
   "historyLoadError": "Couldn't load history",
-  "sessionLoadError": "Couldn't load the session"
+  "sessionLoadError": "Couldn't load the session",
+  "deviceUnknown": "Unknown device",
+  "deviceRowerFallback": "Rower",
+  "deviceScanError": "Scan error: {error}",
+  "@deviceScanError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceConnectError": "Connection error: {error}",
+  "@deviceConnectError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceStepConnecting": "Connecting…",
+  "deviceStepControl": "Taking control of the monitor…",
+  "deviceStepReady": "Ready",
+  "deviceReconnecting": "Reconnecting to {name}…",
+  "@deviceReconnecting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceReconnected": "Reconnected to {name}",
+  "@deviceReconnected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceMonitorStopped": "The monitor stopped sending data",
+  "deviceBleUnsupported": "This device doesn't have Bluetooth LE",
+  "deviceBleUnsupportedHint": "RowMate needs Bluetooth LE to connect\nthe rower and the heart rate monitor"
 }

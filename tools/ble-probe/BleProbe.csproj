@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Herramienta manual de la It. 10a (02-tech-design Sec. 8.5): busca con RowMateBle.dll y lista SOLO remos FTMS (0x1826) y
+         pulsometros (0x180D). Nunca conecta, empareja ni cambia la radio; no escribe archivos. Fuera de RowMate.sln (es de Windows). -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>RowMate.BleProbe</AssemblyName>
+    <RootNamespace>RowMate.BleProbe</RootNamespace>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <PlatformTarget>x64</PlatformTarget>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../dotnet/RowMate.Core/RowMate.Core.csproj" />
+  </ItemGroup>
+</Project>

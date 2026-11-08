@@ -188,6 +188,9 @@ namespace RowMate.Tests.UiSupport
         // El remo de prueba de la It. 4a (HostBackends.TestRower), si es el del host.
         public ScriptedRower? ScriptedRower => Backend.Rower as ScriptedRower;
 
+        // It. 10a: el backend con el remo real sobre el adaptador falso (HostBackends.FakeBle), o null.
+        public FakeBleBackend? FakeBle => Backend as FakeBleBackend;
+
         public WorkoutScreenView? WorkoutScreen => Handle.Shell.WorkoutScreen;
 
         // El inmersivo de arriba (la página que no está saliendo), si hay.

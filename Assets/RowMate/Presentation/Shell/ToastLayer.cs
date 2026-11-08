@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using RowMate.App.Device;
 using RowMate.Core.Design;
+using RowMate.Presentation.Controls;
 using RowMate.Presentation.Motion;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -18,6 +20,10 @@ namespace RowMate.Presentation.Shell
     //   rectángulo se cruza con un obstáculo inferior (el +, la llave) agrandado 8 dp, sube hasta 8 dp sobre él y repite
     //   (BottomObstacles.Lift). Si un obstáculo cambia mientras se ve, lo sigue con un resorte ω 22.
     // - Después de Dispose, Show no hace nada.
+    // - It. 10a (02-tech-design §6.3; AC-BLE-08-06, -09-02; DV-98, DV-99): ShowLink reutiliza ESTE aviso para el enlace con el remo (no
+    //   suma otro: el HUD está cerca de su tope y el ToastLayer está fuera de #immersive). Suma un hijo #toast-indicator (LinkIndicator,
+    //   1 elemento) y la clase .rm-toast--link. "Reconectando…" queda FIJO hasta "Reconectado" (2 s) o Cleared (null); "El monitor dejó
+    //   de enviar datos", 4 s. Un aviso común que llega con el fijo a la vista lo reemplaza 4 s y después vuelve el fijo.
     public sealed class ToastLayer : VisualElement, IDisposable
     {
         public const double NarrowWindowDp = 600;
@@ -26,6 +32,7 @@ namespace RowMate.Presentation.Shell
         public const double MaxWidthDp = 560;
         public const double TextPaddingDp = 32;
         public const double BaseGapDp = 16;
+        public const double LinkIndicatorDp = 24;
 
         private readonly UiContext _ui;
         private readonly ShellLayout _layout;
@@ -36,6 +43,8 @@ namespace RowMate.Presentation.Shell
         private bool _visible;
         private bool _disposed;
         private string _text = "";
+        private LinkToast? _sticky;
+        private LinkToast? _link;
 
         public ToastLayer(UiContext ui, ShellLayout layout)
         {
@@ -55,6 +64,11 @@ namespace RowMate.Presentation.Shell
             Text.pickingMode = PickingMode.Ignore;
             Text.enableRichText = false;
             Text.parseEscapeSequences = false;
+            Indicator = new LinkIndicator(ui.Motion, 16) { name = "toast-indicator" };
+            Indicator.AddToClassList("rm-toast__indicator");
+            Indicator.MarkAsToast = true;
+            Indicator.Show(LinkIndicator.Mode.None);
+            Toast.Add(Indicator);
             Toast.Add(Text);
             Add(Toast);
 
@@ -68,6 +82,15 @@ namespace RowMate.Presentation.Shell
         public VisualElement Toast { get; }
 
         public Label Text { get; }
+
+        // It. 10a: el indicador del aviso del enlace (oculto en los avisos comunes).
+        public LinkIndicator Indicator { get; }
+
+        // El aviso del enlace a la vista (null si el que se ve es común o no hay ninguno).
+        public LinkToast? CurrentLink => _visible ? _link : null;
+
+        // "Reconectando…" fijo (aunque un aviso común lo tape por 4 s).
+        public LinkToast? StickyLink => _sticky;
 
         // Hay un aviso a la vista (entrando o quieto; no saliendo).
         public bool IsVisible => _visible;
@@ -86,9 +109,43 @@ namespace RowMate.Presentation.Shell
                 return;
             }
 
+            Present(text, TimeSpan.FromMilliseconds(UiTimings.ToastVisibleMs), null);
+        }
+
+        // It. 10a (§6.3): el aviso del enlace (null = Cleared: se quita el fijo).
+        public void ShowLink(LinkToast? toast)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (toast == null)
+            {
+                _sticky = null;
+                if (_visible && _link != null)
+                {
+                    Hide();
+                }
+
+                return;
+            }
+
+            _sticky = toast.Duration.HasValue ? null : toast;
+            Present(toast.Text, toast.Duration, toast);
+        }
+
+        private void Present(string text, TimeSpan? duration, LinkToast? link)
+        {
             ShowCount++;
             _timer?.Dispose();
-            _timer = _ui.App.Scheduler.Schedule(TimeSpan.FromMilliseconds(UiTimings.ToastVisibleMs), Hide);
+            _timer = duration.HasValue ? _ui.App.Scheduler.Schedule(duration.Value, OnTimer) : null;
+            _link = link;
+            Toast.EnableInClassList("rm-toast--link", link != null);
+            // WP-D (00-arte §4.2): el texto del enlace en titleXs 14/600 (el aviso común sigue en bodyM 14).
+            Text.EnableInClassList("rm-type-body-m", link == null);
+            Text.EnableInClassList("rm-type-title-xs", link != null);
+            Indicator.Show(link == null ? LinkIndicator.Mode.None : ModeFor(link.Kind));
             if (_visible && !_transition.IsLeaving)
             {
                 var changed = !string.Equals(text, _text, StringComparison.Ordinal);
@@ -133,6 +190,34 @@ namespace RowMate.Presentation.Shell
             _layout.Changed -= Reposition;
         }
 
+        private static LinkIndicator.Mode ModeFor(LinkNoticeKind kind)
+        {
+            switch (kind)
+            {
+                case LinkNoticeKind.Reconnecting:
+                    return LinkIndicator.Mode.Spinner;
+                case LinkNoticeKind.Reconnected:
+                    return LinkIndicator.Mode.Check;
+                case LinkNoticeKind.MonitorStopped:
+                    return LinkIndicator.Mode.LinkOff;
+                default:
+                    return LinkIndicator.Mode.None;
+            }
+        }
+
+        // Vencieron los 4 s (o los 2 s del enlace): si el fijo sigue vigente y lo tapaba un aviso común, vuelve; si no, se va.
+        private void OnTimer()
+        {
+            var sticky = _sticky;
+            if (sticky != null && !_disposed && _visible && !ReferenceEquals(_link, sticky))
+            {
+                Present(sticky.Text, null, sticky);
+                return;
+            }
+
+            Hide();
+        }
+
         private void Hide()
         {
             _timer?.Dispose();
@@ -149,6 +234,8 @@ namespace RowMate.Presentation.Shell
                 {
                     Toast.style.display = DisplayStyle.None;
                     Toast.style.opacity = StyleKeyword.Null;
+                    Indicator.Show(LinkIndicator.Mode.None);
+                    Toast.RemoveFromClassList("rm-toast--link");
                 }
             });
         }
@@ -170,7 +257,9 @@ namespace RowMate.Presentation.Shell
             }
 
             var natural = Text.MeasureTextSize(_text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x;
-            var width = Math.Max(MinWidthDp, Math.Min(MaxWidthDp, natural + TextPaddingDp));
+            // It. 10a: con el indicador del enlace, sus 16 y 8 de aire.
+            var indicator = _link != null ? LinkIndicatorDp : 0;
+            var width = Math.Max(MinWidthDp, Math.Min(MaxWidthDp, natural + TextPaddingDp + indicator));
             Toast.style.width = (float)width;
             Toast.style.left = (float)((window.x - width) / 2);
             Toast.style.right = StyleKeyword.Auto;

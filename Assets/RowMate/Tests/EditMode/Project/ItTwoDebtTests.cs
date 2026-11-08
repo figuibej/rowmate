@@ -22,7 +22,7 @@ namespace RowMate.Tests.EditMode.Project
         [Test, Category("AC-APP-05-03"), Category("QA-V2-07")]
         public void GeneratedFontAssetsAreCommittedWithoutDynamicData()
         {
-            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(10), "It. 3: + Noto Emoji (QA-G3-12)");
+            Assert.That(FontAssetPaths.All.Count, Is.EqualTo(11), "It. 3: + Noto Emoji (QA-G3-12); It. 10a: + JetBrains Mono");
             foreach (var relative in FontAssetPaths.All)
             {
                 var path = RepoPaths.Combine(relative);

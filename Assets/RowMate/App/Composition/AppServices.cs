@@ -29,5 +29,9 @@ namespace RowMate.App.Composition
         // la carpeta de la base); null = MemoryPreferences (dotnet, las pruebas, el arnés: nunca el archivo del usuario,
         // AC-HIS-20-04). Las dispone quien las creó.
         public IPreferences? Preferences { get; init; }
+
+        // La respuesta táctil (It. 10a, A10-06): AndroidHaptics en Android; null = ninguna (Windows, el Editor, dotnet, las pruebas que no
+        // la miran).
+        public IHaptics? Haptics { get; init; }
     }
 }
