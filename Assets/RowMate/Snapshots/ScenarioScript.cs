@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using RowMate.Presentation.Shell;
 using RowMate.Tests.UiSupport;
+using UnityEngine.UIElements;
 
 namespace RowMate.Snapshots
 {
@@ -126,6 +127,31 @@ namespace RowMate.Snapshots
             yield return Frames(2);
             Host.Type(fieldName, text);
             yield return Settle();
+        }
+
+        // It. 12 (12-exportar-tcx/02-tech-design §7, CAP-12): el cursor sobre el elemento (PointerEnter y PointerMove en su centro) y
+        // el reloj hasta que la ayuda está a la vista (en escritorio aparece al apoyarse; se asienta su entrada). Con el puntero encima
+        // corre la transición de USS de :hover (Motion.uss, regla 1: con el reloj REAL del panel, no el de prueba): para que la toma sea
+        // la misma en cada corrida, la capa de estado de ESE elemento queda sin transición (estilo en línea, solo en el arnés) y llega
+        // a su valor de :hover en el acto.
+        public IEnumerator Hover(string elementName)
+        {
+            yield return Frames(2);
+            var element = Host.Find(elementName);
+            if (element != null)
+            {
+                foreach (var layer in element.Query(className: "rm-button__state").ToList())
+                {
+                    layer.style.transitionDuration = new UnityEngine.UIElements.StyleList<UnityEngine.UIElements.TimeValue>(
+                        new System.Collections.Generic.List<UnityEngine.UIElements.TimeValue> { new UnityEngine.UIElements.TimeValue(0) });
+                }
+            }
+
+            yield return Frames(2);
+            Host.PointerEnter(elementName);
+            Host.PointerMove(elementName);
+            yield return Settle();
+            yield return Frames(4);
         }
 
         public IEnumerator RightClick(string elementName)

@@ -747,3 +747,25 @@
 .rm-toast__indicator.rm-link-indicator--heart-broken {
     color: var(--rm-state-warning);
 }
+
+/* ════ It. 12 — Exportar TCX (12-exportar-tcx/04-design-notes §2 y §3; 00-arte-exportar §2 a §4; contrato de 02-tech-design §8).
+   Cero tokens, fuentes, glifos de fuente ni transiciones nuevas: el glifo (download o ios_share) lo dibuja ExportGlyphView con
+   ExportGlyph en el color del ícono del botón (.rm-icon-button__icon, text.primary); la presión, la capa de estado y el anillo de
+   foco son los de .rm-icon-button, y el aviso usa la cápsula de vidrio del enlace. Acá van solo colores. ════ */
+
+/* El indicador de 18/2 mientras exporta, en el color del glifo al que reemplaza: el botón no cambia de color, solo de forma. */
+.rm-export-button .rm-spinner {
+    color: var(--rm-text-primary);
+}
+
+/* Segundo renglón del aviso (el nombre del archivo): caption 11/500 en text.secondary: 9,4:1 sobre glass.fallback compuesto con las
+   tarjetas y 8,2:1 en el peor fondo (el cian de la pestaña elegida detrás). Se lee como dato, debajo del título en text.hudPrimary. */
+.rm-toast__detail {
+    color: var(--rm-text-secondary);
+}
+
+/* Acción del aviso ("Abrir carpeta", "Reintentar"): botón de texto en accent.onTonal (9,8:1 sobre el vidrio con una tarjeta detrás y
+   8,0:1 en el peor fondo). Sin rojo en el error (D12-07): es un contratiempo, no un peligro. */
+.rm-toast__action .rm-button__label {
+    color: var(--rm-accent-on-tonal);
+}

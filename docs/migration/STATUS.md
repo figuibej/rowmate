@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-09 (coordinador, OK de la It. 11 y arranque de la 12) |
-| Fase | **It. 12 en curso** (`12-strava-subida`). La It. 11 quedó cerrada con el OK del usuario ([reporte](iterations/11-ble-pulsometro/REPORT.md)); deuda en los issues #57 a #65. Builds `normal` y `simulator` y capturas regeneradas con el arte final |
-| Próximo paso | Terminar la **It. 12** (Strava: conexión, subida y TCX) con un Strava simulado: el usuario todavía no pasó las credenciales de la API (se cargan al compilar y nunca se versionan). Las demos de la 10a (AMS-670B) y de la 11 (pulsómetro) quedan pendientes del usuario. La 6b sigue postergada (issue #6) y la 10b, flotante hasta que haya Mac |
-| Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs. El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
+| Actualizado | 2026-11-09 (coordinador, OK de la It. 12 y arranque de la 14) |
+| Fase | **It. 14 en curso** (`14-pulido-plataformas`), la última del plan. La It. 12 (Exportar TCX) quedó cerrada con el OK del usuario ([reporte](iterations/12-exportar-tcx/REPORT.md)); deuda en los issues #66 a #73 |
+| Próximo paso | Terminar la **It. 14** (pulido, identidad, plataformas y CI). La 6b sigue postergada (issue #6) y la 10b, flotante hasta que haya Mac. Demos pendientes del usuario: la 10a (AMS-670B), la 11 (pulsómetro) y la 12 (subir un TCX a strava.com/upload) |
+| Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs; desde el 2026-11-09, la 13 descartada y 25 IDs de Strava descartados (133 vivos). El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
 
@@ -26,9 +26,9 @@
 | 10a | Bluetooth real en Android y Windows | **Cerrada** ([reporte](iterations/10a-ble-android-windows/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Deuda en los issues #40 a #56. La demo con el remo queda pendiente. Sin FAIL; 37 PASS y 6 NO VERIFICABLE: AC-BLE-06-08, -08-07, -09-03 y -91-02 esperan el AMS-670B; AC-APP-13-02 y -14-05, el módulo "Android Build Support" y un teléfono |
 | 10b | Tanda Apple (iOS y macOS) | Flotante: cuando haya Mac |
 | 11 | Pulsómetro real | **Cerrada** ([reporte](iterations/11-ble-pulsometro/REPORT.md)); el usuario dio el OK ("dale"): rigen los valores por defecto de su gate. Deuda en los issues #57 a #65. La demo con el pulsómetro queda pendiente. Sin FAIL; 39 PASS y 2 NO VERIFICABLE: AC-HRM-HW-01 (sensor real y AMS-670B) y AC-HRM-HW-02 (teléfono y "Android Build Support") |
-| 12 | Strava: conexión y subida | **En curso** |
-| 13 | Strava: sincronización y Perfil | Pendiente |
-| 14 | Pulido, identidad, plataformas y CI | Pendiente |
+| 12 | Exportar TCX (reemplaza a "Strava: conexión y subida") | **Cerrada** ([reporte](iterations/12-exportar-tcx/REPORT.md)); el usuario dio el OK ("dale"): rigen los valores por defecto de su gate (DV-116 a DV-127). Deuda en los issues #66 a #73. Sin FAIL; 25 PASS y 3 NO VERIFICABLE: AC-STR-09-24 (Android), -25 (Apple, 10b) y -27 (subida a Strava, demo del usuario) |
+| 13 | ~~Strava: sincronización y Perfil~~ | **Descartada** (Strava pago: decisión del usuario del 2026-11-09) |
+| 14 | Pulido, identidad, plataformas y CI | **En curso** |
 
 ## Decisiones
 
@@ -47,10 +47,29 @@
 - **Gate de la It. 8**: el usuario dio el OK, así que rigen los valores por defecto de la tabla de abajo (DV-79 a DV-89, DT8-10, QA-V8-14, D-ART-08). También pidió borrar el worktree `it08-entornos` y su rama (ya no están: `git worktree list` solo muestra `main`), commitear, pushear y empezar la It. 9.
 
 - **Gate de la It. 9**: el usuario dio el OK ("pushea y pasa a la 10"), así que rigen los valores por defecto de la tabla "Gate de la It. 9" de abajo (DV-90 a DV-95, tiempo y distancia del monitor, etiquetas X como `fl_chart` con issue prioritario).
+- **Gates de la It. 10a y la It. 11**: el usuario dio el OK; rigen los valores por defecto de sus tablas (abajo).
 
-### Para confirmar en el gate de la It. 11
+### Para confirmar en el gate de la It. 12
 
-Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §9](iterations/11-ble-pulsometro/01-po-spec.md) y [02-tech-design](iterations/11-ble-pulsometro/02-tech-design.md).
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §8](iterations/12-exportar-tcx/01-po-spec.md) y el [reporte](iterations/12-exportar-tcx/REPORT.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-116 / DV-117: sin metadatos de Strava; `<Notes>` con el nombre de la rutina, después de la última vuelta | Se acepta | Sin `Notes`, o antes de la primera vuelta como el legacy |
+| DV-118: las vueltas salen de los índices de paso de los puntos, sin depender de la rutina | Se acepta | — (el legacy fallaba) |
+| DV-119: sesión cortada con tiempo y calorías de los puntos, sin tocar la base; tiempo 0 → 0 kcal | Se acepta | Reparar y guardar en la base |
+| DV-120: se quitan los caracteres que XML 1.0 no admite | Se acepta | Escapar solo los 5 del legacy |
+| DV-121: Windows guarda directo en `Documentos\RowMate\TCX`, sin diálogo | Se acepta | Diálogo "Guardar como" (issue) |
+| DV-122: Android abre la hoja de compartir | Se acepta | Guardar en Descargas (issue) |
+| DV-123: el simulador exporta con `_SIM` en el nombre y `[SIM]` en `Notes` | Se acepta | No exporta, como el legacy |
+| DV-124 / DV-126: solo desde el Detalle, y el botón solo con una sesión exportable | Se acepta | Acción en la tarjeta del Historial (issue); botón deshabilitado |
+| DV-125 / DV-127: `Sport="Other"` (el remo se elige en Strava) y la distancia del monitor tal cual | Paridad | FIT (issue); restar el primer punto |
+
+**Decididas por el PO al cerrar la It. 12** (no necesitan respuesta): AC-STR-09-24, -25 y -27 quedan para la demo del usuario (teléfono, Mac, subida manual); los 6 menores de QA (QA-V12-01 a -06), los menores del gate y los "Para issues" de la spec, el diseño y el arte van a issues de GitHub (8, agrupados), sin corregirlos antes del commit, salvo QA-V12-03 y -04, que son de documentos: la ROADMAP ya no atribuye Strava a la 12 ni a la 13, y "sobre la barra de pestañas" se lee como "al pie, sin tapar la barra superior" (el Detalle no tiene pestañas). El set `it9` de capturas no se regenera ahora (mostraría el botón nuevo).
+
+### Gate de la It. 11 (valores que rigen)
+
+El usuario dio el OK ("dale"): rigen los valores por defecto. Detalle en [01-po-spec §9](iterations/11-ble-pulsometro/01-po-spec.md) y [02-tech-design](iterations/11-ble-pulsometro/02-tech-design.md).
 
 | Decisión | Por defecto | Si se rechaza |
 |---|---|---|
@@ -149,7 +168,8 @@ El usuario dio el OK ("pushea y arranca la proxima iteracion"): rigen los valore
 | It. 6a (opcional) | **Terrain Sample Asset Pack** (Asset Store de Unity, gratis, 1,6 GB) | Opcional (P-02): la 6a se ve completa con terreno procedural |
 | It. 2 (opcional, 5 minutos en la PC) | Abrir la app legacy después de la nueva (AC-APP-16-03); probar el build con Windows en modo claro (AC-APP-05-01 y, de la It. 3, AC-APP-05-10); los idiomas preferidos `Français (France)`, `Español (Argentina)` (AC-APP-09-06) | Pendiente |
 | CI de Unity (opcional) | Licencia Personal de Unity como secreto del repositorio (P-08) | Pendiente. El repositorio está en GitHub, público, y `ci-core` corre en verde |
-| It. 10a / 10b / 11 / 12 | Remo AMS-670B, Mac con Xcode + iPhone, pulsómetro, cuenta de Strava | Pendiente |
+| It. 10a / 10b / 11 | Remo AMS-670B, Mac con Xcode + iPhone, pulsómetro | Pendiente |
+| It. 12 (demo, opcional) | Una cuenta gratis de Strava (u otro servicio que acepte TCX) para subir a mano el archivo exportado ([spec §1](iterations/12-exportar-tcx/01-po-spec.md)). Ya no hacen falta credenciales de la API | Pendiente |
 
 Resueltos: en la It. 2, Unity Hub con el Editor 6000.3.27f1 y Windows Standalone (Mono), y las fuentes e íconos. Entre la It. 2 y la 3, el repositorio en GitHub ([figuibej/rowmate](https://github.com/figuibej/rowmate), público, con `ci-core` en verde). Entre la It. 3 y la 4a, los avisos del Firewall. Entre la 4a y la 4b, el `RowMate.exe` que había quedado abierto. Al empezar la 6a, el build de la 5 (el `RowMate.exe` ya no estaba abierto: QA verificó la 5 en el build). Para la 7, Y Bot de Mixamo en `Assets/ThirdParty/Mixamo/YBot/` (no se versiona). Al cerrar la 8, el worktree `it08-entornos` y su rama (borrados a pedido del usuario).
 
@@ -180,7 +200,7 @@ Otra deuda abierta:
 - **Para la 6b.** Lo de la tabla de arriba; el vidrio con desenfoque en el HUD y en el diálogo de completado (P-19); la elección del agua avanzada o la degradada; 60 fps en el teléfono (regla 9; si no hay teléfono, a la 14).
 - **Para la It. 7** (hecho en la 7). La boya o marca de 500 m en el agua (P-06); `Series anteriores` abierto en vertical con el remero a la vista (P-03 de la 5); la sombra del bote del legacy, el cabeceo y las medidas reales del bote (D-ART-04); en L640, con el simulador, la llave dentro de la zona del bote (de la 4a).
 - **Para la 10a.** QA-V4a-L01; RA-19 (R4a-12) y RA-08 (R4a-10) de Android; un cuadro tarde con el remo real (DT4a-10); la variante completa de ROB-04; el *lock* del *scheduler* para los *callbacks* nativos de Bluetooth; las barras del sistema en Android (R4b-05), el aviso de suspensión con IL2CPP (R4b-06) y el reemplazo atómico de `prefs.json` con IL2CPP (R5-04).
-- **Para la It. 12.** El diálogo de completado con Strava; el indicio de que el diálogo a 1,3× en L640 se desplaza (O-01 de la 4b).
+- **Para la It. 14** (antes "Para la It. 12"). El indicio de que el diálogo de completado a 1,3× en L640 se desplaza (O-01 de la 4b). El diálogo de completado con Strava se descartó con Strava (2026-11-09).
 - **Para la It. 14.** Lectores de pantalla, DPI con dos monitores, la pantalla encendida solo donde hace falta (BKL-24), la háptica, el cierre de F-APP-15 y lo de la escena en el teléfono (arriba).
 - **Deseables sin AC.** De la It. 3: `Guardar` con indicador (DN3-19); el alto que crece y la mini-barra que interpola (DN3-20). De la 5: un indicio de "hay más" en las filas desplazables de W1280, si el usuario lo pide.
 - **Con teléfono.** Lo de las It. 3 a 5 (el teclado del sistema, "Atrás", el segundo plano, la pantalla encendida, las barras del sistema, el dedo sobre los chips) y, de la 6a, los 60 fps de la escena, la fila de 200 píldoras, la adaptación térmica y la profundidad en el nivel Bajo con GLES.
@@ -238,3 +258,5 @@ Riesgos:
 | 2026-11-08 | coordinador | El usuario dio el OK a la It. 10a ("pushea y arranca la proxima iteracion"): rigen los valores por defecto de su gate. Empieza la It. 11 |
 | 2026-11-09 | rowmate-po | **Cierre de la It. 11**: aceptada por el PO, sin FAIL; esperando OK y demo del usuario con el pulsómetro. QA: APROBADO CON OBSERVACIONES (dotnet `-Matrix` 3737/3776 pasan, 0 fallan; herramientas 194/194; matriz 1003 PASA, 0 FALLA; LT-139 a LT-145 pasan; Unity EditMode con simulador 4026/4074 y PlayMode con simulador 713/713; builds `-BleSmoke` y `-Simulator` OK; plugins sin cambios; 39 AC PASS, 0 FAIL, 2 NV: [BLE-HW] y [Device-Android]). Decisiones del PO al cerrar: los NV a la demo, capturas y build normal a regenerar, menores y "Para issues" a 10 issues de GitHub. Próxima: la It. 12 (la 6b sigue postergada y la 10b, flotante). Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-09 | coordinador | Capturas y builds `normal`/`simulator` de la It. 11 regenerados con el arte final; deuda en los issues #57 a #65. El usuario dio el OK a la It. 11 ("dale"): rigen los valores por defecto de su gate. Empieza la It. 12 con Strava simulado (sin credenciales de la API todavía) |
+| 2026-11-09 | rowmate-po | **Strava descartado** por decisión del usuario (la API exige suscripción paga desde junio de 2026): ROADMAP con las viejas It. 12 y 13 DESCARTADAS y la nueva It. 12 "Exportar TCX" (`12-exportar-tcx`, F-STR-09); inventarios con 25 IDs descartados; spec de la It. 12 escrita (`iterations/12-exportar-tcx/01-po-spec.md`). Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-09 | coordinador | Deuda de la It. 12 en los issues #66 a #73. El usuario dio el OK a la It. 12 ("dale"): rigen los valores por defecto de su gate. Empieza la It. 14 |

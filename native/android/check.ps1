@@ -7,11 +7,15 @@
 #    (su JBR y el kotlinc del plugin de Kotlin; $env:KOTLIN_HOME manda si esta), y el SDK en $env:ANDROID_HOME,
 #    $env:ANDROID_SDK_ROOT o "$env:LOCALAPPDATA\Android\Sdk" (el android.jar de la plataforma mas nueva).
 # 2. Revisa las fuentes Kotlin (Assets/Plugins/Android/RowMateBle): sin emparejar ni desemparejar, sin cambiar la radio y sin
-#    UnityPlayer (AC-BLE-SEC-01, DT10-11). Codigo 3 si aparece algo.
-# 3. Compila TODO el Kotlin contra android.jar (con -Werror) en -OutDir (por defecto, una carpeta temporal del sistema).
+#    UnityPlayer (AC-BLE-SEC-01, DT10-11). It. 12 (12-exportar-tcx/02-tech-design Sec. 3.4): las de RowMateExport, sin UnityPlayer,
+#    androidx, red, INTERNET ni WRITE_EXTERNAL_STORAGE, y su manifiesto sin uses-permission (AC-STR-09-24). Codigo 3 si aparece algo.
+# 3. Compila TODO el Kotlin (RowMateBle y RowMateExport) contra android.jar (con -Werror) en -OutDir (por defecto, una carpeta
+#    temporal del sistema).
 # 4. javap -s -public de com.rowmate.ble.RmBle -> "nombre descriptor" ordenados; lo compara con
 #    native/android/golden/jni-signatures.txt y con la tabla de Core/Ble/Native/RmBleJniSignatures.cs. Codigo 4 si difiere
 #    (QA-G10a-05). -Update reescribe jni-signatures.txt con lo de javap (solo si cambia la API, junto con la tabla de C#).
+#    It. 12: javap -s -public de com.rowmate.export.RmExport -> lo compara con native/android/golden/export-signatures.txt
+#    (codigo 4 si difiere; -Update tambien lo reescribe).
 # 5. -Golden: compila Wire.kt + EventRing.kt + golden/EmitFixture.kt para la JVM, lo corre y compara su salida byte a byte con
 #    Assets/RowMate/Tests/Golden/ble/events-v1.bin. Codigo 5 si difiere.
 # Codigo 1: faltan herramientas o no compila. 0: todo bien. No instala nada ni toca variables del sistema (JAVA_HOME solo
@@ -25,8 +29,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $sources = Join-Path $repo 'Assets\Plugins\Android\RowMateBle'
+$exportSources = Join-Path $repo 'Assets\Plugins\Android\RowMateExport'
+$exportManifest = Join-Path $repo 'Assets\Plugins\Android\RowMateExport.androidlib\AndroidManifest.xml'
 $goldenDir = Join-Path $PSScriptRoot 'golden'
 $signaturesFile = Join-Path $goldenDir 'jni-signatures.txt'
+$exportSignaturesFile = Join-Path $goldenDir 'export-signatures.txt'
 $tableFile = Join-Path $repo 'Assets\RowMate\Core\Ble\Native\RmBleJniSignatures.cs'
 $eventsGolden = Join-Path $repo 'Assets\RowMate\Tests\Golden\ble\events-v1.bin'
 
@@ -81,6 +88,20 @@ foreach ($f in $kt) {
         if ($text.Contains($p)) { Fail 3 ($f.Name + " contiene '" + $p + "'") }
     }
 }
+# It. 12: el plugin de exportar, sin dependencias del reproductor de Unity, sin red y sin permisos (AC-STR-09-24, F-APP-13).
+$exportKt = @(Get-ChildItem -LiteralPath $exportSources -Filter '*.kt' -File | Sort-Object Name)
+if ($exportKt.Count -eq 0) { Fail 1 'no hay fuentes Kotlin en Assets/Plugins/Android/RowMateExport' }
+$exportForbidden = @('UnityPlayer', 'com.unity3d', 'androidx', 'java.net', 'INTERNET', 'WRITE_EXTERNAL_STORAGE')
+foreach ($f in $exportKt) {
+    $text = [System.IO.File]::ReadAllText($f.FullName)
+    foreach ($p in $exportForbidden) {
+        if ($text.Contains($p)) { Fail 3 ($f.Name + " contiene '" + $p + "'") }
+    }
+}
+$manifestText = [System.IO.File]::ReadAllText($exportManifest)
+foreach ($p in @('uses-permission', 'INTERNET', 'WRITE_EXTERNAL_STORAGE')) {
+    if ($manifestText.Contains($p)) { Fail 3 ("RowMateExport.androidlib/AndroidManifest.xml contiene '" + $p + "'") }
+}
 
 # Compila con el compilador de Kotlin en la JVM del JBR (sin el .bat: rutas con espacios) y un archivo de argumentos.
 function Invoke-Kotlinc([string[]]$KotlinArgs, [string]$Name) {
@@ -94,10 +115,10 @@ function Invoke-Kotlinc([string[]]$KotlinArgs, [string]$Name) {
 
 # ---- 3. Compilacion contra android.jar ----
 $classes = Join-Path $OutDir 'classes'
-$compileArgs = @('-classpath', $androidJar, '-jvm-target', '17', '-Werror', '-d', $classes) + @($kt | ForEach-Object { $_.FullName })
+$compileArgs = @('-classpath', $androidJar, '-jvm-target', '17', '-Werror', '-d', $classes) + @($kt | ForEach-Object { $_.FullName }) + @($exportKt | ForEach-Object { $_.FullName })
 $code = Invoke-Kotlinc $compileArgs 'android'
 if ($code -ne 0) { Fail 1 ('kotlinc fallo (codigo ' + $code + ')') }
-Write-Host ('check.ps1: ' + $kt.Count + ' fuentes Kotlin compiladas contra ' + $platform.Name)
+Write-Host ('check.ps1: ' + ($kt.Count + $exportKt.Count) + ' fuentes Kotlin compiladas contra ' + $platform.Name + ' (' + $kt.Count + ' de RowMateBle, ' + $exportKt.Count + ' de RowMateExport)')
 
 # ---- 4. Firmas JNI ----
 $javapOut = & $javap -s -public -cp $classes com.rowmate.ble.RmBle
@@ -150,6 +171,43 @@ if ($javapText -ne ($table -join "`n")) {
     Fail 4 'las firmas de RmBle no coinciden con Core/Ble/Native/RmBleJniSignatures.cs'
 }
 Write-Host ('check.ps1: firmas JNI: ' + $fromJavap.Count + ' metodos, iguales a jni-signatures.txt y a RmBleJniSignatures.cs')
+
+# ---- 4b. Firmas de RmExport (It. 12, DT12-18) ----
+$exportOut = & $javap -s -public -cp $classes com.rowmate.export.RmExport
+if ($LASTEXITCODE -ne 0) { Fail 1 'javap fallo con com.rowmate.export.RmExport' }
+$exportJavap = New-Object System.Collections.Generic.List[string]
+$pendingName = $null
+foreach ($line in $exportOut) {
+    $t = $line.Trim()
+    $m = [regex]::Match($t, '^public .*?\s([A-Za-z_][A-Za-z0-9_$]*)\(.*\);$')
+    if ($m.Success) { $pendingName = $m.Groups[1].Value; continue }
+    $d = [regex]::Match($t, '^descriptor: (\(.*)$')
+    if ($d.Success -and $null -ne $pendingName) {
+        if ($pendingName -notmatch '[$<]') { $exportJavap.Add($pendingName + ' ' + $d.Groups[1].Value) }
+    }
+    if (-not $t.StartsWith('public') ) { $pendingName = $null }
+}
+$exportJavap.Sort([System.StringComparer]::Ordinal)
+if ($Update) {
+    $header = @('# Firmas de com.rowmate.export.RmExport (nombre y descriptor, orden ordinal). Las genera native/android/check.ps1 -Update', '# con javap -s; las llama Platform/Export/AndroidFileExporter por AndroidJavaClass (It. 12, DT12-18).')
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($exportSignaturesFile, (($header + $exportJavap) -join "`n") + "`n", $utf8)
+    Write-Host ('check.ps1: export-signatures.txt reescrito (' + $exportJavap.Count + ' metodos)')
+}
+$exportGolden = New-Object System.Collections.Generic.List[string]
+if (Test-Path -LiteralPath $exportSignaturesFile) {
+    foreach ($line in [System.IO.File]::ReadAllLines($exportSignaturesFile)) {
+        $t = $line.Trim()
+        if ($t -ne '' -and -not $t.StartsWith('#')) { $exportGolden.Add($t) }
+    }
+}
+$exportGolden.Sort([System.StringComparer]::Ordinal)
+if (($exportJavap -join "`n") -ne ($exportGolden -join "`n")) {
+    Write-Host 'javap:'; $exportJavap | ForEach-Object { Write-Host ('  ' + $_) }
+    Write-Host 'export-signatures.txt:'; $exportGolden | ForEach-Object { Write-Host ('  ' + $_) }
+    Fail 4 'las firmas de RmExport no coinciden con native/android/golden/export-signatures.txt'
+}
+Write-Host ('check.ps1: firmas de RmExport: ' + $exportJavap.Count + ' metodos, iguales a export-signatures.txt')
 
 # ---- 5. Fijacion del formato en la JVM ----
 if ($Golden) {

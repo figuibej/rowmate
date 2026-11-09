@@ -356,6 +356,53 @@ namespace RowMate.Tests.EditMode.Composition
             withLifecycle.Dispose();
         }
 
+        // It. 12 (02-tech-design §3.5, §4, DT12-11): "Exportar TCX" vive en AppContext.Export, con el exportador, la zona y la marca
+        // del simulador de AppServices; sin exportador, Delivery None (sin botón). Exportar SOLO LEE: ni la base ni prefs.json
+        // (AC-STR-09-11). La carpeta es una temporal propia (nunca Documentos).
+        [Test, Category("AC-STR-09-11"), Category("AC-STR-09-15")]
+        public void ExportIsWiredAndReadOnly()
+        {
+            var none = Compose();
+            Assert.That(none.Export.Delivery, Is.EqualTo(ExportDelivery.None), "sin exportador");
+            none.Dispose();
+
+            var sessions = new ScriptedSessionRepository(_scheduler);
+            var seed = HistorySeeds.Apply(new InMemoryRoutineRepository(), sessions, HistorySeeds.F9);
+            var preferences = new RecordingPreferences();
+            var folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rowmate-compose-export-" + Guid.NewGuid().ToString("N"));
+            var exporter = new FakeFileExporter(folder, null);
+            var app = AppComposer.Compose(new AppServices(_backend, _routines, sessions, _scheduler, _logger, LocalizationFixture.Set, _locale,
+                _accessibility, new ShellOptions(false))
+            {
+                Preferences = preferences, Exporter = exporter, ExportZone = () => HistorySeeds.Zone, SimulatorBuild = true,
+            });
+            try
+            {
+                Assert.That(app.Export.Delivery, Is.EqualTo(ExportDelivery.SaveToFolder));
+                var calls = sessions.Calls.Count;
+                var writes = preferences.WriteCount;
+                var notices = new List<RowMate.App.Export.TcxExportNotice>();
+                app.Export.Notices.Subscribe(notices.Add);
+                app.Export.ExportAsync(sessions.Store.Session(seed.Session(3))!);
+                _scheduler.Advance(TimeSpan.FromSeconds(1));
+                Assert.That(notices.Count, Is.EqualTo(1));
+                Assert.That(notices[0].File!.FileName, Is.EqualTo("RowMate_2026-11-03_1902_Escalera_SIM.tcx"), "zona y simulador de AppServices");
+                Assert.That(sessions.Calls.Count, Is.EqualTo(calls), "ninguna escritura en la base");
+                Assert.That(preferences.WriteCount, Is.EqualTo(writes), "nada en prefs.json");
+                Assert.That(sessions.Store.Session(seed.Session(3))!.FinishedAt, Is.Null, "la cortada no se repara en la base");
+                app.Dispose();
+                Assert.That(app.Export.ExportAsync(sessions.Store.Session(seed.Session(1))!).IsCompleted, Is.True, "dispuesto con la app");
+            }
+            finally
+            {
+                app.Dispose();
+                if (System.IO.Directory.Exists(folder))
+                {
+                    System.IO.Directory.Delete(folder, true);
+                }
+            }
+        }
+
         // Pulsómetro cuya reconexión tarda (como la real, hasta 15 s) y falla cuando el test quiere.
         private sealed class SlowHeartRateService : IHeartRateService
         {

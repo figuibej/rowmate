@@ -178,5 +178,36 @@ namespace RowMate.Tests.EditMode.History
             store.SelectMetric(ChartMetric.Spm);
             Assert.That(store.Metric.Value, Is.EqualTo(ChartMetric.Watts));
         }
+
+        // It. 12 (AC-STR-09-10, -17; DT12-05): el botón Exportar TCX solo con el detalle cargado y datos en sus puntos.
+        [Test, Category("AC-STR-09-10")]
+        public void CanExportOnlyWhenReadyAndExportable()
+        {
+            foreach (var number in new[] { 1, 2, 3, 5, 6 })
+            {
+                var ready = Load(Entry(number));
+                Assert.That(ready.Phase, Is.EqualTo(SessionDetailPhase.Ready), "n.º " + number);
+                Assert.That(ready.CanExport, Is.True, "n.º " + number + " (las cortadas, libres y de rutina borrada también)");
+            }
+
+            Assert.That(Load(Entry(4)).CanExport, Is.False, "n.º 4: sin telemetría");
+            _sessions.ReadDelay = TimeSpan.FromSeconds(1);
+            using (var store = new SessionDetailStore(Entry(1), _sessions, _routines, _logger))
+            {
+                store.LoadAsync();
+                Assert.That(store.State.Value.Phase, Is.EqualTo(SessionDetailPhase.Loading));
+                Assert.That(store.State.Value.CanExport, Is.False, "mientras carga");
+                _scheduler.Advance(TimeSpan.FromSeconds(3));
+                Assert.That(store.State.Value.CanExport, Is.True);
+            }
+
+            _sessions.ReadDelay = TimeSpan.Zero;
+            _sessions.PointsFailures = 1;
+            Assert.That(Load(Entry(1)).CanExport, Is.False, "con error de carga");
+            var ready1 = Load(Entry(1));
+            var empty = ready1 with { Stats = SessionStats.Compute(new[] { new DataPoint(1, 0) }) };
+            Assert.That(empty.Phase, Is.EqualTo(SessionDetailPhase.Ready));
+            Assert.That(empty.CanExport, Is.False, "tiempo y distancia de los puntos en 0 (T-5)");
+        }
     }
 }

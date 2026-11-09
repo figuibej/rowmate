@@ -1,0 +1,21 @@
+// Biblioteca de Android SOLO con el manifiesto del ContentProvider de "Exportar TCX" (It. 12, DT12-18) y las reglas de R8 del plugin.
+// El código Kotlin vive en Assets/Plugins/Android/RowMateExport/*.kt y lo compila el Gradle de Unity en unityLibrary. Sin
+// dependencias (ni androidx). compileSdk: el de Unity si lo expone en gradle.properties; si no, 34. NO VERIFICABLE hasta
+// "Android Build Support".
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.rowmate.export.manifest'
+    compileSdkVersion((project.findProperty('unity.compileSdkVersion') ?: '34').toString().toInteger())
+
+    defaultConfig {
+        minSdkVersion 26
+        // RmExport se llama solo por JNI (Platform/Export/AndroidFileExporter).
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

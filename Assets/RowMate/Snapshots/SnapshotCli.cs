@@ -46,11 +46,18 @@ namespace RowMate.Snapshots
         public const string It10aOutput = "docs/migration/iterations/10a-ble-android-windows/snapshots";
         // It. 11 (11-ble-pulsometro/02-tech-design §7): it11 (por defecto desde la 11) = HrmCatalog, el pulsómetro real sobre el adaptador falso.
         public const string It11Output = "docs/migration/iterations/11-ble-pulsometro/snapshots";
-        public const string DefaultSet = "it11";
+        // It. 12 (12-exportar-tcx/02-tech-design §7): it12 (por defecto desde la 12) = ExportCatalog, "Exportar TCX" con el destino falso.
+        public const string It12Output = "docs/migration/iterations/12-exportar-tcx/snapshots";
+        public const string DefaultSet = "it12";
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
         {
+            if (string.Equals(set, "it12", StringComparison.OrdinalIgnoreCase))
+            {
+                return It12Output;
+            }
+
             if (string.Equals(set, "it11", StringComparison.OrdinalIgnoreCase))
             {
                 return It11Output;

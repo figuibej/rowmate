@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+  <Activities>
+    <Activity Sport="Other">
+      <Id>2026-11-05T19:02:00-03:00</Id>
+      <Lap StartTime="2026-11-05T19:02:05-03:00">
+        <TotalTimeSeconds>10</TotalTimeSeconds>
+        <DistanceMeters>42</DistanceMeters>
+        <Calories>3</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-11-05T19:02:05-03:00</Time>
+            <DistanceMeters>20</DistanceMeters>
+            <Cadence>24</Cadence>
+            <Extensions>
+              <ns3:TPX>
+                <ns3:Watts>150</ns3:Watts>
+              </ns3:TPX>
+            </Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-11-05T19:02:10-03:00</Time>
+            <DistanceMeters>41</DistanceMeters>
+            <HeartRateBpm><Value>140</Value></HeartRateBpm>
+            <Cadence>25</Cadence>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-11-05T19:02:15-03:00</Time>
+            <DistanceMeters>62</DistanceMeters>
+            <HeartRateBpm><Value>141</Value></HeartRateBpm>
+            <Extensions>
+              <ns3:TPX>
+                <ns3:Watts>155</ns3:Watts>
+              </ns3:TPX>
+            </Extensions>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Lap StartTime="2026-11-05T19:02:20-03:00">
+        <TotalTimeSeconds>5</TotalTimeSeconds>
+        <DistanceMeters>20</DistanceMeters>
+        <Calories>2</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-11-05T19:02:20-03:00</Time>
+            <DistanceMeters>80</DistanceMeters>
+            <HeartRateBpm><Value>142</Value></HeartRateBpm>
+            <Cadence>23</Cadence>
+            <Extensions>
+              <ns3:TPX>
+                <ns3:Watts>160</ns3:Watts>
+              </ns3:TPX>
+            </Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-11-05T19:02:25-03:00</Time>
+            <DistanceMeters>100</DistanceMeters>
+            <Cadence>24</Cadence>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Lap StartTime="2026-11-05T19:02:30-03:00">
+        <TotalTimeSeconds>0</TotalTimeSeconds>
+        <DistanceMeters>0</DistanceMeters>
+        <Calories>1</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>2026-11-05T19:02:30-03:00</Time>
+            <DistanceMeters>121</DistanceMeters>
+            <HeartRateBpm><Value>143</Value></HeartRateBpm>
+            <Cadence>24</Cadence>
+            <Extensions>
+              <ns3:TPX>
+                <ns3:Watts>150</ns3:Watts>
+              </ns3:TPX>
+            </Extensions>
+          </Trackpoint>
+        </Track>
+      </Lap>
+      <Notes>Escalera &amp; &lt;Co&gt; &quot;A&quot; &apos;B&apos;</Notes>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>

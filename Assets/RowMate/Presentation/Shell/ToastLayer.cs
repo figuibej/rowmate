@@ -28,6 +28,12 @@ namespace RowMate.Presentation.Shell
     //   SOLO ante uno del remo (a la vista o fijo pendiente: devuelve false y no se ve); reemplaza uno anterior del pulsómetro (con su
     //   empujón y la duración nueva desde el reemplazo) o uno común. Va en _hrm (CurrentHrm), nunca en _link: CurrentLink y StickyLink
     //   siguen siendo solo del remo. Show y ShowLink lo reemplazan.
+    // - It. 12 (12-exportar-tcx/02-tech-design §5.2; DT12-14, A12-04; AC-STR-09-19, -21, -22): ShowAction, el aviso con acción en la
+    //   misma cápsula (de vidrio, .rm-toast--link .rm-toast--action): el título que ajusta en varias líneas (nunca "…"), un segundo
+    //   renglón #toast-detail (caption, el nombre del archivo), el check del LinkIndicator en el éxito y el botón #toast-action (el
+    //   único hijo que recibe el puntero), creados UNA vez. Tocar la acción la ejecuta y el aviso sale en el acto. Tiene la prioridad
+    //   de un aviso común (VisibleSlot = Common): lo reemplazan Show, ShowLink y ShowHrm, y un fijo del remo vuelve al vencer.
+    //   El título y el detalle van dentro de #toast-body (columna), que en los otros avisos solo tiene el texto.
     public sealed class ToastLayer : VisualElement, IDisposable
     {
         public const double NarrowWindowDp = 600;
@@ -37,6 +43,10 @@ namespace RowMate.Presentation.Shell
         public const double TextPaddingDp = 32;
         public const double BaseGapDp = 16;
         public const double LinkIndicatorDp = 24;
+
+        // It. 12: el aire entre el texto y la acción y el relleno horizontal de la acción (.rm-button: 0 12).
+        public const double ActionGapDp = 8;
+        public const double ActionPaddingDp = 24;
 
         private readonly UiContext _ui;
         private readonly ShellLayout _layout;
@@ -50,6 +60,7 @@ namespace RowMate.Presentation.Shell
         private LinkToast? _sticky;
         private LinkToast? _link;
         private HrmToast? _hrm;
+        private ActionToast? _action;
 
         public ToastLayer(UiContext ui, ShellLayout layout)
         {
@@ -74,7 +85,25 @@ namespace RowMate.Presentation.Shell
             Indicator.MarkAsToast = true;
             Indicator.Show(LinkIndicator.Mode.None);
             Toast.Add(Indicator);
-            Toast.Add(Text);
+            // It. 12: el título y el segundo renglón en una columna; la acción a la derecha (oculta salvo en ShowAction).
+            Body = new VisualElement { name = "toast-body" };
+            Body.AddToClassList("rm-toast__body");
+            Body.pickingMode = PickingMode.Ignore;
+            Body.Add(Text);
+            Detail = new Label { name = "toast-detail" };
+            Detail.AddToClassList("rm-toast__detail");
+            Detail.AddToClassList("rm-type-caption");
+            Detail.pickingMode = PickingMode.Ignore;
+            Detail.enableRichText = false;
+            Detail.parseEscapeSequences = false;
+            Detail.style.display = DisplayStyle.None;
+            Body.Add(Detail);
+            Toast.Add(Body);
+            Action = new RmButton("toast-action", "text", null, "", OnActionClicked, RmButton.DefaultIconDp, "rm-type-button-s");
+            Action.AddToClassList("rm-toast__action");
+            Action.pickingMode = PickingMode.Position;
+            Action.style.display = DisplayStyle.None;
+            Toast.Add(Action);
             Add(Toast);
 
             _transition = new ToastTransition(ui.Motion);
@@ -90,6 +119,16 @@ namespace RowMate.Presentation.Shell
 
         // It. 10a: el indicador del aviso del enlace (oculto en los avisos comunes).
         public LinkIndicator Indicator { get; }
+
+        // It. 12: la columna del texto, el segundo renglón y la acción del aviso con acción (ocultos en los demás).
+        public VisualElement Body { get; }
+
+        public Label Detail { get; }
+
+        public RmButton Action { get; }
+
+        // It. 12: el aviso con acción a la vista (null si el que se ve es otro o no hay ninguno).
+        public ActionToast? CurrentAction => _visible ? _action : null;
 
         // El aviso del enlace a la vista (null si el que se ve es común o no hay ninguno).
         public LinkToast? CurrentLink => _visible ? _link : null;
@@ -163,19 +202,51 @@ namespace RowMate.Presentation.Shell
             return true;
         }
 
-        private void Present(string text, TimeSpan? duration, LinkToast? link, HrmToast? hrm = null)
+        // It. 12 (§5.2): el aviso con acción, con la prioridad de un aviso común (reemplaza lo que haya a la vista).
+        public void ShowAction(ActionToast toast)
+        {
+            if (_disposed || toast == null)
+            {
+                return;
+            }
+
+            Present(toast.Title, toast.Duration, null, null, toast);
+        }
+
+        private void OnActionClicked()
+        {
+            var action = _visible ? _action : null;
+            if (action == null || _disposed)
+            {
+                return;
+            }
+
+            // Primero sale el aviso (en el acto); después la acción (que puede mostrar otro aviso: Reintentar → error de nuevo).
+            Hide();
+            action.OnAction();
+        }
+
+        private void Present(string text, TimeSpan? duration, LinkToast? link, HrmToast? hrm = null, ActionToast? action = null)
         {
             ShowCount++;
             _timer?.Dispose();
             _timer = duration.HasValue ? _ui.App.Scheduler.Schedule(duration.Value, OnTimer) : null;
             _link = link;
             _hrm = hrm;
-            var linkLike = link != null || hrm != null;
+            _action = action;
+            var linkLike = link != null || hrm != null || action != null;
             Toast.EnableInClassList("rm-toast--link", linkLike);
+            Toast.EnableInClassList("rm-toast--action", action != null);
             // WP-D (00-arte §4.2): el texto del enlace en titleXs 14/600 (el aviso común sigue en bodyM 14).
             Text.EnableInClassList("rm-type-body-m", !linkLike);
             Text.EnableInClassList("rm-type-title-xs", linkLike);
-            Indicator.Show(link != null ? ModeFor(link.Kind) : hrm != null ? ModeFor(hrm.Kind) : LinkIndicator.Mode.None);
+            Indicator.Show(link != null ? ModeFor(link.Kind) : hrm != null ? ModeFor(hrm.Kind)
+                : action != null && action.Check ? LinkIndicator.Mode.Check : LinkIndicator.Mode.None);
+            var detail = action?.Detail;
+            Detail.text = detail ?? "";
+            Detail.style.display = string.IsNullOrEmpty(detail) ? DisplayStyle.None : DisplayStyle.Flex;
+            Action.SetLabel(action?.ActionText ?? "");
+            Action.style.display = action != null ? DisplayStyle.Flex : DisplayStyle.None;
             if (_visible && !_transition.IsLeaving)
             {
                 var changed = !string.Equals(text, _text, StringComparison.Ordinal);
@@ -272,6 +343,10 @@ namespace RowMate.Presentation.Shell
                     Toast.style.opacity = StyleKeyword.Null;
                     Indicator.Show(LinkIndicator.Mode.None);
                     Toast.RemoveFromClassList("rm-toast--link");
+                    Toast.RemoveFromClassList("rm-toast--action");
+                    Detail.style.display = DisplayStyle.None;
+                    Action.style.display = DisplayStyle.None;
+                    _action = null;
                 }
             });
         }
@@ -292,10 +367,22 @@ namespace RowMate.Presentation.Shell
                 return;
             }
 
-            var natural = Text.MeasureTextSize(_text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x;
+            var natural = (double)Text.MeasureTextSize(_text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x;
             // It. 10a: con el indicador del enlace, sus 16 y 8 de aire.
-            var indicator = _link != null || _hrm != null ? LinkIndicatorDp : 0;
-            var width = Math.Max(MinWidthDp, Math.Min(MaxWidthDp, natural + TextPaddingDp + indicator));
+            var indicator = _link != null || _hrm != null || (_action != null && _action.Check) ? LinkIndicatorDp : 0;
+            var action = 0.0;
+            if (_action != null)
+            {
+                // It. 12 (§5.2): clamp(max(título, detalle) + 32 + indicador + acción + 8; 344; 560).
+                if (!string.IsNullOrEmpty(_action.Detail))
+                {
+                    natural = Math.Max(natural, Detail.MeasureTextSize(_action.Detail, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x);
+                }
+
+                action = ActionGapDp + ActionPaddingDp + Action.Label.MeasureTextSize(_action.ActionText, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x;
+            }
+
+            var width = Math.Max(MinWidthDp, Math.Min(MaxWidthDp, natural + TextPaddingDp + indicator + action));
             Toast.style.width = (float)width;
             Toast.style.left = (float)((window.x - width) / 2);
             Toast.style.right = StyleKeyword.Auto;

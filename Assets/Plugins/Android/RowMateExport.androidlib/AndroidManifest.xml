@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Exportar TCX" en Android (It. 12; 12-exportar-tcx/02-tech-design §3.4, DT12-18; AC-STR-09-24): SOLO el ContentProvider propio
+     que comparte los archivos de cacheDir/exports con la app elegida en la hoja de compartir (permiso de lectura temporal).
+     Sin permisos nuevos (F-APP-13): la caché es privada y el permiso de cada archivo lo da el Intent. Se fusiona con el manifiesto de
+     Unity, así no se toca ProjectSettings. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <provider
+            android:name="com.rowmate.export.RmExportProvider"
+            android:authorities="${applicationId}.rowmate.export"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+
+</manifest>

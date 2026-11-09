@@ -1,5 +1,7 @@
 # Inventario de producto: Strava y pantalla Perfil
 
+> **2026-11-09: Strava descartado por decisión del usuario** (desde junio de 2026 la API exige suscripción paga incluso para apps personales). Todas las F-STR-* quedan **descartadas** salvo **F-STR-09** (el archivo TCX), que pasa a la It. 12 "Exportar TCX" ([ROADMAP](../../ROADMAP.md)). La app sigue con 4 pestañas. El resto de este documento queda como registro del legacy.
+
 - **Área:** `STR` (abarca la integración con Strava y la pantalla Perfil, que es su única pantalla propia).
 - **Rol:** RowMate PO. Este documento es el **contrato de paridad**: lo que no está acá se pierde en la migración.
 - **Fuente:** `https://github.com/figuibej/rowmate-legacy` (solo lectura). Leídos completos: `lib/core/strava/` (salvo `strava_secrets.dart`, que no se leyó), `lib/features/profile/`, y los puntos de contacto en `lib/features/workout/`, `lib/features/history/`, `lib/core/database/database_service.dart`, `lib/core/models/workout_session.dart`, `lib/main.dart`, `.arb`, manifiestos de plataforma, `README.md`, `CLAUDE.md` y specs.
@@ -25,24 +27,24 @@ Cada sesión subida lleva **pulso, cadencia, potencia y distancia por punto**, u
 
 | ID | Funcionalidad | Lógica pura | Tests legacy |
 |---|---|---|---|
-| F-STR-01 | Disponibilidad de Strava según credenciales | no | ninguno |
-| F-STR-02 | Conectar con Strava (autorización) | no | ninguno |
-| F-STR-03 | Sesión persistente y renovación de credenciales | parcial (regla de vencimiento) | ninguno |
-| F-STR-04 | Desconectar Strava | no | ninguno |
-| F-STR-05 | Preferencia de subida (auto / preguntar / manual) | no | ninguno |
-| F-STR-06 | Subida al terminar un entrenamiento | no | ninguno |
-| F-STR-07 | Subir una sesión (operación individual) | no | ninguno |
-| F-STR-08 | Envío a Strava, confirmación y duplicados | parcial (lectura del duplicado) | ninguno |
-| F-STR-09 | Archivo de actividad TCX | **sí** | ninguno |
-| F-STR-10 | Metadatos de rutina ocultos en la descripción | **sí** | ninguno |
-| F-STR-11 | Sincronizar a Strava (subida en lote + auto-reparación) | parcial (regla de reparación) | indirecto: `session_stats_test.dart` |
-| F-STR-12 | Sincronizar desde Strava (importación) | no | ninguno |
-| F-STR-13 | Reconstrucción de la telemetría importada | **sí** | indirecto: `session_stats_test.dart` |
-| F-STR-14 | Tarjeta "Subidas pendientes" | no | ninguno |
-| F-STR-15 | Mantenimiento: limpiar sesiones de Strava | no | ninguno |
-| F-STR-16 | Pantalla Perfil: estructura y estados | no | ninguno |
-| F-STR-17 | Estado de sincronización en Historial y Detalle | no | ninguno |
-| F-STR-18 | Strava en modo simulador | no | ninguno |
+| F-STR-01 | Disponibilidad de Strava según credenciales — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-02 | Conectar con Strava (autorización) — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-03 | Sesión persistente y renovación de credenciales — **descartado (decisión del usuario 2026-11-09)** | parcial (regla de vencimiento) | ninguno |
+| F-STR-04 | Desconectar Strava — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-05 | Preferencia de subida (auto / preguntar / manual) — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-06 | Subida al terminar un entrenamiento — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-07 | Subir una sesión (operación individual) — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-08 | Envío a Strava, confirmación y duplicados — **descartado (decisión del usuario 2026-11-09)** | parcial (lectura del duplicado) | ninguno |
+| F-STR-09 | Archivo de actividad TCX — **sigue: It. 12 "Exportar TCX"** | **sí** | ninguno |
+| F-STR-10 | Metadatos de rutina ocultos en la descripción — **descartado (decisión del usuario 2026-11-09)** | **sí** | ninguno |
+| F-STR-11 | Sincronizar a Strava (subida en lote + auto-reparación) — **descartado (decisión del usuario 2026-11-09)** | parcial (regla de reparación) | indirecto: `session_stats_test.dart` |
+| F-STR-12 | Sincronizar desde Strava (importación) — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-13 | Reconstrucción de la telemetría importada — **descartado (decisión del usuario 2026-11-09)** | **sí** | indirecto: `session_stats_test.dart` |
+| F-STR-14 | Tarjeta "Subidas pendientes" — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-15 | Mantenimiento: limpiar sesiones de Strava — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-16 | Pantalla Perfil: estructura y estados — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-17 | Estado de sincronización en Historial y Detalle — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
+| F-STR-18 | Strava en modo simulador — **descartado (decisión del usuario 2026-11-09)** | no | ninguno |
 
 ---
 
@@ -147,6 +149,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-01 · Disponibilidad de Strava según credenciales
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** Strava es opcional. Sin credenciales la app queda completa y sin rastros de una función rota.
 
 **Comportamientos observables**
@@ -169,6 +173,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 ---
 
 ### F-STR-02 · Conectar con Strava (autorización)
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor:** el remero vincula su cuenta una sola vez para subir e importar entrenamientos.
 
@@ -199,6 +205,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-03 · Sesión persistente y renovación de credenciales
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** el usuario se conecta una vez y la app sigue conectada aunque se reinicie o pasen días.
 
 **Comportamientos observables**
@@ -222,6 +230,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-04 · Desconectar Strava
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** el usuario controla su cuenta y puede desvincularla.
 
 **Comportamientos observables**
@@ -244,6 +254,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-05 · Preferencia de subida
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** cada remero decide si sus sesiones van solas a Strava, si se le pregunta, o si las sube él.
 
 **Comportamientos observables**
@@ -264,6 +276,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 ---
 
 ### F-STR-06 · Subida al terminar un entrenamiento
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor:** el entrenamiento llega a Strava sin pasos extra, o con una sola pregunta.
 
@@ -301,6 +315,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-07 · Subir una sesión (operación individual)
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** es la operación base de todos los caminos individuales: Detalle, Pendientes y fin de entrenamiento.
 
 **Comportamientos observables**
@@ -331,6 +347,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-08 · Envío a Strava, confirmación y duplicados
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** la actividad aparece en Strava como remo indoor, con nombre y datos correctos, sin duplicarse.
 
 **Comportamientos observables**
@@ -357,6 +375,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 ---
 
 ### F-STR-09 · Archivo de actividad TCX
+
+> **Sigue en la It. 12 "Exportar TCX"** (2026-11-09): el archivo se exporta para subirlo a mano; sin los metadatos de F-STR-10. Contrato en [la spec de la It. 12](../../iterations/12-exportar-tcx/01-po-spec.md).
 
 **Valor:** Strava recibe la sesión completa: pulso, cadencia, potencia, distancia, hora local correcta y una vuelta por cada paso de la rutina.
 
@@ -388,6 +408,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-10 · Metadatos de rutina ocultos en la descripción
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** al importar una sesión que subió RowMate, se puede recuperar la estructura de la rutina (tipos de intervalo y objetivos).
 
 **Comportamientos observables (formato)**
@@ -411,6 +433,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 ---
 
 ### F-STR-11 · Sincronizar a Strava (subida en lote + auto-reparación)
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor:** con un toque, todo lo que falta queda en Strava, incluso las sesiones que se guardaron mal.
 
@@ -443,6 +467,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 ---
 
 ### F-STR-12 · Sincronizar desde Strava (importación)
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor:** el historial incluye los remos que el usuario tiene en Strava (de otros dispositivos o anteriores a la app).
 
@@ -480,6 +506,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-13 · Reconstrucción de la telemetría importada
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** las sesiones de Strava se ven en los gráficos con un ritmo creíble y sin picos absurdos, separadas por intervalos.
 
 **Comportamientos observables (por cada muestra de Strava, índice i)**
@@ -510,6 +538,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-14 · Tarjeta "Subidas pendientes"
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** ver qué falta subir y subir de a una, sin entrar al Historial.
 
 **Comportamientos observables**
@@ -531,6 +561,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-15 · Mantenimiento: limpiar sesiones de Strava
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** volver a empezar la sincronización desde cero (p. ej. después de importar mal).
 
 **Comportamientos observables**
@@ -550,6 +582,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 ---
 
 ### F-STR-16 · Pantalla Perfil: estructura y estados
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor:** un solo lugar para todo lo relacionado con la cuenta de Strava.
 
@@ -572,6 +606,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 
 ### F-STR-17 · Estado de sincronización en Historial y Detalle
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor:** saber de un vistazo qué ya está en Strava y subir lo que falta desde el Detalle.
 
 **Comportamientos observables**
@@ -592,6 +628,8 @@ No es una decisión técnica: es lo que Strava ve y lo que ya está en las cuent
 ---
 
 ### F-STR-18 · Strava en modo simulador
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor:** probar la app sin ensuciar la cuenta real de Strava.
 

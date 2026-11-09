@@ -94,6 +94,11 @@ namespace RowMate.Bootstrap
         // Profiler (registro binario con la pila de cada asignación) de los 25,5 a los 27,5 s de Serie larga (el halo y la cuenta grande
         // de los últimos 5 s del primer paso). El archivo lo lee el Editor (RowMate.EditorTools.ProfileAllocations).
         public const string PerfProfileArgument = "-rowmate-perf-profile";
+
+        // It. 12 (12-exportar-tcx/02-tech-design DT12-20; AC-STR-09-26): -rowmate-export-smoke <n>: exporta la sesión más nueva n veces
+        // sin UI (con el exportador de la app: en desarrollo, ROWMATE_DATA_DIR\exports) y registra los nombres; sale con 0 o 1. Solo con
+        // la carpeta de datos de desarrollo: nunca Documentos.
+        public const string ExportSmokeArgument = "-rowmate-export-smoke";
 #endif
 
         [SerializeField] private UiAssets? _assets;
@@ -202,8 +207,16 @@ namespace RowMate.Bootstrap
 
             // 5. La app pura. Perfil apagado (su regla real es de la It. 12, D-20).
             var texts = LocalizationSet.Load(_assets.StringsEs!.text, _assets.StringsEn!.text);
+            //    It. 12 (12-exportar-tcx/02-tech-design §3.5; DT12-03, DT12-10, DT12-16): el exportador de la plataforma (Windows:
+            //    Documentos\RowMate\TCX, o ROWMATE_DATA_DIR\exports en desarrollo; Android: la caché y la hoja de compartir), la zona del
+            //    equipo releída en cada exportación y la marca del simulador. Ninguna ruta va al registro.
+            var exporter = ExportLocations.CreateExporter(_platform.Kind, ExportLocations.ForApp(_platform.Kind), logger);
             _app = AppComposer.Compose(new AppServices(_backend, _store.Routines, _store.Sessions, _scheduler, logger, texts, _platform.Locale,
-                _platform.Accessibility, new ShellOptions(false)) { Lifecycle = _lifecycle, SystemUi = _platform.SystemUi, Preferences = _preferences, Haptics = RowMate.Platform.Haptics.HapticsFactory.Create(logger) });
+                _platform.Accessibility, new ShellOptions(false))
+            {
+                Lifecycle = _lifecycle, SystemUi = _platform.SystemUi, Preferences = _preferences, Haptics = RowMate.Platform.Haptics.HapticsFactory.Create(logger),
+                Exporter = exporter, ExportZone = ExportZoneNow, SimulatorBuild = BuildFlags.IsSimulator,
+            });
 
             // 6. Superficie: copia del panel con sus respaldos de fuente (RuntimePanelFactory: el asset no se toca, R2-05;
             //    QA-G3-12), RT limpia a bg.app y presentador (S-B1). El documento de la escena no tiene panel: se engancha a la
@@ -277,6 +290,12 @@ namespace RowMate.Bootstrap
             if (HasArgument(BleSmokeArgument))
             {
                 _ = BleSmoke.RunAsync(_backend.Rower, _backend.HeartRate, _scheduler, _logger!);
+            }
+
+            var exportSmoke = ArgumentValue(ExportSmokeArgument);
+            if (exportSmoke != null)
+            {
+                _ = RunExportSmoke(exportSmoke);
             }
 #endif
 
@@ -581,7 +600,74 @@ namespace RowMate.Bootstrap
             _platform?.SleepSource.Dispose();
         }
 
+        // It. 12 (DT12-03): la zona del equipo AL EXPORTAR, sin caché (el equipo pudo cambiar de zona u horario de verano). En el hilo
+        // principal, una vez por exportación (TcxExportService).
+        private static TimeZoneInfo ExportZoneNow()
+        {
+            TimeZoneInfo.ClearCachedData();
+            return TimeZoneInfo.Local;
+        }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // It. 12 (DT12-20; AC-STR-09-26): la sesión más nueva, exportada n veces seguidas con el exportador de la app; registra
+        // "[EXPORT] humo: k/n <archivo>" (solo el nombre: nunca la ruta) y "[EXPORT] humo: ok" o "falla (…)". Solo con ROWMATE_DATA_DIR.
+        private async System.Threading.Tasks.Task RunExportSmoke(string countText)
+        {
+            var logger = _logger!;
+            var app = _app!;
+            if (!DataLocation.IsOverridden || !int.TryParse(countText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) || count < 1)
+            {
+                logger.Log(LogLevel.Error, RowMate.Core.Export.ExportLog.Tag, "humo: falla (hace falta ROWMATE_DATA_DIR y un número de exportaciones)");
+                Application.Quit(1);
+                return;
+            }
+
+            var saved = new System.Collections.Generic.List<string>();
+            var failed = 0;
+            using (app.Export.Notices.Subscribe(notice =>
+            {
+                if (notice.Kind == RowMate.App.Export.TcxExportNoticeKind.Saved && notice.File != null)
+                {
+                    saved.Add(notice.File.FileName);
+                }
+                else
+                {
+                    failed++;
+                }
+            }))
+            {
+                try
+                {
+                    var history = await _store!.Sessions.GetHistoryAsync();
+                    if (history.Count == 0)
+                    {
+                        logger.Log(LogLevel.Error, RowMate.Core.Export.ExportLog.Tag, "humo: falla (la base no tiene sesiones)");
+                        Application.Quit(1);
+                        return;
+                    }
+
+                    var newest = history[0].Session;
+                    for (var i = 0; i < count; i++)
+                    {
+                        await app.Export.ExportAsync(newest);
+                        var name = saved.Count > i ? saved[i] : "(sin archivo)";
+                        logger.Log(LogLevel.Info, RowMate.Core.Export.ExportLog.Tag, "humo: " + (i + 1).ToString(CultureInfo.InvariantCulture) + "/"
+                            + count.ToString(CultureInfo.InvariantCulture) + " " + name);
+                    }
+                }
+                catch (Exception error)
+                {
+                    logger.Log(LogLevel.Error, RowMate.Core.Export.ExportLog.Tag, "humo: falla (" + error.GetType().Name + ")");
+                    Application.Quit(1);
+                    return;
+                }
+            }
+
+            var ok = saved.Count == count && failed == 0;
+            logger.Log(ok ? LogLevel.Info : LogLevel.Error, RowMate.Core.Export.ExportLog.Tag, ok ? "humo: ok" : "humo: falla (" + failed.ToString(CultureInfo.InvariantCulture) + " fallas)");
+            Application.Quit(ok ? 0 : 1);
+        }
+
         private async System.Threading.Tasks.Task RunDatabaseSmoke(string folder)
         {
             var ok = await DatabaseSmoke.RunAsync(folder, _logger!);

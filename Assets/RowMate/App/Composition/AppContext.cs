@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using RowMate.App.Device;
+using RowMate.App.Export;
 using RowMate.App.History;
 using RowMate.App.Routines;
 using RowMate.App.Scene;
@@ -38,8 +39,10 @@ namespace RowMate.App.Composition
                             DerivedObservable<AppLanguage, Localizer> texts, IReadOnlyObservable<AccessibilitySnapshot> accessibility,
                             IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, ImmersiveSystemBars systemBars,
                             IPreferences preferences, SeriesPanelPrefs seriesPanels, SceneEnvironmentChoice sceneEnvironment,
-                            HistoryStore history, ISessionRepository sessions, IRoutineRepository routineRepository)
+                            HistoryStore history, ISessionRepository sessions, IRoutineRepository routineRepository,
+                            TcxExportService export)
         {
+            Export = export;
             _devices = devices;
             SystemBars = systemBars;
             Preferences = preferences;
@@ -102,6 +105,10 @@ namespace RowMate.App.Composition
         // It. 9 (F-HIS-06; §3.1): la lista del historial, una por app. Start() la carga; recarga con cada toque de la pestaña
         // Historial, al volver del detalle (lo pide la página) y cuando vuelve el cierre de una sesión. Dispose la dispone.
         public HistoryStore History { get; }
+
+        // It. 12 (F-STR-09; §4, DT12-11): "Exportar TCX", uno por app; lo usa el Detalle y lo lee el aviso de la exportación.
+        // Salir del Detalle no cancela una exportación en curso. Dispose lo dispone (antes del historial).
+        public TcxExportService Export { get; }
 
         public LanguageState Language { get; }
 
@@ -214,6 +221,7 @@ namespace RowMate.App.Composition
             _disposed = true;
             // It. 4b: si quedaron ocultas, las barras del sistema se muestran.
             SystemBars.Dispose();
+            Export.Dispose();
             History.Dispose();
             SceneEnvironment.Dispose();
             SeriesPanels.Dispose();

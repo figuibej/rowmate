@@ -295,5 +295,16 @@ namespace RowMate.Core.Localization
         public const string HrmConnectFailed = "hrmConnectFailed";
         public const string HrmConnectedNotice = "hrmConnectedNotice";
         public const string HrmLostNotice = "hrmLostNotice";
+
+        // ── Nuevas de la It. 12 (12-exportar-tcx/01-po-spec §4): 245 → 252 ──
+        // El botón y su ayuda (AC-STR-09-17, -18), los avisos de éxito y error (AC-STR-09-19, -21; {folder} = la carpeta abreviada,
+        // ExportFolderLabel) y el título de la hoja de compartir de Android (AC-STR-09-24). Se reusan retry e historyFree.
+        public const string ExportTcx = "exportTcx";
+        public const string ExportTcxExporting = "exportTcxExporting";
+        public const string ExportTcxSaved = "exportTcxSaved";
+        public const string ExportTcxDocuments = "exportTcxDocuments";
+        public const string ExportTcxOpenFolder = "exportTcxOpenFolder";
+        public const string ExportTcxFailed = "exportTcxFailed";
+        public const string ExportTcxShareTitle = "exportTcxShareTitle";
     }
 }

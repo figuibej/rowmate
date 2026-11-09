@@ -1,0 +1,4 @@
+# Firmas de com.rowmate.export.RmExport (nombre y descriptor, orden ordinal). Las genera native/android/check.ps1 -Update
+# con javap -s; las llama Platform/Export/AndroidFileExporter por AndroidJavaClass (It. 12, DT12-18).
+exportDir (Landroid/app/Activity;)Ljava/lang/String;
+share (Landroid/app/Activity;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z

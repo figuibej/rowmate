@@ -279,7 +279,11 @@ namespace RowMate.Tests.UiSupport
             Sessions = options.Sessions(Scheduler, _logger, Routines);
             var texts = LocalizationSet.Load(UiAssetsLocator.StringsEs(), UiAssetsLocator.StringsEn());
             App = AppComposer.Compose(new AppServices(Backend, repository, Sessions, Scheduler, _logger, texts, Locale, Accessibility,
-                new ShellOptions(options.ProfileTab)) { CreationClock = CreationClock, Lifecycle = Lifecycle, SystemUi = SystemUi, Preferences = PreferencesFor(options) });
+                new ShellOptions(options.ProfileTab))
+            {
+                CreationClock = CreationClock, Lifecycle = Lifecycle, SystemUi = SystemUi, Preferences = PreferencesFor(options),
+                Exporter = ExporterFor(options), ExportZone = options.ExportZone ?? (() => options.LocalZone), SimulatorBuild = options.SimulatorBuild,
+            });
             _sceneBridge?.Dispose();
             _sceneBridge = options.Scene == SceneMode.Real ? CreateScene(options) : null;
             Handle = ShellHost.Build(App, Root, new ShellHostOptions(Scheduler, options.IsDesktop, _backButton, Display,
@@ -295,6 +299,36 @@ namespace RowMate.Tests.UiSupport
             }
 
             TickAll();
+        }
+
+        // ── It. 12: el exportador de "Exportar TCX" (12-exportar-tcx/02-tech-design §3.5, §6.2) ──
+
+        // El exportador de la app de este anfitrión (el de UiHostOptions o el falso propio).
+        public IFileExporter Exporter { get; private set; } = null!;
+
+        // El falso propio (o el de UiHostOptions si es uno): Hold, FailNext, Requests, Reveals y Files.
+        public FakeFileExporter? FakeExporter => Exporter as FakeFileExporter;
+
+        // La carpeta temporal del falso propio (null si las opciones traen otro exportador).
+        public string? ExportFolder { get; private set; }
+
+        private IFileExporter ExporterFor(UiHostOptions options)
+        {
+            if (options.Exporter != null)
+            {
+                Exporter = options.Exporter;
+                return Exporter;
+            }
+
+            // Reopen = el mismo falso (y su carpeta): los archivos ya exportados siguen ahí.
+            if (Exporter is FakeFileExporter && ExportFolder != null)
+            {
+                return Exporter;
+            }
+
+            ExportFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "RowMate.Tests", "exports-" + Guid.NewGuid().ToString("N"));
+            Exporter = new FakeFileExporter(ExportFolder, null, options.FakeExportDelivery);
+            return Exporter;
         }
 
         // ── It. 5: las preferencias (05-series-parciales/02-tech-design §2.7, §6.2; AC-HIS-20-04) ──
@@ -669,6 +703,19 @@ namespace RowMate.Tests.UiSupport
             }
         }
 
+        // It. 12 (CAP-12): el puntero se mueve sobre el centro del elemento (a lo que da Pick ahí, o al elemento).
+        public void PointerMove(string elementName)
+        {
+            var element = FindRequired(elementName);
+            var center = element.worldBound.center;
+            var target = Root.panel.Pick(center) ?? element;
+            using (var move = PointerMoveEvent.GetPooled(new Event { type = EventType.MouseMove, mousePosition = center }))
+            {
+                move.target = target;
+                target.SendEvent(move);
+            }
+        }
+
         public void PointerLeave(string elementName)
         {
             var element = FindRequired(elementName);
@@ -994,6 +1041,17 @@ namespace RowMate.Tests.UiSupport
             Backend.Dispose();
             Routines.Dispose();
             ClosePreferencesFile();
+            if (ExportFolder != null && System.IO.Directory.Exists(ExportFolder))
+            {
+                try
+                {
+                    System.IO.Directory.Delete(ExportFolder, true);
+                }
+                catch (System.IO.IOException)
+                {
+                }
+            }
+
             if (_preferencesFolder != null)
             {
                 try

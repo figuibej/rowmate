@@ -36,7 +36,7 @@ Siglas de otras áreas que se citan: **BLE** (remo FTMS y su conexión), **HRM**
 | F-APP-01 | Arranque de la app y servicios activos desde el inicio | No | ninguno |
 | F-APP-02 | Barra de pestañas inferior | No | ninguno |
 | F-APP-03 | Navegación secundaria: pantallas apiladas, diálogos y avisos | No | ninguno |
-| F-APP-04 | Strava como interruptor de producto (según credenciales del build) | Sí (la regla) | ninguno |
+| F-APP-04 | Strava como interruptor de producto (según credenciales del build) — **descartado (decisión del usuario 2026-11-09)** | Sí (la regla) | ninguno |
 | F-APP-05 | Tema visual oscuro y estilos base | No | ninguno |
 | F-APP-06 | Paleta de colores por métrica | Sí (datos) | ninguno |
 | F-APP-07 | Colores y nombres por tipo de paso, vistos desde el tema | Sí | indirecto: `step_pill_test` |
@@ -49,7 +49,7 @@ Siglas de otras áreas que se citan: **BLE** (remo FTMS y su conexión), **HRM**
 | F-APP-14 | Pantalla siempre encendida | No | ninguno |
 | F-APP-15 | Modo inmersivo del sistema, orientación y ventana | No | ninguno |
 | F-APP-16 | Identidad de la app: nombre, identificadores, versión, ícono y pantalla de arranque | No | ninguno |
-| F-APP-17 | Regreso a la app después del login externo (esquema `rowmate://`) | No | ninguno |
+| F-APP-17 | Regreso a la app después del login externo (esquema `rowmate://`) — **descartado (decisión del usuario 2026-11-09)** | No | ninguno |
 | F-APP-18 | Variante de compilación "simulador" vista desde el shell | No | `simulator_overlay_test` (2 casos) |
 | F-APP-19 | Compilación y distribución (CI/CD, firma, configuraciones de ejecución) | No | ninguno |
 
@@ -173,6 +173,8 @@ Siglas de otras áreas que se citan: **BLE** (remo FTMS y su conexión), **HRM**
 ---
 
 ### F-APP-04: Strava como interruptor de producto (según credenciales del build)
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor para el usuario.** Strava es opcional: la app funciona completa sin conexión ni cuenta. Si el build no trae credenciales, el usuario no ve ninguna opción de Strava rota o a medias.
 
@@ -585,6 +587,8 @@ Siglas de otras áreas que se citan: **BLE** (remo FTMS y su conexión), **HRM**
 ---
 
 ### F-APP-17: Regreso a la app después del login externo (esquema `rowmate://`)
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor para el usuario.** Después de autorizar Strava en el navegador, volver solo a RowMate ya conectado.
 

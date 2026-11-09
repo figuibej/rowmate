@@ -50,7 +50,7 @@
 | F-WKT-19 | Reloj de pared | no | — |
 | F-WKT-20 | Controles y confirmación de terminar | no | — |
 | F-WKT-21 | Diálogo de rutina completada | no | — |
-| F-WKT-22 | Reglas de subida a Strava al terminar | no | — |
+| F-WKT-22 | Reglas de subida a Strava al terminar — **descartado (decisión del usuario 2026-11-09)** | no | — |
 | F-WKT-23 | Pantalla clásica y tarjeta de métrica (código muerto) | no | — |
 
 ## Constantes visuales de referencia
@@ -1045,6 +1045,8 @@ Los cambios de texto son cambios de producto: ver Preguntas abiertas.
 ---
 
 ## F-WKT-22: Reglas de subida a Strava al terminar
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor para el usuario:** según su preferencia, la sesión se sube sola, se le pregunta o no se hace nada, y en modo simulador nunca se sube nada.
 

@@ -537,5 +537,19 @@
     }
   },
   "hrmConnectedNotice": "Pulsómetro conectado",
-  "hrmLostNotice": "Se perdió el pulsómetro, reconectando…"
+  "hrmLostNotice": "Se perdió el pulsómetro, reconectando…",
+  "exportTcx": "Exportar TCX",
+  "exportTcxExporting": "Exportando…",
+  "exportTcxSaved": "Guardado en {folder}",
+  "@exportTcxSaved": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "exportTcxDocuments": "Documentos",
+  "exportTcxOpenFolder": "Abrir carpeta",
+  "exportTcxFailed": "No se pudo exportar la sesión",
+  "exportTcxShareTitle": "Compartir sesión"
 }

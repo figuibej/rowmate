@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RowMate.Core.Export;
 using RowMate.Core.History;
 using RowMate.Core.Localization;
 using RowMate.Core.Models;
@@ -14,6 +15,10 @@ namespace RowMate.App.History
     {
         // El Rendimiento por paso solo si algún punto tiene índice (_hasStepData, sd:145).
         public bool HasSteps => Steps.Count > 0;
+
+        // It. 12 (AC-STR-09-10, -17; DT12-05): se puede exportar como TCX con el detalle cargado (Ready = al menos un punto) y
+        // datos en sus puntos (tiempo o distancia distintos de 0, como el legacy al sincronizar). Calculada: sin campo nuevo.
+        public bool CanExport => Phase == SessionDetailPhase.Ready && TcxExportRules.HasData(Stats);
 
         // La fila del Resumen: la misma de la tarjeta (AC-HIS-10-01).
         public IReadOnlyList<StatColumn> Columns => StatColumns.Build(Stats);

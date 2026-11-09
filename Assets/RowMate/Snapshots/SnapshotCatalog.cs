@@ -25,7 +25,13 @@ namespace RowMate.Snapshots
         // it3 = RoutinesCatalog, it4a (por defecto desde la 4a) = WorkoutCatalog. It. 6a: it6a (por defecto desde la 6a) = SceneCatalog.
         public static IReadOnlyList<SnapshotScenario> For(string set)
         {
-            // It. 11: it11 (por defecto desde la 11) = HrmCatalog.
+            // It. 12: it12 (por defecto desde la 12) = ExportCatalog ("Exportar TCX").
+            if (string.Equals(set, "it12", StringComparison.OrdinalIgnoreCase))
+            {
+                return ExportCatalog.All;
+            }
+
+            // It. 11: it11 = HrmCatalog.
             if (string.Equals(set, "it11", StringComparison.OrdinalIgnoreCase))
             {
                 return HrmCatalog.All;
@@ -91,6 +97,11 @@ namespace RowMate.Snapshots
 
         public static string TitleFor(string set)
         {
+            if (string.Equals(set, "it12", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 12 (Exportar TCX)";
+            }
+
             if (string.Equals(set, "it11", StringComparison.OrdinalIgnoreCase))
             {
                 return "It. 11 (Bluetooth real: pulsómetro)";

@@ -119,6 +119,20 @@ namespace RowMate.Tests.UiSupport
         // Un puerto de escena de prueba en lugar de la real (FakeImmersiveScene; QA-G6aT-16). Gana sobre Scene.
         public RowMate.Presentation.Workout.IImmersiveScene? FakeScene;
 
+        // It. 12 (12-exportar-tcx/02-tech-design §3.5, §6.2): el exportador de "Exportar TCX". null = un FakeFileExporter propio del
+        // anfitrión (SaveToFolder, sin etiqueta fija: muestra DocumentosRowMateTCX) que escribe en una carpeta TEMPORAL que el
+        // anfitrión borra al terminar y que nunca abre el Explorador. Nunca Documentos ni Descargas.
+        public IFileExporter? Exporter;
+
+        // Con Exporter = null: la entrega del exportador falso (Share = la variante de Android, sin aviso de éxito).
+        public ExportDelivery FakeExportDelivery = ExportDelivery.SaveToFolder;
+
+        // La zona de la exportación (nombre del archivo y horas del TCX); null = LocalZone.
+        public Func<TimeZoneInfo>? ExportZone;
+
+        // El build del simulador marca los archivos con _SIM y [SIM] (DT12-16).
+        public bool SimulatorBuild;
+
         public UiHostOptions Clone()
         {
             return (UiHostOptions)MemberwiseClone();

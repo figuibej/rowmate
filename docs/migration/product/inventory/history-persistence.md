@@ -62,7 +62,7 @@ Acá solo se describe lo que esas áreas **leen o escriben** en el historial.
 | F-HIS-05 | Formatos de duración, ritmo, fecha y números | Sí | — |
 | F-HIS-06 | Acceso al Historial y recargas | No | — |
 | F-HIS-07 | Lista de sesiones (pantalla Historial) | No | — |
-| F-HIS-08 | Indicador de sincronización con Strava | No | — |
+| F-HIS-08 | Indicador de sincronización con Strava — **descartado (decisión del usuario 2026-11-09)** | No | — |
 | F-HIS-09 | Detalle: apertura, carga y estados | No | — |
 | F-HIS-10 | Detalle: Resumen | No (usa F-HIS-04) | indirecto: `session_stats_test.dart` |
 | F-HIS-11 | Detalle: Rendimiento por paso | Sí (cálculos) | — |
@@ -70,14 +70,14 @@ Acá solo se describe lo que esas áreas **leen o escriben** en el historial.
 | F-HIS-13 | Detalle: gráfico de la métrica | Sí (escala, inversión, ejes) | — |
 | F-HIS-14 | Detalle: bandas y separadores de pasos | Sí (cálculo de bandas) | — |
 | F-HIS-15 | Detalle: líneas objetivo por paso | Sí (cálculo de objetivos) | indirecto: `routine_positions_test.dart` |
-| F-HIS-16 | Detalle: subida manual a Strava | No | — |
+| F-HIS-16 | Detalle: subida manual a Strava — **descartado (decisión del usuario 2026-11-09)** | No | — |
 | F-HIS-17 | Base local: archivo, esquema y versiones | No | — |
 | F-HIS-18 | Persistencia de rutinas (capa de datos) | No | — |
 | F-HIS-19 | Consultas de sesiones y telemetría | No (salvo agregación) | — |
 | F-HIS-20 | Base separada en modo simulador | No | — |
-| F-HIS-21 | Reparación de sesiones incompletas | Sí (regla de reparación) | — |
-| F-HIS-22 | Limpieza de sesiones vinculadas a Strava | No | — |
-| F-HIS-23 | Sesiones importadas de Strava dentro del historial | Sí (cálculo de ritmo) | — |
+| F-HIS-21 | Reparación de sesiones incompletas — **descartado (decisión del usuario 2026-11-09)** | Sí (regla de reparación) | — |
+| F-HIS-22 | Limpieza de sesiones vinculadas a Strava — **descartado (decisión del usuario 2026-11-09)** | No | — |
+| F-HIS-23 | Sesiones importadas de Strava dentro del historial — **descartado (decisión del usuario 2026-11-09)** | Sí (cálculo de ritmo) | — |
 
 ---
 
@@ -454,6 +454,8 @@ Acá solo se describe lo que esas áreas **leen o escriben** en el historial.
 
 ### F-HIS-08: Indicador de sincronización con Strava
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor para el usuario:** saber qué sesiones ya están en Strava.
 
 **Comportamiento observable**
@@ -730,6 +732,8 @@ Colores: `lib/shared/theme.dart:32-40`.
 
 ### F-HIS-16: Detalle, subida manual a Strava
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor para el usuario:** subir a Strava una sesión puntual que todavía no está ahí.
 
 **Comportamiento observable**
@@ -905,6 +909,8 @@ Colores: `lib/shared/theme.dart:32-40`.
 
 ### F-HIS-21: Reparación de sesiones incompletas (antes de subir a Strava)
 
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
+
 **Valor para el usuario:** las sesiones que quedaron mal guardadas se corrigen solas antes de subirlas.
 
 **Comportamiento observable.** Forma parte de "Subir a Strava" masivo, en el Perfil.
@@ -931,6 +937,8 @@ Colores: `lib/shared/theme.dart:32-40`.
 ---
 
 ### F-HIS-22: Limpieza de sesiones vinculadas a Strava
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor para el usuario:** volver a sincronizar desde cero las actividades de Strava.
 
@@ -960,6 +968,8 @@ Colores: `lib/shared/theme.dart:32-40`.
 ---
 
 ### F-HIS-23: Sesiones importadas de Strava dentro del historial
+
+> **Descartado (decisión del usuario 2026-11-09):** Strava se dejó de lado porque su API exige suscripción paga desde junio de 2026. Queda como registro del legacy; no se migra.
 
 **Valor para el usuario:** ver en un solo historial también los entrenamientos de remo hechos con otros dispositivos.
 

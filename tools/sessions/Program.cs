@@ -6,8 +6,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using RowMate.Core.Common;
+using RowMate.Core.Export;
 using RowMate.Core.Models;
+using RowMate.Core.Ports;
 using RowMate.Infrastructure.Database;
+using RowMate.Infrastructure.Export;
 using RowMate.Infrastructure.Sessions;
 using RowMate.Infrastructure.Threading;
 using RowMate.Tests.Support;
@@ -19,6 +22,7 @@ namespace RowMate.SessionList
     //
     //   dotnet run --project tools/dotnet/RowMate.SessionList -- [--variant simulator|normal | --db <archivo>] [--verbose]
     //   dotnet run --project tools/dotnet/RowMate.SessionList -- seed F-9|F-9V|F-9P --data-dir <carpeta> [--variant simulator|normal]
+    //   dotnet run --project tools/dotnet/RowMate.SessionList -- tcx --data-dir <carpeta> --out <carpeta> [--variant simulator|normal]
     //
     // 1. Nunca abre el archivo original con SQLite: copia la base (y su -wal, si está) a una carpeta temporal propia, con
     //    FileShare.ReadWrite (no bloquea a la app), abre la copia y la borra al terminar. Ni el contenido ni la fecha de la
@@ -39,7 +43,8 @@ namespace RowMate.SessionList
         private const int CopyAttempts = 3;
 
         private const string Usage = "[sessions] uso: RowMate.SessionList [--variant simulator|normal | --db <archivo>] [--verbose]"
-            + " | seed F-9|F-9V|F-9P --data-dir <carpeta> [--variant simulator|normal]";
+            + " | seed F-9|F-9V|F-9P --data-dir <carpeta> [--variant simulator|normal]"
+            + " | tcx --data-dir <carpeta> --out <carpeta> [--variant simulator|normal]";
 
         // Con la salida redirigida (un informe, una prueba) escribe UTF-8; en la consola, la de la consola en UTF-8 si se puede
         // (el "—" de una sesión cortada).
@@ -76,6 +81,11 @@ namespace RowMate.SessionList
             if (args.Length > 0 && args[0] == "seed")
             {
                 return Seed(args, output, error);
+            }
+
+            if (args.Length > 0 && args[0] == "tcx")
+            {
+                return Tcx(args, output, error);
             }
 
             if (!TryParse(args, out var source, out var verbose))
@@ -227,6 +237,120 @@ namespace RowMate.SessionList
             {
                 error.WriteLine("[sessions] no se pudo escribir " + name);
                 return ExitError;
+            }
+        }
+
+        // It. 12 (12-exportar-tcx/02-tech-design DT12-20; AC-STR-09-26, m-05): el TCX de la sesión MÁS NUEVA de la base de una carpeta
+        // de datos (la de ROWMATE_DATA_DIR del humo), como lo arma la app: TcxBuilder con la zona del equipo (TimeZoneInfo.Local), el
+        // nombre de TcxFileName (las libres con "Libre", el idioma por defecto de la app) y la escritura sin pisar de FolderExportWriter en
+        // --out. Lee una COPIA de la base (como el listado). Escribe "[sessions] tcx: <archivo> (<vueltas> vueltas, <puntos> puntos)"; sin
+        // rutas en la salida ni en los errores. build.ps1 -ExportSmoke compara este archivo, nombre y bytes, con el del player.
+        private static int Tcx(string[] args, TextWriter output, TextWriter error)
+        {
+            string? dir = null;
+            string? outDir = null;
+            var simulator = true;
+            for (var i = 1; i < args.Length; i++)
+            {
+                switch (args[i])
+                {
+                    case "--data-dir":
+                        if (i + 1 >= args.Length || dir != null)
+                        {
+                            return SeedUsage(error);
+                        }
+
+                        dir = args[++i];
+                        break;
+                    case "--out":
+                        if (i + 1 >= args.Length || outDir != null)
+                        {
+                            return SeedUsage(error);
+                        }
+
+                        outDir = args[++i];
+                        break;
+                    case "--variant":
+                        if (i + 1 >= args.Length || (args[i + 1] != "simulator" && args[i + 1] != "normal"))
+                        {
+                            return SeedUsage(error);
+                        }
+
+                        simulator = args[++i] == "simulator";
+                        break;
+                    default:
+                        return SeedUsage(error);
+                }
+            }
+
+            if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(outDir))
+            {
+                return SeedUsage(error);
+            }
+
+            var name = DatabaseFiles.NameFor(simulator);
+            var source = Path.Combine(dir!, name);
+            if (!File.Exists(source))
+            {
+                error.WriteLine("[sessions] no se encontró " + name);
+                return ExitError;
+            }
+
+            var work = Path.Combine(Path.GetTempPath(), "RowMate.SessionList", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(work);
+                var copy = Path.Combine(work, name);
+                CopyShared(source, copy);
+                if (File.Exists(source + "-wal"))
+                {
+                    CopyShared(source + "-wal", copy + "-wal");
+                }
+
+                WorkoutSession session;
+                IReadOnlyList<DataPoint> points;
+                using (var database = new RowMateDatabase(copy, new SerialExecutor("RowMate.SessionList", NullAppLogger.Instance), NullAppLogger.Instance))
+                {
+                    var repository = new SqliteSessionRepository(database, NullAppLogger.Instance);
+                    var history = repository.GetHistoryAsync().GetAwaiter().GetResult();
+                    if (history.Count == 0)
+                    {
+                        error.WriteLine("[sessions] " + name + " no tiene sesiones");
+                        return ExitError;
+                    }
+
+                    session = history[0].Session;
+                    points = repository.GetPointsAsync(session.Id!.Value).GetAwaiter().GetResult();
+                }
+
+                if (!TcxExportRules.IsExportable(SessionStats.Compute(points), points.Count))
+                {
+                    error.WriteLine("[sessions] la sesión más nueva no tiene datos para exportar");
+                    return ExitError;
+                }
+
+                var zone = TimeZoneInfo.Local;
+                var baseName = TcxFileName.Base(session.StartedAt, zone, session.RoutineName, "Libre", simulator);
+                var bytes = TcxDocument.Encode(TcxBuilder.Build(session, points, new TcxOptions(zone, simulator)));
+                var file = FolderExportWriter.Write(new ExportLocation(Path.GetFullPath(outDir!), null), baseName, TcxDocument.Extension, bytes);
+                output.WriteLine("[sessions] tcx: " + file.FileName + " (" + TcxLaps.Group(points).Count.ToString(CultureInfo.InvariantCulture) + " vueltas, "
+                    + points.Count.ToString(CultureInfo.InvariantCulture) + " puntos)");
+                return ExitOk;
+            }
+            catch (Exception problem) when (problem is IOException || problem is UnauthorizedAccessException)
+            {
+                error.WriteLine("[sessions] no se pudo escribir el TCX de " + name);
+                return ExitError;
+            }
+            catch (Exception)
+            {
+                // SQLite o una base ajena: el mensaje trae la ruta, nunca se imprime.
+                error.WriteLine("[sessions] " + name + " no es una base de RowMate o no se puede leer");
+                return ExitError;
+            }
+            finally
+            {
+                Delete(work);
             }
         }
 

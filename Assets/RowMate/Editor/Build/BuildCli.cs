@@ -140,6 +140,16 @@ namespace RowMate.EditorTools
                     }
                 }
 
+                // It. 12 (QA-G12-01; AC-STR-09-28): ningún build (normal, de desarrollo ni del simulador) lleva credenciales ni la red de
+                // Strava.
+                var credentials = BuildOutputInspector.FindCredentialTraces(request.OutputFolder);
+                if (credentials.Count > 0)
+                {
+                    Debug.LogError(Prefix + "el build lleva credenciales o la red de Strava (AC-STR-09-28):\n" + string.Join("\n", credentials));
+                    return 2;
+                }
+
+                Debug.Log(Prefix + "BuildOutputInspector: sin credenciales ni red de Strava.");
                 if (!request.Simulator)
                 {
                     if (request.Development)

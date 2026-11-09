@@ -233,7 +233,7 @@ Notas:
 | `RowMate.App` | `App/` | No | **true** | — | Core | Sí |
 | `RowMate.Infrastructure` | `Infrastructure/` | No (por regla) | false (\*) | — | Core, `Gilzoide.SqliteNet`, `Newtonsoft.Json.dll` | Sí (con NuGet equivalentes) |
 | `RowMate.Simulator` | `Simulator/` | No | **true** | `ROWMATE_SIMULATOR` | Core, App | Sí (con el define) |
-| `RowMate.Platform` | `Platform/` | Sí | false | — | Core, `Unity.InputSystem` | No |
+| `RowMate.Platform` | `Platform/` | Sí | false | — | Core, Infrastructure (desde la It. 12: `FolderExportWriter`), `Unity.InputSystem` | No |
 | `RowMate.Presentation` | `Presentation/` | Sí (UI Toolkit) | false | — | Core, App, `Unity.InputSystem` | No |
 | `RowMate.Scene` | `Scene/` | Sí (URP) | false | — | Core, App, `Unity.RenderPipelines.Core.Runtime`, `Unity.RenderPipelines.Universal.Runtime`, `Unity.Animation.Rigging` | No |
 | `RowMate.Simulator.Presentation` | `SimulatorPresentation/` | Sí | false | `ROWMATE_SIMULATOR` | Core, App, Simulator, Presentation | No |

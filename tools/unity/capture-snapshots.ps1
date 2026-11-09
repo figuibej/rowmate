@@ -4,11 +4,12 @@
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it11|it10a|it9|it8|it7|it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it12|it11|it10a|it9|it8|it7|it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it11 por defecto desde la It. 11: el pulsometro real sobre el adaptador falso K-11, CAP-01..16 en
-# docs/migration/iterations/11-ble-pulsometro/snapshots, con ROWMATE_BLE=off; it10a, el de la It. 10a: Dispositivo con el remo real sobre el adaptador falso K-10, CAP-01..20 y
+# -Set: el catalogo (it12 por defecto desde la It. 12: "Exportar TCX" con el destino falso (FakeFileExporter: muestra DocumentosRowMateTCX,
+# escribe en una carpeta temporal y nunca abre el Explorador), CAP-01..12 en docs/migration/iterations/12-exportar-tcx/snapshots; it11, el de
+# la It. 11: el pulsometro real sobre el adaptador falso K-11, CAP-01..16 en docs/migration/iterations/11-ble-pulsometro/snapshots, con ROWMATE_BLE=off; it10a, el de la It. 10a: Dispositivo con el remo real sobre el adaptador falso K-10, CAP-01..20 y
 # AUX-10a-01..02 en docs/migration/iterations/10a-ble-android-windows/snapshots, con ROWMATE_BLE=off; it9, el de la It. 9: el historial, el detalle y el grafico, CAP-01..17, VID-01..02 y DEMO-01..05 en
 # docs/migration/iterations/09-historial/snapshots, con bases temporales sembradas por codigo (HistorySeeds); it8, el de la It. 8;
 # it7, el de la It. 7: el remero, el bote y la palada, CAP-01..21, VID-01..07 y DEMO-01..06 en
@@ -38,8 +39,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it11',
+    [ValidateSet('it12', 'it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it12',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -169,6 +170,7 @@ function Get-SetFolder {
     if ($Set -eq 'it7') { return 'docs/migration/iterations/07-remero-palada/snapshots' }
     if ($Set -eq 'it10a') { return 'docs/migration/iterations/10a-ble-android-windows/snapshots' }
     if ($Set -eq 'it11') { return 'docs/migration/iterations/11-ble-pulsometro/snapshots' }
+    if ($Set -eq 'it12') { return 'docs/migration/iterations/12-exportar-tcx/snapshots' }
     return 'docs/migration/iterations/09-historial/snapshots'
 }
 

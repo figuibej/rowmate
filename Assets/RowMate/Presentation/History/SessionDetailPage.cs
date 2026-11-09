@@ -19,6 +19,7 @@ namespace RowMate.Presentation.History
     // AC-HIS-10-01; legacy SessionDetailScreen, lib/features/history/session_detail_screen.dart; 02-tech-design §5.3):
     //   #session-detail .rm-page .rm-session
     //   ├── #session-appbar .rm-appbar: #session-back (arrow_back, ayuda navBack) + título (RoutineName ?? workoutFree, Q-09)
+//   │   + .rm-appbar__actions > #session-export (It. 12: ExportTcxButton, solo con la sesión exportable)
     //   └── #session-body
     //       ├── #session-loading > Spinner 32/3 | #session-no-telemetry (sessionNoTelemetry) | #session-error (sessionLoadError
     //       │   + #session-retry)
@@ -29,7 +30,7 @@ namespace RowMate.Presentation.History
     //           └── (8)  SessionChartView #session-chart (220)
     // La flecha, "Atrás" de Android y Escape vuelven (IClosesOnEscape); al salir se dispone el store y la lista recarga
     // (AC-HIS-06-02). Las secciones entran en cascada de 35 ms si los datos llegan después del push; si llegan durante el push,
-    // entran con la página. Strava no aparece (It. 12).
+    // entran con la página. Strava no aparece (descartada; la It. 12 es "Exportar TCX").
     public sealed class SessionDetailPage : IPage, IClosesOnEscape
     {
         private readonly UiContext _ui;
@@ -71,6 +72,13 @@ namespace RowMate.Presentation.History
             Back.AddToClassList("rm-appbar__back");
             Back.SetTooltip(ui, () => _ui.Texts.Get(L10nKeys.NavBack));
             _appBar.Insert(0, Back);
+            // It. 12 (12-exportar-tcx/02-tech-design §5.1, DT12-17): "Exportar TCX" a la derecha del título, si la plataforma exporta.
+            if (ui.App.Export.Delivery != RowMate.Core.Ports.ExportDelivery.None)
+            {
+                Export = new ExportTcxButton(ui, ui.App.Export);
+                _appBar.Actions.Add(Export.Button);
+            }
+
             Root.Add(_appBar);
 
             var body = new VisualElement { name = "session-body" };
@@ -166,6 +174,9 @@ namespace RowMate.Presentation.History
         public SessionChartView Chart { get; }
 
         public AppBarView AppBar => _appBar;
+
+        // It. 12: el botón "Exportar TCX" (null si la plataforma no exporta).
+        public ExportTcxButton? Export { get; }
 
         public SessionDetailPhase? Phase => _phase;
 
@@ -264,6 +275,7 @@ namespace RowMate.Presentation.History
             var previous = _phase;
             _phase = state.Phase;
             SetTitle(state);
+            Export?.SetSession(state.Session, state.CanExport);
             _loading.style.display = DisplayStyle.None;
             _noTelemetry.style.display = DisplayStyle.None;
             _error.style.display = DisplayStyle.None;

@@ -1,3 +1,4 @@
+using System;
 using RowMate.App.Shell;
 using RowMate.Core.Common;
 using RowMate.Core.Localization;
@@ -33,5 +34,16 @@ namespace RowMate.App.Composition
         // La respuesta táctil (It. 10a, A10-06): AndroidHaptics en Android; null = ninguna (Windows, el Editor, dotnet, las pruebas que no
         // la miran).
         public IHaptics? Haptics { get; init; }
+
+        // It. 12 (02-tech-design §3.5, DT12-07): el exportador de la plataforma (WindowsFileExporter, AndroidFileExporter; en las
+        // pruebas y el arnés, FakeFileExporter). null = ninguno (Delivery None: el Detalle no muestra el botón).
+        public IFileExporter? Exporter { get; init; }
+
+        // It. 12 (DT12-03): la zona horaria del equipo AL EXPORTAR (nombre del archivo y horas del TCX). AppRoot la relee en cada
+        // exportación; las pruebas pasan HistorySeeds.Zone o TestZones. null = TimeZoneInfo.Local.
+        public Func<TimeZoneInfo>? ExportZone { get; init; }
+
+        // It. 12 (DT12-16): el build del simulador marca los archivos con _SIM y [SIM]. AppRoot pasa BuildFlags.IsSimulator.
+        public bool SimulatorBuild { get; init; }
     }
 }

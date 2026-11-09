@@ -6,6 +6,7 @@
 | Fecha | 2026-10-27 |
 | Fuente | `https://github.com/figuibej/rowmate-legacy` (solo lectura). Manda el código cuando difiere de los docs. |
 | Insumos | Los 8 inventarios de detalle de [inventory/](inventory/) y la auditoría visual [LEGACY_VISUAL_AUDIT.md](../design/LEGACY_VISUAL_AUDIT.md) |
+| Cambio 2026-11-09 | **Strava descartado** (decisión del usuario: desde junio de 2026 la API de Strava exige suscripción paga incluso para apps personales). Las F-STR-* y las F-HIS/F-APP/F-WKT que solo existían por Strava (F-HIS-08, -16, -21, -22, -23, F-APP-04, -17, F-WKT-22) quedan **descartadas**: 25 IDs (20 canónicos y 5 alias). Se conserva **F-STR-09** (el archivo TCX), que pasa a la It. 12 "Exportar TCX" ([ROADMAP](../ROADMAP.md)). Las claves de Strava siguen en el catálogo es/en (no se muestran) |
 | Uso | Índice único del contrato de paridad. Cada ID tiene **una** iteración dueña en el [ROADMAP](../ROADMAP.md). El detalle (comportamientos, números, textos, casos borde) vive en el inventario de detalle; este documento no lo repite. |
 
 ---
@@ -167,7 +168,7 @@ Columnas: **ID** · **Funcionalidad** · **Área** · **Pura** · **Depende de**
 | F-WKT-19 | Reloj de pared | WKT·HUD | No | F-WKT-14, F-WKT-16 | — | 4b | [ficha][wkt] |
 | F-WKT-20 | Controles (Pausa/Reanudar/Terminar) y confirmación de terminar | WKT·HUD | No | F-WKT-01, F-WKT-06, F-WKT-13 | — | 4a | [ficha][wkt] |
 | F-WKT-21 | Diálogo de rutina completada | WKT·HUD | No | F-WKT-03, F-WKT-06, F-WKT-13 | — | 4b | [ficha][wkt] |
-| F-WKT-22 | *Alias de F-STR-06* | — | — | — | — | 12 | [ficha][wkt] |
+| F-WKT-22 | *Alias de F-STR-06* | — | — | — | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][wkt] |
 | F-WKT-23 | Pantalla clásica y `MetricCard` (código muerto: **descarte**) | WKT | No | — | — | 4a | [ficha][wkt] |
 
 ### 2.5 SCN — escena inmersiva
@@ -209,7 +210,7 @@ Columnas: **ID** · **Funcionalidad** · **Área** · **Pura** · **Depende de**
 | F-HIS-05 | Formatos del historial: duración, ritmo, fecha y números | HIS | Sí | F-RUT-18 | — | 9 | [ficha][his] |
 | F-HIS-06 | Acceso al Historial y recargas | HIS | No | F-APP-02, F-APP-03, F-HIS-19 | — | 9 | [ficha][his] |
 | F-HIS-07 | Lista de sesiones | HIS | No | F-HIS-05, F-HIS-06, F-HIS-19, F-RUT-18 | — | 9 | [ficha][his] |
-| F-HIS-08 | *Alias de F-STR-17* | — | — | — | — | 12 | [ficha][his] |
+| F-HIS-08 | *Alias de F-STR-17* | — | — | — | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][his] |
 | F-HIS-09 | Detalle: apertura, carga y estados | HIS | No | F-HIS-19, F-RUT-06, F-RUT-08 | — | 9 | [ficha][his] |
 | F-HIS-10 | Detalle: Resumen | HIS | No | F-RUT-18, F-HIS-05 | `session_stats_test` (indirecto) | 9 | [ficha][his] |
 | F-HIS-11 | Detalle: Rendimiento por paso | HIS | Sí | F-WKT-06, F-HIS-05 | — | 9 | [ficha][his] |
@@ -217,37 +218,37 @@ Columnas: **ID** · **Funcionalidad** · **Área** · **Pura** · **Depende de**
 | F-HIS-13 | Detalle: gráfico de la métrica (escala, inversión del split, ejes) | HIS | Sí | F-HIS-05, F-HIS-12, F-HIS-14, F-HIS-15 | — | 9 | [ficha][his] |
 | F-HIS-14 | Detalle: bandas y separadores de pasos | HIS | Sí | F-WKT-06, F-HIS-13 | — | 9 | [ficha][his] |
 | F-HIS-15 | Detalle: líneas objetivo por paso | HIS | Sí | F-RUT-06, F-RUT-20, F-HIS-13 | `routine_positions_test` (indirecto) | 9 | [ficha][his] |
-| F-HIS-16 | Detalle: subida manual a Strava | HIS | No | F-STR-07, F-STR-17 | — | 12 | [ficha][his] |
+| F-HIS-16 | Detalle: subida manual a Strava | HIS | No | F-STR-07, F-STR-17 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][his] |
 | F-HIS-17 | Base local: archivo, esquema y versiones (4 tablas) | HIS·DB | No | — | — | 3 | [ficha][his] |
 | F-HIS-18 | *Alias de F-RUT-08* | — | — | — | — | 3 | [ficha][his] |
 | F-HIS-19 | Consultas de sesiones y telemetría | HIS·DB | No (salvo agregación) | F-HIS-17, F-RUT-18 | — | 9 | [ficha][his] |
 | F-HIS-20 | Base separada en modo simulador (`rower_app_dev.db`) | HIS·DB·SIM | No | F-BLE-13, F-HIS-17 | — | 3 | [ficha][his] |
-| F-HIS-21 | Reparación de sesiones incompletas (antes de subir en lote) | HIS | Sí | F-RUT-18, F-HIS-19, F-STR-11 | — | 13 | [ficha][his] |
-| F-HIS-22 | *Alias de F-STR-15* | — | — | — | — | 13 | [ficha][his] |
-| F-HIS-23 | *Alias de F-STR-13* | — | — | — | — | 13 | [ficha][his] |
+| F-HIS-21 | Reparación de sesiones incompletas (antes de subir en lote) | HIS | Sí | F-RUT-18, F-HIS-19, F-STR-11 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][his] |
+| F-HIS-22 | *Alias de F-STR-15* | — | — | — | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][his] |
+| F-HIS-23 | *Alias de F-STR-13* | — | — | — | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][his] |
 
 ### 2.7 STR — Strava y pantalla Perfil
 
 | ID | Funcionalidad | Área | Pura | Depende de | Tests legacy | It. | Detalle |
 |---|---|---|---|---|---|---|---|
-| F-STR-01 | Disponibilidad de Strava según credenciales del build *(alias F-APP-04)* | STR | Sí (regla) | F-APP-02, F-APP-19 | — | 12 | [ficha][str] |
-| F-STR-02 | Conectar con Strava (autorización OAuth) | STR | No | F-STR-01, F-STR-03, F-APP-17 | — | 12 | [ficha][str] |
-| F-STR-03 | Sesión persistente y renovación de credenciales (V − 60 s) | STR | Parcial | F-STR-02 | — | 12 | [ficha][str] |
-| F-STR-04 | Desconectar Strava | STR | No | F-STR-02, F-STR-17 | — | 12 | [ficha][str] |
-| F-STR-05 | Preferencia de subida (`strava_upload_pref`: auto/ask/manual) | STR·PRF | No | — | — | 12 | [ficha][str] |
-| F-STR-06 | Subida al terminar un entrenamiento *(alias F-WKT-22)* | STR | No | F-STR-05, F-STR-07, F-STR-18, F-WKT-20, F-WKT-21 | — | 12 | [ficha][str] |
-| F-STR-07 | Subir una sesión (operación individual) | STR | No | F-STR-03, F-STR-08..10, F-HIS-19, F-RUT-06 | — | 12 | [ficha][str] |
-| F-STR-08 | Envío, confirmación y duplicados ("duplicate of activity N") | STR | Parcial | F-STR-03, F-STR-09, F-STR-18 | — | 12 | [ficha][str] |
-| F-STR-09 | Archivo de actividad TCX | STR | Sí | F-STR-10, F-WKT-06 | — | 12 | [ficha][str] |
-| F-STR-10 | Metadatos de rutina ocultos en la descripción | STR | Sí | F-RUT-01, F-RUT-04, F-RUT-06 | — | 12 | [ficha][str] |
-| F-STR-11 | Sincronizar a Strava (subida en lote + auto-reparación) | STR·PRF | Parcial | F-STR-07, F-STR-08, F-HIS-21 | `session_stats_test` (indirecto) | 13 | [ficha][str] |
-| F-STR-12 | Sincronizar desde Strava (importación, Rowing/VirtualRow, 50 actividades) | STR·PRF | No | F-STR-03, F-STR-10, F-STR-13 | `session_stats_test` (indirecto) | 13 | [ficha][str] |
-| F-STR-13 | Reconstrucción de la telemetría importada *(alias F-HIS-23)* | STR | Sí | F-STR-10, F-STR-12, F-RUT-18 | `session_stats_test` (indirecto) | 13 | [ficha][str] |
-| F-STR-14 | Tarjeta "Subidas pendientes" | STR·PRF | No | F-STR-07, F-STR-16, F-HIS-05 | — | 13 | [ficha][str] |
-| F-STR-15 | Mantenimiento: limpiar sesiones de Strava *(alias F-HIS-22)* | STR·PRF | No | F-STR-12, F-HIS-06 | — | 13 | [ficha][str] |
-| F-STR-16 | Pantalla Perfil: estructura y estados | STR·PRF | No | F-STR-01..15 | — | 13 | [ficha][str] |
-| F-STR-17 | Estado de sincronización en Historial y Detalle *(alias F-HIS-08)* | STR | No | F-STR-01, F-STR-07, F-HIS-07, F-HIS-09 | — | 12 | [ficha][str] |
-| F-STR-18 | Strava en modo simulador (subidas bloqueadas en todo camino) | STR·SIM | No | F-BLE-13, F-STR-06, F-STR-08 | — | 12 | [ficha][str] |
+| F-STR-01 | Disponibilidad de Strava según credenciales del build *(alias F-APP-04)* | STR | Sí (regla) | F-APP-02, F-APP-19 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-02 | Conectar con Strava (autorización OAuth) | STR | No | F-STR-01, F-STR-03, F-APP-17 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-03 | Sesión persistente y renovación de credenciales (V − 60 s) | STR | Parcial | F-STR-02 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-04 | Desconectar Strava | STR | No | F-STR-02, F-STR-17 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-05 | Preferencia de subida (`strava_upload_pref`: auto/ask/manual) | STR·PRF | No | — | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-06 | Subida al terminar un entrenamiento *(alias F-WKT-22)* | STR | No | F-STR-05, F-STR-07, F-STR-18, F-WKT-20, F-WKT-21 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-07 | Subir una sesión (operación individual) | STR | No | F-STR-03, F-STR-08..10, F-HIS-19, F-RUT-06 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-08 | Envío, confirmación y duplicados ("duplicate of activity N") | STR | Parcial | F-STR-03, F-STR-09, F-STR-18 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-09 | Archivo de actividad TCX: **Exportar TCX** (sin los metadatos de F-STR-10) | STR | Sí | F-WKT-06, F-HIS-19 | — | 12 | [ficha][str] |
+| F-STR-10 | Metadatos de rutina ocultos en la descripción | STR | Sí | F-RUT-01, F-RUT-04, F-RUT-06 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-11 | Sincronizar a Strava (subida en lote + auto-reparación) | STR·PRF | Parcial | F-STR-07, F-STR-08, F-HIS-21 | `session_stats_test` (indirecto) | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-12 | Sincronizar desde Strava (importación, Rowing/VirtualRow, 50 actividades) | STR·PRF | No | F-STR-03, F-STR-10, F-STR-13 | `session_stats_test` (indirecto) | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-13 | Reconstrucción de la telemetría importada *(alias F-HIS-23)* | STR | Sí | F-STR-10, F-STR-12, F-RUT-18 | `session_stats_test` (indirecto) | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-14 | Tarjeta "Subidas pendientes" | STR·PRF | No | F-STR-07, F-STR-16, F-HIS-05 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-15 | Mantenimiento: limpiar sesiones de Strava *(alias F-HIS-22)* | STR·PRF | No | F-STR-12, F-HIS-06 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-16 | Pantalla Perfil: estructura y estados | STR·PRF | No | F-STR-01..15 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-17 | Estado de sincronización en Historial y Detalle *(alias F-HIS-08)* | STR | No | F-STR-01, F-STR-07, F-HIS-07, F-HIS-09 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
+| F-STR-18 | Strava en modo simulador (subidas bloqueadas en todo camino) | STR·SIM | No | F-BLE-13, F-STR-06, F-STR-08 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][str] |
 
 ### 2.8 APP — shell, tema, l10n y plataformas
 
@@ -256,7 +257,7 @@ Columnas: **ID** · **Funcionalidad** · **Área** · **Pura** · **Depende de**
 | F-APP-01 | Arranque de la app y servicios activos desde el inicio | APP | No | F-APP-02, F-APP-14, F-BLE-13 | `widget_test` (vacío, no se porta) | 2 | [ficha][app] |
 | F-APP-02 | Barra de pestañas inferior (4 o 5 pestañas, estado conservado) | APP | No | F-APP-10, F-STR-01 | — | 2 | [ficha][app] |
 | F-APP-03 | Navegación secundaria: pantallas apiladas, diálogos y avisos | APP | No | F-APP-02 | — | 3 | [ficha][app] |
-| F-APP-04 | *Alias de F-STR-01* | — | — | — | — | 12 | [ficha][app] |
+| F-APP-04 | *Alias de F-STR-01* | — | — | — | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][app] |
 | F-APP-05 | Tema visual oscuro y estilos base (`#0D1B2A`, `#1A2E45`, semilla `#0077B6`) | APP | No | — | — | 2 | [ficha][app] |
 | F-APP-06 | Paleta de colores por métrica (contrato visual) | APP | Sí (datos) | — | — | 2 | [ficha][app] |
 | F-APP-07 | *Alias de F-RUT-01* | — | — | — | — | 1 | [ficha][app] |
@@ -269,7 +270,7 @@ Columnas: **ID** · **Funcionalidad** · **Área** · **Pura** · **Depende de**
 | F-APP-14 | Pantalla siempre encendida | APP | No | F-APP-01 | — | 4a | [ficha][app] |
 | F-APP-15 | Modo inmersivo del sistema, orientación y ventana | APP | No | F-WKT-13 | indirectos (`heart_rate_card_test` :142, `simulator_overlay_test` :89) | 14 | [ficha][app] |
 | F-APP-16 | Identidad: nombre, identificadores, versión, ícono y pantalla de arranque | APP | No | F-APP-05, F-APP-19 | — | 14 | [ficha][app] |
-| F-APP-17 | Regreso a la app después del login externo (`rowmate://`) | APP | No | F-STR-02 | — | 12 | [ficha][app] |
+| F-APP-17 | Regreso a la app después del login externo (`rowmate://`) | APP | No | F-STR-02 | — | **descartado (decisión del usuario 2026-11-09)** | [ficha][app] |
 | F-APP-18 | *Alias de F-BLE-13* | — | — | — | `simulator_overlay_test` | 2 | [ficha][app] |
 | F-APP-19 | Compilación y distribución (CI/CD, firma, configuraciones) | APP | No | F-APP-16, F-BLE-13, F-STR-01 | — | 14 | [ficha][app] |
 

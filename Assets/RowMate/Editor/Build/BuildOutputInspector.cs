@@ -15,6 +15,9 @@ namespace RowMate.EditorTools
     //   la base) y la variable ROWMATE_DATA_DIR (la carpeta de datos de las pruebas, Bootstrap/DataLocation).
     // - Metadatos de tests (QA-V2-02): PerformanceTestRunInfo / PerformanceTestRunSettings, que el paquete
     //   com.unity.test-framework.performance deja en Assets/Resources (PerformanceTestRunCleaner los borra antes de juntar).
+    // - It. 12 (12-exportar-tcx/02-tech-design §3.6; QA-G12-01; AC-STR-09-28): credenciales y red de Strava (CredentialNeedles). La
+    //   palabra "Strava" no es aguja: los restos (StravaActivityId, strava_activity_id, BrandStrava, los textos profile*) se quedan.
+    //   FindCredentialTraces corre sobre TODOS los builds (también el del simulador y los de desarrollo).
     public static class BuildOutputInspector
     {
         public static readonly string[] SimulatorNeedles =
@@ -56,6 +59,20 @@ namespace RowMate.EditorTools
             "-rowmate-perf-hour",
             // It. 10a (02-tech-design §5.3): el humo del Bluetooth real, solo en desarrollo.
             "-rowmate-ble-smoke",
+            // It. 12 (12-exportar-tcx/02-tech-design DT12-20): el humo de "Exportar TCX", solo en desarrollo.
+            "-rowmate-export-smoke",
+        };
+
+        // It. 12 (QA-G12-01): lo que delataría una integración viva con Strava: endpoints de la API y del OAuth, credenciales y tokens, y
+        // el regreso del OAuth.
+        public static readonly string[] CredentialNeedles =
+        {
+            "strava.com/api",
+            "strava.com/oauth",
+            "api/v3/uploads",
+            "client_secret",
+            "refresh_token",
+            "rowmate://",
         };
 
         // It. 6a (QA-G6aT-19): el aviso de licencias de terceros (BSD-3 del SDK de Dart, por DartRandom) viaja con cada build de Windows,
@@ -98,7 +115,15 @@ namespace RowMate.EditorTools
             var needles = new List<string>(SimulatorNeedles);
             needles.AddRange(DiagnosticNeedles);
             needles.AddRange(TestNeedles);
+            needles.AddRange(CredentialNeedles);
             return Find(buildFolder, needles);
+        }
+
+        // It. 12: solo las credenciales y la red de Strava (todos los builds, AC-STR-09-28).
+        public static List<string> FindCredentialTraces(string buildFolder)
+        {
+            // En el build del simulador sus ensamblados están a propósito: acá solo cuentan las agujas.
+            return Find(buildFolder, CredentialNeedles, false);
         }
 
         // Solo los rastros del simulador (AC-BLE-13-02).
@@ -107,7 +132,7 @@ namespace RowMate.EditorTools
             return Find(buildFolder, SimulatorNeedles);
         }
 
-        private static List<string> Find(string buildFolder, IEnumerable<string> needles)
+        private static List<string> Find(string buildFolder, IEnumerable<string> needles, bool simulatorAssemblies = true)
         {
             var traces = new List<string>();
             if (!Directory.Exists(buildFolder))
@@ -126,7 +151,7 @@ namespace RowMate.EditorTools
             foreach (var file in Directory.GetFiles(buildFolder, "*", SearchOption.AllDirectories))
             {
                 var name = Path.GetFileName(file);
-                if (name.StartsWith("RowMate.Simulator", StringComparison.OrdinalIgnoreCase))
+                if (simulatorAssemblies && name.StartsWith("RowMate.Simulator", StringComparison.OrdinalIgnoreCase))
                 {
                     traces.Add(file + ": ensamblado del simulador");
                     continue;

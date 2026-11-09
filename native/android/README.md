@@ -27,3 +27,12 @@ Encuentra Android Studio (`$env:ANDROID_STUDIO` o `Program Files\Android\Android
 En dotnet, `AndroidManifestTests` revisa el manifiesto (permisos exactos), la biblioteca, que `ProjectSettings` siga en API 26 y ARM64 y la higiene del Kotlin, y `JniSignatureTests` la tabla de C# contra `jni-signatures.txt`.
 
 El APK, los permisos en el teléfono, la vibración, el segundo plano y la pantalla encendida quedan NO VERIFICABLE hasta instalar "Android Build Support": los pasos están en [tools/unity/README.md](../../tools/unity/README.md) (sección "It. 10a: el plugin de Android").
+
+## It. 12: Exportar TCX (`RowMateExport`)
+
+Fuentes en [`Assets/Plugins/Android/RowMateExport/`](../../Assets/Plugins/Android/RowMateExport/) y la biblioteca [`RowMateExport.androidlib`](../../Assets/Plugins/Android/RowMateExport.androidlib/) (solo el `<provider>`, sin permisos):
+
+- **`RmExport`** (`object` con `@JvmStatic`, lo llama `Platform/Export/AndroidFileExporter` por `AndroidJavaClass`): `exportDir(activity)` (crea y devuelve `cacheDir/exports`) y `share(activity, path, mime, title)` (`ACTION_SEND` + `createChooser` con `FLAG_GRANT_READ_URI_PERMISSION`; un error en el hilo de UI solo va a `Log.w`).
+- **`RmExportProvider`**: `ContentProvider` propio (autoridad `${applicationId}.rowmate.export`, `exported=false`, `grantUriPermissions=true`) que sirve solo archivos de `cacheDir/exports`, de lectura, por ruta canónica de un segmento; `query` con `DISPLAY_NAME` y `SIZE`. Sin bibliotecas de soporte.
+
+`check.ps1` revisa que estas fuentes no nombren el reproductor de Unity, bibliotecas de soporte, red, `INTERNET` ni `WRITE_EXTERNAL_STORAGE` y que el manifiesto no tenga `uses-permission` (código 3), las compila con el resto y compara `javap -s` de `RmExport` con [`golden/export-signatures.txt`](golden/export-signatures.txt) (código 4; `-Update` lo reescribe).

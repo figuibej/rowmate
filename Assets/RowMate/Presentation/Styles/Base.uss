@@ -3096,3 +3096,46 @@
     flex-grow: 1;
     flex-shrink: 1;
 }
+
+/* ════ It. 12 — Exportar TCX (12-exportar-tcx/02-tech-design §5; 00-arte-exportar §1 a §4). Cero tokens nuevos. Estructura del
+   botón de la AppBar y del aviso con acción; los colores y el aspecto fino van en Skin.uss (WP-D, 04-design-notes §3). ════ */
+
+/* El botón exportando: la caja de 48 queda deshabilitada pero el indicador de 18/2 no toma el 0,38 de :disabled (AC-STR-09-18). */
+.rm-icon-button.rm-export-button--busy:disabled {
+    opacity: 1;
+}
+
+/* El texto del aviso (y su segundo renglón) en una columna; en los avisos sin acción, solo el texto. */
+.rm-toast__body {
+    flex-direction: column;
+    flex-shrink: 1;
+}
+
+/* Aviso con acción (A12-04): la cápsula de vidrio del enlace, con el texto a la izquierda y la acción a la derecha. El título y el
+   nombre del archivo ajustan en varias líneas: nunca "…" (AC-STR-09-19). */
+.rm-toast.rm-toast--action {
+    justify-content: flex-start;
+    padding-right: 8px;
+}
+
+.rm-toast.rm-toast--action .rm-toast__body {
+    flex-grow: 1;
+}
+
+.rm-toast.rm-toast--action .rm-toast__text {
+    flex-grow: 0;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.rm-toast__detail {
+    margin-top: 2px;
+    white-space: normal;
+}
+
+.rm-toast__action {
+    flex-shrink: 0;
+    min-height: 36px;
+    margin-left: 8px;
+}

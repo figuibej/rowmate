@@ -185,6 +185,11 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(lt.Id);
             }
 
+            foreach (var ac in It12Ids.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -2127,6 +2132,88 @@ namespace RowMate.Tests.EditMode.Traceability
             }
 
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }
+
+        [Test, Category("AC-BASE-09")]
+        public void It12IdsAreComplete()
+        {
+            // 28 AC (12 §3): AC-STR-09-01 a -28, todos nuevos y en orden; sin casos legacy (el legacy no tiene tests del TCX).
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance, It06aIds.Acceptance, It07Ids.Acceptance, It08Ids.Acceptance, It09Ids.Acceptance, It10aIds.Acceptance, It11Ids.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            Assert.That(It12Ids.Acceptance.Length, Is.EqualTo(28));
+            for (var i = 0; i < It12Ids.Acceptance.Length; i++)
+            {
+                var ac = It12Ids.Acceptance[i];
+                Assert.That(ac.Id, Is.EqualTo("AC-STR-09-" + (i + 1).ToString("00", System.Globalization.CultureInfo.InvariantCulture)));
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It12Ids: " + ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior");
+            }
+
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            var deviceOnly = new List<string>();
+            foreach (var ac in It12Ids.Acceptance)
+            {
+                if (ac.Checks == "eq")
+                {
+                    deviceOnly.Add(ac.Id);
+                    continue;
+                }
+
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It12Ids.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It12Ids.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(It12Ids.DeviceOnlyIds, Is.EquivalentTo(deviceOnly));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It12DotnetIdsHaveTests()
+        {
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It12Ids.Acceptance)
+            {
+                if (HasKind(ac.Checks, "d") && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d] de la It. 12 sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It12UnityOnlyIdsHaveNoDotnetResult()
+        {
+            var scan = Scan();
+            var offenders = new List<string>();
+            var ids = new List<string>(It12Ids.UnityOnlyIds);
+            ids.AddRange(It12Ids.DeviceOnlyIds);
+            foreach (var id in ids)
+            {
+                if (!scan.Categories.TryGetValue(id, out var files))
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    offenders.Add(id + " en " + file);
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
         }
 
         [Test, Category("AC-BASE-09")]

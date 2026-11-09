@@ -1,5 +1,6 @@
 using System;
 using RowMate.App.Device;
+using RowMate.App.Export;
 using RowMate.App.History;
 using RowMate.App.Routines;
 using RowMate.App.Scene;
@@ -57,9 +58,18 @@ namespace RowMate.App.Composition
             var sceneEnvironment = new SceneEnvironmentChoice(preferences, logger);
             // It. 9 (§3.1): la lista del historial, una por app; recarga con los toques de la pestaña y con el cierre de una sesión.
             var history = new HistoryStore(services.Sessions, shell, workout.State, logger);
+            // It. 12 (§4, DT12-11): "Exportar TCX", uno por app (salir del Detalle no cancela). Solo lee la base.
+            var export = new TcxExportService(services.Sessions, services.Exporter ?? NoFileExporter.Instance, services.Scheduler,
+                services.ExportZone ?? LocalZone, texts, services.SimulatorBuild, logger);
             return new AppContext(services.Devices, device, heartRate, shell, scene, routines, workout, workoutRest, language, texts,
                 services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars, preferences, seriesPanels, sceneEnvironment,
-                history, services.Sessions, services.Routines);
+                history, services.Sessions, services.Routines, export);
+        }
+
+        // La zona del equipo sin exportador de la plataforma (AppServices.ExportZone = null).
+        private static TimeZoneInfo LocalZone()
+        {
+            return TimeZoneInfo.Local;
         }
 
         // Las barras del sistema sin efecto (AppServices.SystemUi = null).

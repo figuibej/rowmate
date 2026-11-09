@@ -6,6 +6,7 @@
 | Fecha | 2026-10-27 (revisado tras el gate de QA del plan y al especificar la It. 1) |
 | Base | [Inventario maestro](product/FEATURE_INVENTORY.md) (158 IDs = 142 canónicos + 16 alias), [auditoría visual](design/LEGACY_VISUAL_AUDIT.md), [gate de QA del plan](QA_PLAN_REVIEW.md) y propuestas P-01 a P-10 del Architect ([ARCHITECTURE](architecture/ARCHITECTURE.md)) |
 | Objetivo | Migrar **todo** `rowmate-legacy` a Unity 6 LTS + URP con paridad funcional exacta y look & feel realista estilo EXR, en **17 iteraciones** verticales (las 14 originales; la 4, la 6 y la 10 divididas en a/b) más un *spike* opcional. Cada una entra en el contexto de un agente |
+| Cambio 2026-11-09 | **Strava descartado** por decisión del usuario: desde junio de 2026 la API de Strava exige una suscripción paga incluso para apps personales de un solo usuario. Las viejas It. 12 (subida) y 13 (sincronización y Perfil) quedan **DESCARTADAS**, con sus 25 IDs (20 canónicos y 5 alias, §4). La nueva **It. 12 = "Exportar TCX"** (`12-exportar-tcx`, F-STR-09): el usuario exporta una sesión como archivo y la sube a mano (strava.com/upload, Garmin Connect, intervals.icu). Quedan 16 iteraciones activas (la 13 descartada) y 133 IDs vivos |
 
 ---
 
@@ -14,7 +15,7 @@
 1. **Vertical slices.** Cada iteración termina con algo que el usuario puede ver o probar (la *demo*), y se le muestra **antes** de empezar la siguiente. Ciclo por iteración (ver [CLAUDE.md](../../CLAUDE.md)): PO spec → Architect diseño (+ Designer) → QA gate de armonía → implementación → QA verificación → correcciones → `REPORT.md` → [STATUS.md](STATUS.md). Carpeta: `docs/migration/iterations/NN-slug/`.
 2. **Una iteración dueña por ID.** Cada ID del inventario se cierra en **una** iteración (la que verifica todos sus criterios, salvo los [Apple] de la regla 8). Un alias se cierra con su canónico. Si otra iteración necesita una parte antes (por ejemplo, la tarjeta del pulsómetro con el sensor simulado), figura en "También toca" de la matriz (§4) y no cuenta como cierre.
 3. **Tamaño.** ≤ ~2 500 líneas legacy por iteración (código vivo + tests a portar; el catálogo `.arb` cuenta como datos). Algunas iteraciones son chicas en líneas legacy pero grandes en trabajo nuevo de arte o plataforma: lo indica la columna "Esfuerzo nuevo".
-4. **Primero usable con el simulador.** De la It. 2 a la It. 9 todo se prueba con el remo y el pulsómetro simulados, en cualquier plataforma. El hardware real entra en las It. 10a-11 y Strava en las It. 12-13.
+4. **Primero usable con el simulador.** De la It. 2 a la It. 9 todo se prueba con el remo y el pulsómetro simulados, en cualquier plataforma. El hardware real entra en las It. 10a-11 y la exportación TCX en la It. 12 (Strava, descartado el 2026-11-09).
 5. **Mejoras EXR junto a lo que tocan.** Cada iteración incluye las mejoras de experiencia de sus funcionalidades (fichas "Mejora EXR" de los inventarios). La It. 14 queda para el pulido transversal.
 6. **Decisiones de producto.** Cada iteración aplica las decisiones por defecto de [FEATURE_INVENTORY §4](product/FEATURE_INVENTORY.md) que la afectan y las decisiones de diseño de §6. Las marcadas "Confirmar = Sí" se le muestran al usuario en el gate de esa iteración.
 7. **Textos.** Cada iteración pasa los textos de sus pantallas al catálogo es/en (Q-01), con el español idéntico al legacy salvo las correcciones de Q-02, y su `01-po-spec` fija la tabla exacta es/en de cada clave nueva. La It. 14 audita.
@@ -30,7 +31,8 @@
 | **[Device]** | Build en un dispositivo o equipo real: PC con Windows, teléfono Android de gama media | Parcial (Windows sí; el Android lo aporta el usuario) |
 | **[Apple]** | Build y prueba en iPhone y Mac (necesita una Mac con Xcode) | **No** (RA-02); se juntan en la It. 10b o en la It. 14 |
 | **[BLE-HW]** | Remo FTMS real (AMS-670B) y un pulsómetro real | Depende del usuario |
-| **[Strava]** | Cuenta de Strava y app de API con credenciales | Depende del usuario |
+| **[Manual]** | Paso a mano del usuario fuera de la app (p. ej. subir el TCX a strava.com/upload) | Depende del usuario |
+| ~~**[Strava]**~~ | Ya no se usa: Strava se descartó el 2026-11-09. La subida manual del TCX la verifica el usuario (**[Manual]**, It. 12) | — |
 
 ### Prerrequisitos del usuario (bloquean demos, no el Core)
 
@@ -47,7 +49,7 @@
 | It. 10a | Remo AMS-670B (u otro FTMS), el teléfono Android y la PC con Windows con Bluetooth LE | Bluetooth real en Android y Windows | Sin Bluetooth real |
 | It. 10b | Una Mac con Xcode, un iPhone y una cuenta de Apple para firmar | Tanda Apple: iOS y macOS | Los criterios [Apple] quedan NO VERIFICABLE hasta que haya Mac |
 | It. 11 | Un pulsómetro BLE (banda o reloj con app que transmita 0x180D) | Pulsómetro real | Sin pulsómetro real |
-| It. 12 | Cuenta de Strava y app de API (client id/secret propios, inyectados al compilar) | Login, subida y sincronización | Strava no aparece (estado válido del legacy) |
+| It. 12 (demo, opcional) | Una cuenta gratis de Strava (u otro servicio que acepte TCX) para subir el archivo a mano | Ver la sesión exportada con sus vueltas | El archivo igual se exporta; la subida queda para cuando el usuario quiera. Ya no hacen falta credenciales de API (Strava descartado el 2026-11-09) |
 
 ---
 
@@ -70,12 +72,12 @@
 | 10a | `10a-ble-android-windows` | Bluetooth real en Android y Windows: capa nativa y remo FTMS | 7 | 2, 4a | [dotnet] [Editor] [Device] [BLE-HW] | ~650 | Alto |
 | 10b | `10b-tanda-apple` | Tanda Apple: todo lo nativo de iOS y macOS y los criterios [Apple] | 0 (verifica los [Apple], §4.1) | 10a | [Device] [Apple] [BLE-HW] | ~50 | Alto |
 | 11 | `11-ble-pulsometro` | Bluetooth real: pulsómetro | 10 | 10a | [dotnet] [Editor] [Device] [BLE-HW] | ~720 | Medio |
-| 12 | `12-strava-subida` | Strava: conexión, subida y TCX | 17 (14 + 3) | 4b, 9 | [dotnet] [Editor] [Device] [Strava] | ~1 190 | Alto |
-| 13 | `13-strava-sincronizacion` | Strava: sincronización, importación y Perfil completo | 9 (7 + 2) | 12 | [dotnet] [Editor] [Strava] | ~790 | Medio |
+| 12 | `12-exportar-tcx` | Exportar TCX (reemplaza a "Strava: conexión, subida y TCX", descartada) | 1 | 9 | [dotnet] [Editor] [Device] [Manual] | ~190 | Bajo |
+| ~~13~~ | ~~`13-strava-sincronizacion`~~ | **DESCARTADA** (2026-11-09, Strava pago) | 0 (9 descartados) | — | — | — | — |
 | 14 | `14-pulido-plataformas` | Pulido EXR, identidad, plataformas y CI | 4 | todas | [dotnet] [Editor] [Device] [Apple] | ~300 | Medio |
-| | | **Total** | **158 (142 + 16)** | | | **~14 550** | |
+| | | **Total** | **158 (142 + 16)**: 133 vivos y 25 descartados (§4) | | | **~12 760** vivas | |
 
-Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En paralelo lógico: 4a → 9 → 12 → 13 y 4a → 10a → 11. La 10b es **flotante**: se hace en cuanto haya Mac, después de la 10a y antes de la 14; cuanto más tarde llegue, más criterios [Apple] verifica de una vez. El Bluetooth real (10a → 11) solo depende de 2 y 4a, así que se puede adelantar si el usuario quiere usar su remo antes. El *spike* S-1 es opcional, entre la 2 y la 3.
+Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En paralelo lógico: 4a → 9 → 12 y 4a → 10a → 11. La 10b es **flotante**: se hace en cuanto haya Mac, después de la 10a y antes de la 14; cuanto más tarde llegue, más criterios [Apple] verifica de una vez. El Bluetooth real (10a → 11) solo depende de 2 y 4a, así que se puede adelantar si el usuario quiere usar su remo antes. El *spike* S-1 es opcional, entre la 2 y la 3.
 
 ---
 
@@ -115,7 +117,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Decisiones aplicadas.** Q-01 (resumen y etiquetas), Q-02 (4 claves del catálogo y plurales del resumen), Q-05, Q-07, Q-10 (el `📈` se mantiene en el texto), Q-14 (P99 idéntico), Q-38, Q-48, Q-69, Q-90, R-14.
 
-**Fuera de esta iteración.** Toda pantalla; la lógica pura de la escena (It. 6a-8), del motor (It. 4a-5), del pulsómetro real (It. 11) y de Strava (It. 12-13).
+**Fuera de esta iteración.** Toda pantalla; la lógica pura de la escena (It. 6a-8), del motor (It. 4a-5), del pulsómetro real (It. 11) y de Strava (descartado el 2026-11-09).
 
 ---
 
@@ -142,7 +144,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Decisiones aplicadas.** Q-03, Q-08, Q-33, Q-40, Q-57, D-ART-03 (§6).
 
-**Fuera de esta iteración.** Búsqueda real con lista, conexión, permisos y diagnóstico (It. 10a); memoria y reconexiones reales del pulsómetro (It. 11); Perfil (It. 12-13).
+**Fuera de esta iteración.** Búsqueda real con lista, conexión, permisos y diagnóstico (It. 10a); memoria y reconexiones reales del pulsómetro (It. 11); Perfil (descartado con Strava el 2026-11-09).
 
 ---
 
@@ -226,9 +228,9 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Mejoras EXR.** HUD legible a 1,5 m con cifras tabulares (escala de D-ART-02); tarjeta de objetivo que conserva su color semántico (Q-60) y muestra el objetivo en chico (D-ART-09).
 
-**Decisiones aplicadas.** Q-01 (textos del HUD en es/en), Q-02 (`workoutStartTitle` y `workoutStartContent` con `¿`, ya corregidos desde la It. 1), Q-06, Q-12 (telemetría incremental), Q-13, Q-15, Q-51, Q-55, Q-56, Q-57, Q-58, Q-60, Q-91, D-ART-01, D-ART-02, D-ART-09 y respaldo del vidrio (QA-P-17), todas en §6. Strava se comporta como "no configurado" hasta la It. 12, que es un estado válido del legacy.
+**Decisiones aplicadas.** Q-01 (textos del HUD en es/en), Q-02 (`workoutStartTitle` y `workoutStartContent` con `¿`, ya corregidos desde la It. 1), Q-06, Q-12 (telemetría incremental), Q-13, Q-15, Q-51, Q-55, Q-56, Q-57, Q-58, Q-60, Q-91, D-ART-01, D-ART-02, D-ART-09 y respaldo del vidrio (QA-P-17), todas en §6. Strava se comporta como "no configurado" (después, descartado el 2026-11-09), que es un estado válido del legacy.
 
-**Fuera de esta iteración.** Barra de pasos con píldoras, reloj de pared, diálogo de completado, transiciones e inmersivo del sistema (It. 4b); parciales y repeticiones (It. 5); escena real (It. 6a); vidrio con desenfoque (It. 6b); selector de escenario en la vista de reposo (It. 8); subida a Strava al terminar (It. 12); aviso de caída del remo (It. 10a).
+**Fuera de esta iteración.** Barra de pasos con píldoras, reloj de pared, diálogo de completado, transiciones e inmersivo del sistema (It. 4b); parciales y repeticiones (It. 5); escena real (It. 6a); vidrio con desenfoque (It. 6b); selector de escenario en la vista de reposo (It. 8); subida a Strava al terminar (descartada el 2026-11-09); aviso de caída del remo (It. 10a).
 
 ---
 
@@ -259,7 +261,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Decisiones aplicadas.** Q-01, Q-52, Q-53 (parte del diálogo de completado), Q-59, D-ANI-05 (§6).
 
-**Fuera de esta iteración.** Vidrio con desenfoque (It. 6b); subida a Strava desde el diálogo (It. 12).
+**Fuera de esta iteración.** Vidrio con desenfoque (It. 6b); subida a Strava desde el diálogo (descartada el 2026-11-09).
 
 ---
 
@@ -407,13 +409,13 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 **Verificación.** [dotnet] estadísticas, rendimiento por paso, bandas, líneas objetivo, formatos y consultas. [Editor] lista, detalle y gráfico.
 
-**Tamaño.** ~780 líneas: `features/history/history_provider.dart` 35, `history_screen.dart` 159, `session_detail_screen.dart` (~520 de 581; el botón de subida es de la It. 12), `database_service.dart` (~60: consultas).
+**Tamaño.** ~780 líneas: `features/history/history_provider.dart` 35, `history_screen.dart` 159, `session_detail_screen.dart` (~520 de 581; el botón de subida se descartó con Strava; la It. 12 pone ahí `Exportar TCX`), `database_service.dart` (~60: consultas).
 
 **Mejoras EXR.** Tipografía numérica de tablero de regata, gráfico con animación de entrada y tooltip fluido, sin parpadeo al recargar (Q-22).
 
 **Decisiones aplicadas.** Q-01, Q-06, Q-09, Q-13, Q-16, Q-21, Q-22, Q-23, Q-24, Q-28, D-ART-03 (ejes de 11 px).
 
-**Fuera de esta iteración.** Indicadores y subida a Strava (It. 12); sesiones importadas y reparación (It. 13).
+**Fuera de esta iteración.** Indicadores y subida a Strava, sesiones importadas y reparación (descartados con Strava el 2026-11-09); el botón `Exportar TCX` (It. 12).
 
 ---
 
@@ -444,19 +446,19 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 ### It. 10b — Tanda Apple: iOS y macOS (`10b-tanda-apple`)
 
-**Objetivo.** Llevar a iOS y macOS todo lo que ya funciona en Android y Windows, escribiendo de una sola vez **todo** el código nativo de Apple (P-06): Bluetooth del remo y del pulsómetro, Bluetooth en segundo plano en iOS (R-07), pantalla siempre encendida en macOS, barra de estado de iOS, almacenamiento seguro y login del sistema para Strava. Además se verifican todos los criterios [Apple] de las iteraciones ya hechas (§4.1).
+**Objetivo.** Llevar a iOS y macOS todo lo que ya funciona en Android y Windows, escribiendo de una sola vez **todo** el código nativo de Apple (P-06): Bluetooth del remo y del pulsómetro, Bluetooth en segundo plano en iOS (R-07), pantalla siempre encendida en macOS, barra de estado de iOS y la exportación del TCX (hoja de compartir en iOS, carpeta en macOS; It. 12). Además se verifican todos los criterios [Apple] de las iteraciones ya hechas (§4.1). El almacenamiento seguro y el login de Strava ya no se hacen (Strava descartado el 2026-11-09).
 
-**Cuándo.** En cuanto el usuario tenga una Mac con Xcode, en cualquier momento después de la 10a (regla 8). Si llega antes de la It. 12, el almacenamiento seguro y el login se prueban con una verificación técnica mínima: guardar y leer un valor, y abrir el login del sistema contra una dirección de prueba y volver a la app por `rowmate://`. El cierre de producto de esas piezas queda en la It. 12.
+**Cuándo.** En cuanto el usuario tenga una Mac con Xcode, en cualquier momento después de la 10a (regla 8).
 
 **Incluye.** No es dueña de ningún ID: verifica los criterios [Apple] de §4.1 y escribe el código nativo que necesitan.
 
-**Demo.** En un iPhone y en una Mac: el remo AMS-670B se conecta y muestra datos reales. Al primer arranque aparece el diálogo de permiso de Bluetooth, con textos es/en que mencionan el remo y el pulsómetro (Q-87, Q-89). En iOS, con la app en segundo plano, la conexión sigue y reconecta (R-07). En la Mac, la pantalla no se apaga. Si ya pasaron las It. 11-12, también el pulsómetro real y el login de Strava.
+**Demo.** En un iPhone y en una Mac: el remo AMS-670B se conecta y muestra datos reales. Al primer arranque aparece el diálogo de permiso de Bluetooth, con textos es/en que mencionan el remo y el pulsómetro (Q-87, Q-89). En iOS, con la app en segundo plano, la conexión sigue y reconecta (R-07). En la Mac, la pantalla no se apaga. Si ya pasaron las It. 11-12, también el pulsómetro real y exportar un TCX.
 
 **Verificación.** [Device] [Apple] iPhone y Mac. [BLE-HW] AMS-670B (y pulsómetro si ya pasó la It. 11).
 
-**Tamaño.** ~50 líneas legacy (`Info.plist`, permisos y *entitlements* de iOS y macOS, partes de `main.dart`). Más el código nativo nuevo de Apple (Bluetooth, almacenamiento seguro, login, pantalla encendida, barra de estado).
+**Tamaño.** ~50 líneas legacy (`Info.plist`, permisos y *entitlements* de iOS y macOS, partes de `main.dart`). Más el código nativo nuevo de Apple (Bluetooth, pantalla encendida, barra de estado, compartir el TCX).
 
-**Decisiones aplicadas.** Q-80 (parte nativa del login en macOS), Q-87, Q-89, Q-91, R-07, R-14 (identificador provisional de Apple distinto del legacy).
+**Decisiones aplicadas.** Q-87, Q-89, Q-91, R-07, R-14 (identificador provisional de Apple distinto del legacy). Q-80 (login en macOS) se descartó con Strava.
 
 ---
 
@@ -483,63 +485,39 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 ---
 
-### It. 12 — Strava: conexión, subida y TCX (`12-strava-subida`)
+### It. 12 — Exportar TCX (`12-exportar-tcx`)
 
-**Objetivo.** Con un build que trae credenciales aparece la pestaña Perfil. El usuario conecta su cuenta (regresando a la app con `rowmate://`), elige cómo subir (automático, preguntar, manual) y cada sesión sube como TCX con vueltas por paso, pulso, cadencia, potencia y metadatos ocultos de la rutina. Historial y Detalle muestran qué está sincronizado, y el Detalle permite subir a mano. En simulador no se sube nada.
+**Objetivo.** El usuario exporta cualquier sesión del Historial como archivo **TCX** (Training Center Database v2), fiel al que armaba el legacy para Strava: una vuelta por paso, pulso, cadencia, potencia, calorías y la hora local con su desfase. Después lo sube a mano, gratis, a strava.com/upload, Garmin Connect, intervals.icu u otro servicio. Sin red y sin cuentas. Reemplaza a las viejas It. 12 y 13 (Strava), **descartadas** por decisión del usuario del 2026-11-09: desde junio de 2026 la API de Strava exige suscripción paga incluso para apps personales.
 
-**Incluye.**
-- STR: F-STR-01 (+ F-APP-04), F-STR-02, F-STR-03, F-STR-04, F-STR-05, F-STR-06 (+ F-WKT-22), F-STR-07, F-STR-08, F-STR-09, F-STR-10, F-STR-17 (+ F-HIS-08), F-STR-18.
-- HIS: F-HIS-16.
-- APP: F-APP-17.
-- Login y almacenamiento seguro en iOS/macOS: criterios [Apple], con el código nativo de la 10b.
+**Incluye.** STR: F-STR-09 (el archivo TCX, sin los metadatos ocultos de F-STR-10).
 
-**También toca.** F-STR-16 (tarjetas de conexión y preferencia del Perfil), F-WKT-20/21 (disparadores al terminar), F-APP-02 (quinta pestaña), F-APP-13 (permiso de internet).
+**También toca.** F-HIS-09 (botón `Exportar TCX` en el Detalle), F-HIS-19 (lee la sesión y sus puntos; nunca escribe la base), F-BLE-13 (las sesiones del simulador se exportan con marca), F-APP-03 (avisos), F-APP-10 (claves nuevas), F-APP-13 (en Android, compartir sin permisos nuevos).
 
 **Tests legacy a portar.** Ninguno (no hay). **Criterios nuevos (STR §5):**
-- Vencimiento de credenciales: 939 no vence, 940 sí, con V = 1000.
-- Preferencia por defecto `auto`.
-- TCX: desfases horarios, vueltas por paso, calorías, omisión de ceros y escape de caracteres.
-- Metadatos: nivel 3 con 5 pasos → `{"v":3,"c":5}`; límites de tamaño.
-- Duplicado "duplicate of activity 123456" → éxito con 123456.
+- Hora local con desfase negativo, positivo, de media hora y con cambio de horario en medio de la sesión.
+- Una vuelta si no hay pasos; una vuelta nueva en cada cambio de índice de paso; duración y distancia = último − primero.
+- Calorías por vuelta con el redondeo de Dart (100 kcal, 600 s, 60 puntos → 50; 3 puntos → 3).
+- Pulso, cadencia y potencia omitidos cuando valen 0; cadencia redondeada; escape de `& < > " '`.
+- Sesión cortada: tiempo y calorías de sus puntos, sin tocar la base; sin puntos útiles, no se exporta.
+- Nombres de archivo seguros y sin colisiones; nada se escribe en Documentos ni en Descargas durante las pruebas.
 
-**Demo.** Conectar con Strava desde Perfil (nombre y avatar del atleta). Con "Automático", terminar una sesión la sube y aparece en Strava con sus vueltas; con "Preguntar", el diálogo espera la respuesta; con "Manual", el Detalle ofrece "Subir a Strava". El ícono naranja `#FC4C02` aparece en las sincronizadas. Un build sin credenciales vuelve a tener 4 pestañas; un build de simulador no muestra botones de subida.
+**Demo.** En el build normal de Windows: Historial → una sesión real → `Exportar TCX` → aviso `Guardado en Documentos\RowMate\TCX` con `Abrir carpeta`; el archivo está ahí. Subirlo en strava.com/upload: aparece la actividad con la hora correcta, sus vueltas, el pulso, la cadencia y la potencia (el tipo de deporte se cambia a Remo a mano: el TCX solo admite `Other`). En Android, el mismo botón abre la hoja de compartir del sistema.
 
-**Verificación.** [dotnet] TCX, metadatos, vencimiento, lectura del duplicado. [Editor] Perfil y diálogos. [Device] login en Android y Windows. [Strava] cuenta real (verificar que la descripción guarde el comentario ROWMATE, Q-74).
+**Verificación.** [dotnet] armado del TCX, horas, vueltas, calorías, omisiones, escape y nombres de archivo. [Editor] botón, estados y avisos. [Device-Win] el archivo aparece en la carpeta (con la carpeta de datos de prueba). [Device-Android] hoja de compartir (NO VERIFICABLE sin "Android Build Support"). [Manual] la subida a strava.com/upload, en la demo del usuario. [Apple] en la 10b.
 
-**Tamaño.** ~1 190 líneas: `core/strava/strava_auth_service.dart` 182, `strava_api_service.dart` (~200 de 303), `strava_config.dart` 22, `strava_metadata.dart` (~120 de 205), `tcx_builder.dart` 189, `features/profile/profile_provider.dart` (~120 de 431), `profile_screen.dart` (~220 de 467), `session_detail_screen.dart` (~60), disparadores del inmersivo (~50), configuración de plataformas (~20). **Nunca** se lee `strava_secrets.dart`.
+**Tamaño.** ~190 líneas legacy: `core/strava/tcx_builder.dart` 189 (sin `strava_metadata.dart`: los metadatos se descartan). Más el trabajo nuevo de guardar y compartir por plataforma. **Nunca** se lee `strava_secrets.dart`.
 
-**Mejoras EXR.** Conexión con la identidad de Strava respetada (color `#FC4C02`), avisos de subida claros y no intrusivos, estado sincronizado visible de un vistazo.
+**Mejoras EXR.** Un toque y el archivo queda listo, con un aviso que dice dónde está y lo abre; el archivo se llama como la sesión y nunca pisa uno anterior.
 
-**Decisiones aplicadas.** Q-01, Q-11 (R-11: ids externos que no chocan con el legacy), Q-53, Q-54, Q-72, Q-74, Q-78, Q-79, Q-80, Q-83, Q-84.
+**Decisiones aplicadas.** Q-01, Q-11 (sin importar el historial legacy), decisión del usuario del 2026-11-09 (Strava descartado). Las del PO, en la [spec de la It. 12](iterations/12-exportar-tcx/01-po-spec.md) §8.
+
+**Fuera de esta iteración.** Todo Strava: conexión, API, credenciales, Perfil, preferencia de subida, diálogos de subida, íconos de sincronizado, sincronización, importación y reparación en la base.
 
 ---
 
-### It. 13 — Strava: sincronización, importación y Perfil completo (`13-strava-sincronizacion`)
+### ~~It. 13 — Strava: sincronización, importación y Perfil completo~~ (`13-strava-sincronizacion`) — DESCARTADA
 
-**Objetivo.** Completar el Perfil: sincronizar a Strava todo lo pendiente (reparando antes las sesiones mal guardadas), importar las actividades de remo de Strava al historial con su telemetría reconstruida, ver y subir las pendientes y limpiar las sesiones importadas.
-
-**Incluye.**
-- STR: F-STR-11, F-STR-12, F-STR-13 (+ F-HIS-23), F-STR-14, F-STR-15 (+ F-HIS-22), F-STR-16.
-- HIS: F-HIS-21.
-
-**También toca.** F-HIS-17 (la base distingue las sesiones importadas desde la It. 3, P-02).
-
-**Tests legacy a portar.** Ninguno directo. **Criterios nuevos (STR §5):**
-- Ritmo importado: Δt 1 / Δd 4 → 125; serie sin distancia → 120; suavizado de ventana 15 recortada en los bordes.
-- Vueltas que comparten índice de borde.
-- Reparación: sin puntos se saltea; fin = inicio + tiempo máximo.
-- Importación: solo Rowing y VirtualRow; saltea los ids que ya están.
-- Avisos con plural (`profileSyncResult`, `profileUploadResult`, FEATURE_INVENTORY §4.1.1).
-
-**Demo.** "Sincronizar desde Strava" trae al historial las actividades de remo de la cuenta, con gráfico y bandas por vuelta. "Sincronizar a Strava" sube las pendientes, incluida una sesión cortada a mitad (gracias al guardado incremental de la It. 4a). "Subidas pendientes" lista lo que falta. "Limpiar sesiones de Strava" borra solo las importadas y deja intactas las grabadas en la app.
-
-**Verificación.** [dotnet] reconstrucción del ritmo, vueltas y tipo de paso, reparación, filtros de importación. [Editor] Perfil completo. [Strava] cuenta real con actividades de remo.
-
-**Tamaño.** ~790 líneas: `features/profile/profile_provider.dart` (~311), `profile_screen.dart` (~247), `core/strava/strava_api_service.dart` (~103: actividades, streams, vueltas), `strava_metadata.dart` (~85: lectura), `database_service.dart` (~40: limpieza y pendientes).
-
-**Mejoras EXR.** Las sesiones externas se integran sin costuras, con marca de origen; las acciones destructivas dicen exactamente qué y cuántas sesiones borran.
-
-**Decisiones aplicadas.** Q-02 (plural de "{count} sesiones", ya en el catálogo desde la It. 1), Q-71, Q-73, Q-75, Q-76, Q-77, Q-82.
+**Descartada** por decisión del usuario del 2026-11-09: desde junio de 2026 la API de Strava exige suscripción paga incluso para apps personales de un solo usuario. Sus 9 IDs (F-STR-11 a -16, F-HIS-21 y los alias F-HIS-22 y -23) quedan descartados (§4). La vieja It. 12 (`12-strava-subida`: conexión, preferencia, subida, metadatos e íconos) también se descartó, salvo el TCX, que pasó a la nueva It. 12. La app sigue con 4 pestañas.
 
 ---
 
@@ -557,7 +535,7 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 - Lectores de pantalla (DT-05 de la It. 3): el lector del sistema (TalkBack en Android, Narrador en Windows y VoiceOver en la tanda Apple) lee los textos, los botones y las ayudas de la app, como en el legacy (AC-APP-03-06 de la It. 3, que quedó NO VERIFICABLE en esa parte).
 - Todos los criterios [Apple] pendientes (§4.1).
 
-**Demo.** Builds instalables de Android, iOS, Windows y macOS con nombre, ícono y arranque "RowMate"; recorrido completo de la app (Dispositivo → rutina → entrenamiento en los 4 escenarios → historial → Strava) en es y en, con transiciones fluidas y sin textos fijos.
+**Demo.** Builds instalables de Android, iOS, Windows y macOS con nombre, ícono y arranque "RowMate"; recorrido completo de la app (Dispositivo → rutina → entrenamiento en los 4 escenarios → historial → exportar TCX) en es y en, con transiciones fluidas y sin textos fijos.
 
 **Verificación.** [dotnet] en el pipeline. [Editor] auditoría visual. [Device] Android y Windows. [Apple] iOS y macOS.
 
@@ -632,7 +610,7 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-RUT-17 | C | 1 | 4a |
 | F-RUT-18 | C | 1 | 4a, 9 |
 | F-RUT-19 | → F-APP-08 | 2 | — |
-| F-RUT-20 | C | 9 | 12 |
+| F-RUT-20 | C | 9 | — |
 | F-WKT-01 | C | 4a | 4b, 5 |
 | F-WKT-02 | C | 4a | 4b, 5 |
 | F-WKT-03 | C | 4a | 4b, 5 |
@@ -652,9 +630,9 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-WKT-17 | C | 4b | 4a, 5, 6a, 6b |
 | F-WKT-18 | C | 5 | — |
 | F-WKT-19 | C | 4b | — |
-| F-WKT-20 | C | 4a | 4b, 12 |
-| F-WKT-21 | C | 4b | 12 |
-| F-WKT-22 | → F-STR-06 | 12 | — |
+| F-WKT-20 | C | 4a | 4b |
+| F-WKT-21 | C | 4b | — |
+| F-WKT-22 | → F-STR-06 | Descartado (2026-11-09) | — |
 | F-WKT-23 | C | 4a | — |
 | F-SCN-01 | C | 6b | 4a, 6a |
 | F-SCN-02 | C | 6a | — |
@@ -683,47 +661,47 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-HIS-02 | → F-WKT-06 | 4a | — |
 | F-HIS-03 | → F-WKT-06 | 4a | — |
 | F-HIS-04 | → F-RUT-18 | 1 | — |
-| F-HIS-05 | C | 9 | 13 |
-| F-HIS-06 | C | 9 | 12, 13 |
-| F-HIS-07 | C | 9 | 12 |
-| F-HIS-08 | → F-STR-17 | 12 | — |
+| F-HIS-05 | C | 9 | — |
+| F-HIS-06 | C | 9 | — |
+| F-HIS-07 | C | 9 | — |
+| F-HIS-08 | → F-STR-17 | Descartado (2026-11-09) | — |
 | F-HIS-09 | C | 9 | 12 |
 | F-HIS-10 | C | 9 | — |
-| F-HIS-11 | C | 9 | 13 |
+| F-HIS-11 | C | 9 | — |
 | F-HIS-12 | C | 9 | — |
 | F-HIS-13 | C | 9 | — |
-| F-HIS-14 | C | 9 | 13 |
+| F-HIS-14 | C | 9 | — |
 | F-HIS-15 | C | 9 | — |
-| F-HIS-16 | C | 12 | — |
-| F-HIS-17 | C | 3 | 4a, 13 |
+| F-HIS-16 | C | Descartado (2026-11-09) | — |
+| F-HIS-17 | C | 3 | 4a |
 | F-HIS-18 | → F-RUT-08 | 3 | — |
-| F-HIS-19 | C | 9 | 4a, 12, 13 |
+| F-HIS-19 | C | 9 | 4a, 12 |
 | F-HIS-20 | C | 3 | 5 |
-| F-HIS-21 | C | 13 | — |
-| F-HIS-22 | → F-STR-15 | 13 | — |
-| F-HIS-23 | → F-STR-13 | 13 | — |
-| F-STR-01 | C | 12 | — |
-| F-STR-02 | C | 12 | 10b |
-| F-STR-03 | C | 12 | 10b, 13 |
-| F-STR-04 | C | 12 | — |
-| F-STR-05 | C | 12 | — |
-| F-STR-06 | C | 12 | — |
-| F-STR-07 | C | 12 | 13 |
-| F-STR-08 | C | 12 | 13 |
-| F-STR-09 | C | 12 | — |
-| F-STR-10 | C | 12 | 13 |
-| F-STR-11 | C | 13 | — |
-| F-STR-12 | C | 13 | — |
-| F-STR-13 | C | 13 | — |
-| F-STR-14 | C | 13 | — |
-| F-STR-15 | C | 13 | — |
-| F-STR-16 | C | 13 | 12 |
-| F-STR-17 | C | 12 | — |
-| F-STR-18 | C | 12 | — |
+| F-HIS-21 | C | Descartado (2026-11-09) | — |
+| F-HIS-22 | → F-STR-15 | Descartado (2026-11-09) | — |
+| F-HIS-23 | → F-STR-13 | Descartado (2026-11-09) | — |
+| F-STR-01 | C | Descartado (2026-11-09) | — |
+| F-STR-02 | C | Descartado (2026-11-09) | — |
+| F-STR-03 | C | Descartado (2026-11-09) | — |
+| F-STR-04 | C | Descartado (2026-11-09) | — |
+| F-STR-05 | C | Descartado (2026-11-09) | — |
+| F-STR-06 | C | Descartado (2026-11-09) | — |
+| F-STR-07 | C | Descartado (2026-11-09) | — |
+| F-STR-08 | C | Descartado (2026-11-09) | — |
+| F-STR-09 | C | 12 | 10b |
+| F-STR-10 | C | Descartado (2026-11-09) | — |
+| F-STR-11 | C | Descartado (2026-11-09) | — |
+| F-STR-12 | C | Descartado (2026-11-09) | — |
+| F-STR-13 | C | Descartado (2026-11-09) | — |
+| F-STR-14 | C | Descartado (2026-11-09) | — |
+| F-STR-15 | C | Descartado (2026-11-09) | — |
+| F-STR-16 | C | Descartado (2026-11-09) | — |
+| F-STR-17 | C | Descartado (2026-11-09) | — |
+| F-STR-18 | C | Descartado (2026-11-09) | — |
 | F-APP-01 | C | 2 | 3, 9, 11 |
-| F-APP-02 | C | 2 | 9, 12 |
-| F-APP-03 | C | 3 | 4a, 4b, 9 |
-| F-APP-04 | → F-STR-01 | 12 | — |
+| F-APP-02 | C | 2 | 9 |
+| F-APP-03 | C | 3 | 4a, 4b, 9, 12 |
+| F-APP-04 | → F-STR-01 | Descartado (2026-11-09) | — |
 | F-APP-05 | C | 2 | 4b, 5, 6a, 14 |
 | F-APP-06 | C | 2 | 4a, 9 |
 | F-APP-07 | → F-RUT-01 | 1 | — |
@@ -736,11 +714,11 @@ Cada uno de los 158 IDs aparece **una sola vez**. "Tipo": C = canónico; "→ X"
 | F-APP-14 | C | 4a | 10a, 10b |
 | F-APP-15 | C | 14 | 4b, 10b |
 | F-APP-16 | C | 14 | 1, 2, 10b |
-| F-APP-17 | C | 12 | 10b |
+| F-APP-17 | C | Descartado (2026-11-09) | — |
 | F-APP-18 | → F-BLE-13 | 2 | — |
 | F-APP-19 | C | 14 | 1, 2 |
 
-Recuento por iteración dueña: It. 1 = 20, 2 = 16, 3 = 11, 4a = 19, 4b = 7, 5 = 3, 6a = 8, 6b = 3, 7 = 5, 8 = 7, 9 = 12, 10a = 7, 10b = 0, 11 = 10, 12 = 17, 13 = 9, 14 = 4. Total 158.
+Recuento por iteración dueña: It. 1 = 20, 2 = 16, 3 = 11, 4a = 19, 4b = 7, 5 = 3, 6a = 8, 6b = 3, 7 = 5, 8 = 7, 9 = 12, 10a = 7, 10b = 0, 11 = 10, 12 = 1, 14 = 4: 133 vivos. Descartados el 2026-11-09 (Strava): 25 (los 16 de la vieja It. 12 y los 9 de la 13). Total 158. Cambios del 2026-11-09 en "También toca": se quitaron las referencias a la 12 y la 13 de Strava (F-RUT-20, F-WKT-20, -21, F-HIS-05, -06, -07, -11, -14, -17, -19, F-APP-02, -13) y se sumaron las de la nueva 12 (F-HIS-19, F-APP-03, F-APP-13; F-HIS-09 y F-BLE-13 ya la tenían).
 
 ### 4.1 Criterios [Apple]
 
@@ -754,7 +732,8 @@ Se verifican en la tanda Apple (10b) si la iteración dueña ya pasó; si no, en
 | F-APP-14 | Pantalla siempre encendida en iOS y macOS | 10b |
 | F-APP-15 | Barra de estado de iOS oculta en el inmersivo; ventana inicial 800×600 en macOS | 10b |
 | F-HRM-02, F-HRM-03, F-HRM-05..11, F-HRM-16 | Pulsómetro real: búsqueda, conexión, memoria, reconexiones y watchdog | 10b |
-| F-STR-02, F-STR-03, F-APP-17, Q-80 | Login con regreso a la app (`rowmate://`), credenciales guardadas en el almacenamiento seguro y renovación | 10b |
+| ~~F-STR-02, F-STR-03, F-APP-17, Q-80~~ | Descartado con Strava (2026-11-09) | — |
+| F-STR-09 | Exportar el TCX: hoja de compartir en iOS y carpeta en macOS | 10b |
 | F-APP-16, F-APP-19, Q-85, R-14 | Nombre, ícono, arranque oscuro, identificador (distinto del legacy hasta Q-85) y build firmado | 10b (id), 14 |
 
 ---

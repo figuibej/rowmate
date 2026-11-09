@@ -537,5 +537,19 @@
     }
   },
   "hrmConnectedNotice": "Heart rate sensor connected",
-  "hrmLostNotice": "Heart rate sensor lost, reconnecting…"
+  "hrmLostNotice": "Heart rate sensor lost, reconnecting…",
+  "exportTcx": "Export TCX",
+  "exportTcxExporting": "Exporting…",
+  "exportTcxSaved": "Saved to {folder}",
+  "@exportTcxSaved": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "exportTcxDocuments": "Documents",
+  "exportTcxOpenFolder": "Open folder",
+  "exportTcxFailed": "Couldn't export the session",
+  "exportTcxShareTitle": "Share session"
 }

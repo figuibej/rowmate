@@ -8,6 +8,8 @@
 *.yml text eol=lf
 *.dart text eol=lf
 *.sh text eol=lf
+# It. 12: el golden del TCX (Tests/Golden/tcx/T-1.tcx) se compara byte a byte con lo que arma la app, que escribe \n.
+*.tcx text eol=lf
 # It. 10a: el formato binario de los eventos BLE (Tests/Golden/ble/events-v1.bin), byte por byte.
 *.bin binary
 
