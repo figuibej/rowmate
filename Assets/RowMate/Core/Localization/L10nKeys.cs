@@ -286,5 +286,14 @@ namespace RowMate.Core.Localization
         public const string DeviceMonitorStopped = "deviceMonitorStopped";
         public const string DeviceBleUnsupported = "deviceBleUnsupported";
         public const string DeviceBleUnsupportedHint = "deviceBleUnsupportedHint";
+
+        // ── Nuevas de la It. 11 (Q-01; 11-ble-pulsometro/01-po-spec §4): 240 → 245 ──
+        // La leyenda de la lectura vencida (AC-HRM-05-03), los errores en lenguaje humano (Q-42, AC-HRM-13-14; {name} = el sensor) y
+        // los avisos breves (AC-HRM-07-05, AC-HRM-08-03). Las nuevas usan … (U+2026); hrmConnectError queda sin uso en la tarjeta.
+        public const string HrmNoSignal = "hrmNoSignal";
+        public const string HrmScanFailed = "hrmScanFailed";
+        public const string HrmConnectFailed = "hrmConnectFailed";
+        public const string HrmConnectedNotice = "hrmConnectedNotice";
+        public const string HrmLostNotice = "hrmLostNotice";
     }
 }

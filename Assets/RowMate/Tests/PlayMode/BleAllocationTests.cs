@@ -106,6 +106,45 @@ namespace RowMate.Tests.PlayMode
             Assert.That(sonar.ElapsedMs, Is.GreaterThan(1000), "los anillos avanzaron");
         }
 
+        // It. 11 (AC-HRM-04-06; 00-arte §8; marcador RowMate.Device.HrmCard): la tarjeta del pulsómetro REAL conectada y latiendo con una
+        // lectura por segundo (cada lectura rearma el estado a 1 Hz, como el motor: a lo sumo los cuadros de esos segundos), y reconectando
+        // con el arco de la espera de 3 s (sin intentos en la ventana).
+        [UnityTest, Category("AC-HRM-04-06")]
+        public IEnumerator HrmConnectedZeroBytesPerFrame()
+        {
+            var prefs = new RowMate.Core.Common.MemoryPreferences();
+            Create(new UiHostOptions { Profile = DeviceProfile.TV }.WithRealHrm(prefs));
+            yield return Settle();
+            _ = H.App.HeartRate.StartScanAsync();
+            Adapter.Advertise(FakeBleDevices.Hrm);
+            yield return Frames();
+            _ = H.App.HeartRate.ConnectAsync(FakeBleDevices.HrmId, "Banda de prueba");
+            yield return Settle();
+            Assert.That(H.App.HeartRate.State.Value.Status, Is.EqualTo(HrmStatus.Connected));
+            using (Adapter.NotifyEvery(FakeBleDevices.HrmId, TimeSpan.FromSeconds(1), _ => HrPackets.Contact142, HeartRateParser.Measurement))
+            {
+                H.Advance(1.5);
+                yield return Settle();
+                Assert.That(H.HeartRateCard!.Model!.HeartBeating, Is.True, "late con 142");
+                // Calentamiento: unos latidos cuadro a cuadro (los caminos del latido y de la lectura por primera vez).
+                for (var i = 0; i < 90; i++)
+                {
+                    H.Step();
+                    yield return null;
+                }
+
+                yield return Measure(H.DeviceScreen!, "tarjeta del pulsómetro conectada y latiendo", true);
+            }
+
+            Adapter.NeverRespond(FakeBleDevices.HrmId);
+            Adapter.DropLink(FakeBleDevices.HrmId);
+            H.Advance(15.2);
+            yield return Settle();
+            var indicator = H.HeartRateCard!.Indicator!;
+            Assert.That(indicator.Current, Is.EqualTo(RowMate.Presentation.Controls.LinkIndicator.Mode.WaitingArc), "en la espera de 3 s");
+            yield return Measure(H.DeviceScreen!, "tarjeta del pulsómetro reconectando (arco de espera)");
+        }
+
         [UnityTest, Category("AC-BLE-08-06")]
         public IEnumerator TheHudLinkNoticeDoesNotAllocatePerFrame()
         {

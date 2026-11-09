@@ -525,5 +525,17 @@
   },
   "deviceMonitorStopped": "The monitor stopped sending data",
   "deviceBleUnsupported": "This device doesn't have Bluetooth LE",
-  "deviceBleUnsupportedHint": "RowMate needs Bluetooth LE to connect\nthe rower and the heart rate monitor"
+  "deviceBleUnsupportedHint": "RowMate needs Bluetooth LE to connect\nthe rower and the heart rate monitor",
+  "hrmNoSignal": "No signal from the sensor",
+  "hrmScanFailed": "Couldn't search for sensors",
+  "hrmConnectFailed": "Couldn't connect to {name}",
+  "@hrmConnectFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hrmConnectedNotice": "Heart rate sensor connected",
+  "hrmLostNotice": "Heart rate sensor lost, reconnecting…"
 }

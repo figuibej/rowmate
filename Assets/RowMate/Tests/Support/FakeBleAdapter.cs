@@ -44,6 +44,10 @@ namespace RowMate.Tests.Support
     // equipo (Respond, NeverRespond, Fail o RespondAfter), la caída del enlace, las notificaciones y el registro de todo lo que
     // pidió la app. Determinista con el programador de la prueba (FakeScheduler o el FrameScheduler de LifecycleHarness). Nunca
     // toca una radio.
+    // It. 11 (02-tech-design §6.2): ConnectRequests (id y si pidió MTU), Steps (connect, discover, notify:<chr>, disconnect, en orden),
+    // FailDiscover / FailSetNotify / HoldNextDiscover, el connect que falla con el adaptador sin On y LiveSessions. Como
+    // NativeBleAdapter (:243-299, m-04): la cancelación de un connect pendiente actúa por pedido (reqId), no por id, y un connect nuevo
+    // al mismo id reemplaza la sesión (cierra el periférico abierto, sin caída, y cancela el connect que seguía esperando).
     public sealed class FakeBleAdapter : IBleAdapter
     {
         private readonly IScheduler _scheduler;
@@ -57,6 +61,15 @@ namespace RowMate.Tests.Support
         private readonly Dictionary<string, int> _connectCalls = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly Dictionary<string, int> _connectCancels = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly Dictionary<string, FakeBlePeripheral> _peripherals = new Dictionary<string, FakeBlePeripheral>(StringComparer.Ordinal);
+        private readonly List<FakeBlePeripheral> _opened = new List<FakeBlePeripheral>();
+        private readonly Dictionary<int, PendingConnect> _pending = new Dictionary<int, PendingConnect>();
+        private readonly Dictionary<string, int> _pendingById = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, Exception> _discoverFailures = new Dictionary<string, Exception>(StringComparer.Ordinal);
+        private readonly Dictionary<string, Exception> _notifyFailures = new Dictionary<string, Exception>(StringComparer.Ordinal);
+        private readonly Dictionary<string, TaskCompletionSource<IReadOnlyList<BleGattService>>> _heldDiscovers =
+            new Dictionary<string, TaskCompletionSource<IReadOnlyList<BleGattService>>>(StringComparer.Ordinal);
+        private readonly Dictionary<string, TaskCompletionSource<bool>> _heldDisconnects = new Dictionary<string, TaskCompletionSource<bool>>(StringComparer.Ordinal);
+        private int _nextReqId;
         private Exception? _failNextScan;
         private bool _permissionModel;
         private BlePermissionState _permission = BlePermissionState.Granted;
@@ -318,14 +331,119 @@ namespace RowMate.Tests.Support
             return _peripherals.TryGetValue(id, out var p) && !p.Closed ? p : null;
         }
 
+        // It. 11: cada connect pedido, en orden (id y si pidió MTU alto).
+        public List<(string DeviceId, bool RequestHighMtu)> ConnectRequests { get; } = new List<(string, bool)>();
+
+        // It. 11: los pasos GATT en orden ("connect", "discover", "notify:2a37", "disconnect"), con el id.
+        public List<(string DeviceId, string Step)> Steps { get; } = new List<(string, string)>();
+
+        // Los pasos de un equipo, en orden.
+        public IReadOnlyList<string> StepsOf(string id)
+        {
+            var steps = new List<string>();
+            foreach (var step in Steps)
+            {
+                if (step.DeviceId == id)
+                {
+                    steps.Add(step.Step);
+                }
+            }
+
+            return steps;
+        }
+
+        // Connects que reemplazó otro connect al mismo id (no cuentan en ConnectCancels).
+        public int ReplacedConnects { get; private set; }
+
+        // El descubrimiento de servicios del equipo falla (hasta ClearStepFailures).
+        public void FailDiscover(string id, Exception error)
+        {
+            _discoverFailures[id] = error;
+        }
+
+        // Activar las notificaciones del equipo falla (hasta ClearStepFailures).
+        public void FailSetNotify(string id, Exception error)
+        {
+            _notifyFailures[id] = error;
+        }
+
+        public void ClearStepFailures(string id)
+        {
+            _discoverFailures.Remove(id);
+            _notifyFailures.Remove(id);
+        }
+
+        // El próximo descubrimiento del equipo queda pendiente hasta que se llame a la acción devuelta (responde con su GATT).
+        public Action HoldNextDiscover(string id)
+        {
+            var held = new TaskCompletionSource<IReadOnlyList<BleGattService>>();
+            _heldDiscovers[id] = held;
+            return () =>
+            {
+                if (_heldDiscovers.TryGetValue(id, out var current) && ReferenceEquals(current, held))
+                {
+                    _heldDiscovers.Remove(id);
+                }
+
+                held.TrySetResult(_devices[id].Services);
+            };
+        }
+
+        // La próxima desconexión pedida del equipo queda pendiente (el periférico ya se cerró) hasta que se llame a la acción devuelta.
+        public Action HoldNextDisconnect(string id)
+        {
+            var held = new TaskCompletionSource<bool>();
+            _heldDisconnects[id] = held;
+            return () =>
+            {
+                if (_heldDisconnects.TryGetValue(id, out var current) && ReferenceEquals(current, held))
+                {
+                    _heldDisconnects.Remove(id);
+                }
+
+                held.TrySetResult(true);
+            };
+        }
+
+        // Sesiones vivas del equipo: periféricos abiertos más connects pendientes (R-03: nunca más de una por id).
+        public int LiveSessions(string id)
+        {
+            var live = 0;
+            foreach (var peripheral in _opened)
+            {
+                if (peripheral.DeviceId == id && !peripheral.Closed)
+                {
+                    live++;
+                }
+            }
+
+            foreach (var pending in _pending.Values)
+            {
+                if (pending.DeviceId == id)
+                {
+                    live++;
+                }
+            }
+
+            return live;
+        }
+
         public Task<IBlePeripheral> ConnectAsync(string deviceId, bool requestHighMtu, CancellationToken ct)
         {
             _connectCalls[deviceId] = ConnectCalls(deviceId) + 1;
+            ConnectRequests.Add((deviceId, requestHighMtu));
+            Steps.Add((deviceId, "connect"));
+            if (_state.Value != BleAdapterState.On)
+            {
+                return Task.FromException<IBlePeripheral>(new BleException("connect", "adapter off"));
+            }
+
             if (!_devices.TryGetValue(deviceId, out var device))
             {
                 return Task.FromException<IBlePeripheral>(new BleException("connect", "device not found"));
             }
 
+            ReplaceSession(deviceId);
             _behaviors.TryGetValue(deviceId, out var behavior);
             switch (behavior)
             {
@@ -335,29 +453,28 @@ namespace RowMate.Tests.Support
                     return Task.FromResult<IBlePeripheral>(Open(device));
             }
 
-            var source = new TaskCompletionSource<IBlePeripheral>();
-            IDisposable? timer = null;
+            var reqId = ++_nextReqId;
+            var pending = new PendingConnect(deviceId, new TaskCompletionSource<IBlePeripheral>());
+            _pending[reqId] = pending;
+            _pendingById[deviceId] = reqId;
             if (behavior == FakeConnectBehavior.RespondAfter)
             {
-                timer = _scheduler.Schedule(_delays[deviceId], () => source.TrySetResult(Open(device)));
+                pending.Timer = _scheduler.Schedule(_delays[deviceId], () =>
+                {
+                    if (_pending.Remove(reqId))
+                    {
+                        ForgetPendingId(deviceId, reqId);
+                        pending.Source.TrySetResult(Open(device));
+                    }
+                });
             }
 
             if (ct.CanBeCanceled)
             {
-                ct.Register(() =>
-                {
-                    if (source.Task.IsCompleted)
-                    {
-                        return;
-                    }
-
-                    timer?.Dispose();
-                    _connectCancels[deviceId] = ConnectCancels(deviceId) + 1;
-                    source.TrySetCanceled();
-                });
+                ct.Register(() => CancelRequest(reqId));
             }
 
-            return source.Task;
+            return pending.Source.Task;
         }
 
         // La caída no pedida del enlace (sale del rango, se apaga el remo).
@@ -390,11 +507,101 @@ namespace RowMate.Tests.Support
             return WriteFailure?.Invoke(write);
         }
 
+        internal Exception? DiscoverFailure(string id)
+        {
+            return _discoverFailures.TryGetValue(id, out var error) ? error : null;
+        }
+
+        internal Exception? NotifyFailure(string id)
+        {
+            return _notifyFailures.TryGetValue(id, out var error) ? error : null;
+        }
+
+        // Una sola vez: el descubrimiento siguiente responde en el acto.
+        internal Task<IReadOnlyList<BleGattService>>? TakeHeldDiscover(string id)
+        {
+            if (!_heldDiscovers.TryGetValue(id, out var held))
+            {
+                return null;
+            }
+
+            _heldDiscovers.Remove(id);
+            return held.Task;
+        }
+
+        internal Task? TakeHeldDisconnect(string id)
+        {
+            if (!_heldDisconnects.TryGetValue(id, out var held))
+            {
+                return null;
+            }
+
+            _heldDisconnects.Remove(id);
+            return held.Task;
+        }
+
         private FakeBlePeripheral Open(FakeBleDevice device)
         {
             var peripheral = new FakeBlePeripheral(this, device, _scheduler, Logger);
             _peripherals[device.Id] = peripheral;
+            _opened.Add(peripheral);
             return peripheral;
+        }
+
+        // Como NativeBleAdapter (:243-260): un connect sobre un id con sesión la reemplaza.
+        private void ReplaceSession(string id)
+        {
+            if (_peripherals.TryGetValue(id, out var open) && !open.Closed)
+            {
+                open.Dispose();
+            }
+
+            if (_pendingById.TryGetValue(id, out var reqId) && _pending.TryGetValue(reqId, out var previous))
+            {
+                _pending.Remove(reqId);
+                _pendingById.Remove(id);
+                previous.Timer?.Dispose();
+                ReplacedConnects++;
+                previous.Source.TrySetCanceled();
+            }
+        }
+
+        // DT10-17 por pedido (m-04): solo cancela ESE connect si sigue pendiente.
+        private void CancelRequest(int reqId)
+        {
+            if (!_pending.TryGetValue(reqId, out var pending))
+            {
+                return;
+            }
+
+            _pending.Remove(reqId);
+            ForgetPendingId(pending.DeviceId, reqId);
+            pending.Timer?.Dispose();
+            _connectCancels[pending.DeviceId] = ConnectCancels(pending.DeviceId) + 1;
+            pending.Source.TrySetCanceled();
+        }
+
+        private void ForgetPendingId(string id, int reqId)
+        {
+            if (_pendingById.TryGetValue(id, out var current) && current == reqId)
+            {
+                _pendingById.Remove(id);
+            }
+        }
+
+        private sealed class PendingConnect
+        {
+            public PendingConnect(string deviceId, TaskCompletionSource<IBlePeripheral> source)
+            {
+                DeviceId = deviceId;
+                Source = source;
+            }
+
+            public string DeviceId { get; }
+
+            public TaskCompletionSource<IBlePeripheral> Source { get; }
+
+            public IDisposable? Timer { get; set; }
         }
 
         private bool AdvertisesAny(FakeBleDevice device)
@@ -457,18 +664,32 @@ namespace RowMate.Tests.Support
 
         public Task<IReadOnlyList<BleGattService>> DiscoverServicesAsync()
         {
+            _adapter.Steps.Add((DeviceId, "discover"));
             if (Closed)
             {
                 return Task.FromException<IReadOnlyList<BleGattService>>(new BleException("discover", "not connected"));
             }
 
-            return Task.FromResult(_device.Services);
+            var failure = _adapter.DiscoverFailure(DeviceId);
+            if (failure != null)
+            {
+                return Task.FromException<IReadOnlyList<BleGattService>>(failure);
+            }
+
+            return _adapter.TakeHeldDiscover(DeviceId) ?? Task.FromResult(_device.Services);
         }
 
         public Task SetNotifyAsync(BleUuid service, BleUuid characteristic, bool enable)
         {
             _adapter.SetNotifyCalls.Add((DeviceId, characteristic, enable));
-            return Closed ? Task.FromException(new BleException("setNotify", "not connected")) : Task.CompletedTask;
+            _adapter.Steps.Add((DeviceId, "notify:" + characteristic.ToShortString()));
+            if (Closed)
+            {
+                return Task.FromException(new BleException("setNotify", "not connected"));
+            }
+
+            var failure = _adapter.NotifyFailure(DeviceId);
+            return failure != null ? Task.FromException(failure) : Task.CompletedTask;
         }
 
         public Task WriteAsync(BleUuid service, BleUuid characteristic, byte[] data, bool withResponse)
@@ -485,8 +706,9 @@ namespace RowMate.Tests.Support
         public Task DisconnectAsync()
         {
             DisconnectCalls++;
+            _adapter.Steps.Add((DeviceId, "disconnect"));
             Close();
-            return Task.CompletedTask;
+            return _adapter.TakeHeldDisconnect(DeviceId) ?? Task.CompletedTask;
         }
 
         public void StartNativeKeepAlive(BleUuid service, BleUuid characteristic, byte[] data, TimeSpan period)

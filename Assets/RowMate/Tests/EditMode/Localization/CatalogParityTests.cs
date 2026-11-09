@@ -122,6 +122,8 @@ namespace RowMate.Tests.EditMode.Localization
             { "deviceConnectError", "error:String" },
             { "deviceReconnecting", "name:String" },
             { "deviceReconnected", "name:String" },
+            // La de la It. 11 (11-ble-pulsometro/01-po-spec §4): el nombre del sensor, como texto.
+            { "hrmConnectFailed", "name:String" },
         };
 
         // Las 12 claves de la It. 4b (04b-hud-exr/01-po-spec §11.2), en su orden, con es y en.
@@ -182,12 +184,22 @@ namespace RowMate.Tests.EditMode.Localization
                 "RowMate needs Bluetooth LE to connect\nthe rower and the heart rate monitor" },
         };
 
+        // Las 5 claves de la It. 11 (11-ble-pulsometro/01-po-spec §4), en su orden, con es y en.
+        private static readonly string[][] ItElevenKeys =
+        {
+            new[] { "hrmNoSignal", "Sin señal del sensor", "No signal from the sensor" },
+            new[] { "hrmScanFailed", "No se pudo buscar sensores", "Couldn't search for sensors" },
+            new[] { "hrmConnectFailed", "No se pudo conectar con {name}", "Couldn't connect to {name}" },
+            new[] { "hrmConnectedNotice", "Pulsómetro conectado", "Heart rate sensor connected" },
+            new[] { "hrmLostNotice", "Se perdió el pulsómetro, reconectando…", "Heart rate sensor lost, reconnecting…" },
+        };
+
         private static LocalizationCatalog Es => LocalizationFixture.Catalog("es");
 
         private static LocalizationCatalog En => LocalizationFixture.Catalog("en");
 
-        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12: 240 claves en es y las mismas 240 en en (159 del legacy + 15 de la
-        // It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5 + 5 de la It. 9 + 12 de la It. 10a).
+        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12: 245 claves en es y las mismas 245 en en (159 del legacy + 15 de la
+        // It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5 + 5 de la It. 9 + 12 de la It. 10a + 5 de la It. 11).
         [Test, Category("AC-APP-10-01"), Category("AC-APP-10-10"), Category("AC-APP-10-11"), Category("AC-APP-10-12")]
         public void SameKeysInBothLanguages()
         {
@@ -195,9 +207,9 @@ namespace RowMate.Tests.EditMode.Localization
             var en = En;
             Assert.That(es.Locale, Is.EqualTo("es"));
             Assert.That(en.Locale, Is.EqualTo("en"));
-            Assert.That(es.Keys.Count, Is.EqualTo(240));
-            Assert.That(en.Keys.Count, Is.EqualTo(240));
-            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(240), "claves repetidas en es");
+            Assert.That(es.Keys.Count, Is.EqualTo(245));
+            Assert.That(en.Keys.Count, Is.EqualTo(245));
+            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(245), "claves repetidas en es");
             Assert.That(en.Keys, Is.EquivalentTo(es.Keys), "una clave existe en un solo idioma");
             Assert.That(en.Keys, Is.EqualTo(es.Keys), "mismo orden en los dos archivos");
             Assert.That(LocalizationFixture.LegacyTexts("es").Count, Is.EqualTo(159));
@@ -404,8 +416,8 @@ namespace RowMate.Tests.EditMode.Localization
             }
 
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
-            Assert.That(withParameters, Is.EqualTo(2 * 37), "30 hasta la It. 4b + 3 de la It. 5 + 4 de la It. 10a");
-            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(37));
+            Assert.That(withParameters, Is.EqualTo(2 * 38), "30 hasta la It. 4b + 3 de la It. 5 + 4 de la It. 10a + 1 de la It. 11");
+            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(38));
         }
 
         // AC-APP-10-07: las 15 claves nuevas con los textos de la spec y los tipos de §3.3, al final del catálogo.
@@ -605,6 +617,35 @@ namespace RowMate.Tests.EditMode.Localization
             Assert.That(LocalizationFixture.Es.Get(L10nKeys.DeviceSearching), Is.EqualTo("Buscando..."), "las existentes no cambian");
             Assert.That(LocalizationFixture.Es.Get(L10nKeys.DeviceBleUnsupportedHint).Split('\n').Length, Is.EqualTo(2));
             Assert.That(LocalizationFixture.Es.Get(L10nKeys.Retry), Is.EqualTo("Reintentar"), "se reusa (AC-BLE-09-02)");
+        }
+
+        // Las 5 claves de la It. 11 (11-ble-pulsometro/01-po-spec §4), en su orden, con es y en. Las existentes hrm* no cambian.
+        [Test, Category("AC-APP-10-07")]
+        public void FiveItElevenKeys()
+        {
+            var es = Es;
+            var en = En;
+            var legacy = ToDictionary(LocalizationFixture.LegacyTexts("es"));
+            Assert.That(ItElevenKeys.Length, Is.EqualTo(5));
+            for (var i = 0; i < ItElevenKeys.Length; i++)
+            {
+                var key = ItElevenKeys[i][0];
+                Assert.That(legacy.ContainsKey(key), Is.False, key + " no existía en el legacy");
+                Assert.That(es.Message(key), Is.EqualTo(ItElevenKeys[i][1]), "es/" + key);
+                Assert.That(en.Message(key), Is.EqualTo(ItElevenKeys[i][2]), "en/" + key);
+                Assert.That(es.Keys[240 + i], Is.EqualTo(key), "las de la It. 11 van al final, en el orden de la spec");
+                Assert.That(en.Keys[240 + i], Is.EqualTo(key));
+                ExpectedPlaceholders.TryGetValue(key, out var expected);
+                Assert.That(LocalizationFixture.Describe(es.Placeholders(key)), Is.EqualTo(expected ?? ""), "es/" + key);
+                Assert.That(LocalizationFixture.Describe(en.Placeholders(key)), Is.EqualTo(expected ?? ""), "en/" + key);
+            }
+
+            Assert.That(LocalizationFixture.Es.Format(L10nKeys.HrmConnectFailed, MessageArg.Text("name", "Banda de prueba")),
+                Is.EqualTo("No se pudo conectar con Banda de prueba"));
+            Assert.That(LocalizationFixture.En.Format(L10nKeys.HrmConnectFailed, MessageArg.Text("name", "Banda de prueba")),
+                Is.EqualTo("Couldn't connect to Banda de prueba"));
+            Assert.That(LocalizationFixture.Es.Get(L10nKeys.HrmSearching), Is.EqualTo("Buscando sensores..."), "las existentes conservan sus ...");
+            Assert.That(LocalizationFixture.Es.Format(L10nKeys.HrmConnectError, MessageArg.Text("error", "x")), Is.EqualTo("Error al conectar: x"), "sigue en el catálogo");
         }
 
         // AC-APP-10-08: no se pierde ninguna de las 159 claves del legacy (incluidas las sin uso y las de código muerto).

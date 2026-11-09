@@ -30,23 +30,30 @@ namespace RowMate.Core.Ble
         // null si está vacío o si le faltan bytes para su formato: el de 16 bits con 2 bytes NO cae a 8 bits (:25, :28).
         public static HeartRateReading? Parse(ReadOnlySpan<byte> bytes)
         {
+            return TryParse(bytes, out var bpm, out var contact) ? new HeartRateReading(bpm, contact) : null;
+        }
+
+        // Lo mismo sin reservar memoria (It. 11, AC-HRM-04-06): el pulsómetro real lo usa en cada notificación de 0x2A37.
+        public static bool TryParse(ReadOnlySpan<byte> bytes, out int bpm, out bool? contact)
+        {
+            bpm = 0;
+            contact = null;
             if (bytes.Length == 0)
             {
-                return null;
+                return false;
             }
 
             var flags = bytes[0];
             var is16 = (flags & 0x01) != 0;
             if (bytes.Length < (is16 ? 3 : 2))
             {
-                return null;
+                return false;
             }
 
-            var bpm = is16 ? bytes[1] | (bytes[2] << 8) : bytes[1];
+            bpm = is16 ? bytes[1] | (bytes[2] << 8) : bytes[1];
 
             // switch (contactBits) { 2 => false, 3 => true, _ => null } (:33-38).
             var contactBits = (flags >> 1) & 0x03;
-            bool? contact;
             switch (contactBits)
             {
                 case 2:
@@ -55,12 +62,9 @@ namespace RowMate.Core.Ble
                 case 3:
                     contact = true;
                     break;
-                default:
-                    contact = null;
-                    break;
             }
 
-            return new HeartRateReading(bpm, contact);
+            return true;
         }
     }
 }

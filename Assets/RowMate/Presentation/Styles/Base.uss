@@ -619,6 +619,13 @@
     -unity-text-align: middle-center;
 }
 
+/* It. 11: en Dispositivo, el vacío a todo el ancho (centrado por el texto). Con el ancho "a la medida", el redondeo de algunas
+   densidades partía "No devices found" en dos líneas dentro de una caja de una (CAP-05c, CAP-07b). */
+.rm-device-empty .rm-empty__title,
+.rm-device-empty .rm-empty__hint {
+    align-self: stretch;
+}
+
 #hrm-card-slot-scan {
     margin-top: 12px;
     flex-grow: 1;
@@ -697,12 +704,14 @@
 
 #hrm-connecting-text {
     flex-shrink: 1;
+    flex-grow: 1;
     color: var(--rm-text-primary);
     white-space: normal;
 }
 
 #hrm-searching-text {
     flex-shrink: 1;
+    flex-grow: 1;
     white-space: normal;
 }
 
@@ -759,9 +768,41 @@
     color: var(--rm-text-tertiary);
 }
 
-#hrm-remembered-text {
+/* It. 11 (02-tech-design §4.1; A11-02): identidad del recordado = indicador 16 + nombre (1 línea con …) + sufijo en la misma fila */
+.rm-hrm-card__identity {
+    flex-direction: row;
+    align-items: center;
+}
+
+.rm-hrm-card__indicator {
+    margin-right: 10px;
+}
+
+#hrm-remembered-name {
+    flex-shrink: 1;
+    min-width: 0;
     color: var(--rm-text-secondary);
-    white-space: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#hrm-remembered-suffix {
+    flex-shrink: 0;
+    color: var(--rm-text-secondary);
+    white-space: nowrap;
+}
+
+.rm-hrm-card__check {
+    margin-right: 12px;
+}
+
+/* AC-HRM-05-03: "Sin señal del sensor" debajo del pulso, 12 dp text.tertiary */
+.rm-hrm-card__stale {
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .rm-hrm-actions {
@@ -790,10 +831,56 @@
     align-self: flex-start;
 }
 
+/* It. 11 (AC-HRM-13-14, Q-42): la frase humana (state.dangerText 12, hasta 2 líneas) y el detalle técnico (text.tertiary 11, 1 línea) */
 #hrm-error {
     margin-top: 8px;
+}
+
+#hrm-error-human {
     color: var(--rm-state-danger-text);
     white-space: normal;
+}
+
+#hrm-error-detail {
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* It. 11 (A11-05, DT11-14; cierra m-06 de la 10a): la búsqueda con alto compacto (DeviceScanLayout) */
+.rm-device-scan__columns {
+    flex-direction: row;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-height: 0;
+}
+
+.rm-device-scan__main {
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+}
+
+.rm-device-scan--two-columns #hrm-card-slot-scan {
+    margin-top: 0;
+    margin-left: 16px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
+}
+
+.rm-device-scan--single-scroll #hrm-card-slot-scan {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+}
+
+.rm-device-scan--single-scroll #hrm-card {
+    margin-top: 12px;
 }
 
 /* ── Pestañas provisorias (AC-APP-02-08): ícono 56 apagado al 24 %, centrado entre las dos barras ── */

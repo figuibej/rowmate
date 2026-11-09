@@ -15,9 +15,11 @@ namespace RowMate.Tests.EditMode.Device
 
         private static HeartRateState State(HrmStatus status, int bpm = 0, bool retrying = false, string? remembered = null,
                                             string? connected = null, string? chosen = null, Exception? error = null,
-                                            IReadOnlyList<BleScanResult>? results = null)
+                                            IReadOnlyList<BleScanResult>? results = null, HrmLink? link = null)
         {
-            return new HeartRateState(status, bpm, results ?? NoResults, error, chosen, retrying, connected, remembered);
+            var kind = error == null ? HrmErrorKind.None : error is HrmIncompatibleException ? HrmErrorKind.Incompatible : HrmErrorKind.Connect;
+            return new HeartRateState(status, bpm, results ?? NoResults, kind, null, error?.Message, chosen, retrying, connected, remembered,
+                link ?? HrmLink.Idle);
         }
 
         [Test, Category("AC-HRM-13-02")]
@@ -144,11 +146,9 @@ namespace RowMate.Tests.EditMode.Device
             Assert.That(HrmCardRules.Build(State(HrmStatus.Disconnected), BleStatus.Connected, es).ErrorText, Is.Null);
             Assert.That(HrmCardRules.Build(State(HrmStatus.Disconnected, error: new HrmIncompatibleException()), BleStatus.Connected, es).ErrorText,
                 Is.EqualTo("No es un pulsómetro compatible (sin servicio Heart Rate)"));
-            Assert.That(HrmCardRules.ErrorText(new HrmIncompatibleException(), LocalizationFixture.En),
-                Is.EqualTo("Not a compatible heart rate sensor (no Heart Rate service)"));
-            // D-25: el texto técnico es el Message (el legacy, el toString() de Dart con el tipo adelante).
-            Assert.That(HrmCardRules.ErrorText(new InvalidOperationException("GATT 133"), es), Is.EqualTo("Error al conectar: GATT 133"));
-            Assert.That(HrmCardRules.ErrorText(new InvalidOperationException("GATT 133"), LocalizationFixture.En), Is.EqualTo("Connection error: GATT 133"));
+            var english = HrmCardRules.Build(State(HrmStatus.Disconnected, error: new HrmIncompatibleException()), BleStatus.Connected,
+                LocalizationFixture.En);
+            Assert.That(english.ErrorText, Is.EqualTo("Not a compatible heart rate sensor (no Heart Rate service)"));
         }
 
         [Test, Category("AC-HRM-04-03")]

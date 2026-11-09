@@ -41,5 +41,9 @@ namespace RowMate.Core.Ble
         Task DisconnectAsync();
 
         Task ForgetAsync();
+
+        // It. 11 (A11-01, DT11-03): el enlace con el pulsómetro real (fase de reconexión, motivo, corrida, lectura vencida y quién
+        // conectó). El simulado y Unavailable no lo tienen: siempre Idle (como IRowerService.Link), así el simulador no avisa nada.
+        IReadOnlyObservable<HrmLink> Link => HrmLinkSource.Idle;
     }
 }

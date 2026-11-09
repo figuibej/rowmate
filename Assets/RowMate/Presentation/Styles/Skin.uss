@@ -692,3 +692,58 @@
 .rm-toast__indicator.rm-link-indicator--link-off {
     color: var(--rm-state-warning);
 }
+
+/* ════ It. 11 — Bluetooth real: pulsómetro (11-ble-pulsometro/04-design-notes; 00-arte-pulsometro §1, §3 y §5; contrato de
+   11-ble-pulsometro/02-tech-design §4 y §8). Cero colores, fuentes ni glifos nuevos: el corazón y el corazón roto los dibuja
+   LinkIndicator (HeartGlyph). Lo que mueve el código (respiración, línea sin señal, filas, check, seguir a la tarjeta) está en
+   HrmMotion y BleMotionSpecs; acá van solo colores y aspecto. ════ */
+
+/* Identidad del recordado: el indicador de 16 + nombre (text.secondary, 1 línea con …) + estado (text.tertiary 5,15:1, para que el
+   nombre mande y el estado se lea como estado). link_off sin reintentos: text.tertiary (es un hecho, no una alarma; D11-01); el arco
+   y el spinner siguen en accent.primary. */
+
+.rm-hrm-card__identity #hrm-remembered-suffix {
+    color: var(--rm-text-tertiary);
+}
+
+.rm-hrm-card__indicator.rm-link-indicator--link-off {
+    color: var(--rm-text-tertiary);
+}
+
+/* Lectura vencida (AC-HRM-05-03): bodyXs 12 en text.tertiary, una línea con … (es aviso, no error: sin rojo). */
+.rm-hrm-card__stale {
+    color: var(--rm-text-tertiary);
+}
+
+/* Error en dos renglones (Q-42; AC-HRM-13-14): la frase humana en state.dangerText (5,20:1) y el detalle técnico en caption
+   text.tertiary, una línea con … (el texto completo va al registro). */
+.rm-hrm-card__error-human {
+    color: var(--rm-state-danger-text);
+}
+
+.rm-hrm-card__error-detail {
+    color: var(--rm-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Alto compacto (A11-05): TH en dos columnas, la tarjeta arriba de su columna y alineada con "Buscar dispositivos"; L640 en un
+   único desplazamiento, con aire debajo de la tarjeta para que no quede pegada a la barra al seguirla. */
+.rm-device-scan--two-columns #hrm-card-slot-scan .unity-scroll-view__content-container {
+    padding-bottom: 8px;
+}
+
+.rm-device-scan--single-scroll #hrm-card-slot-scan .unity-scroll-view__content-container {
+    padding-bottom: 12px;
+}
+
+/* Avisos del pulsómetro en la cápsula del enlace (§5): corazón en metric.hr.hud (4,57:1 en el peor fondo) y corazón roto en
+   state.warning (6,24:1). */
+.rm-toast__indicator.rm-link-indicator--heart {
+    color: var(--rm-metric-hr-hud);
+}
+
+.rm-toast__indicator.rm-link-indicator--heart-broken {
+    color: var(--rm-state-warning);
+}

@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-08 (rowmate-po, al cerrar la It. 10a) |
-| Fase | **It. 10a cerrada con OK del usuario (rigen los valores por defecto de su gate; la demo con el remo queda pendiente). It. 11 en curso.** PO: **aceptada**, sin criterios en FAIL. QA: APROBADO CON OBSERVACIONES ([05-qa-verification](iterations/10a-ble-android-windows/05-qa-verification.md)), sin bloqueantes ni mayores (6 menores): dotnet `-Matrix` 3632 (3593 pasan, 0 fallan, 39 omitidos), herramientas 192 / 192, matriz con 772 en PASA, 0 en FALLA, 4 ignorados, 165 pendientes de Unity y 6 sin test (todos de equipo o de remo); Unity EditMode 3736 / 3688 / 0 / 48 y con simulador 3928 / 3880 / 0 / 48; PlayMode 622 / 622 y con simulador 697 / 697; builds normal, `-BleSmoke` (3 búsquedas reales, `ftms=0`, `fallas=0`, sin colgarse) y `-Simulator` con exit 0; Kotlin compilado contra android-36 (`check.ps1 -Golden`), DLL de Windows reproducible y sin rutas. De 43 criterios, 37 cumplen y 6 no son verificables (4 esperan el remo y 2 el módulo de Android). El reporte para el usuario lo devolvió el PO al coordinador. La deuda va a issues de GitHub |
-| Próximo paso | **It. 11** (`11-ble-pulsometro`: pulsómetro real), en curso. La demo de la 10a con el AMS-670B queda pendiente del usuario. Necesita un pulsómetro BLE (banda o reloj que transmita `0x180D`). La 6b sigue postergada (issue #6) y la 10b, flotante hasta que haya Mac |
+| Actualizado | 2026-11-09 (coordinador, OK de la It. 11 y arranque de la 12) |
+| Fase | **It. 12 en curso** (`12-strava-subida`). La It. 11 quedó cerrada con el OK del usuario ([reporte](iterations/11-ble-pulsometro/REPORT.md)); deuda en los issues #57 a #65. Builds `normal` y `simulator` y capturas regeneradas con el arte final |
+| Próximo paso | Terminar la **It. 12** (Strava: conexión, subida y TCX) con un Strava simulado: el usuario todavía no pasó las credenciales de la API (se cargan al compilar y nunca se versionan). Las demos de la 10a (AMS-670B) y de la 11 (pulsómetro) quedan pendientes del usuario. La 6b sigue postergada (issue #6) y la 10b, flotante hasta que haya Mac |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs. El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
@@ -25,8 +25,8 @@
 | 9 | Historial y detalle | **Cerrada** ([reporte](iterations/09-historial/REPORT.md)); el usuario dio el OK ("pushea y pasa a la 10"): rigen los valores por defecto de su gate. Deuda en los issues #32 a #39. Sin FAIL; AC-HIS-19-05 NO VERIFICABLE en parte (cuadro de 50 ms y 60 fps en el build) |
 | 10a | Bluetooth real en Android y Windows | **Cerrada** ([reporte](iterations/10a-ble-android-windows/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Deuda en los issues #40 a #56. La demo con el remo queda pendiente. Sin FAIL; 37 PASS y 6 NO VERIFICABLE: AC-BLE-06-08, -08-07, -09-03 y -91-02 esperan el AMS-670B; AC-APP-13-02 y -14-05, el módulo "Android Build Support" y un teléfono |
 | 10b | Tanda Apple (iOS y macOS) | Flotante: cuando haya Mac |
-| 11 | Pulsómetro real | Pendiente |
-| 12 | Strava: conexión y subida | Pendiente |
+| 11 | Pulsómetro real | **Cerrada** ([reporte](iterations/11-ble-pulsometro/REPORT.md)); el usuario dio el OK ("dale"): rigen los valores por defecto de su gate. Deuda en los issues #57 a #65. La demo con el pulsómetro queda pendiente. Sin FAIL; 39 PASS y 2 NO VERIFICABLE: AC-HRM-HW-01 (sensor real y AMS-670B) y AC-HRM-HW-02 (teléfono y "Android Build Support") |
+| 12 | Strava: conexión y subida | **En curso** |
 | 13 | Strava: sincronización y Perfil | Pendiente |
 | 14 | Pulido, identidad, plataformas y CI | Pendiente |
 
@@ -48,9 +48,28 @@
 
 - **Gate de la It. 9**: el usuario dio el OK ("pushea y pasa a la 10"), así que rigen los valores por defecto de la tabla "Gate de la It. 9" de abajo (DV-90 a DV-95, tiempo y distancia del monitor, etiquetas X como `fl_chart` con issue prioritario).
 
-### Para confirmar en el gate de la It. 10a
+### Para confirmar en el gate de la It. 11
 
-Si el usuario no dice nada, se aplica "Por defecto". Detalle en el reporte de la 10a (§6) y en [01-po-spec §8](iterations/10a-ble-android-windows/01-po-spec.md).
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §9](iterations/11-ble-pulsometro/01-po-spec.md) y [02-tech-design](iterations/11-ble-pulsometro/02-tech-design.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-106 / Q-41: un sensor nuevo sin nombre borra el nombre guardado y se ve `Sensor desconocido` | Se acepta | El legacy: queda el nombre del anterior o la dirección |
+| DV-107 / Q-42: error en lenguaje humano (`No se pudo buscar sensores`, `No se pudo conectar con {name}`) y el detalle técnico debajo | Se acepta | `Error al conectar: …` del legacy |
+| DV-108: `Pulsómetro conectado` 2 s, solo en reconexiones automáticas | Se acepta | Sin aviso, como el legacy |
+| DV-109: `Se perdió el pulsómetro, reconectando…` 4 s sobre el HUD; los avisos del remo tienen prioridad | Se acepta | Sin aviso, como el legacy |
+| DV-110: lectura vencida = `--` + `Sin señal del sensor` y el corazón atenuado | Se acepta | Solo `--`, como el legacy |
+| DV-111: con el Bluetooth apagado durante una caída, sigue intentando cada 3 s y reconecta al encenderlo | Se acepta (paridad) | Deja de intentar |
+| DV-113: la reconexión va directo a la dirección recordada, sin buscar, también en Windows | Se acepta (paridad; R-01 se mira en la demo) | Buscar antes de reconectar en Windows |
+| DV-114: Android sin servicio en primer plano | Se acepta | Servicio con notificación ya |
+| DT11-15: si `Desconectar` u `Olvidar` fallan, la tarjeta dice `No se pudo conectar con {name}` | Se acepta | Texto propio para esas acciones |
+| DT11-10: en el `Player.log` las direcciones van enmascaradas (`AA:BB:…:0D`) | Se acepta | Dirección completa, como el legacy |
+
+**Decididas por el PO al cerrar la It. 11** (no necesitan respuesta): AC-HRM-HW-01 y -HW-02 quedan para la demo del usuario; los 3 menores de QA (m-01 a m-03), los menores del gate y los "Para issues" de la spec, el diseño y el arte van a issues de GitHub (agrupados, 10), sin corregirlos antes del commit; las capturas versionadas son de antes del último pulido (los avisos muestran check y `link_off` en vez del corazón): el coordinador las regeneró con el arte final antes del commit, junto con `Builds/Windows/normal` y `simulator` (no se versionan).
+
+### Gate de la It. 10a (valores que rigen)
+
+El usuario dio el OK ("pushea y arranca la proxima iteracion"): rigen los valores por defecto. Detalle en el reporte de la 10a (§6) y en [01-po-spec §8](iterations/10a-ble-android-windows/01-po-spec.md).
 
 | Decisión | Por defecto | Si se rechaza |
 |---|---|---|
@@ -123,7 +142,7 @@ Si el usuario no dice nada, se aplica "Por defecto". Detalle en el reporte de la
 | It. 9 (opcional, 15 minutos) | La demo de [REPORT de la 9 §2](iterations/09-historial/REPORT.md) en `Builds/Windows/simulator` (ya tiene la 9): una libre, la rutina `Demo 9`, el detalle con las 5 métricas y una sesión cortada | Pendiente |
 | It. 10a (demo, recomendado) | Con el AMS-670B: la demo de Windows del reporte de la 10a en `Builds/Windows/normal` (Bluetooth apagado, buscar, conectar, diagnóstico, entrenar, minimizar, corte breve, monitor apagado) y anotar la cadencia (`[BLE] Cadencia` del `Player.log`, que no se sube). Cierra AC-BLE-06-08, -08-07, -09-03 y la parte de remo de -91-02 | Pendiente |
 | It. 10a, Android | Módulo **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), `build.ps1 -Target Android -Backend IL2CPP` y un teléfono con Android 12+ y depuración USB ([tools/unity/README.md](../../tools/unity/README.md) §It. 10a). Cierra AC-APP-13-01 (APK), -13-02, -14-05, la vibración y Android de AC-BLE-04-04 y -91-02 | Pendiente |
-| It. 11 (necesario) | Un pulsómetro BLE (banda o reloj que transmita `0x180D`) | Pendiente |
+| It. 11 (demo, recomendado) | Con un pulsómetro BLE (banda o reloj que transmita `0x180D`) y, si se puede, el AMS-670B: la demo de Windows del reporte de la 11 en `Builds/Windows/normal` (regenerado) y las líneas `[HRM]` del `Player.log` (no se suben). Cierra AC-HRM-HW-01; con el teléfono, AC-HRM-HW-02 | Pendiente |
 | P-17 (recomendado, 5 minutos) | La demo (c) de la 4b: suspender el equipo a mano (Inicio → Encender/apagar → Suspender) con un entrenamiento en marcha ([REPORT de la 6a §3.1 (d)](iterations/06a-escena-lago/REPORT.md)). Cierra AC-WKT-02-11, que QA no puede verificar | Pendiente |
 | It. 4a (opcional, 1 minuto) | `powercfg /requests` en una consola de administrador, con la app abierta y después de cerrarla ([REPORT de la 4a §3.7](iterations/04a-motor-hud-funcional/REPORT.md)). Cierra AC-APP-14-01 a -03 | Pendiente |
 | Cierre de NV (It. 2 a 6a) y rendimiento de la escena | Módulos **Windows Build Support (IL2CPP)** (con Visual Studio 2022 "Desarrollo de escritorio con C++" y Windows SDK 10.0.22621+) y **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), más **un Android de gama media** (clase Galaxy A54 / Pixel 6a, Android 8+ de 64 bits) con depuración USB. Cierran IL2CPP (AC-BASE-01, R3-01; R5-04), AC-SCN-01-09 (60 fps con la escena, 30 min), la fila de 200 píldoras en el teléfono (R4b-02) y las partes Android de las It. 2 a 6a | Pendiente. Sin él, el rendimiento en el teléfono queda NO VERIFICABLE hasta la 14 (regla 9). **Recomendado para la 6b** (60 fps con el agua avanzada) |
@@ -217,3 +236,5 @@ Riesgos:
 | 2026-11-08 | coordinador | El usuario dio el OK a la It. 9 ("pushea y pasa a la 10"): rigen los valores por defecto de su gate. Empieza la It. 10a |
 | 2026-11-08 | rowmate-po | **Cierre de la It. 10a**: aceptada por el PO, sin FAIL; esperando OK y demo del usuario con el remo. QA: APROBADO CON OBSERVACIONES (dotnet `-Matrix` 3593/3632 pasan, 0 fallan; herramientas 192/192; matriz 772 PASA, 0 FALLA; Unity EditMode con simulador 3880/3928 y PlayMode con simulador 697/697; builds normal, `-BleSmoke` y `-Simulator` OK; Kotlin y DLL verificados; 37 AC PASS, 0 FAIL, 6 NV: 4 [BLE-HW] y 2 [Device-Android]). Decisiones del PO al cerrar: los NV a la demo, QA-G10a-06 precisado, m-01 a m-06 y los "Para issues" a issues de GitHub. Próxima: la It. 11 (la 6b sigue postergada y la 10b, flotante). Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-08 | coordinador | El usuario dio el OK a la It. 10a ("pushea y arranca la proxima iteracion"): rigen los valores por defecto de su gate. Empieza la It. 11 |
+| 2026-11-09 | rowmate-po | **Cierre de la It. 11**: aceptada por el PO, sin FAIL; esperando OK y demo del usuario con el pulsómetro. QA: APROBADO CON OBSERVACIONES (dotnet `-Matrix` 3737/3776 pasan, 0 fallan; herramientas 194/194; matriz 1003 PASA, 0 FALLA; LT-139 a LT-145 pasan; Unity EditMode con simulador 4026/4074 y PlayMode con simulador 713/713; builds `-BleSmoke` y `-Simulator` OK; plugins sin cambios; 39 AC PASS, 0 FAIL, 2 NV: [BLE-HW] y [Device-Android]). Decisiones del PO al cerrar: los NV a la demo, capturas y build normal a regenerar, menores y "Para issues" a 10 issues de GitHub. Próxima: la It. 12 (la 6b sigue postergada y la 10b, flotante). Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-09 | coordinador | Capturas y builds `normal`/`simulator` de la It. 11 regenerados con el arte final; deuda en los issues #57 a #65. El usuario dio el OK a la It. 11 ("dale"): rigen los valores por defecto de su gate. Empieza la It. 12 con Strava simulado (sin credenciales de la API todavía) |

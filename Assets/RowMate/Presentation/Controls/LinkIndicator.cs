@@ -15,6 +15,9 @@ namespace RowMate.Presentation.Controls
     // - Check: "Listo" / "Reconectado": el círculo se dibuja en 0-160 y la tilde se traza en 80-240 (ease.enter; CheckGlyph). Reducir
     //   movimiento: entero con un fundido de 160.
     // - LinkOff: el monitor dejó de enviar datos: dos eslabones separados y la diagonal que los corta (el link_off de Material).
+    // - It. 11 (A11-04; 00-arte-pulsometro §5): Heart, el favorite relleno de "Pulsómetro conectado", con UN latido al entrar (escala
+    //   1 → 1,16 en 0-90 y vuelta en 90-290; por style.scale, sin repintar); HeartBroken, el heart_broken de "Se perdió el pulsómetro".
+    //   Los dos se dibujan con Painter2D (HeartGlyph) en el mismo elemento: ni fuente ni elementos nuevos. Reducir movimiento: sin latido.
     // Los colores salen de las clases rm-link-indicator--* (USS); el tamaño y el trazo, del constructor. Spinner y arco son continuos (no
     // cuentan para Settle) y siguen con reducir movimiento (indican espera); el check es finito hasta los 240 ms. Sin asignaciones por
     // cuadro (en el aviso del HUD, marcador RowMate.Toast.LinkNotice; BleAllocationTests).
@@ -36,6 +39,7 @@ namespace RowMate.Presentation.Controls
         private double _checkStart = double.NaN;
         private double _checkElapsedMs = BleMotionSpecs.CheckTickEndMs;
         private bool _reducedCheck;
+        private double _beatStart = double.NaN;
 
         public LinkIndicator(MotionDriver? motion, float sizeDp, float strokeDp = 2)
         {
@@ -57,11 +61,16 @@ namespace RowMate.Presentation.Controls
             Spinner,
             WaitingArc,
             Check,
-            LinkOff
+            LinkOff,
+            Heart,
+            HeartBroken
         }
 
         // El check se está dibujando (finito); los demás modos con movimiento son continuos.
-        public bool IsFinite => _mode == Mode.Check && !double.IsNaN(_checkStart);
+        public bool IsFinite => _mode == Mode.Check && !double.IsNaN(_checkStart) || IsBeating;
+
+        // El latido de entrada del corazón está corriendo (finito, 290 ms).
+        public bool IsBeating => _mode == Mode.Heart && !double.IsNaN(_beatStart);
 
         public Mode Current => _mode;
 
@@ -81,6 +90,8 @@ namespace RowMate.Presentation.Controls
             EnableInClassList(UssClass + "--waiting", mode == Mode.WaitingArc);
             EnableInClassList(UssClass + "--check", mode == Mode.Check);
             EnableInClassList(UssClass + "--link-off", mode == Mode.LinkOff);
+            EnableInClassList(UssClass + "--heart", mode == Mode.Heart);
+            EnableInClassList(UssClass + "--heart-broken", mode == Mode.HeartBroken);
             style.display = mode == Mode.None ? DisplayStyle.None : DisplayStyle.Flex;
             if (mode != Mode.Spinner)
             {
@@ -100,6 +111,15 @@ namespace RowMate.Presentation.Controls
             {
                 _checkStart = double.NaN;
                 style.opacity = StyleKeyword.Null;
+            }
+
+            if (changed && mode == Mode.Heart)
+            {
+                StartBeat();
+            }
+            else if (mode != Mode.Heart)
+            {
+                StopBeat();
             }
 
             UpdateRegistration();
@@ -181,9 +201,52 @@ namespace RowMate.Presentation.Controls
                     return true;
                 }
 
+                case Mode.Heart:
+                {
+                    if (double.IsNaN(_beatStart))
+                    {
+                        return false;
+                    }
+
+                    var elapsed = (nowSeconds - _beatStart) * 1000.0;
+                    if (elapsed >= BleMotionSpecs.HeartBeatEndMs)
+                    {
+                        StopBeat();
+                        return false;
+                    }
+
+                    var s = (float)BleMotionSpecs.HeartBeatScaleAt(elapsed);
+                    style.scale = new Scale(new Vector2(s, s));
+                    return true;
+                }
+
                 default:
                     return false;
             }
+        }
+
+        // Un latido desde ahora (solo armado y sin reducir movimiento; si no, el corazón queda quieto en 1).
+        private void StartBeat()
+        {
+            if (_motion == null || !_motion.Armed || _motion.Settings.ReduceMotion)
+            {
+                StopBeat();
+                return;
+            }
+
+            _beatStart = _motion.Now;
+            style.scale = new Scale(Vector2.one);
+        }
+
+        private void StopBeat()
+        {
+            if (double.IsNaN(_beatStart))
+            {
+                return;
+            }
+
+            _beatStart = double.NaN;
+            style.scale = StyleKeyword.Null;
         }
 
         private void StartCheck()
@@ -218,7 +281,7 @@ namespace RowMate.Presentation.Controls
                 return;
             }
 
-            if (panel != null && (_mode == Mode.Spinner || _mode == Mode.WaitingArc || _mode == Mode.Check && !double.IsNaN(_checkStart)))
+            if (panel != null && (_mode == Mode.Spinner || _mode == Mode.WaitingArc || _mode == Mode.Check && !double.IsNaN(_checkStart) || IsBeating))
             {
                 _motion.Add(this);
             }
@@ -274,7 +337,65 @@ namespace RowMate.Presentation.Controls
                 case Mode.LinkOff:
                     DrawLinkOff(painter, color, center, size, stroke);
                     break;
+                case Mode.Heart:
+                    painter.fillColor = color;
+                    DrawHeart(painter, rect, size, 0);
+                    break;
+                case Mode.HeartBroken:
+                    painter.fillColor = color;
+                    DrawHeart(painter, rect, size, -1);
+                    DrawHeart(painter, rect, size, 1);
+                    break;
             }
+        }
+
+        // El favorite (HeartGlyph, caja de 24) escalado al elemento y centrado. side 0 = entero; −1 / +1 = la mitad izquierda / derecha
+        // de la versión rota, corrida BrokenGap hacia su lado y cerrada por la grieta. Sin asignar: recorre los arreglos estáticos.
+        private static void DrawHeart(Painter2D painter, Rect rect, float size, int side)
+        {
+            var k = size / (float)HeartGlyph.ViewBox;
+            var ox = rect.x + (rect.width - size) / 2 + side * (float)HeartGlyph.BrokenGap * k;
+            var oy = rect.y + (rect.height - size) / 2;
+            var c = HeartGlyph.LeftContour;
+            var n = HeartGlyph.Segments;
+            var mirror = side > 0;
+            painter.BeginPath();
+            painter.MoveTo(P(HeartGlyph.NotchX, HeartGlyph.NotchY, ox, oy, k, mirror));
+            // El contorno de su lado, de la muesca a la punta (el derecho es el espejo del izquierdo).
+            for (var i = 0; i < n; i++)
+            {
+                var j = i * 6;
+                painter.BezierCurveTo(P(c[j], c[j + 1], ox, oy, k, mirror), P(c[j + 2], c[j + 3], ox, oy, k, mirror), P(c[j + 4], c[j + 5], ox, oy, k, mirror));
+            }
+
+            if (side == 0)
+            {
+                // Entero: vuelve por el contorno derecho, de la punta a la muesca (tramos invertidos y en espejo).
+                for (var i = n - 1; i >= 0; i--)
+                {
+                    var j = i * 6;
+                    HeartGlyph.SegmentStart(i, out var sx, out var sy);
+                    painter.BezierCurveTo(P(c[j + 2], c[j + 3], ox, oy, k, true), P(c[j], c[j + 1], ox, oy, k, true), P(sx, sy, ox, oy, k, true));
+                }
+            }
+            else
+            {
+                // Roto: sube por la grieta hasta la muesca (la misma línea cierra las dos mitades).
+                var crack = HeartGlyph.Crack;
+                for (var i = crack.Length - 4; i >= 0; i -= 2)
+                {
+                    painter.LineTo(P(crack[i], crack[i + 1], ox, oy, k, false));
+                }
+            }
+
+            painter.ClosePath();
+            painter.Fill();
+        }
+
+        private static Vector2 P(double x, double y, float ox, float oy, float k, bool mirror)
+        {
+            var gx = mirror ? HeartGlyph.MirrorX(x) : x;
+            return new Vector2(ox + (float)gx * k, oy + (float)y * k);
         }
 
         // El círculo se dibuja desde arriba en sentido horario (0-160) con un relleno suave, y la tilde se traza (80-240).

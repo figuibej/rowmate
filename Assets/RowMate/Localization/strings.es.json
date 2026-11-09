@@ -525,5 +525,17 @@
   },
   "deviceMonitorStopped": "El monitor dejó de enviar datos",
   "deviceBleUnsupported": "Este equipo no tiene Bluetooth LE",
-  "deviceBleUnsupportedHint": "RowMate necesita Bluetooth LE para conectar\nel remo y el pulsómetro"
+  "deviceBleUnsupportedHint": "RowMate necesita Bluetooth LE para conectar\nel remo y el pulsómetro",
+  "hrmNoSignal": "Sin señal del sensor",
+  "hrmScanFailed": "No se pudo buscar sensores",
+  "hrmConnectFailed": "No se pudo conectar con {name}",
+  "@hrmConnectFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hrmConnectedNotice": "Pulsómetro conectado",
+  "hrmLostNotice": "Se perdió el pulsómetro, reconectando…"
 }

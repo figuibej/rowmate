@@ -59,10 +59,10 @@ namespace RowMate.Tests.PlayMode
             Hrm.Remember(ScriptedHeartRateService.RememberedSample, true);
             yield return Settle();
             Assert.That(card.Body, Is.EqualTo(HrmCardBody.Remembered));
-            Assert.That(H.TextOf("hrm-remembered-text"), Is.EqualTo("Polar H10 7E1A2B3C · reconectando..."));
+            Assert.That(H.TextOf("hrm-remembered-name") + H.TextOf("hrm-remembered-suffix"), Is.EqualTo("Polar H10 7E1A2B3C · reconectando..."));
             Hrm.Remember(ScriptedHeartRateService.RememberedSample, false);
             yield return Settle();
-            Assert.That(H.TextOf("hrm-remembered-text"), Is.EqualTo("Polar H10 7E1A2B3C · no encontrado"));
+            Assert.That(H.TextOf("hrm-remembered-name") + H.TextOf("hrm-remembered-suffix"), Is.EqualTo("Polar H10 7E1A2B3C · no encontrado"));
             Hrm.SetStatus(HrmStatus.Connected);
             yield return Settle();
             Assert.That(card.Body, Is.EqualTo(HrmCardBody.Connected));
@@ -143,17 +143,20 @@ namespace RowMate.Tests.PlayMode
             Hrm.ConnectBehavior = ScriptedConnect.ThrowIncompatible;
             _ = H.App.HeartRate.ConnectAsync("AA", "X");
             yield return Settle();
-            Assert.That(H.TextOf("hrm-error"), Is.EqualTo("No es un pulsómetro compatible (sin servicio Heart Rate)"));
+            Assert.That(H.TextOf("hrm-error-human"), Is.EqualTo("No es un pulsómetro compatible (sin servicio Heart Rate)"));
             Hrm.ConnectBehavior = ScriptedConnect.ThrowError;
             Hrm.ErrorText = new string('x', 120) + " " + new string('y', 120) + " " + new string('z', 120);
             _ = H.App.HeartRate.ConnectAsync("AA", "X");
             yield return Settle();
             yield return Frames(3);
-            var error = H.Find<Label>("hrm-error")!;
-            Assert.That(H.HeartRateCard!.ErrorIsClamped, Is.True, "texto largo: cortado");
-            Assert.That(error.text, Does.EndWith("…"));
+            // It. 11 (AC-HRM-13-14, Q-42): la frase humana (hasta 2 líneas) y el detalle técnico en 1 línea con "…": hasta 3 en total.
+            var error = H.Find<Label>("hrm-error-human")!;
+            var detail = H.Find<Label>("hrm-error-detail")!;
+            Assert.That(error.text, Is.EqualTo("No se pudo conectar con X"));
+            Assert.That(H.HeartRateCard!.ErrorDetail.text, Is.EqualTo(Hrm.ErrorText));
+            Assert.That(detail.resolvedStyle.textOverflow, Is.EqualTo(TextOverflow.Ellipsis), "el detalle largo, cortado con …");
             var lineHeight = error.MeasureTextSize("Ag", error.contentRect.width, VisualElement.MeasureMode.Exactly, 0, VisualElement.MeasureMode.Undefined).y;
-            Assert.That(error.layout.height, Is.LessThanOrEqualTo(lineHeight * 3 + 1f), "hasta 3 líneas");
+            Assert.That(error.layout.height + detail.layout.height, Is.LessThanOrEqualTo(lineHeight * 3 + 1f), "hasta 3 líneas");
             AssertColor(error.resolvedStyle.color, Tokens.StateDangerText);
         }
 

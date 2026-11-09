@@ -12,7 +12,9 @@ namespace RowMate.Bootstrap
     // prueba.
     // - Create: el remo real (RowerService, Core) sobre el plugin nativo (NativeBleAdapter + WindowsBleApi o el de Android), si
     //   BleAdapterFactory da uno; el adaptador es también la bomba de eventos que AppRoot drena en cada cuadro. Sin plugin (otro
-    //   sistema, ROWMATE_BLE=off, la DLL que no carga): el equipo sin Bluetooth LE de la It. 2. El pulsómetro real es de la It. 11.
+    //   sistema, ROWMATE_BLE=off, la DLL que no carga): el equipo sin Bluetooth LE de la It. 2.
+    // - It. 11 (02-tech-design §5): el pulsómetro real (HeartRateService, Core) sobre el MISMO adaptador que el remo y con las
+    //   preferencias de la app (hrm.deviceId / hrm.deviceName); AppRoot las lee antes de armar el backend.
     // - Unavailable: el equipo sin Bluetooth LE (P-04, AC-BLE-13-05: remo y pulsómetro "no disponibles", buscar no hace nada; legacy
     //   ble_service.dart:65-67, heart_rate_service.dart:108-113). Público: lo usa también UiTestHost (HostBackends.Unavailable, CAP-22).
     public static class HardwareBackend
@@ -20,7 +22,7 @@ namespace RowMate.Bootstrap
         public const string Tag = "BLE";
 
         public static DeviceBackend Create(IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, MainThreadQueue mainThread,
-                                           out IBleEventPump? pump)
+                                           IPreferences preferences, out IBleEventPump? pump)
         {
             pump = null;
             var api = BleAdapterFactory.Create(logger, mainThread, out var permissions);
@@ -32,9 +34,10 @@ namespace RowMate.Bootstrap
             var adapter = new NativeBleAdapter(api, permissions, scheduler, lifecycle, logger);
             pump = adapter;
             var rower = new RowerService(adapter, scheduler, lifecycle, logger);
-            logger.Log(LogLevel.Info, Tag, "Remo real (plugin nativo, adaptador " + adapter.State.Value + ")");
+            var heartRate = new HeartRateService(adapter, preferences, scheduler, logger);
+            logger.Log(LogLevel.Info, Tag, "Remo y pulsómetro reales (plugin nativo, adaptador " + adapter.State.Value + ")");
             // Dispose: pulsómetro, remo y después el adaptador (cierra las sesiones y el plugin).
-            return new DeviceBackend(rower, new UnavailableHeartRateService(logger), adapter);
+            return new DeviceBackend(rower, heartRate, adapter);
         }
 
         public static DeviceBackend Unavailable(IAppLogger logger)

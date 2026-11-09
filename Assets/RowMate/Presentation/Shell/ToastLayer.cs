@@ -24,6 +24,10 @@ namespace RowMate.Presentation.Shell
     //   suma otro: el HUD está cerca de su tope y el ToastLayer está fuera de #immersive). Suma un hijo #toast-indicator (LinkIndicator,
     //   1 elemento) y la clase .rm-toast--link. "Reconectando…" queda FIJO hasta "Reconectado" (2 s) o Cleared (null); "El monitor dejó
     //   de enviar datos", 4 s. Un aviso común que llega con el fijo a la vista lo reemplaza 4 s y después vuelve el fijo.
+    // - It. 11 (02-tech-design §4.3; DT11-13, QA-G11-03): ShowHrm, el aviso del pulsómetro en la misma cápsula (.rm-toast--link). Cede
+    //   SOLO ante uno del remo (a la vista o fijo pendiente: devuelve false y no se ve); reemplaza uno anterior del pulsómetro (con su
+    //   empujón y la duración nueva desde el reemplazo) o uno común. Va en _hrm (CurrentHrm), nunca en _link: CurrentLink y StickyLink
+    //   siguen siendo solo del remo. Show y ShowLink lo reemplazan.
     public sealed class ToastLayer : VisualElement, IDisposable
     {
         public const double NarrowWindowDp = 600;
@@ -45,6 +49,7 @@ namespace RowMate.Presentation.Shell
         private string _text = "";
         private LinkToast? _sticky;
         private LinkToast? _link;
+        private HrmToast? _hrm;
 
         public ToastLayer(UiContext ui, ShellLayout layout)
         {
@@ -92,6 +97,12 @@ namespace RowMate.Presentation.Shell
         // "Reconectando…" fijo (aunque un aviso común lo tape por 4 s).
         public LinkToast? StickyLink => _sticky;
 
+        // It. 11: el aviso del pulsómetro a la vista (null si el que se ve es otro o no hay ninguno).
+        public HrmToast? CurrentHrm => _visible ? _hrm : null;
+
+        // Qué hay a la vista para la regla de HrmNoticeRules.Admit.
+        public ToastSlot VisibleSlot => !_visible ? ToastSlot.None : _link != null ? ToastSlot.Rower : _hrm != null ? ToastSlot.Hrm : ToastSlot.Common;
+
         // Hay un aviso a la vista (entrando o quieto; no saliendo).
         public bool IsVisible => _visible;
 
@@ -135,17 +146,36 @@ namespace RowMate.Presentation.Shell
             Present(toast.Text, toast.Duration, toast);
         }
 
-        private void Present(string text, TimeSpan? duration, LinkToast? link)
+        // It. 11 (§4.3; QA-G11-03): true si se mostró; false si cedió ante un aviso del remo (a la vista o fijo pendiente).
+        public bool ShowHrm(HrmToast toast)
+        {
+            if (_disposed || toast == null)
+            {
+                return false;
+            }
+
+            if (!HrmNoticeRules.Admit(VisibleSlot, _sticky != null))
+            {
+                return false;
+            }
+
+            Present(toast.Text, toast.Duration, null, toast);
+            return true;
+        }
+
+        private void Present(string text, TimeSpan? duration, LinkToast? link, HrmToast? hrm = null)
         {
             ShowCount++;
             _timer?.Dispose();
             _timer = duration.HasValue ? _ui.App.Scheduler.Schedule(duration.Value, OnTimer) : null;
             _link = link;
-            Toast.EnableInClassList("rm-toast--link", link != null);
+            _hrm = hrm;
+            var linkLike = link != null || hrm != null;
+            Toast.EnableInClassList("rm-toast--link", linkLike);
             // WP-D (00-arte §4.2): el texto del enlace en titleXs 14/600 (el aviso común sigue en bodyM 14).
-            Text.EnableInClassList("rm-type-body-m", link == null);
-            Text.EnableInClassList("rm-type-title-xs", link != null);
-            Indicator.Show(link == null ? LinkIndicator.Mode.None : ModeFor(link.Kind));
+            Text.EnableInClassList("rm-type-body-m", !linkLike);
+            Text.EnableInClassList("rm-type-title-xs", linkLike);
+            Indicator.Show(link != null ? ModeFor(link.Kind) : hrm != null ? ModeFor(hrm.Kind) : LinkIndicator.Mode.None);
             if (_visible && !_transition.IsLeaving)
             {
                 var changed = !string.Equals(text, _text, StringComparison.Ordinal);
@@ -205,6 +235,12 @@ namespace RowMate.Presentation.Shell
             }
         }
 
+        // It. 11 (A11-04; WP-D): corazón con un latido de entrada (Connected, metric.hr.hud) y corazón roto (Lost, state.warning).
+        private static LinkIndicator.Mode ModeFor(HrmNoticeKind kind)
+        {
+            return kind == HrmNoticeKind.Connected ? LinkIndicator.Mode.Heart : LinkIndicator.Mode.HeartBroken;
+        }
+
         // Vencieron los 4 s (o los 2 s del enlace): si el fijo sigue vigente y lo tapaba un aviso común, vuelve; si no, se va.
         private void OnTimer()
         {
@@ -258,7 +294,7 @@ namespace RowMate.Presentation.Shell
 
             var natural = Text.MeasureTextSize(_text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x;
             // It. 10a: con el indicador del enlace, sus 16 y 8 de aire.
-            var indicator = _link != null ? LinkIndicatorDp : 0;
+            var indicator = _link != null || _hrm != null ? LinkIndicatorDp : 0;
             var width = Math.Max(MinWidthDp, Math.Min(MaxWidthDp, natural + TextPaddingDp + indicator));
             Toast.style.width = (float)width;
             Toast.style.left = (float)((window.x - width) / 2);

@@ -78,7 +78,7 @@ namespace RowMate.Tests.EditMode.Ble
             hrm.AutoConnectAsync();
 
             Assert.That(store.State.Value.Status, Is.EqualTo(HrmStatus.Disconnected));
-            Assert.That(store.State.Value.Error, Is.Null);
+            Assert.That(store.State.Value.HasError, Is.False);
             Assert.That(store.State.Value.Bpm, Is.EqualTo(0));
             Assert.That(store.State.Value.HasRemembered, Is.False);
             Assert.That(store.State.Value.IsRetrying, Is.False);

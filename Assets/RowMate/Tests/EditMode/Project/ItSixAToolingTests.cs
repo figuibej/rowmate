@@ -187,7 +187,7 @@ namespace RowMate.Tests.EditMode.Project
             }
 
             var script = Read(Captures);
-            Assert.That(script, Does.Contain("[string]$Set = 'it10a',"));
+            Assert.That(script, Does.Contain("[string]$Set = 'it11',"));
             Assert.That(script, Does.Contain("return '" + Snapshots + "'"), "su carpeta de salida");
             Assert.That(script, Does.Contain("'it5'").And.Contain("'it4b'"), "it4b e it5 siguen");
             AssertAscii(Captures);

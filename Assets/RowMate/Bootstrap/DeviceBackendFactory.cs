@@ -14,14 +14,15 @@ namespace RowMate.Bootstrap
     // nativo, con su bomba de eventos; sin plugin, el equipo sin BLE de la It. 2). Las pantallas no se enteran.
     internal static class DeviceBackendFactory
     {
+        // It. 11 (AC-HRM-15-13): las preferencias solo llegan al pulsómetro real; la rama del simulador no las ve ni escribe hrm.*.
         public static DeviceBackend Create(IScheduler scheduler, IAppLifecycle lifecycle, IAppLogger logger, MainThreadQueue mainThread,
-                                           out IBleEventPump? pump)
+                                           IPreferences preferences, out IBleEventPump? pump)
         {
 #if ROWMATE_SIMULATOR
             pump = null;
             return SimulatorBackend.Create(scheduler, logger, noise: true);
 #else
-            return HardwareBackend.Create(scheduler, lifecycle, logger, mainThread, out pump);
+            return HardwareBackend.Create(scheduler, lifecycle, logger, mainThread, preferences, out pump);
 #endif
         }
 

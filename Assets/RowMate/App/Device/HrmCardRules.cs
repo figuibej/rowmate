@@ -6,10 +6,13 @@ using RowMate.Core.Text;
 
 namespace RowMate.App.Device
 {
-    // Reglas de la tarjeta "Pulsómetro" con los textos ya resueltos (F-HRM-13; 02-tech-design §2.5).
+    // Reglas de la tarjeta "Pulsómetro" con los textos ya resueltos (F-HRM-13; 02-tech-design §2.5 de la It. 2 y §3.2 de la It. 11).
     // legacy: lib/features/device/heart_rate_card.dart:13-238
     public static class HrmCardRules
     {
+        // " · " + sufijo (hc:199, :203).
+        public const string RememberedSeparator = " · ";
+
         // ToUpperInvariant = toUpperCase de Dart (no depende del idioma del equipo).
         public static HrmCardViewModel Build(HeartRateState hr, BleStatus rowerStatus, Localizer texts)
         {
@@ -33,33 +36,63 @@ namespace RowMate.App.Device
                 rows.Add(new HrmDeviceRow(result.DeviceId, RowTitle(result, texts), result.DeviceId, "hrm-device-" + result.DeviceId));
             }
 
-            // :199, :203: "${hr.rememberedDeviceName} · $suffix".
-            var suffix = texts.Get(hr.IsRetrying ? L10nKeys.HrmReconnecting : L10nKeys.HrmNotFound);
-            var rememberedLine = (hr.RememberedDeviceName ?? "") + " · " + suffix;
+            var body = BodyFor(hr);
+            var stale = hr.IsStale;
+            var unknown = texts.Get(L10nKeys.HrmUnknownSensor);
 
+            // A11-02 (AC-HRM-07-02, -03): el indicador del recordado.
+            var indicator = HrmIndicator.None;
+            double? arcStartAt = null;
+            var arcDuration = TimeSpan.Zero;
+            if (body == HrmCardBody.Remembered)
+            {
+                if (!hr.IsRetrying)
+                {
+                    indicator = HrmIndicator.LinkOff;
+                }
+                else if (hr.Link.Reconnect == ReconnectPhase.Waiting && hr.Link.NextAttemptAt.HasValue)
+                {
+                    indicator = HrmIndicator.WaitingArc;
+                    arcStartAt = hr.Link.NextAttemptAt.Value - hr.Link.Wait.TotalSeconds;
+                    arcDuration = hr.Link.Wait;
+                }
+                else
+                {
+                    indicator = HrmIndicator.Spinner;
+                }
+            }
+
+            var error = Error(hr, texts);
             return new HrmCardViewModel(
                 Title: texts.Get(L10nKeys.HrmTitle).ToUpperInvariant(),
-                HeartFull: hr.IsConnected,                                   // :39-40
-                HeartBeating: hr.IsConnected && hr.Bpm > 0,
+                HeartFull: hr.IsConnected && !stale,                           // :39-40; AC-HRM-05-03 con la lectura vencida
+                HeartBeating: hr.IsConnected && hr.Bpm > 0 && !stale,
+                HeartBreathing: body == HrmCardBody.Remembered && hr.IsRetrying,   // D11-05
                 Bpm: hr.Bpm,
-                Body: BodyFor(hr),
-                ConnectedName: hr.ConnectedDeviceName ?? "",                 // :158
-                BpmText: BpmText(hr.Bpm),                                    // :171
+                Body: body,
+                ConnectedName: hr.ConnectedDeviceName == null ? "" : OrUnknown(hr.ConnectedDeviceName, unknown),   // :158, Q-41
+                BpmText: BpmText(hr.Bpm),                                      // :171
                 BpmUnit: texts.Get(L10nKeys.HrmBpm),
-                ConnectingText: texts.Format(L10nKeys.HrmConnectingTo, MessageArg.Text("name", hr.ConnectingName)),   // :84
+                StaleText: stale ? texts.Get(L10nKeys.HrmNoSignal) : null,
+                ConnectingText: texts.Format(L10nKeys.HrmConnectingTo, MessageArg.Text("name", OrUnknown(hr.ConnectingName, unknown))),   // :84
                 SearchingText: texts.Get(L10nKeys.HrmSearching),
                 Rows: rows,
-                RememberedLine: rememberedLine,
+                Indicator: indicator,
+                ArcStartAt: arcStartAt,
+                ArcDuration: arcDuration,
+                RememberedName: hr.RememberedDeviceName == null ? "" : OrUnknown(hr.RememberedDeviceName, unknown),
+                RememberedSuffix: RememberedSeparator + texts.Get(hr.IsRetrying ? L10nKeys.HrmReconnecting : L10nKeys.HrmNotFound),   // :199, :203
                 NoSensorText: texts.Get(L10nKeys.HrmNoSensor),
                 WatchHint: texts.Get(L10nKeys.HrmWatchHint),
-                SearchEnabled: !rowerBusy,                                   // :108, :218
-                ConnectEnabled: !(hr.IsRetrying || rowerBusy),               // :212
+                SearchEnabled: !rowerBusy,                                     // :108, :218
+                ConnectEnabled: !(hr.IsRetrying || rowerBusy),                 // :212
                 SearchLabel: texts.Get(L10nKeys.HrmSearch),
                 SearchOtherLabel: texts.Get(L10nKeys.HrmSearchOther),
                 ConnectLabel: texts.Get(L10nKeys.HrmConnect),
                 ForgetLabel: texts.Get(L10nKeys.HrmForget),
                 DisconnectLabel: texts.Get(L10nKeys.HrmDisconnect),
-                ErrorText: ErrorText(hr.Error, texts));
+                ErrorHuman: error.Human,
+                ErrorDetail: error.Detail);
         }
 
         // :68-94, prioridad de AC-HRM-13-03.
@@ -111,13 +144,14 @@ namespace RowMate.App.Device
             return bpm > 0 ? Fmt.Integer(bpm) : "--";
         }
 
-        // :52-62 (AC-HRM-13-07): incompatible → hrmIncompatible; si no, hrmConnectError con el mensaje de la excepción.
-        // El legacy interpola el toString() de Dart ('${hr.error}', con el prefijo del tipo); el port usa Message (D-25).
-        public static string? ErrorText(Exception? error, Localizer texts)
+        // AC-HRM-13-14 (Q-42, DT11-15): la frase humana según el tipo y, debajo, el detalle técnico sin traducir (no en incompatible).
+        // {name} de hrmConnectFailed = el nombre al empezar la acción, o el recordado, o hrmUnknownSensor. hrmConnectError queda en el
+        // catálogo sin uso en la tarjeta.
+        public static (string? Human, string? Detail) Error(HeartRateState hr, Localizer texts)
         {
-            if (error == null)
+            if (hr == null)
             {
-                return null;
+                throw new ArgumentNullException(nameof(hr));
             }
 
             if (texts == null)
@@ -125,9 +159,31 @@ namespace RowMate.App.Device
                 throw new ArgumentNullException(nameof(texts));
             }
 
-            return HeartRateStore.IsIncompatible(error)
-                ? texts.Get(L10nKeys.HrmIncompatible)
-                : texts.Format(L10nKeys.HrmConnectError, MessageArg.Text("error", error.Message ?? ""));
+            switch (hr.ErrorKind)
+            {
+                case HrmErrorKind.Scan:
+                    return (texts.Get(L10nKeys.HrmScanFailed), Detail(hr.ErrorDetail));
+                case HrmErrorKind.Connect:
+                    var name = !string.IsNullOrEmpty(hr.ErrorName) ? hr.ErrorName!
+                        : !string.IsNullOrEmpty(hr.RememberedDeviceName) ? hr.RememberedDeviceName!
+                        : texts.Get(L10nKeys.HrmUnknownSensor);
+                    return (texts.Format(L10nKeys.HrmConnectFailed, MessageArg.Text("name", name)), Detail(hr.ErrorDetail));
+                case HrmErrorKind.Incompatible:
+                    return (texts.Get(L10nKeys.HrmIncompatible), null);
+                default:
+                    return (null, null);
+            }
+        }
+
+        private static string? Detail(string? detail)
+        {
+            return string.IsNullOrEmpty(detail) ? null : detail;
+        }
+
+        // DT11-04 (Q-41): un sensor sin nombre ("") se muestra como hrmUnknownSensor, nunca con la dirección.
+        private static string OrUnknown(string name, string unknown)
+        {
+            return name.Length > 0 ? name : unknown;
         }
     }
 }

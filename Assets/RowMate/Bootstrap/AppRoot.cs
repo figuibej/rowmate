@@ -181,8 +181,11 @@ namespace RowMate.Bootstrap
 
             // 4. Remo y pulsómetro: el único #if ROWMATE_SIMULATOR (DeviceBackendFactory). It. 10a: en el build normal, el remo real sobre
             //    el plugin nativo y su bomba de eventos (que Update drena antes del Tick).
+            //    It. 11 (02-tech-design §5; R-07): las preferencias (paso 4c) se leen ANTES, porque el pulsómetro real recuerda su sensor en
+            //    ellas (hrm.deviceId / hrm.deviceName) y AppContext.Start lo reconecta al abrir. Ninguna ruta va al registro.
+            _preferences = new RowMate.Infrastructure.Preferences.JsonFilePreferences(DataLocation.PreferencesFile(_platform), logger);
             _mainThread = new RowMate.Core.Common.MainThreadQueue(logger);
-            _backend = DeviceBackendFactory.Create(_scheduler, _lifecycle, logger, _mainThread, out _blePump);
+            _backend = DeviceBackendFactory.Create(_scheduler, _lifecycle, logger, _mainThread, _preferences, out _blePump);
 
             // 4b. Base local (F-HIS-17, F-HIS-20): una por variante (rower_app.db o rower_app_dev.db), en la carpeta privada de
             //     la app (03-rutinas/02-tech-design §2.2, §2.4). El ÚNICO lugar del código que elige el archivo. Se abre en el
@@ -194,9 +197,8 @@ namespace RowMate.Bootstrap
             logger.Log(LogLevel.Info, Tag, "base " + file + (DataLocation.IsOverridden ? " (carpeta de desarrollo)" : ""));
 
             // 4c. It. 5 (05-series-parciales/02-tech-design §2.7, §2.8; ADR 021): las preferencias (prefs.json, en la carpeta de la
-            //     base; en desarrollo, ROWMATE_DATA_DIR), leídas acá, en el arranque; se guardan fuera del hilo principal. Ninguna
-            //     ruta va al registro.
-            _preferences = new RowMate.Infrastructure.Preferences.JsonFilePreferences(DataLocation.PreferencesFile(_platform), logger);
+            //     base; en desarrollo, ROWMATE_DATA_DIR), leídas en el arranque (desde la It. 11, en el paso 4, antes del backend); se
+            //     guardan fuera del hilo principal. Ninguna ruta va al registro.
 
             // 5. La app pura. Perfil apagado (su regla real es de la It. 12, D-20).
             var texts = LocalizationSet.Load(_assets.StringsEs!.text, _assets.StringsEn!.text);
@@ -274,7 +276,7 @@ namespace RowMate.Bootstrap
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (HasArgument(BleSmokeArgument))
             {
-                _ = BleSmoke.RunAsync(_backend.Rower, _scheduler, _logger!);
+                _ = BleSmoke.RunAsync(_backend.Rower, _backend.HeartRate, _scheduler, _logger!);
             }
 #endif
 

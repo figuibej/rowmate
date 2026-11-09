@@ -456,7 +456,8 @@ namespace RowMate.Presentation.Workout
             }
         }
 
-        private bool ShowsLinkNotices()
+        // It. 11 (DT11-12): también lo usa HrmNoticePresenter para el aviso "Se perdió el pulsómetro" (el mismo predicado que el del remo).
+        internal bool ShowsLinkNotices()
         {
             var page = Immersive;
             var phase = _ui.App.Workout.State.Value.Phase;

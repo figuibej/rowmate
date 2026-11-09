@@ -122,7 +122,7 @@ namespace RowMate.Tests.EditMode.Composition
             Assert.DoesNotThrow(() => app.Start());
             Assert.That(_logger.Lines, Is.EqualTo(new[] { "[HRM] Warning: autoConnect: GATT 133" }));
             Assert.That(_logger.Errors[0], Is.InstanceOf<InvalidOperationException>());
-            Assert.That(app.HeartRate.State.Value.Error, Is.Null, "nada en pantalla");
+            Assert.That(app.HeartRate.State.Value.HasError, Is.False, "nada en pantalla");
             Assert.That(states.Count, Is.EqualTo(0));
             app.Dispose();
         }
@@ -171,6 +171,45 @@ namespace RowMate.Tests.EditMode.Composition
             _backend.Dispose();
             Assert.That(adapter.Disposed, Is.True, "el dueño del backend dispone el adaptador");
             Assert.That(_scheduler.PendingTimers, Is.EqualTo(0), "sin timers vivos");
+        }
+
+        // It. 11 (AC-APP-01-10; 02-tech-design §5): el build normal arma HeartRateService sobre el MISMO adaptador y las preferencias de
+        // la app. Con un sensor recordado, Start lo reconecta aunque Dispositivo no esté a la vista, y avisa "Pulsómetro conectado".
+        [Test, Category("AC-APP-01-10")]
+        public void NormalComposesHeartRateService()
+        {
+            using (new InlineContinuations())
+            {
+                var lifecycle = new FakeAppLifecycle(_logger);
+                var adapter = new FakeBleAdapter(_scheduler, _logger, devices: FakeBleDevices.K11);
+                var preferences = new MemoryPreferences(new[]
+                {
+                    new KeyValuePair<string, object>(HeartRateService.PrefDeviceId, FakeBleDevices.HrmId),
+                    new KeyValuePair<string, object>(HeartRateService.PrefDeviceName, "Banda de prueba"),
+                });
+                var rower = new RowerService(adapter, _scheduler, lifecycle, _logger);
+                var hrm = new HeartRateService(adapter, preferences, _scheduler, _logger);
+                _backend = new DeviceBackend(rower, hrm, adapter);
+                adapter.RespondAfter(FakeBleDevices.HrmId, TimeSpan.FromSeconds(1));
+                var app = AppComposer.Compose(new AppServices(_backend, _routines, _sessions, _scheduler, _logger, LocalizationFixture.Set, _locale,
+                    _accessibility, new ShellOptions(false)) { Lifecycle = lifecycle, Preferences = preferences });
+                var notices = new StateRecorder<HrmNotice>(app.HeartRate.Notices);
+                app.Start();
+                Assert.That(adapter.ConnectCalls(FakeBleDevices.HrmId), Is.EqualTo(1), "el arranque intenta en el acto, sin buscar");
+                Assert.That(adapter.ScanStarts, Is.EqualTo(0));
+                Assert.That(HrmCardRules.Build(app.HeartRate.State.Value, BleStatus.Disconnected, LocalizationFixture.Es).RememberedLine,
+                    Is.EqualTo("Banda de prueba · reconectando..."));
+                _scheduler.Advance(TimeSpan.FromSeconds(1));
+                Assert.That(app.HeartRate.State.Value.IsConnected, Is.True);
+                Assert.That(notices.Count, Is.EqualTo(1));
+                adapter.Notify(FakeBleDevices.HrmId, HeartRateParser.Measurement, HrPackets.Contact142);
+                Assert.That(app.Workout.State.Value.Data.HeartRate, Is.EqualTo(142), "el motor escucha al pulsómetro real");
+                notices.Dispose();
+                app.Dispose();
+                _backend.Dispose();
+                Assert.That(adapter.LiveSessions(FakeBleDevices.HrmId), Is.EqualTo(0));
+                Assert.That(_scheduler.PendingTimers, Is.EqualTo(0), "sin timers vivos");
+            }
         }
 
         [Test, Category("AC-APP-01-08")]

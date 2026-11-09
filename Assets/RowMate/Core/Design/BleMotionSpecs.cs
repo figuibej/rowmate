@@ -158,7 +158,80 @@ namespace RowMate.Core.Design
         // El acceso escondido (Show BLE debug): 24 % de opacidad, aparece en 160.
         public const double DebugToggleOpacity = 0.24;
 
+        // ── Pulsómetro real (It. 11; 00-arte-pulsometro §1-§5, §7; 02-tech-design §1.3, §4.1, §4.2) ──
+        // Respiración del corazón del encabezado mientras reconecta (D11-05): opacidad 0,40 ↔ 0,70 en 3 200 ms (ease.pulse). Arranca a los
+        // 160 ms del cambio (después del fundido 1 → 0,40 del corazón, §2.3) y en 0,40. Reducir movimiento: 0,40 fijo.
+        public const double HrmBreathMs = 3200;
+        public const double HrmBreathMinOpacity = 0.40;
+        public const double HrmBreathMaxOpacity = 0.70;
+        public const double HrmBreathDelayMs = 160;
+
+        // La línea "Sin señal del sensor" y las filas de sensores entran con la regla del empuje: alto (y su margen) 0 → natural en 0-160
+        // (ease.move), opacidad 0 → 1 en 60-260 (ease.enter). La línea sale con opacidad → 0 en 0-120 (ease.exit) y alto → 0 en 80-240
+        // (ease.move). Reducir movimiento: fundido de 160 al entrar y de 120 al salir, sin cambio de alto.
+        public const double HrmGrowEndMs = 160;
+        public const double HrmFadeStartMs = 60;
+        public const double HrmFadeEndMs = 260;
+        public const double HrmOutFadeEndMs = 120;
+        public const double HrmOutHeightStartMs = 80;
+        public const double HrmOutHeightEndMs = 240;
+
+        // Filas: escalonadas cada 35 ms, 8 como máximo (como las tarjetas del remo); alto de referencia 56 (min-height de la fila) hasta que
+        // hay una fila medida; y −8 → 0 al entrar.
+        public const double HrmRowStaggerMs = 35;
+        public const int HrmRowStaggerMax = 8;
+        public const double HrmRowHeightDp = 56;
+        public const double HrmRowDropDp = 8;
+
+        // La línea sin señal: bodyXs 12 en una línea (16) y 4 de aire arriba (referencia hasta medir el texto).
+        public const double HrmStaleLineDp = 16;
+        public const double HrmStaleGapDp = 4;
+
+        // Seguir a la tarjeta en un único desplazamiento (L640): lo justo para ver su borde inferior en 240 (ease.move); con reducir
+        // movimiento, en el acto.
+        public const double HrmFollowMs = 240;
+
+        // El corazón del aviso "Pulsómetro conectado" (A11-04, §5): UN latido al entrar: escala 1 → 1,16 en 0-90 (ease.enter) y 1,16 → 1 en
+        // 90-290 (ease.move). Reducir movimiento: sin latido.
+        public const double HeartBeatUpMs = 90;
+        public const double HeartBeatEndMs = 290;
+        public const double HeartBeatScale = 1.16;
+
         // ── Funciones puras ──
+
+        // Opacidad del corazón que respira a elapsedMs desde que empezó a respirar (0,40 en 0 y en cada período; 0,70 a la mitad).
+        public static double HrmBreathOpacity(double elapsedMs)
+        {
+            if (!(elapsedMs > 0))
+            {
+                return HrmBreathMinOpacity;
+            }
+
+            return HrmBreathMinOpacity + (HrmBreathMaxOpacity - HrmBreathMinOpacity) * Pulse(elapsedMs, HrmBreathMs);
+        }
+
+        // Escala del corazón del aviso a elapsedMs desde que entró (1 fuera del latido).
+        public static double HeartBeatScaleAt(double elapsedMs)
+        {
+            if (!(elapsedMs > 0) || elapsedMs >= HeartBeatEndMs)
+            {
+                return 1;
+            }
+
+            if (elapsedMs <= HeartBeatUpMs)
+            {
+                return 1 + (HeartBeatScale - 1) * Easing.Evaluate(Tokens.EaseEnter, elapsedMs / HeartBeatUpMs);
+            }
+
+            return HeartBeatScale - (HeartBeatScale - 1) * Easing.Evaluate(Tokens.EaseMove, Segment(elapsedMs, HeartBeatUpMs, HeartBeatEndMs));
+        }
+
+        // El retardo de la fila nueva número order de un mismo lote (35 ms cada una, hasta 8).
+        public static double HrmRowDelayMs(int order)
+        {
+            var i = order < 0 ? 0 : Math.Min(order, HrmRowStaggerMax - 1);
+            return i * HrmRowStaggerMs;
+        }
 
         // Radio del anillo del sonar en la fracción u (0 → 28, 1 → 68), ease.enter (cúbica de salida exacta: §1.2).
         public static double SonarRingRadius(double u)

@@ -175,6 +175,16 @@ namespace RowMate.Tests.EditMode.Traceability
                 known.Add(ac.Id);
             }
 
+            foreach (var ac in It11Ids.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
+            foreach (var lt in It11Ids.LegacyCases)
+            {
+                known.Add(lt.Id);
+            }
+
             var unknown = new List<string>();
             foreach (var entry in Scan().Categories)
             {
@@ -2001,6 +2011,122 @@ namespace RowMate.Tests.EditMode.Traceability
             }
 
             Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
+        }
+
+        [Test, Category("AC-BASE-09")]
+        public void It11IdsAreComplete()
+        {
+            // 41 AC (11 §3): HRM-09: 1, HRM-05: 3, HRM-04: 1, HRM-02: 6, HRM-03: 4, HRM-06: 3, APP-01: 1, HRM-07: 5, HRM-08: 3, HRM-10: 2,
+            // HRM-11: 3, HRM-16: 2, HRM-13: 2, WKT-05: 1, HRM-15: 1, HRM-SEC: 1, HRM-HW: 2. Todos nuevos; 7 casos legacy (LT-139 a LT-145).
+            var pattern = new Regex(@"^AC-[A-Z]+(-[A-Z]+)?-\d\d(-\d\d)?$");
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance, It06aIds.Acceptance, It07Ids.Acceptance, It08Ids.Acceptance, It09Ids.Acceptance, It10aIds.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            var byCard = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var ac in It11Ids.Acceptance)
+            {
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It11Ids: " + ac.Id);
+                Assert.That(pattern.IsMatch(ac.Id), Is.True, ac.Id);
+                CheckKinds(ac.Id, ac.Checks);
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior");
+                var card = ac.Id.Substring(0, ac.Id.LastIndexOf('-'));
+                byCard.TryGetValue(card, out var count);
+                byCard[card] = count + 1;
+            }
+
+            Assert.That(It11Ids.Acceptance.Length, Is.EqualTo(41));
+            var expected = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["AC-HRM-09"] = 1, ["AC-HRM-05"] = 3, ["AC-HRM-04"] = 1, ["AC-HRM-02"] = 6, ["AC-HRM-03"] = 4, ["AC-HRM-06"] = 3, ["AC-APP-01"] = 1,
+                ["AC-HRM-07"] = 5, ["AC-HRM-08"] = 3, ["AC-HRM-10"] = 2, ["AC-HRM-11"] = 3, ["AC-HRM-16"] = 2, ["AC-HRM-13"] = 2, ["AC-WKT-05"] = 1,
+                ["AC-HRM-15"] = 1, ["AC-HRM-SEC"] = 1, ["AC-HRM-HW"] = 2,
+            };
+            Assert.That(byCard, Is.EquivalentTo(expected), "los 41 por ficha (§3)");
+
+            Assert.That(It11Ids.LegacyCases.Length, Is.EqualTo(7));
+            for (var i = 0; i < It11Ids.LegacyCases.Length; i++)
+            {
+                Assert.That(It11Ids.LegacyCases[i].Id, Is.EqualTo("LT-" + (139 + i)));
+                CheckKinds(It11Ids.LegacyCases[i].Id, It11Ids.LegacyCases[i].Checks);
+            }
+
+            var unityOnly = new List<string>();
+            var workPackageB = new List<string>();
+            var deviceOnly = new List<string>();
+            foreach (var ac in It11Ids.Acceptance)
+            {
+                if (ac.Checks == "eq")
+                {
+                    deviceOnly.Add(ac.Id);
+                    continue;
+                }
+
+                Classify(ac.Id, ac.Checks, unityOnly, workPackageB);
+            }
+
+            Assert.That(It11Ids.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It11Ids.WorkPackageBIds, Is.EquivalentTo(workPackageB));
+            Assert.That(It11Ids.DeviceOnlyIds, Is.EquivalentTo(deviceOnly));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It11DotnetIdsHaveTests()
+        {
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It11Ids.Acceptance)
+            {
+                if ((HasKind(ac.Checks, "d") || HasKind(ac.Checks, "s")) && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d] de la It. 11 sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It11UnityOnlyIdsHaveNoDotnetResult()
+        {
+            var scan = Scan();
+            var offenders = new List<string>();
+            var ids = new List<string>(It11Ids.UnityOnlyIds);
+            ids.AddRange(It11Ids.DeviceOnlyIds);
+            foreach (var id in ids)
+            {
+                if (!scan.Categories.TryGetValue(id, out var files))
+                {
+                    continue;
+                }
+
+                foreach (var file in files)
+                {
+                    offenders.Add(id + " en " + file);
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It11LegacyCasesKeepTheirNames()
+        {
+            // LT-139 a LT-145 (test/reconnect_loop_test.dart), en Tests/EditMode/Ble (ReconnectLoopTests, StaleWatchdogTests).
+            var scan = Scan();
+            var problems = new List<string>();
+            foreach (var lt in It11Ids.LegacyCases)
+            {
+                CheckLegacyCase(scan, lt.Id, lt.File, lt.Line, lt.Name, problems);
+            }
+
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
         }
 
         [Test, Category("AC-BASE-09")]

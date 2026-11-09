@@ -108,6 +108,10 @@ namespace RowMate.Presentation.Shell
                 }
             }
 
+            // It. 11 (02-tech-design §4.3; DT11-12): los avisos del pulsómetro; "Se perdió…" solo con el entrenamiento a la vista.
+            HrmNotices = new HrmNoticePresenter(ui, Toasts, () => WorkoutScreen != null && WorkoutScreen.ShowsLinkNotices(),
+                () => WorkoutScreen?.Immersive?.SetLinkNoticeObstacle(true));
+
             KeyboardFocus = new FocusHighlight(this);
             this.Bind(ui.App.Accessibility, OnAccessibility);
             Tabs.Start();
@@ -141,6 +145,8 @@ namespace RowMate.Presentation.Shell
 
         public VisualElement? TopLayer { get; }
 
+        public HrmNoticePresenter HrmNotices { get; }
+
         public FocusHighlight KeyboardFocus { get; }
 
         public string TextScaleClass => _textScaleClass;
@@ -166,6 +172,7 @@ namespace RowMate.Presentation.Shell
             }
 
             _disposed = true;
+            HrmNotices.Dispose();
             Toasts.Dispose();
             Popups.Dispose();
             Dialogs.Dispose();

@@ -79,13 +79,116 @@ namespace RowMate.Presentation.Device
             CardSlot.AddToClassList("rm-scroll");
             ScrollPolicy.Apply(CardSlot, ui.IsDesktop);
             Add(CardSlot);
+            // WP-D (§3; 02-tech-design §4.2): con un único desplazamiento, si la tarjeta del pulsómetro crece y sale de la vista, la sigue.
+            _follow = new RowMate.Presentation.Motion.HrmMotion.Follow(ui.Motion, CardSlot);
+            CardSlot.contentContainer.RegisterCallback<GeometryChangedEvent>(_ => FollowCard());
+
+            // It. 11 (A11-05): las columnas de TwoColumns (se usan solo en esa disposición).
+            _columns = new VisualElement { name = "device-scan-columns" };
+            _columns.AddToClassList("rm-device-scan__columns");
+            _columns.pickingMode = PickingMode.Ignore;
+            _main = new VisualElement { name = "device-scan-main" };
+            _main.AddToClassList("rm-device-scan__main");
+            _main.pickingMode = PickingMode.Ignore;
+            _columns.Add(_main);
+
             RegisterCallback<GeometryChangedEvent>(evt =>
             {
                 if (evt.newRect.height > 0)
                 {
                     Sonar.SetCompact(evt.newRect.height < RowMate.Core.Design.BleMotionSpecs.CompactHeightDp);
+                    ApplyLayout(DeviceScanLayout.For(contentRect.width, evt.newRect.height));
                 }
             });
+        }
+
+        private readonly VisualElement _columns;
+        private readonly VisualElement _main;
+        private readonly RowMate.Presentation.Motion.HrmMotion.Follow _follow;
+        private VisualElement? _followedCard;
+        private float _followedHeight;
+
+        // La tarjeta es el último hijo del contenido del slot (DeviceScreenView la mueve ahí). Solo en SingleScroll y solo si creció.
+        private void FollowCard()
+        {
+            var content = CardSlot.contentContainer;
+            var card = content.childCount > 0 ? content[content.childCount - 1] : null;
+            if (card == null || card.name != "hrm-card")
+            {
+                _followedCard = null;
+                return;
+            }
+
+            var height = card.layout.height;
+            var grew = ReferenceEquals(card, _followedCard) && height > _followedHeight + 0.5f;
+            _followedCard = card;
+            _followedHeight = height;
+            if (grew && Layout.Kind == DeviceScanLayoutKind.SingleScroll)
+            {
+                _follow.Track(card);
+            }
+        }
+
+        // It. 11 (A11-05, DT11-14): la disposición vigente (Stacked hasta el primer layout).
+        public DeviceScanLayout Layout { get; private set; } = new DeviceScanLayout(DeviceScanLayoutKind.Stacked, 0);
+
+        // Reubica la lista, el vacío y el slot de la tarjeta SIN recrearlos (en el acto: es un cambio de ventana, no de dato):
+        // - Stacked: como hasta la 10a (búsqueda, ayuda, sonar, la lista en #device-empty-area y el slot, hermanos).
+        // - SingleScroll (L640): un único desplazamiento: la lista y el vacío pasan al slot de la tarjeta, arriba de ella (a su alto natural),
+        //   y #device-empty-area se oculta.
+        // - TwoColumns (TH): búsqueda, ayuda y lista a la izquierda; el slot a la derecha con ancho RightColumnDp.
+        public void ApplyLayout(DeviceScanLayout layout)
+        {
+            if (layout.Equals(Layout) && (layout.Kind != DeviceScanLayoutKind.Stacked || _columns.parent == null))
+            {
+                return;
+            }
+
+            Layout = layout;
+            EnableInClassList("rm-device-scan--single-scroll", layout.Kind == DeviceScanLayoutKind.SingleScroll);
+            EnableInClassList("rm-device-scan--two-columns", layout.Kind == DeviceScanLayoutKind.TwoColumns);
+
+            // 1. Todo vuelve a la columna plana (orden de la 10a).
+            if (_columns.parent == this)
+            {
+                Remove(_columns);
+            }
+
+            Add(Search);
+            Add(Hint);
+            Add(Sonar);
+            Add(EmptyArea);
+            Add(CardSlot);
+            if (Results.parent != EmptyArea.contentContainer)
+            {
+                EmptyArea.Add(Results);
+            }
+
+            if (_empty.parent != EmptyArea.contentContainer)
+            {
+                EmptyArea.Add(_empty);
+            }
+
+            EmptyArea.style.display = StyleKeyword.Null;
+            CardSlot.style.width = StyleKeyword.Null;
+
+            // 2. La disposición pedida.
+            if (layout.Kind == DeviceScanLayoutKind.SingleScroll)
+            {
+                EmptyArea.style.display = DisplayStyle.None;
+                CardSlot.contentContainer.Insert(0, Results);
+                CardSlot.contentContainer.Insert(1, _empty);
+            }
+            else if (layout.Kind == DeviceScanLayoutKind.TwoColumns)
+            {
+                Add(_columns);
+                _main.Add(Search);
+                _main.Add(Hint);
+                _main.Add(Sonar);
+                _main.Add(EmptyArea);
+                _columns.Add(CardSlot);
+                CardSlot.style.width = (float)layout.RightColumnDp;
+            }
         }
 
         public SonarView Sonar { get; }

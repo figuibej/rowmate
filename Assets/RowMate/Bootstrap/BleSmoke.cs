@@ -17,17 +17,89 @@ namespace RowMate.Bootstrap
     // dirección):
     //   [BLE] humo: estado=On busquedas=3 ftms=N fallas=0 colgado=no soloFtms=si
     // Pasa (sale con 0) con el adaptador On, las 3 búsquedas terminadas sin falla ni cuelgue y la lista solo con FTMS; si no, 6.
+    // It. 11 (DT11-16; AC-HRM-02-06): después, 1 búsqueda de pulsómetros de 10 s con el HeartRateService de la app, SIN conectar a nada
+    // (un pulsómetro real cercano queda solo en el Player.log local, con la dirección enmascarada). Solo contadores:
+    //   [HRM] humo: busquedas=1 sensores=N ajenos=0 fallas=0
+    // ajenos = sensores listados que no anuncian 0x180D. Pasa con busquedas=1, ajenos=0 y fallas=0.
     internal static class BleSmoke
     {
         public const string Argument = "-rowmate-ble-smoke";
         public const string Tag = "BLE";
+        public const string HrmTag = "HRM";
         public const int FailureCode = 6;
 
         private static readonly TimeSpan SearchCap = TimeSpan.FromSeconds(15);
 
-        public static async Task RunAsync(IRowerService rower, IScheduler scheduler, IAppLogger logger)
+        public static async Task RunAsync(IRowerService rower, IHeartRateService heartRate, IScheduler scheduler, IAppLogger logger)
         {
-            var code = FailureCode;
+            var rowerOk = await RunRowerAsync(rower, scheduler, logger);
+            var hrmOk = rower.AdapterState.Value == BleAdapterState.On && await RunHeartRateAsync(heartRate, scheduler, logger);
+            Application.Quit(rowerOk && hrmOk ? 0 : FailureCode);
+        }
+
+        // La búsqueda del pulsómetro (10 s, el plazo del servicio). Nunca toca ConnectAsync.
+        private static async Task<bool> RunHeartRateAsync(IHeartRateService heartRate, IScheduler scheduler, IAppLogger logger)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var foreign = 0;
+            var searches = 0;
+            var failures = 0;
+            try
+            {
+                using (heartRate.Devices.Subscribe(list =>
+                       {
+                           for (var i = 0; i < list.Count; i++)
+                           {
+                               if (seen.Add(list[i].DeviceId) && !ScanFilter.AdvertisesService(list[i], HeartRateParser.Service))
+                               {
+                                   foreign++;
+                               }
+                           }
+                       }))
+                {
+                    var scan = heartRate.StartScanAsync();
+                    var cap = scheduler.Delay(SearchCap);
+                    if (await Task.WhenAny(scan, cap) != scan)
+                    {
+                        failures++;
+                        logger.Log(LogLevel.Warning, HrmTag, "humo: la búsqueda de pulsómetros no terminó en 15 s");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            await scan;
+                            if (heartRate.Status.Value == HrmStatus.Disconnected)
+                            {
+                                searches++;
+                            }
+                            else
+                            {
+                                failures++;
+                            }
+                        }
+                        catch (Exception error)
+                        {
+                            failures++;
+                            logger.Log(LogLevel.Warning, HrmTag, "humo: la búsqueda de pulsómetros falló (" + error.Message + ")");
+                        }
+                    }
+                }
+            }
+            catch (Exception error)
+            {
+                failures++;
+                logger.Log(LogLevel.Error, HrmTag, "humo: falla (" + error.GetType().Name + ")", error);
+            }
+
+            var ok = searches == 1 && foreign == 0 && failures == 0;
+            logger.Log(ok ? LogLevel.Info : LogLevel.Error, HrmTag, "humo: busquedas=" + Fmt.Integer(searches) + " sensores=" + Fmt.Integer(seen.Count)
+                + " ajenos=" + Fmt.Integer(foreign) + " fallas=" + Fmt.Integer(failures));
+            return ok;
+        }
+
+        private static async Task<bool> RunRowerAsync(IRowerService rower, IScheduler scheduler, IAppLogger logger)
+        {
             try
             {
                 // La primera lectura del estado (el plugin la hace al iniciar; como mucho 5 s más).
@@ -97,14 +169,13 @@ namespace RowMate.Bootstrap
                 var ok = state == BleAdapterState.On && searches == 3 && failures == 0 && !hung && onlyFtms;
                 logger.Log(ok ? LogLevel.Info : LogLevel.Error, Tag, "humo: estado=" + state + " busquedas=" + Fmt.Integer(searches) + " ftms="
                     + Fmt.Integer(seen.Count) + " fallas=" + Fmt.Integer(failures) + " colgado=" + (hung ? "si" : "no") + " soloFtms=" + (onlyFtms ? "si" : "no"));
-                code = ok ? 0 : FailureCode;
+                return ok;
             }
             catch (Exception error)
             {
                 logger.Log(LogLevel.Error, Tag, "humo: falla (" + error.GetType().Name + ")", error);
+                return false;
             }
-
-            Application.Quit(code);
         }
 
         // La ventana del player (solo Windows; en el Editor no hace nada).

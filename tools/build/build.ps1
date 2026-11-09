@@ -21,6 +21,8 @@
 #   El player lee el estado del adaptador REAL y hace 3 busquedas de 10 s con RowerService, sin conectar, emparejar ni cambiar la
 #   radio, y escribe solo contadores: "[BLE] humo: estado=On busquedas=3 ftms=N fallas=0 colgado=no soloFtms=si". Pasa con esa
 #   linea; codigo 6 si no (o si el player no termina en 90 s). Solo Windows.
+#   It. 11 (DT11-16; AC-HRM-02-06): despues, 1 busqueda de pulsometros de 10 s con HeartRateService, sin conectar a nada:
+#   "[HRM] humo: busquedas=1 sensores=N ajenos=0 fallas=0". Pasa solo con las dos lineas.
 # - Windows: si el RowMate.exe de la carpeta de salida esta en uso, espera 2 min y reintenta, hasta 20 veces, sin cerrar nada.
 # - Con -Simulator: BuildCli pasa ROWMATE_SIMULATOR por extraScriptingDefines (nunca a PlayerSettings) y fuerza Development
 #   (R-01, AC-BLE-13-01). Sin -Simulator: al terminar, BuildOutputInspector busca rastros del simulador en la carpeta del
@@ -216,9 +218,10 @@ if ($BleSmoke -and $code -eq 0) {
             $code = 6
         }
         $lines = @()
-        if (Test-Path $bleLog) { $lines = @(Select-String -Path $bleLog -Pattern '\[BLE\] humo' | ForEach-Object { $_.Line }) }
+        if (Test-Path $bleLog) { $lines = @(Select-String -Path $bleLog -Pattern '\[BLE\] humo', '\[HRM\] humo' | ForEach-Object { $_.Line }) }
         foreach ($l in $lines) { Write-Host ('  ' + $l) }
-        $ok = @($lines | Where-Object { $_ -match 'humo: estado=On busquedas=3 ftms=\d+ fallas=0 colgado=no soloFtms=si' }).Count -gt 0
+        $ok = (@($lines | Where-Object { $_ -match '\[BLE\] humo: estado=On busquedas=3 ftms=\d+ fallas=0 colgado=no soloFtms=si' }).Count -gt 0) -and
+              (@($lines | Where-Object { $_ -match '\[HRM\] humo: busquedas=1 sensores=\d+ ajenos=0 fallas=0' }).Count -gt 0)
         if (-not $ok) {
             Write-Host '[build] -BleSmoke: el humo del Bluetooth fallo (ver el registro del player; no lleva nombres ni direcciones).'
             $code = 6

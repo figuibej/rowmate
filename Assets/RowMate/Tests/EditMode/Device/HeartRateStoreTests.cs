@@ -26,7 +26,7 @@ namespace RowMate.Tests.EditMode.Device
             Assert.That(state.IsConnected || state.IsScanning || state.IsConnecting || state.IsRetrying, Is.False);
             Assert.That(state.ConnectedDeviceName, Is.Null);
             Assert.That(state.RememberedDeviceName, Is.Null);
-            Assert.That(state.Error, Is.Null);
+            Assert.That(state.HasError, Is.False);
             store.Dispose();
         }
 
@@ -84,26 +84,26 @@ namespace RowMate.Tests.EditMode.Device
             var hrm = new ScriptedHeartRateService { ConnectBehavior = ScriptedConnect.ThrowError, ErrorText = "GATT 133" };
             var store = new HeartRateStore(hrm, new RecordingLogger());
             store.ConnectAsync(Polar.DeviceId, "Polar");
-            Assert.That(store.State.Value.Error!.Message, Is.EqualTo("GATT 133"), "la falla queda visible");
+            Assert.That(store.State.Value.ErrorDetail, Is.EqualTo("GATT 133"), "la falla queda visible");
 
             hrm.SetStatus(HrmStatus.Disconnected);
-            Assert.That(store.State.Value.Error, Is.Not.Null, "pasar a desconectado NO la borra");
+            Assert.That(store.State.Value.HasError, Is.True, "pasar a desconectado NO la borra");
             hrm.SetStatus(HrmStatus.Connected);
-            Assert.That(store.State.Value.Error, Is.Null, "llegar a conectado la borra");
+            Assert.That(store.State.Value.HasError, Is.False, "llegar a conectado la borra");
 
             store.ConnectAsync(Polar.DeviceId, "Polar");
-            Assert.That(store.State.Value.Error, Is.Not.Null);
+            Assert.That(store.State.Value.HasError, Is.True);
             hrm.ConnectBehavior = ScriptedConnect.Pending;
             WithMainThread(context =>
             {
                 store.ConnectAsync(Polar.DeviceId, "Polar");
-                Assert.That(store.State.Value.Error, Is.Null, "empezar cualquier acción la borra");
+                Assert.That(store.State.Value.HasError, Is.False, "empezar cualquier acción la borra");
                 hrm.FailPending(new InvalidOperationException("otra"));
                 context.RunUntilIdle(); // la continuación del await vuelve al hilo principal (como con UnitySynchronizationContext)
-                Assert.That(store.State.Value.Error!.Message, Is.EqualTo("otra"));
+                Assert.That(store.State.Value.ErrorDetail, Is.EqualTo("otra"));
             });
             store.DisconnectAsync();
-            Assert.That(store.State.Value.Error, Is.Null, "desconectar también empieza limpio");
+            Assert.That(store.State.Value.HasError, Is.False, "desconectar también empieza limpio");
             store.Dispose();
         }
 
@@ -135,9 +135,9 @@ namespace RowMate.Tests.EditMode.Device
             };
             var store = new HeartRateStore(hrm, new RecordingLogger());
             Assert.That(store.StartScanAsync().IsFaulted, Is.False);
-            Assert.That(store.State.Value.Error!.Message, Is.EqualTo("scan"));
+            Assert.That(store.State.Value.ErrorDetail, Is.EqualTo("scan"));
             Assert.That(store.RetryAsync().IsFaulted, Is.False);
-            Assert.That(store.State.Value.Error!.Message, Is.EqualTo("retry"));
+            Assert.That(store.State.Value.ErrorDetail, Is.EqualTo("retry"));
             store.Dispose();
         }
 
@@ -148,12 +148,12 @@ namespace RowMate.Tests.EditMode.Device
             var store = new HeartRateStore(hrm, new RecordingLogger());
             hrm.EmitDevices(new[] { Polar, Polar });
             store.ConnectAsync(Polar.DeviceId, "Polar");
-            Assert.That(store.State.Value.Error, Is.InstanceOf<HrmIncompatibleException>());
+            Assert.That(store.State.Value.ErrorKind, Is.EqualTo(HrmErrorKind.Incompatible));
             Assert.That(store.State.Value.ScanResults.Count, Is.EqualTo(2));
 
             var recorder = new StateRecorder<HeartRateState>(store.State);
             store.StartScanAsync();
-            Assert.That(recorder.First.Error, Is.Null, "antes de empezar se borra el error");
+            Assert.That(recorder.First.HasError, Is.False, "antes de empezar se borra el error");
             Assert.That(recorder.First.ScanResults, Is.Empty, "y la lista anterior");
             Assert.That(recorder.First.Status, Is.EqualTo(HrmStatus.Disconnected), "todavía sin buscar");
             Assert.That(store.State.Value.ScanResults.Count, Is.EqualTo(1));

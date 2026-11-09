@@ -29,6 +29,9 @@ namespace RowMate.Tests.UiSupport
 
         public RowerService RealRower { get; }
 
+        // It. 11: el pulsómetro real (null con el de prueba).
+        public HeartRateService? RealHeartRate => HeartRate as HeartRateService;
+
         public FakeAppLifecycle Lifecycle { get; }
     }
 
@@ -44,7 +47,11 @@ namespace RowMate.Tests.UiSupport
         // It. 10a (02-tech-design §8.2, §8.4): el remo REAL (RowerService, Core) sobre el adaptador falso (FakeBleAdapter) con los equipos
         // ficticios K-10 y el reloj del host; el pulsómetro, el de prueba. setup prepara el adaptador antes de crear el servicio (estado
         // inicial, permiso, conducta de cada equipo). Ninguna toma toca la radio (ROWMATE_BLE=off).
-        public static HostBackendFactory FakeBle(Action<FakeBleAdapter>? setup = null, BleAdapterState initial = BleAdapterState.On)
+        // It. 11 (02-tech-design §1.2, §7): con hrmPreferences, también el pulsómetro REAL (HeartRateService, Core) sobre el MISMO adaptador
+        // falso (K-11) y esas preferencias (MemoryPreferences sembradas por el guion; la prueba pasa la misma instancia en
+        // UiHostOptions.Preferences, así la app y el servicio ven lo mismo). Sin ellas, el pulsómetro de prueba de la 10a.
+        public static HostBackendFactory FakeBle(Action<FakeBleAdapter>? setup = null, BleAdapterState initial = BleAdapterState.On,
+                                                 RowMate.Core.Ports.IPreferences? hrmPreferences = null)
         {
             return (scheduler, logger) =>
             {
@@ -52,8 +59,20 @@ namespace RowMate.Tests.UiSupport
                 setup?.Invoke(adapter);
                 var lifecycle = new FakeAppLifecycle(logger);
                 var rower = new RowerService(adapter, scheduler, lifecycle, logger);
-                return new FakeBleBackend(adapter, rower, lifecycle, new ScriptedHeartRateService(logger));
+                IHeartRateService heartRate = hrmPreferences != null
+                    ? new HeartRateService(adapter, hrmPreferences, scheduler, logger)
+                    : new ScriptedHeartRateService(logger);
+                return new FakeBleBackend(adapter, rower, lifecycle, heartRate);
             };
+        }
+
+        // It. 11: el remo y el pulsómetro reales sobre el adaptador falso; options.Preferences = preferences (las mismas del backend).
+        public static UiHostOptions WithRealHrm(this UiHostOptions options, RowMate.Core.Common.MemoryPreferences preferences,
+                                                Action<FakeBleAdapter>? setup = null, BleAdapterState initial = BleAdapterState.On)
+        {
+            options.Preferences = preferences;
+            options.Backend = FakeBle(setup, initial, preferences);
+            return options;
         }
 
         // El remo de prueba de la It. 4a (spec §0.4; 02-tech-design §4.5, §7.1): L(k) cada segundo por un timer del reloj del

@@ -248,7 +248,7 @@ namespace RowMate.Tests.PlayMode.Simulator
             yield return Advance(2);
             Sim.SimHeartRate.SimulateDisconnect();
             yield return Settle();
-            Assert.That(H.TextOf("hrm-remembered-text"), Is.EqualTo("Pulsómetro simulado · reconectando..."));
+            Assert.That(H.TextOf("hrm-remembered-name") + H.TextOf("hrm-remembered-suffix"), Is.EqualTo("Pulsómetro simulado · reconectando..."));
             Assert.That(H.Find("hrm-retry")!.enabledSelf, Is.False);
             yield return Advance(3.1);
             yield return Settle();

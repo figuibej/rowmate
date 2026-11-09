@@ -302,6 +302,64 @@ namespace RowMate.Tests.PlayMode
             Assert.That(H.Find("hrm-search")!.enabledSelf, Is.True);
         }
 
+        // It. 11 (AC-HRM-02-04; DBT.LT29_RealServices y .LT31_RealServices): las búsquedas se excluyen con el remo Y el pulsómetro reales
+        // sobre K-11. Con el pulsómetro buscando, Buscar dispositivos deshabilitado; con el remo buscando o conectando, Buscar, Buscar otro y
+        // Conectar del pulsómetro deshabilitados; Olvidar y las filas, nunca. Nunca dos búsquedas a la vez.
+        private IEnumerator CreateReal(RowMate.Core.Common.MemoryPreferences prefs, Action<FakeBleAdapter>? setup = null)
+        {
+            Create(new UiHostOptions { Profile = DeviceProfile.Dp(800, 600) }.WithRealHrm(prefs, setup));
+            yield return Settle();
+        }
+
+        [UnityTest, Category("AC-HRM-02-04"), Category("LT-29")]
+        public IEnumerator LT29_RealServices()
+        {
+            yield return CreateReal(new RowMate.Core.Common.MemoryPreferences());
+            Assert.That(H.FakeBle!.RealHeartRate, Is.Not.Null);
+            H.ScrollTo("hrm-search");
+            yield return Tap("hrm-search");
+            Assert.That(H.App.HeartRate.State.Value.IsScanning, Is.True);
+            Assert.That(H.Find("device-search")!.enabledSelf, Is.False, "LT-29: el pulsómetro busca, el remo no");
+            Adapter.Advertise(FakeBleDevices.Row);
+            Adapter.Advertise(FakeBleDevices.Hrm);
+            yield return Settle();
+            Assert.That(Screen.Scan.Results.Count, Is.EqualTo(0), "un remo nunca entra en la búsqueda del pulsómetro");
+            Assert.That(H.Find("hrm-device-" + FakeBleDevices.HrmId), Is.Not.Null);
+            yield return Advance(10.1);
+            yield return Settle();
+            Assert.That(H.Find("device-search")!.enabledSelf, Is.True, "al vencer los 10 s, el remo puede buscar");
+            Assert.That(Adapter.Scanning, Is.False);
+        }
+
+        [UnityTest, Category("AC-HRM-02-04"), Category("LT-31")]
+        public IEnumerator LT31_RealServices()
+        {
+            var prefs = new RowMate.Core.Common.MemoryPreferences();
+            prefs.SetString(HeartRateService.PrefDeviceId, FakeBleDevices.HrmId);
+            prefs.SetString(HeartRateService.PrefDeviceName, "Banda de prueba");
+            yield return CreateReal(prefs, a =>
+            {
+                a.Advertise(FakeBleDevices.Hrm);
+                a.Fail(FakeBleDevices.HrmId, new BleException("connect", "device not found"));
+            });
+            yield return Advance(55);
+            yield return Settle();
+            Assert.That(H.TextOf("hrm-remembered-suffix"), Is.EqualTo(" · no encontrado"));
+            yield return Tap("device-search");
+            Assert.That(H.App.Device.State.Value.Status, Is.EqualTo(BleStatus.Scanning));
+            Assert.That(H.Find("hrm-search")!.enabledSelf, Is.False, "LT-31: el remo busca, Buscar otro no");
+            Assert.That(H.Find("hrm-retry")!.enabledSelf, Is.False, "ni Conectar");
+            Assert.That(H.Find("hrm-forget")!.enabledSelf, Is.True, "Olvidar siempre");
+            Adapter.Advertise(FakeBleDevices.Hrm);
+            Adapter.Advertise(FakeBleDevices.Row);
+            yield return Settle();
+            Assert.That(Screen.Scan.Results.Count, Is.EqualTo(1), "solo el remo en la lista del remo");
+            yield return Advance(10.1);
+            yield return Settle();
+            Assert.That(H.Find("hrm-search")!.enabledSelf, Is.True);
+            Assert.That(H.Find("hrm-retry")!.enabledSelf, Is.True);
+        }
+
         [UnityTest, Category("AC-BLE-05-09")]
         public IEnumerator TheListAndTheHrmCardFitInLandscape()
         {

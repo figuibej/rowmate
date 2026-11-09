@@ -79,15 +79,15 @@ namespace RowMate.Tests.Simulator
             var connect = p.ConnectAsync("AA:BB", "X");
             Assert.That(connect.IsCompleted, Is.True);
             Assert.That(connect.IsFaulted, Is.False, "la excepción no sube: queda en el estado");
-            Assert.That(p.State.Value.Error, Is.InstanceOf<HrmIncompatibleException>());
-            Assert.That(HeartRateStore.IsIncompatible(p.State.Value.Error!), Is.True);
+            Assert.That(p.State.Value.ErrorKind, Is.EqualTo(HrmErrorKind.Incompatible));
+            Assert.That(p.State.Value.ErrorDetail, Is.EqualTo(new HrmIncompatibleException().Message), "el detalle es el Message");
 
             p.RetryAsync();
-            Assert.That(p.State.Value.Error, Is.Null);
+            Assert.That(p.State.Value.HasError, Is.False);
 
             var disconnect = p.DisconnectAsync(); // no lanza aunque el servicio falle
             Assert.That(disconnect.IsFaulted, Is.False);
-            Assert.That(p.State.Value.Error, Is.InstanceOf<InvalidOperationException>());
+            Assert.That(p.State.Value.ErrorKind, Is.EqualTo(HrmErrorKind.Connect));
             p.Dispose();
             hrm.Dispose();
         }

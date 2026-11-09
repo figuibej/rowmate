@@ -199,3 +199,7 @@
     transition-duration: var(--rm-dur-micro);
     transition-timing-function: var(--rm-ease-enter);
 }
+
+/* ════ It. 11 (11-ble-pulsometro/04-design-notes §3): ninguna regla nueva. La respiración del corazón, la línea "Sin señal del
+   sensor", la entrada de las filas, el check, el latido del aviso y el seguimiento de la tarjeta van por código (HrmMotion,
+   LinkIndicator; BleMotionSpecs) con el reloj de prueba: una transición de USS acá las volvería no deterministas (regla 2). ════ */

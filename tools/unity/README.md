@@ -190,3 +190,10 @@ Esta PC no tiene el módulo de Android de Unity: el Kotlin se compila y se revis
 5. Instalar con `adb install -r <apk>` y seguir la demo de Android de la spec (§1): primer toque en "Buscar dispositivos" → diálogo; negar → vista de permiso denegado; reabrir la app → sigue denegado; "Activar Bluetooth" → ajustes de la app.
 
 Si el Gradle de Unity no toma los `.kt` (riesgo R-01), el mismo código va en un `.aar`: es el pedido abierto en los issues de la 10a.
+
+## It. 11: el pulsómetro real (ninguna prueba toca la radio)
+
+- Las pruebas y las capturas del pulsómetro usan el remo **y** el pulsómetro REALES (`RowerService` y `HeartRateService`) sobre el adaptador **falso** con los sensores ficticios K-11: `HostBackends.FakeBle(setup, initial, hrmPreferences)` o `UiHostOptions.WithRealHrm(prefs)`, con una `MemoryPreferences` propia (sembrada con `hrm.deviceId` / `hrm.deviceName` cuando la prueba arranca con un sensor recordado). Nunca el `prefs.json` del usuario. PlayMode: `HrmCardRealTests`, `HrmToastTests`, `DeviceBleTests` (LT-29 y LT-31 con los servicios reales) y `BleAllocationTests.HrmConnectedZeroBytesPerFrame`.
+- En PlayMode la continuación de un `await` corre en el cuadro siguiente (contexto de Unity): un intento que vence a los 15 s y el próximo de la cadencia se avanzan en dos pasos con cuadros en el medio, no con un solo `Advance`.
+- **Capturas**: `capture-snapshots.ps1 -Set it11 -NoSimulator` (por defecto desde la 11) escribe CAP-01 a CAP-16 (a/b/c cuando la spec pide más de un tamaño o el inglés) en `docs/migration/iterations/11-ble-pulsometro/snapshots` (`Snapshots/HrmCatalog.cs`). No escribe en la carpeta de la 10a. Dos corridas seguidas dan los mismos bytes.
+- **Humo en un player**: `tools/build/build.ps1 -Target Windows -BleSmoke` suma, después de las 3 búsquedas del remo, 1 búsqueda de pulsómetros de 10 s sin conectar: `[HRM] humo: busquedas=1 sensores=N ajenos=0 fallas=0`. Pasa solo con las dos líneas (`[BLE] humo` y `[HRM] humo`).
