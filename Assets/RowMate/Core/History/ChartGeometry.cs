@@ -353,9 +353,11 @@ namespace RowMate.Core.History
             if (previous != null && visual.OldSeriesAlpha > 0)
             {
                 previous.WriteSeriesLine(buffer, yMax, reveal, visual.OldSeriesAlpha);
+                previous.WriteSeriesCaps(buffer, yMax, reveal, visual.OldSeriesAlpha);
             }
 
             current.WriteSeriesLine(buffer, yMax, reveal, visual.NewSeriesAlpha);
+            current.WriteSeriesCaps(buffer, yMax, reveal, visual.NewSeriesAlpha);
             current.WriteStrip(buffer, visual.StaticAlpha);
         }
 
@@ -374,6 +376,7 @@ namespace RowMate.Core.History
         {
             WriteSeriesArea(buffer, yMax, reveal, areaAlpha);
             WriteSeriesLine(buffer, yMax, reveal, lineAlpha);
+            WriteSeriesCaps(buffer, yMax, reveal, lineAlpha);
         }
 
         // Los objetivos: sus áreas y sus líneas punteadas.
@@ -597,7 +600,34 @@ namespace RowMate.Core.History
             }
         }
 
-        // La tira de tipo (arte §4): 3 dp encima del área en el color base del tipo, con 2 dp de hueco entre franjas.
+        // Los extremos redondos de la línea (It. 14, #37, AC-DEBT-08; arte de la 9 §4): un disco de 2 dp (el ancho de la línea) en el
+        // primer punto y en el último visible (el corte del revelado), con su borde suavizado. Aparte de WriteSeriesLine: la línea sigue
+        // con sus 4 vértices por punto.
+        public void WriteSeriesCaps(ChartMeshBuffer buffer, double yMax, double reveal, double alpha)
+        {
+            if (alpha <= 0 || _series < 2)
+            {
+                return;
+            }
+
+            var visible = VisibleCount(reveal, out var inside, out var tailX, out var tailV);
+            if (visible < 2)
+            {
+                return;
+            }
+
+            var area = Frame.Area;
+            var core = ChartMeshBuffer.Pack(_seriesRgb, alpha);
+            var edge = ChartMeshBuffer.Pack(_seriesRgb, 0);
+            var radius = ChartSpecs.LineWidth / 2;
+            Point(0, inside, tailX, tailV, out var x0, out var v0);
+            Disk(buffer, x0, Math.Max(area.Top, PixelY(v0, yMax)), radius, Frame.PixelDp, core, edge);
+            Point(visible - 1, inside, tailX, tailV, out var x1, out var v1);
+            Disk(buffer, x1, Math.Max(area.Top, PixelY(v1, yMax)), radius, Frame.PixelDp, core, edge);
+        }
+
+        // La tira de tipo (arte §4): 3 dp encima del área en el color base del tipo, con 2 dp de hueco entre franjas. It. 14 (#37,
+        // AC-DEBT-08; arte de la 9 §7.1): cada tramo es una cápsula de radio 1,5 dp (la mitad del alto) con su borde suavizado.
         public void WriteStrip(ChartMeshBuffer buffer, double alpha)
         {
             if (alpha <= 0)
@@ -614,8 +644,51 @@ namespace RowMate.Core.History
                 var x1 = band.X1 - gap;
                 if (x1 > x0)
                 {
-                    Rect(buffer, x0, top, x1, top + ChartSpecs.TypeStripHeight, ChartMeshBuffer.Pack(band.Color, alpha));
+                    var color = ChartMeshBuffer.Pack(band.Color, alpha);
+                    Stadium(buffer, x0, top, x1, top + ChartSpecs.TypeStripHeight, Frame.PixelDp, color, color & 0xFFFFFF00u);
                 }
+            }
+        }
+
+        // Lo que ocupa una cápsula: centro + 2 × (StadiumSegments + 1) puntos del contorno, cada uno con su borde.
+        public const int StadiumSegments = 8;
+        public const int StadiumVertices = 1 + 4 * (StadiumSegments + 1);
+        public const int StadiumIndices = 2 * (StadiumSegments + 1) * 9;
+
+        // Una cápsula horizontal (radio = medio alto, o medio ancho si es más corta) en abanico desde el centro, con su borde de feather.
+        public static void Stadium(ChartMeshBuffer buffer, double x0, double y0, double x1, double y1, double feather, uint fill, uint edge)
+        {
+            if (buffer == null)
+            {
+                throw new ArgumentNullException(nameof(buffer));
+            }
+
+            var cy = (y0 + y1) / 2;
+            var r = Math.Min((y1 - y0) / 2, (x1 - x0) / 2);
+            var leftCx = x0 + r;
+            var rightCx = x1 - r;
+            var center = buffer.Vertex((x0 + x1) / 2, cy, fill);
+            var first = buffer.VertexCount;
+            const int Points = 2 * (StadiumSegments + 1);
+            for (var k = 0; k < Points; k++)
+            {
+                // La derecha de −90° a 90° y la izquierda de 90° a 270° (sentido horario con y hacia abajo).
+                var right = k <= StadiumSegments;
+                var step = right ? k : k - StadiumSegments - 1;
+                var angle = Math.PI * (right ? -0.5 + (double)step / StadiumSegments : 0.5 + (double)step / StadiumSegments);
+                var c = Math.Cos(angle);
+                var sn = Math.Sin(angle);
+                var cx = right ? rightCx : leftCx;
+                buffer.Vertex(cx + c * r, cy + sn * r, fill);
+                buffer.Vertex(cx + c * (r + feather), cy + sn * (r + feather), edge);
+            }
+
+            for (var k = 0; k < Points; k++)
+            {
+                var inner = first + 2 * k;
+                var nextInner = first + 2 * ((k + 1) % Points);
+                buffer.Triangle(center, inner, nextInner);
+                buffer.Quad(inner, inner + 1, nextInner + 1, nextInner);
             }
         }
 
@@ -854,9 +927,13 @@ namespace RowMate.Core.History
             vertices += DiskVertices;
             indices += DiskIndices;
 
-            // Franjas y tira: 4 / 6 cada una.
-            vertices += 8 * _bandCount;
-            indices += 12 * _bandCount;
+            // Los dos extremos redondos de la línea (It. 14, #37).
+            vertices += 2 * DiskVertices;
+            indices += 2 * DiskIndices;
+
+            // Franjas (4 / 6) y la cápsula de la tira, cada una.
+            vertices += (4 + StadiumVertices) * _bandCount;
+            indices += (6 + StadiumIndices) * _bandCount;
 
             // Separadores: un rectángulo suavizado (8 / 30) por trazo.
             var dashes = (int)Math.Ceiling(area.Height / (ChartSpecs.SeparatorDash + ChartSpecs.SeparatorGap)) + 1;

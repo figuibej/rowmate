@@ -9,13 +9,21 @@ namespace RowMate.Presentation.Motion.Hud
     // arranca desde la opacidad que tiene (sin saltos). Un cambio de tamaño dentro de la misma clase no llama acá: se reacomoda en el
     // acto, como hasta la 5. La escena se adapta en el acto (no pasa por acá).
     // - Reducir movimiento, sin armar o con Instant: en el acto (1).
+    // - It. 14 (T-07, AC-APP-15-10; 00-arte-pulido §3.3 punto 4, la regla de los 400 ms): si llega otro cambio de clase antes de
+    //   RepeatWindowMs desde el anterior (arrastrar el borde de la ventana de un lado al otro del cuadrado), no se repite la entrada:
+    //   queda en el acto (1) hasta que los cambios se espacien. Esta es la LayoutClassEntrance de 02-tech-design §3 (ya existía
+    //   desde la 6a; WP-D le suma la regla).
     // - IsFinite mientras corre. Stop: sale del MotionDriver sin avisar y deja lo que se ve donde estaba (ROB-02).
     // - Sin asignaciones por cuadro.
     public sealed class HudReflowMotion : HudMotion
     {
         private readonly Action<double> _apply;
+        // La regla de los 400 ms (T-07).
+        public const double RepeatWindowMs = 400;
+
         private double _from;
         private double _start;
+        private double _lastChange = double.NegativeInfinity;
 
         public HudReflowMotion(MotionDriver driver, Action<double> apply)
             : base(driver)
@@ -31,7 +39,10 @@ namespace RowMate.Presentation.Motion.Hud
 
         public void OnOrientationClassChanged(bool instant = false)
         {
-            if (!CanAnimate(instant) || ReduceMotion)
+            var now = Now;
+            var repeated = (now - _lastChange) * 1000.0 < RepeatWindowMs;
+            _lastChange = now;
+            if (!CanAnimate(instant) || ReduceMotion || repeated)
             {
                 Leave();
                 Apply(1);

@@ -25,7 +25,8 @@ namespace RowMate.Tests.PlayMode
             var layer = H.Shell.Toasts;
             var toast = layer.CurrentAction!;
             Assert.That(toast, Is.Not.Null, "el aviso de éxito");
-            Assert.That(layer.Text.text, Is.EqualTo(SavedTitle));
+            // It. 14 (#69): la ruta lleva cortes de ancho cero después de cada barra (PathBreak); el texto es el mismo sin ellos.
+            Assert.That(RowMate.Core.Design.PathBreak.Strip(layer.Text.text), Is.EqualTo(SavedTitle));
             Assert.That(layer.Detail.text, Is.EqualTo(FileName), "el nombre en el segundo renglón");
             Assert.That(layer.Detail.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex));
             Assert.That(layer.Action.Label.text, Is.EqualTo("Abrir carpeta"));

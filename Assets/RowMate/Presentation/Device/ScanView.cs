@@ -112,8 +112,9 @@ namespace RowMate.Presentation.Device
         private void FollowCard()
         {
             var content = CardSlot.contentContainer;
-            var card = content.childCount > 0 ? content[content.childCount - 1] : null;
-            if (card == null || card.name != "hrm-card")
+            var card = CardIn(content);
+            SizeCard(card);
+            if (card == null)
             {
                 _followedCard = null;
                 return;
@@ -136,7 +137,9 @@ namespace RowMate.Presentation.Device
         // - Stacked: como hasta la 10a (búsqueda, ayuda, sonar, la lista en #device-empty-area y el slot, hermanos).
         // - SingleScroll (L640): un único desplazamiento: la lista y el vacío pasan al slot de la tarjeta, arriba de ella (a su alto natural),
         //   y #device-empty-area se oculta.
-        // - TwoColumns (TH): búsqueda, ayuda y lista a la izquierda; el slot a la derecha con ancho RightColumnDp.
+        // - TwoColumns (TH): búsqueda, ayuda y sonar arriba; debajo, UN SOLO desplazamiento (el slot de la tarjeta, It. 14 #42,
+        //   AC-DEBT-03): adentro, en fila, la lista y el vacío a la izquierda (a su alto natural, sin alto fijo) y la tarjeta a la derecha
+        //   con ancho RightColumnDp. "Buscar" del pulsómetro se alcanza desplazando; #device-empty-area se oculta.
         public void ApplyLayout(DeviceScanLayout layout)
         {
             if (layout.Equals(Layout) && (layout.Kind != DeviceScanLayoutKind.Stacked || _columns.parent == null))
@@ -152,6 +155,11 @@ namespace RowMate.Presentation.Device
             if (_columns.parent == this)
             {
                 Remove(_columns);
+            }
+
+            if (_main.parent != _columns)
+            {
+                _columns.Add(_main);
             }
 
             Add(Search);
@@ -171,6 +179,9 @@ namespace RowMate.Presentation.Device
 
             EmptyArea.style.display = StyleKeyword.Null;
             CardSlot.style.width = StyleKeyword.Null;
+            CardSlot.contentContainer.style.flexDirection = StyleKeyword.Null;
+            CardSlot.contentContainer.style.alignItems = StyleKeyword.Null;
+            SizeCard(null);
 
             // 2. La disposición pedida.
             if (layout.Kind == DeviceScanLayoutKind.SingleScroll)
@@ -181,14 +192,46 @@ namespace RowMate.Presentation.Device
             }
             else if (layout.Kind == DeviceScanLayoutKind.TwoColumns)
             {
-                Add(_columns);
-                _main.Add(Search);
-                _main.Add(Hint);
-                _main.Add(Sonar);
-                _main.Add(EmptyArea);
-                _columns.Add(CardSlot);
-                CardSlot.style.width = (float)layout.RightColumnDp;
+                // #42: un solo desplazamiento (el del slot), con la lista y la tarjeta en fila adentro.
+                EmptyArea.style.display = DisplayStyle.None;
+                _main.Add(Results);
+                _main.Add(_empty);
+                CardSlot.contentContainer.Insert(0, _main);
+                CardSlot.contentContainer.style.flexDirection = FlexDirection.Row;
+                CardSlot.contentContainer.style.alignItems = Align.FlexStart;
+                SizeCard(CardIn(CardSlot.contentContainer));
             }
+        }
+
+        // La tarjeta del pulsómetro dentro del slot (el último hijo, la pone DeviceScreenView), o null.
+        private static VisualElement? CardIn(VisualElement content)
+        {
+            var card = content.childCount > 0 ? content[content.childCount - 1] : null;
+            return card != null && card.name == "hrm-card" ? card : null;
+        }
+
+        private VisualElement? _sizedCard;
+
+        // En TwoColumns la tarjeta toma el ancho de la columna derecha; fuera de esa disposición (o en otro slot) vuelve a su ancho.
+        private void SizeCard(VisualElement? card)
+        {
+            if (_sizedCard != null && !ReferenceEquals(_sizedCard, card))
+            {
+                _sizedCard.style.width = StyleKeyword.Null;
+                _sizedCard.style.flexShrink = StyleKeyword.Null;
+                _sizedCard.style.marginLeft = StyleKeyword.Null;
+                _sizedCard = null;
+            }
+
+            if (card == null || Layout.Kind != DeviceScanLayoutKind.TwoColumns)
+            {
+                return;
+            }
+
+            _sizedCard = card;
+            card.style.width = (float)Layout.RightColumnDp;
+            card.style.flexShrink = 0;
+            card.style.marginLeft = Padding;
         }
 
         public SonarView Sonar { get; }
@@ -214,11 +257,35 @@ namespace RowMate.Presentation.Device
             Search.SetEnabled(spec.SearchEnabled);
             Search.SetLabel(texts.Get(spec.Searching ? L10nKeys.DeviceSearching : L10nKeys.DeviceSearch));
             Search.SetBusy(spec.Searching, _ui.Motion);
+            ApplySearchingLook(spec.Searching);
             Hint.style.display = spec.ShowSearchHint ? DisplayStyle.Flex : DisplayStyle.None;
             Hint.text = texts.Get(L10nKeys.DeviceSearchHint);
             _empty.style.display = spec.ShowEmptyState ? DisplayStyle.Flex : DisplayStyle.None;
             EmptyTitle.text = texts.Get(L10nKeys.DeviceNoResults);
             EmptyHint.text = texts.Get(L10nKeys.DeviceNoResultsHint);
+        }
+
+        // It. 14 (#41, AC-DEBT-02; legacy device_screen.dart:398-402): "Buscando..." con el indicador BLANCO de 16 dp y la etiqueta blanca
+        // al 70 %, sobre el fondo del primario deshabilitado (accent.primary al 38 % sobre bg.app, el mismo color que da hoy la opacidad
+        // 0,38) pero sin apagar el texto: contraste ≥ 4,5:1. El deshabilitado genérico no cambia (solo este botón y solo buscando).
+        public const string BusyClass = "rm-scan-button--busy";
+        public const float BusyLabelAlpha = 0.7f;
+        public const double BusyBackgroundAlpha = 0.38;
+
+        private void ApplySearchingLook(bool searching)
+        {
+            Search.EnableInClassList(BusyClass, searching);
+            Search.style.opacity = searching ? 1f : (StyleFloat)StyleKeyword.Null;
+            Search.style.backgroundColor = searching
+                ? TokenColors.Lerp(TokenColors.ToColor(Tokens.BgApp), TokenColors.ToColor(Tokens.AccentPrimary), BusyBackgroundAlpha)
+                : (StyleColor)StyleKeyword.Null;
+            var white = TokenColors.ToColor(Tokens.TextPrimary);
+            Search.Label.style.color = searching ? new UnityEngine.Color(white.r, white.g, white.b, BusyLabelAlpha) : (StyleColor)StyleKeyword.Null;
+            var spinner = Search.BusySpinner;
+            if (spinner != null)
+            {
+                spinner.style.color = searching ? white : (StyleColor)StyleKeyword.Null;
+            }
         }
 
         // It. 10a: la lista de remos (AC-BLE-05-07) y la caja del enlace (AC-BLE-08-05, AC-BLE-09-02).

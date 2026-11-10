@@ -239,6 +239,11 @@ namespace RowMate.App.Device
             {
                 _noticeShown = false;
                 _linkNotices.Emit(new LinkNotice(reconnected ? LinkNoticeKind.Reconnected : LinkNoticeKind.Cleared, name));
+                if (reconnected)
+                {
+                    // It. 14 (#51, AC-DEBT-10): "Reconectado con {name}" vibra igual que "Listo", una vez por reconexión.
+                    _haptics?.Confirm();
+                }
             }
 
             if (userReady)

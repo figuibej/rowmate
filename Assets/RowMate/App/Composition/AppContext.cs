@@ -121,6 +121,9 @@ namespace RowMate.App.Composition
 
         public IAppLogger Logger { get; }
 
+        // It. 14 (AC-POL-03, DT14-23): la háptica del entrenamiento (null sin puerto de háptica). Dispose la dispone.
+        public WorkoutHaptics? WorkoutHaptics { get; internal set; }
+
         // El backend con el que se armó (para la capa del simulador y los tests); AppContext no lo dispone.
         public DeviceBackend Devices => _devices;
 
@@ -222,6 +225,7 @@ namespace RowMate.App.Composition
             // It. 4b: si quedaron ocultas, las barras del sistema se muestran.
             SystemBars.Dispose();
             Export.Dispose();
+            WorkoutHaptics?.Dispose();
             History.Dispose();
             SceneEnvironment.Dispose();
             SeriesPanels.Dispose();

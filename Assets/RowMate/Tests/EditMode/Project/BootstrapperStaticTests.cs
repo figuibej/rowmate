@@ -22,7 +22,7 @@ namespace RowMate.Tests.EditMode.Project
         private static readonly string[] StepIds =
         {
             "player.identity", "player.scripting", "player.android", "player.ios", "player.rendering", "player.runtime",
-            "player.input", "urp.tiers", "urp.tidy", "player.window", "ui.fonts", "ui.panel", "scene.assets", "scene.materials", "scene.boot",
+            "player.input", "urp.tiers", "urp.tidy", "player.window", "identity.import", "identity.standalone", "identity.mobile", "ui.fonts", "ui.panel", "scene.assets", "scene.materials", "scene.boot",
             "defines.check",
         };
 
@@ -34,7 +34,7 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(main, Does.Contain("EditorApplication.delayCall"));
             Assert.That(main, Does.Contain("\"ProjectSettings/RowMateBootstrap.json\""));
             Assert.That(main, Does.Contain("[MenuItem(\"RowMate/Bootstrap/Reaplicar\")]"));
-            Assert.That(main, Does.Contain("CurrentVersion = 6"), "It. 8 (WP-B0): bootstrapper v6, 08-entornos-selector/02-tech-design §1.2");
+            Assert.That(main, Does.Contain("CurrentVersion = 7"), "It. 14 (WP-B1): bootstrapper v7, 14-pulido-plataformas/02-tech-design DT14-07");
         }
 
         [Test, Category("AC-BASE-10")]

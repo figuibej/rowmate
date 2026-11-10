@@ -325,7 +325,8 @@ namespace RowMate.Presentation.Device
                 }
 
                 _errorDetail.style.display = model.ErrorDetail == null ? DisplayStyle.None : DisplayStyle.Flex;
-                SetText(_errorDetail, model.ErrorDetail ?? "");
+                // It. 14 (#44, AC-DEBT-04, QA-G14-13): solo el detalle del sistema, sin el prefijo de la operación; HrmCardRules no cambia.
+                SetText(_errorDetail, model.ErrorDetail != null ? BleErrorText.ForDisplay(model.ErrorDetail) : "");
             }
         }
 

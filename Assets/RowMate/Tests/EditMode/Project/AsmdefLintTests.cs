@@ -94,11 +94,12 @@ namespace RowMate.Tests.EditMode.Project
             "RowMate.Tests.Support", "RowMate.Tests.EditMode", "RowMate.Tests.Simulator",
         };
 
-        // It. 4a (02-tech-design §3.6): más la herramienta de la demo, RowMate.SessionList.
+        // It. 4a (02-tech-design §3.6): más la herramienta de la demo, RowMate.SessionList. It. 14 (DT14-06): y la del ícono, RowMate.Icon.
         private static readonly string[] SolutionProjects =
         {
             "RowMate.Core", "RowMate.App", "RowMate.Infrastructure", "RowMate.Simulator", "RowMate.Tests.Support",
             "RowMate.Tests.EditMode", "RowMate.Tests.Simulator", "RowMate.Tests.UnityApiCheck", "RowMate.Tokens", "RowMate.SessionList",
+            "RowMate.Icon",
         };
 
         [Test, Category("AC-BASE-10")]

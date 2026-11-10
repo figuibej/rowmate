@@ -39,8 +39,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it12', 'it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it12',
+    [ValidateSet('it14', 'it12', 'it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it14',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -171,6 +171,7 @@ function Get-SetFolder {
     if ($Set -eq 'it10a') { return 'docs/migration/iterations/10a-ble-android-windows/snapshots' }
     if ($Set -eq 'it11') { return 'docs/migration/iterations/11-ble-pulsometro/snapshots' }
     if ($Set -eq 'it12') { return 'docs/migration/iterations/12-exportar-tcx/snapshots' }
+    if ($Set -eq 'it14') { return 'docs/migration/iterations/14-pulido-plataformas/snapshots' }
     return 'docs/migration/iterations/09-historial/snapshots'
 }
 

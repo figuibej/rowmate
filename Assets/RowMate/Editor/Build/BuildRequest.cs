@@ -7,6 +7,9 @@ namespace RowMate.EditorTools
     // Qué build pidió tools/build/build.ps1 (ARCHITECTURE §19, 02-tech-design §1.1): -rowmateTarget Windows|Android,
     // -rowmateSimulator, -rowmateBackend Mono|IL2CPP, -rowmateOutput <carpeta>, -rowmateSmokeTest. Con el simulador el build
     // es SIEMPRE Development (R-01, AC-BLE-13-01). Mono es temporal (D-16: no está el módulo IL2CPP de Windows).
+    // It. 14 (14-pulido-plataformas/02-tech-design §8.1; AC-APP-19-06, -08, -09): también -rowmateTarget iOS|macOS (el job manual de
+    // Apple del CI, sin firmar, nunca Development) y la firma de Android por argumentos (-androidKeystoreName, -androidKeystorePass,
+    // -androidKeyaliasName, -androidKeyaliasPass, los que pasa GameCI; vacíos = la llave de depuración). Nada se versiona.
     public sealed class BuildRequest
     {
         public BuildRequest(string target, bool simulator, string backend, string outputFolder, bool smokeTest)
@@ -17,6 +20,9 @@ namespace RowMate.EditorTools
             OutputFolder = outputFolder;
             SmokeTest = smokeTest;
         }
+
+        // La firma de Android por argumentos (null o vacía = depuración). Solo en memoria durante el build (BuildCli la restaura).
+        public AndroidSigning? Signing { get; set; }
 
         public string Target { get; }
 
@@ -33,9 +39,15 @@ namespace RowMate.EditorTools
 
         public bool IsWindows => string.Equals(Target, "Windows", StringComparison.OrdinalIgnoreCase);
 
-        public BuildTarget BuildTarget => IsWindows ? BuildTarget.StandaloneWindows64 : BuildTarget.Android;
+        public bool IsIos => string.Equals(Target, "iOS", StringComparison.OrdinalIgnoreCase);
 
-        public BuildTargetGroup BuildTargetGroup => IsWindows ? BuildTargetGroup.Standalone : BuildTargetGroup.Android;
+        public bool IsMac => string.Equals(Target, "macOS", StringComparison.OrdinalIgnoreCase);
+
+        public bool IsAndroid => !IsWindows && !IsIos && !IsMac;
+
+        public BuildTarget BuildTarget => IsWindows ? BuildTarget.StandaloneWindows64 : IsIos ? BuildTarget.iOS : IsMac ? BuildTarget.StandaloneOSX : BuildTarget.Android;
+
+        public BuildTargetGroup BuildTargetGroup => IsWindows || IsMac ? BuildTargetGroup.Standalone : IsIos ? BuildTargetGroup.iOS : BuildTargetGroup.Android;
 
         public ScriptingImplementation ScriptingBackend =>
             string.Equals(Backend, "IL2CPP", StringComparison.OrdinalIgnoreCase) ? ScriptingImplementation.IL2CPP : ScriptingImplementation.Mono2x;
@@ -43,7 +55,8 @@ namespace RowMate.EditorTools
         public string Variant => Simulator ? "simulator" : "normal";
 
         // Builds/<Windows|Android>/<normal|simulator|dev-smoke>/RowMate.exe (o .apk).
-        public string LocationPath => Path.Combine(OutputFolder, IsWindows ? "RowMate.exe" : "RowMate.apk");
+        // iOS: la carpeta del proyecto de Xcode; macOS: RowMate.app.
+        public string LocationPath => IsIos ? OutputFolder : Path.Combine(OutputFolder, IsWindows ? "RowMate.exe" : IsMac ? "RowMate.app" : "RowMate.apk");
 
         // La carpeta fija de cada variante (QA-V3-08 de la It. 3: un build de desarrollo abre el puerto de PlayerConnection y
         // Windows pregunta por el Firewall una vez por ruta de RowMate.exe). La misma que usa tools/build/build.ps1.
@@ -59,10 +72,10 @@ namespace RowMate.EditorTools
             var backend = Value(args, "-rowmateBackend") ?? "Mono";
             var smoke = Has(args, "-rowmateSmokeTest");
             var output = Value(args, "-rowmateOutput") ?? DefaultOutput(target, simulator, smoke);
-            return new BuildRequest(target, simulator, backend, output, smoke);
+            return new BuildRequest(target, simulator, backend, output, smoke) { Signing = AndroidSigning.FromCommandLine(args) };
         }
 
-        private static bool Has(string[] args, string name)
+        internal static bool Has(string[] args, string name)
         {
             foreach (var arg in args)
             {
@@ -75,7 +88,7 @@ namespace RowMate.EditorTools
             return false;
         }
 
-        private static string? Value(string[] args, string name)
+        internal static string? Value(string[] args, string name)
         {
             for (var i = 0; i < args.Length - 1; i++)
             {

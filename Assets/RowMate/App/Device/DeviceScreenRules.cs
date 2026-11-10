@@ -244,6 +244,25 @@ namespace RowMate.App.Device
             return texts.Format(key, MessageArg.Text("error", state.Error.Message));
         }
 
+        // It. 14 (#44, AC-DEBT-04; DT14-27): lo que muestra la caja roja: lo mismo que ErrorText pero con solo el detalle del
+        // sistema, sin el prefijo de la operación (BleErrorText.ForDisplay): "Error al escanear: error 2". ErrorText no cambia
+        // (paridad con dp:111, :125 y sus pruebas); la vista (ErrorBanner, WP-B1) usa esta.
+        public static string? DisplayErrorText(DeviceState state, Localizer texts)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            if (state.Error == null)
+            {
+                return null;
+            }
+
+            var key = state.ErrorKind == DeviceErrorKind.Scan ? L10nKeys.DeviceScanError : L10nKeys.DeviceConnectError;
+            return texts.Format(key, MessageArg.Text("error", BleErrorText.ForDisplay(state.Error.Message)));
+        }
+
         // AC-BLE-08-05, AC-BLE-09-02 (00-arte §4.1): la caja del enlace arriba de "Buscar dispositivos".
         public static LinkBannerSpec LinkBanner(DeviceState state, Localizer texts)
         {

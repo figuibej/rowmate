@@ -42,12 +42,16 @@ namespace RowMate.Presentation.Routines
             Content.AddToClassList("rm-routines__list");
             Scroller = new FocusScroller(ui, Scroll);
             Scroller.SetBottomInset(() => _ui.Layout.TabBarVisible ? _ui.Layout.CurrentTabBarHeight : 0);
+            // It. 14 (T-07, AC-APP-15-10): al rotar o redimensionar, la primera tarjeta que se veía queda arriba, a la misma distancia.
+            Anchor = ScrollAnchor.Attach(Scroll);
             Add(Scroll);
             AddToClassList("rm-routines__list-host");
             _ui.Pages.Settled += OnPagesSettled;
         }
 
         public ScrollView Scroll { get; }
+
+        public ScrollAnchor Anchor { get; }
 
         public VisualElement Content { get; }
 

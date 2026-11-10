@@ -168,7 +168,7 @@ namespace RowMate.Presentation.Device
             _appBar.SetTitle(texts.Get(L10nKeys.DeviceTitle));
             _disconnect.SetLabel(texts.Get(L10nKeys.DeviceDisconnect));
             _disconnect.style.display = DeviceScreenRules.ShowDisconnectAction(state.Status) ? DisplayStyle.Flex : DisplayStyle.None;
-            ErrorBanner.Render(DeviceScreenRules.ErrorText(state, texts));
+            ErrorBanner.Render(DeviceScreenRules.DisplayErrorText(state, texts));
 
             // La vista conectada solo se dibuja con el remo conectado (QA-V2-01, AC-BLE-11-02). Al desconectar queda congelada
             // con lo último que mostró mientras sale (120 ms): el legacy la desmonta en el acto (device_screen.dart:33-38).
@@ -354,6 +354,14 @@ namespace RowMate.Presentation.Device
             var slot = view == DeviceViewKind.Connected ? Connected.CardSlot : Scan.CardSlot.contentContainer;
             if (Card.parent != slot)
             {
+                // It. 14 (#42): el ancho de la columna derecha de la búsqueda en TH no viaja a la vista conectada.
+                if (view == DeviceViewKind.Connected)
+                {
+                    Card.style.width = StyleKeyword.Null;
+                    Card.style.flexShrink = StyleKeyword.Null;
+                    Card.style.marginLeft = StyleKeyword.Null;
+                }
+
                 slot.Add(Card);
             }
         }

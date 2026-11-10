@@ -78,6 +78,10 @@ namespace RowMate.Presentation.Workout
                 SceneSurface = new SceneSurface(ui.Scene);
                 SceneSurface.style.display = DisplayStyle.None;
                 Add(SceneSurface);
+                // It. 14 (#21, DT14-30, QA-G14-03): el indicador de carga de la escena, justo DESPUÉS de SceneSurface (encima del provisorio y
+                // de la escena, debajo del contenido del HUD). Un solo elemento, display: none salvo en la primera entrada demorada (+1).
+                SceneLoading = new SceneLoadingIndicator(ui);
+                Add(SceneLoading);
             }
 
             if (ui.Scene != null)
@@ -190,6 +194,9 @@ namespace RowMate.Presentation.Workout
 
         // It. 6a: el elemento de la escena (null sin escena).
         public SceneSurface? SceneSurface { get; }
+
+        // It. 14 (#21): el indicador "Preparando escena…" (null sin escena).
+        public SceneLoadingIndicator? SceneLoading { get; }
 
         public VisualElement? BoatZone { get; }
 

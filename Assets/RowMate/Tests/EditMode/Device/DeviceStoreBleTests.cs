@@ -61,11 +61,12 @@ namespace RowMate.Tests.EditMode.Device
                 Assert.That(haptics.Confirms, Is.EqualTo(1));
                 Assert.That(store.State.Value.IsConnected, Is.True, "Connected no espera la vista (A10-05)");
 
-                // La reconexión no vibra.
+                // It. 14 (#51, AC-DEBT-10): la reconexión vibra una vez, con "Reconectado con {name}" (antes no vibraba; lo cubre
+                // DeviceStoreReconnectHapticTests).
                 rig.Adapter.DropLink(FakeBleDevices.RowId);
                 rig.Wait(3.3);
                 Assert.That(rig.Status, Is.EqualTo(BleStatus.Connected));
-                Assert.That(haptics.Confirms, Is.EqualTo(1));
+                Assert.That(haptics.Confirms, Is.EqualTo(2));
                 store.Dispose();
             }
 

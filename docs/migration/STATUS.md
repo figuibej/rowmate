@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-09 (coordinador, OK de la It. 12 y arranque de la 14) |
-| Fase | **It. 14 en curso** (`14-pulido-plataformas`), la última del plan. La It. 12 (Exportar TCX) quedó cerrada con el OK del usuario ([reporte](iterations/12-exportar-tcx/REPORT.md)); deuda en los issues #66 a #73 |
-| Próximo paso | Terminar la **It. 14** (pulido, identidad, plataformas y CI). La 6b sigue postergada (issue #6) y la 10b, flotante hasta que haya Mac. Demos pendientes del usuario: la 10a (AMS-670B), la 11 (pulsómetro) y la 12 (subir un TCX a strava.com/upload) |
+| Actualizado | 2026-11-10 (coordinador, OK de la It. 14) |
+| Fase | **Plan completo**, salvo la 6b (postergada, issue #6) y la 10b (flotante hasta que haya Mac). La It. 14 (`14-pulido-plataformas`), la última, quedó **cerrada** con el OK del usuario ([reporte](iterations/14-pulido-plataformas/REPORT.md); decisiones del cierre en [01-po-spec §12](iterations/14-pulido-plataformas/01-po-spec.md)) |
+| Próximo paso | A pedido del usuario: cargar los secretos de Unity (cierra #10), instalar Android Build Support y probar en un teléfono (#7, #46), la 10b con una Mac, la 6b, y las demos con hardware (10a, 11, 12, P-17) |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs; desde el 2026-11-09, la 13 descartada y 25 IDs de Strava descartados (133 vivos). El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
@@ -28,7 +28,7 @@
 | 11 | Pulsómetro real | **Cerrada** ([reporte](iterations/11-ble-pulsometro/REPORT.md)); el usuario dio el OK ("dale"): rigen los valores por defecto de su gate. Deuda en los issues #57 a #65. La demo con el pulsómetro queda pendiente. Sin FAIL; 39 PASS y 2 NO VERIFICABLE: AC-HRM-HW-01 (sensor real y AMS-670B) y AC-HRM-HW-02 (teléfono y "Android Build Support") |
 | 12 | Exportar TCX (reemplaza a "Strava: conexión y subida") | **Cerrada** ([reporte](iterations/12-exportar-tcx/REPORT.md)); el usuario dio el OK ("dale"): rigen los valores por defecto de su gate (DV-116 a DV-127). Deuda en los issues #66 a #73. Sin FAIL; 25 PASS y 3 NO VERIFICABLE: AC-STR-09-24 (Android), -25 (Apple, 10b) y -27 (subida a Strava, demo del usuario) |
 | 13 | ~~Strava: sincronización y Perfil~~ | **Descartada** (Strava pago: decisión del usuario del 2026-11-09) |
-| 14 | Pulido, identidad, plataformas y CI | **En curso** |
+| 14 | Pulido, identidad, plataformas y CI | **Cerrada** ([reporte](iterations/14-pulido-plataformas/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). QA: APROBADO CON OBSERVACIONES en la ronda 2. Sin FAIL; 38 PASS y 6 NO VERIFICABLE (DPI con dos monitores, 60 fps con la pantalla normal, la corrida real del CI y el arrastre de Android/Apple). Cerró los issues #21, #36, #40, #41, #42, #44 y #69; deuda en los issues #74 a #83 |
 
 ## Decisiones
 
@@ -49,9 +49,31 @@
 - **Gate de la It. 9**: el usuario dio el OK ("pushea y pasa a la 10"), así que rigen los valores por defecto de la tabla "Gate de la It. 9" de abajo (DV-90 a DV-95, tiempo y distancia del monitor, etiquetas X como `fl_chart` con issue prioritario).
 - **Gates de la It. 10a y la It. 11**: el usuario dio el OK; rigen los valores por defecto de sus tablas (abajo).
 
-### Para confirmar en el gate de la It. 12
+### Para confirmar en el gate de la It. 14
 
-Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §8](iterations/12-exportar-tcx/01-po-spec.md) y el [reporte](iterations/12-exportar-tcx/REPORT.md).
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §8 y §12](iterations/14-pulido-plataformas/01-po-spec.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-128: ventana mínima 640 × 360 en Windows y macOS | Se acepta | Sin mínimo, como el legacy |
+| DV-129: pantalla completa con `F11` o `Alt+Enter`, sin recordarla | Se acepta | Sin pantalla completa |
+| DV-130: ventana inicial centrada | Se acepta | En (10, 10), como el legacy |
+| DV-131: Android `com.iguisoft.rowmate`; iOS/macOS `com.iguisoft.rowmate.unity` | Se acepta | iOS/macOS reemplazan al legacy |
+| DV-132: Windows sin MSIX (la carpeta del build comprimida) | Se acepta | MSIX con certificado (issue) |
+| DV-133 / DV-134: ícono propio redibujado; arranque con logo fijo y fundido de 200 ms | Se acepta | Ícono del legacy; animación de marca (issue) |
+| DV-135: Android en las 4 orientaciones, respetando el bloqueo | Se acepta | Sin vertical invertida en teléfonos |
+| DV-136: el lector lee textos, botones, estados, avisos, cambio de paso y resumen del gráfico; no anuncia métricas solo | Se acepta | Anunciar métricas cada N s (issue) |
+| DV-137: #32, se oculta la marca que choca con un borde y el split abre su eje a ±5 s | Se acepta | Etiquetas encimadas, como `fl_chart` |
+| DV-138: sigue Unity 6000.3.27f1 | Se acepta | Evaluar una LTS más nueva |
+| DV-139: APK del CI con la llave de depuración si faltan los secretos de firma | Se acepta | No publicar el APK sin firma |
+| DV-V14-03: el arranque oscuro cuenta "desde el primer código de la app" (queda ≤ 0,1 s blanco de Windows) | Se acepta | *Launcher* nativo (issue) |
+| QA-V14-11: el aviso de exportación sigue de vidrio al 86 % (contraste ≈ 14,7:1) | Se acepta | Aviso opaco (issue) |
+
+**Decididas por el PO al cerrar la It. 14** (no necesitan respuesta): los 6 NO VERIFICABLE quedan para la demo, el teléfono, la Mac y la primera corrida del CI; `BleAllocationTests.TheReconnectBannerDoesNotAllocatePerFrame` (intermitente, It. 11) se arregla antes de cargar `UNITY_LICENSE`; los menores de QA, del gate, del diseño y del arte van a 10 issues de GitHub (agrupados), sin corregirlos antes del commit; #32, #37 y #51 siguen abiertos con su resto.
+
+### Gate de la It. 12 (valores que rigen)
+
+El usuario dio el OK ("dale"): rigen los valores por defecto. Detalle en [01-po-spec §8](iterations/12-exportar-tcx/01-po-spec.md) y el [reporte](iterations/12-exportar-tcx/REPORT.md).
 
 | Decisión | Por defecto | Si se rechaza |
 |---|---|---|
@@ -167,7 +189,7 @@ El usuario dio el OK ("pushea y arranca la proxima iteracion"): rigen los valore
 | Cierre de NV (It. 2 a 6a) y rendimiento de la escena | Módulos **Windows Build Support (IL2CPP)** (con Visual Studio 2022 "Desarrollo de escritorio con C++" y Windows SDK 10.0.22621+) y **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), más **un Android de gama media** (clase Galaxy A54 / Pixel 6a, Android 8+ de 64 bits) con depuración USB. Cierran IL2CPP (AC-BASE-01, R3-01; R5-04), AC-SCN-01-09 (60 fps con la escena, 30 min), la fila de 200 píldoras en el teléfono (R4b-02) y las partes Android de las It. 2 a 6a | Pendiente. Sin él, el rendimiento en el teléfono queda NO VERIFICABLE hasta la 14 (regla 9). **Recomendado para la 6b** (60 fps con el agua avanzada) |
 | It. 6a (opcional) | **Terrain Sample Asset Pack** (Asset Store de Unity, gratis, 1,6 GB) | Opcional (P-02): la 6a se ve completa con terreno procedural |
 | It. 2 (opcional, 5 minutos en la PC) | Abrir la app legacy después de la nueva (AC-APP-16-03); probar el build con Windows en modo claro (AC-APP-05-01 y, de la It. 3, AC-APP-05-10); los idiomas preferidos `Français (France)`, `Español (Argentina)` (AC-APP-09-06) | Pendiente |
-| CI de Unity (opcional) | Licencia Personal de Unity como secreto del repositorio (P-08) | Pendiente. El repositorio está en GitHub, público, y `ci-core` corre en verde |
+| CI de Unity (opcional) | Los secretos `UNITY_LICENSE`, `UNITY_EMAIL` y `UNITY_PASSWORD` (y, opcionales, los 4 de firma de Android), según [tools/unity/README.md](../../tools/unity/README.md) §It. 14: CI. Antes, arreglar el test intermitente de la It. 11 | Pendiente (P-08, #10). `ci-core` corre en verde; `ci-unity` se saltea en verde sin los secretos |
 | It. 10a / 10b / 11 | Remo AMS-670B, Mac con Xcode + iPhone, pulsómetro | Pendiente |
 | It. 12 (demo, opcional) | Una cuenta gratis de Strava (u otro servicio que acepte TCX) para subir a mano el archivo exportado ([spec §1](iterations/12-exportar-tcx/01-po-spec.md)). Ya no hacen falta credenciales de la API | Pendiente |
 
@@ -260,3 +282,5 @@ Riesgos:
 | 2026-11-09 | coordinador | Capturas y builds `normal`/`simulator` de la It. 11 regenerados con el arte final; deuda en los issues #57 a #65. El usuario dio el OK a la It. 11 ("dale"): rigen los valores por defecto de su gate. Empieza la It. 12 con Strava simulado (sin credenciales de la API todavía) |
 | 2026-11-09 | rowmate-po | **Strava descartado** por decisión del usuario (la API exige suscripción paga desde junio de 2026): ROADMAP con las viejas It. 12 y 13 DESCARTADAS y la nueva It. 12 "Exportar TCX" (`12-exportar-tcx`, F-STR-09); inventarios con 25 IDs descartados; spec de la It. 12 escrita (`iterations/12-exportar-tcx/01-po-spec.md`). Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-09 | coordinador | Deuda de la It. 12 en los issues #66 a #73. El usuario dio el OK a la It. 12 ("dale"): rigen los valores por defecto de su gate. Empieza la It. 14 |
+| 2026-11-10 | rowmate-po | **Cierre de la It. 14**, la última del plan: aceptada por el PO, sin FAIL; esperando el OK del usuario. QA: RECHAZADO en la ronda 1 (7 mayores: cierre con la X, barra de título fuera de la pantalla, cuadro blanco al arrancar y 4 AC sin prueba) y APROBADO CON OBSERVACIONES en la ronda 2 (dotnet `-Matrix` 3984/4023 pasan, 0 fallan; herramientas 194/194; matriz 867 PASA, 0 FALLA; Unity EditMode 4098/4152 y con simulador 4292/4346, 0 fallan; PlayMode 690/690 y con simulador 767/767 en la segunda corrida (1 intermitente de la It. 11 en la primera); builds normal, simulador, `-CloseSmoke`, `-BootSmoke` y `-BleSmoke` OK; 38 AC PASS, 0 FAIL, 6 NV). Decisiones del PO al cerrar: DV-V14-03, el vidrio del aviso (QA-V14-11), AC-POL-06 NV y la deuda a 10 issues ([01-po-spec §12](iterations/14-pulido-plataformas/01-po-spec.md)). Cierra #21, #36, #40, #41, #42, #44 y #69. Plan completo salvo la 6b (postergada) y la 10b (flotante). Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-10 | coordinador | Deuda de la It. 14 en los issues #74 a #83. El usuario dio el OK a la It. 14 ("ok"): rigen los valores por defecto de su gate (DV-128 a DV-139, DV-V14-03 y el aviso de vidrio de QA-V14-11). Se cerraron en GitHub #21, #36, #40, #41, #42, #44 y #69. Plan completo salvo la 6b (postergada) y la 10b (flotante) |

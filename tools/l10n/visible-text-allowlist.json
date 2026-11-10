@@ -1,0 +1,8 @@
+{
+  "comment": "It. 14 (02-tech-design DT14-26): literales visibles fuera del catalogo que estan permitidos. reason: Q-03 (simulador), Q-04 (diagnostico BLE), brand (RowMate, TCX, FTMS), format (solo cifras y signos de formato), hidden (etiqueta invisible de medida) o dev-only (solo Editor y builds de desarrollo). Cada entrada nueva la revisa QA.",
+  "entries": [
+    { "file": "Assets/RowMate/App/Device/BleDebugSpec.cs", "literal": "DEBUG BLE", "reason": "Q-04" },
+    { "file": "Assets/RowMate/Presentation/Controls/SegmentedControl.cs", "literal": "Split 500m", "reason": "hidden" },
+    { "file": "Assets/RowMate/Bootstrap/ColorProbe.cs", "literal": "probe", "reason": "dev-only" }
+  ]
+}

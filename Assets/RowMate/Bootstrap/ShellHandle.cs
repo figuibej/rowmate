@@ -18,9 +18,10 @@ namespace RowMate.Bootstrap
         private Texture2D? _fade;
         private bool _disposed;
 
-        internal ShellHandle(AppShellView shell, MotionDriver motion, FramePacingPolicy pacing, BackNavigation back, Texture2D fade)
+        internal ShellHandle(AppShellView shell, MotionDriver motion, FramePacingPolicy pacing, BackNavigation back, Texture2D fade, ShellReadySignal ready)
         {
             Shell = shell;
+            Ready = ready;
             Motion = motion;
             Pacing = pacing;
             _back = back;
@@ -35,6 +36,9 @@ namespace RowMate.Bootstrap
 
         public VisualElement Root => Shell;
 
+        // It. 14 (DT14-11): "shell listo" (el primer layout del contenido de la pestaña activa más un cuadro).
+        public ShellReadySignal Ready { get; }
+
         public void Tick()
         {
             if (_disposed)
@@ -44,6 +48,7 @@ namespace RowMate.Bootstrap
 
             Shell.Layout.Poll();
             Shell.Tick();
+            Ready.Tick(Motion.Now);
             Motion.Tick();
         }
 

@@ -49,5 +49,11 @@ namespace RowMate.Bootstrap
 
         // It. 8 (§3.4): las miniaturas del selector (UiAssets), en el orden de EnvironmentId; null o una que falta = el degradé.
         public UnityEngine.Texture2D?[]? Thumbnails { get; set; }
+
+        // It. 14 (DT14-10, AC-APP-16-10): la capa de arranque (BootSplashView) encima del shell desde el primer cuadro, con la marca de
+        // UiAssets.BootMark. La app la pone siempre (salvo -rowmate-boot-splash off en desarrollo); las pruebas, solo si la piden.
+        public bool BootSplash { get; set; }
+
+        public UnityEngine.Texture2D? BootMark { get; set; }
     }
 }

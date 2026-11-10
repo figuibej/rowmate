@@ -17,7 +17,7 @@ El script imprime y ejecuta, en este orden, los dos comandos de 02-tech-design �
 "C:/Program Files/dotnet/dotnet.exe" test tools/dotnet/RowMate.sln --configuration Release --no-build --artifacts-path tools/dotnet/.artifacts --results-directory tools/dotnet/.artifacts/TestResults --logger "console;verbosity=normal" --logger "trx;LogFilePrefix=rowmate-core"
 ```
 
-- **Por qué dos comandos.** `dotnet test` solo compila los proyectos de test y sus dependencias: `RowMate.Tests.UnityApiCheck` (las fuentes de test contra NUnit 3.5.0 y `netstandard2.1`, el perfil de Unity) y las herramientas `RowMate.Tokens` y `RowMate.SessionList` quedarían sin compilar. El `build` compila los 10 proyectos; si falla, el script sale con ese código y **no** corre tests (QA-01).
+- **Por qué dos comandos.** `dotnet test` solo compila los proyectos de test y sus dependencias: `RowMate.Tests.UnityApiCheck` (las fuentes de test contra NUnit 3.5.0 y `netstandard2.1`, el perfil de Unity) y las herramientas `RowMate.Tokens`, `RowMate.SessionList` y `RowMate.Icon` quedarían sin compilar. El `build` compila los 11 proyectos; si falla, el script sale con ese código y **no** corre tests (QA-01).
 - Sale con el primer código distinto de 0. Un test rojo deja rojo el job del CI (`.github/workflows/ci-core.yml`).
 - Todo lo que se genera (binarios, `obj`, resultados) queda en `tools/dotnet/.artifacts/`, ignorado por git.
 
@@ -54,6 +54,7 @@ Las mismas fuentes de test se corren **dentro de Unity** con `tools/unity/run-un
 | `RowMate.Tests.UnityApiCheck` | netstandard2.1 + NUnit 3.5.0 | Support + EditMode + Simulator | herramienta (solo compila) |
 | `RowMate.Tokens` | net8.0 (Exe) | `tools/tokens/**/*.cs` | herramienta |
 | `RowMate.SessionList` | net8.0 (Exe) | `tools/sessions/**/*.cs` | herramienta de la demo (It. 4a) |
+| `RowMate.Icon` | net8.0 (Exe) | `tools/icon/**/*.cs` | herramienta del ícono (It. 14): escribe `Assets/RowMate/Art/Identity/**` y CAP-01/CAP-02; `--check` sale con 1 si algo difiere |
 
 Agregar un archivo nunca toca un `.csproj` (globs). `AsmdefLintTests` verifica que cada `.csproj` espejo tenga las mismas referencias que su asmdef.
 

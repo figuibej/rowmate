@@ -61,6 +61,9 @@ namespace RowMate.EditorTools
             "-rowmate-ble-smoke",
             // It. 12 (12-exportar-tcx/02-tech-design DT12-20): el humo de "Exportar TCX", solo en desarrollo.
             "-rowmate-export-smoke",
+            // It. 14 (14-pulido-plataformas/02-tech-design DT14-12): la medición del arranque, solo en desarrollo.
+            "-rowmate-boot-splash",
+            "-rowmate-perf-boot",
         };
 
         // It. 12 (QA-G12-01): lo que delataría una integración viva con Strava: endpoints de la API y del OAuth, credenciales y tokens, y

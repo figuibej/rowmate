@@ -204,3 +204,48 @@ Si el Gradle de Unity no toma los `.kt` (riesgo R-01), el mismo código va en un
 - **Capturas**: `capture-snapshots.ps1 -Set it12` (por defecto desde la 12) escribe CAP-01 a CAP-12 en `docs/migration/iterations/12-exportar-tcx/snapshots` (`Snapshots/ExportCatalog.cs`; CAP-12 con `ScenarioScript.Hover`, que deja sin transición de USS la capa de estado del botón para que el `:hover` no dependa del reloj real). No escribe en la carpeta de la 11. Dos corridas seguidas dan los mismos bytes.
 - **Humo en un player**: `tools/build/build.ps1 -Target Windows -ExportSmoke` (build de desarrollo en `Builds/Windows/dev-smoke`): siembra F-9 con `tools/sessions` en una carpeta de datos temporal, corre el player en ventana con `ROWMATE_DATA_DIR` ahí, `ROWMATE_BLE=off` y `-rowmate-export-smoke 2`, y compara el primer TCX (nombre y bytes) con `tools/sessions tcx` en la zona del equipo; el segundo tiene que ser `…_2.tcx`, el XML tiene que estar bien formado con vueltas y puntos y `Documentos\RowMate\TCX` no puede cambiar (solo se lista). Código 7 si falla.
 - **Android**: `native/android/check.ps1` también compila `Assets/Plugins/Android/RowMateExport/*.kt` (el `ContentProvider` propio y la hoja de compartir) y compara las firmas de `RmExport` con `native/android/golden/export-signatures.txt`. La hoja real queda NO VERIFICABLE sin "Android Build Support".
+
+## It. 14: CI
+
+`.github/workflows/ci-unity.yml` corre en cada push a `main` y a mano (Actions → `ci-unity` → **Run workflow**, con las opciones `tests`, `builds` y `apple`). El CI de dotnet (`ci-core.yml`) corre siempre, con o sin estos secretos. Sin los secretos de Unity, el job `gate` deja un aviso que nombra el que falta y remite a esta sección; los jobs de Unity se saltean y el workflow queda en verde.
+
+### Secretos (GitHub → el repositorio → Settings → Secrets and variables → Actions → New repository secret)
+
+| Secreto | Obligatorio | Para qué | Cómo se obtiene |
+|---|---|---|---|
+| `UNITY_LICENSE` | Sí, para todo job de Unity | La licencia Personal de Unity | El contenido completo del archivo `Unity_lic.ulf` que deja Unity Hub al activar la licencia Personal. En Windows está en la carpeta de datos de programa de Unity (`%PROGRAMDATA%\Unity\Unity_lic.ulf`); en macOS, en `/Library/Application Support/Unity/`. Se pega el texto entero |
+| `UNITY_EMAIL` | Sí | La cuenta de Unity | El correo de la cuenta con la que se activó la licencia |
+| `UNITY_PASSWORD` | Sí | La cuenta de Unity | La contraseña de esa cuenta |
+| `ANDROID_KEYSTORE_BASE64` | No | Firmar el APK para la tienda | El keystore propio en base64 (`[Convert]::ToBase64String([IO.File]::ReadAllBytes('<keystore>'))` en PowerShell). El keystore **nunca** se versiona |
+| `ANDROID_KEYSTORE_PASS` | No | Idem | La contraseña del keystore |
+| `ANDROID_KEYALIAS_NAME` | No | Idem | El alias de la llave |
+| `ANDROID_KEYALIAS_PASS` | No | Idem | La contraseña del alias |
+
+Los secretos entran solo por `secrets.*` en `env:` o `with:` (lo controla `WorkflowYamlTests.SecretsOnlyInEnvOrWith`). Ningún archivo versionado trae licencias, contraseñas, llaves ni rutas de la PC.
+
+### Jobs y artefactos (14 días de retención)
+
+| Job | Cuándo | Qué hace | Artefacto |
+|---|---|---|---|
+| `gate` | Siempre | Lee los secretos (solo en `env`) y dice si hay licencia y firma | — |
+| `unity-tests` | Push, o a mano con `tests` | EditMode y PlayMode, sin y con el simulador (el define solo en el checkout del runner) | `unity-<modo>-sim-<bool>` |
+| `build-windows` | Push, o a mano con `builds` | La variante **normal** de Windows 64 bits con `BuildCli` (GameCI, imagen windows-mono) | `RowMate-Windows` (la carpeta del build) |
+| `build-android` | Push, o a mano con `builds` | La variante **normal** de Android (APK, ARM64, IL2CPP) | `RowMate-Android` si están los 4 secretos de firma; si no, `RowMate-Android-debugsigned` (llave de depuración, como el legacy) |
+| `build-apple` | Solo a mano, con `apple` | El proyecto de Xcode de iOS compilado **sin firmar** y la app de macOS sin firmar (runner `macos-14`) | `RowMate-iOS-unsigned`, `RowMate-macOS-unsigned` |
+
+Los builds pasan por `BuildOutputInspector` como en la PC: un rastro del simulador en un build normal es la salida 2 y el job queda rojo. En el CI (Linux) el post-proceso no puede reescribir el `VS_VERSIONINFO` del `.exe`: queda el aviso `VERSIONINFO sin reescribir` y el `.exe` lleva la versión del motor (en la PC, `build.ps1` lo exige con el código 9).
+
+### Primera corrida real (lo comprueba el usuario)
+
+1. Cargar los 3 secretos de Unity (y, si se quiere firmar para la tienda, los 4 de Android).
+2. Actions → `ci-unity` → Run workflow (o un push a `main`).
+3. Comprobar que existan las imágenes de GameCI de `6000.3.27f1` para windows-mono y android, y que la activación Personal funcione en el runner de macOS (job `apple`). Lo que falle va a un issue.
+
+**Android en la PC** (cuando esté el módulo): Unity Hub → 6000.3.27f1 → Add modules → Android Build Support (con OpenJDK y Android SDK & NDK Tools); `tools/build/build.ps1 -Target Android -Backend IL2CPP`. **Apple**: una Mac con Xcode y los módulos de iOS y Mac (10b); el job `apple` sirve para compilar sin firmar antes de tenerla.
+
+### Builds de la 14 en la PC
+
+- `tools/build/build.ps1` verifica después de **todo** build de Windows (normal, simulator y desarrollo) que `RowMate.exe` diga `ProductName` RowMate, `CompanyName` iguisoft y versión `1.0.0` (código 9 si no).
+- `tools/build/build.ps1 -BootSmoke`: build de desarrollo de la variante normal (`Builds/Windows/dev-smoke`) y 10 arranques con `-rowmate-perf-boot` (5 con la capa de arranque y 5 con `-rowmate-boot-splash off`) en ventana de 800 × 480, con `ROWMATE_DATA_DIR` temporal (borrada al terminar) y `ROWMATE_BLE=off`. Cada uno tiene que salir con 0 en 30 s como mucho y sin carpetas nuevas en `Crashes`; la mediana con la capa no puede pasar en más de 100 ms a la de sin la capa (código 8).
+- `tools/build/build.ps1 -CloseSmoke` (QA-V14-01): build de desarrollo de la variante normal y 7 arranques con `ROWMATE_DATA_DIR` temporal y `ROWMATE_BLE=off` (5 en ventana sin `-screen-*`, con la ventana inicial y la subclase del `WndProc` como en la app, y 2 en pantalla completa). A los 6 s de aparecer la ventana manda `WM_CLOSE` con `CloseMainWindow` (el camino de la X y de Alt+F4). Cada uno tiene que salir con 0 en 30 s como mucho y decir `subclase de la ventana retirada` en su registro; al final no puede haber carpetas nuevas en `Crashes` (código 11).
+- `capture-snapshots.ps1` usa `-Set it14` por defecto y escribe en `docs/migration/iterations/14-pulido-plataformas/snapshots`. CAP-01 y CAP-02 las genera `tools/icon` (dotnet). CAP-27 deja además `CAP-27-a11y.txt` (el árbol del lector forzado).

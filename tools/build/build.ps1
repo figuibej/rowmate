@@ -1,7 +1,7 @@
 # Builds de RowMate por linea de comandos (ARCHITECTURE Sec. 19, 02-tech-design Sec. 1.1): Unity -batchmode -executeMethod
 # RowMate.EditorTools.BuildCli.Build. Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 #
-#   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-BleSmoke] [-ExportSmoke] [-Out <carpeta>]
+#   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-BleSmoke] [-ExportSmoke] [-BootSmoke] [-CloseSmoke] [-Out <carpeta>]
 #                         [-AllowNewFolder] [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
 #
 # - Builds de DESARROLLO (-Simulator, -SmokeTest o -DbSmoke) en Windows: SIEMPRE en la misma carpeta (QA-V3-08 de la It. 3).
@@ -38,7 +38,8 @@
 # - Si falta el modulo de la plataforma o el de IL2CPP (-Backend IL2CPP): NO VERIFICABLE, codigo 3, sin compilar nada.
 # Salida por defecto: Builds/<Target>/<normal|simulator|dev-smoke>/RowMate.exe (Builds/ esta en .gitignore).
 # Codigos: 0 bien; 1 el build fallo; 2 rastros del simulador en un build normal; 3 falta un modulo; 4 el humo de -DbSmoke
-# fallo; 5 build de desarrollo con otra carpeta (QA-V3-08); 6 el humo de -BleSmoke fallo; 7 el humo de -ExportSmoke fallo; 10 proyecto abierto en
+# fallo; 5 build de desarrollo con otra carpeta (QA-V3-08); 6 el humo de -BleSmoke fallo; 7 el humo de -ExportSmoke fallo; 8 el humo de
+# -BootSmoke fallo (It. 14); 11 el humo de -CloseSmoke fallo (It. 14, QA-V14-01); 9 RowMate.exe sin el VS_VERSIONINFO de RowMate (It. 14, todo build de Windows); 10 proyecto abierto en
 # otro Editor; 12 no encuentra Unity.exe.
 param(
     [ValidateSet('Windows', 'Android')]
@@ -50,6 +51,8 @@ param(
     [switch]$DbSmoke,
     [switch]$BleSmoke,
     [switch]$ExportSmoke,
+    [switch]$BootSmoke,
+    [switch]$CloseSmoke,
     [string]$Out = '',
     [switch]$AllowNewFolder,
     [string]$Unity = '',
@@ -96,7 +99,7 @@ function Quote-Arg([string]$Value) {
 $variant = 'normal'
 if ($Simulator) { $variant = 'simulator' }
 # QA-V3-08: la carpeta fija de cada build de desarrollo (antes de abrir Unity: una negativa no toca nada).
-$development = $Simulator -or $SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke
+$development = $Simulator -or $SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke -or $BootSmoke -or $CloseSmoke
 $fixedOut = 'Builds/' + $Target + '/' + $variant
 if ($development -and -not $Simulator) { $fixedOut = 'Builds/' + $Target + '/dev-smoke' }
 if ($Out -eq '') {
@@ -133,7 +136,7 @@ $log = Join-Path $artifacts ('build-' + $Target.ToLowerInvariant() + '-' + $vari
 $unityArgs = @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $buildMethod, '-logFile', $log,
     '-rowmateTarget', $Target, '-rowmateBackend', $Backend, '-rowmateOutput', (Get-FullPath $Out))
 if ($Simulator) { $unityArgs += '-rowmateSimulator' }
-if ($SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke) { $unityArgs += '-rowmateSmokeTest' }
+if ($SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke -or $BootSmoke -or $CloseSmoke) { $unityArgs += '-rowmateSmokeTest' }
 
 # It. 10a: si el RowMate.exe de la salida esta en uso (un build abierto), se espera: cada 2 min, hasta 20 veces. Nunca se cierra nada.
 if ($Target -eq 'Windows') {
@@ -167,6 +170,175 @@ if (Test-Path $log) {
 }
 $guardCode = Write-ProjectSettingsGuardResult '[build]' (Compare-ProjectSettingsSnapshot $repo $settingsBefore)
 if ($code -eq 0 -and $guardCode -ne 0) { $code = $guardCode }
+
+# It. 14 (14-pulido-plataformas/02-tech-design DT14-31, QA-G14-01; AC-APP-16-06): todo build de Windows (normal, simulator y de
+# desarrollo) sale con el VS_VERSIONINFO de RowMate (WindowsVersionInfoPostprocess). Codigo 9 si no.
+if ($code -eq 0 -and $Target -eq 'Windows') {
+    $exeInfo = (Get-Item (Join-Path (Get-FullPath $Out) 'RowMate.exe')).VersionInfo
+    $versionProblems = @()
+    if ($exeInfo.ProductName -ne 'RowMate') { $versionProblems += ('ProductName=' + $exeInfo.ProductName) }
+    if ($exeInfo.CompanyName -ne 'iguisoft') { $versionProblems += ('CompanyName=' + $exeInfo.CompanyName) }
+    if ($exeInfo.FileVersion -ne '1.0.0') { $versionProblems += ('FileVersion=' + $exeInfo.FileVersion) }
+    if ($exeInfo.ProductVersion -ne '1.0.0') { $versionProblems += ('ProductVersion=' + $exeInfo.ProductVersion) }
+    if ($versionProblems.Count -gt 0) {
+        Write-Host ('[build] RowMate.exe sin el VS_VERSIONINFO de RowMate: ' + ($versionProblems -join ', '))
+        $code = 9
+    }
+    else {
+        Write-Host ('[build] VersionInfo: RowMate 1.0.0 (iguisoft), archivo ' + $exeInfo.FileVersion)
+    }
+}
+
+# It. 14 (DT14-12, QA-G14-07; AC-APP-16-10, AC-APP-15-05): -BootSmoke. Build de DESARROLLO de la variante normal (Builds/Windows/dev-smoke);
+# 10 arranques con -rowmate-perf-boot (5 con la capa de arranque y 5 con -rowmate-boot-splash off, alternados), cada uno en ventana de
+# 800 x 480 (-screen-*: no se reubica la ventana), con ROWMATE_DATA_DIR en una carpeta temporal propia (borrada en finally) y
+# ROWMATE_BLE=off. Cada corrida tiene que salir con 0 en <= 30 s sin carpeta nueva en Crashes; la mediana con la capa no puede pasar en
+# mas de 100 ms a la mediana sin ella. Codigo 8 si falla. Solo Windows.
+if ($BootSmoke -and $code -eq 0) {
+    if ($Target -ne 'Windows') {
+        Write-Host '[build] -BootSmoke: solo en Windows.'
+        exit 3
+    }
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $bootDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\boot-smoke-' + [guid]::NewGuid().ToString('N'))
+    $crashRoot = Join-Path ([System.IO.Path]::GetTempPath()) 'iguisoft\RowMate\Crashes'
+    $crashesBefore = @()
+    if (Test-Path $crashRoot) { $crashesBefore = @(Get-ChildItem -LiteralPath $crashRoot -Directory | ForEach-Object { $_.Name }) }
+    New-Item -ItemType Directory -Force -Path $bootDir | Out-Null
+    $previousData = $env:ROWMATE_DATA_DIR
+    $previousBle = $env:ROWMATE_BLE
+    $with = @()
+    $without = @()
+    $bootProblems = @()
+    try {
+        $env:ROWMATE_DATA_DIR = $bootDir
+        $env:ROWMATE_BLE = 'off'
+        for ($run = 0; $run -lt 10; $run++) {
+            $splash = ($run % 2) -eq 0
+            $bootLog = Join-Path $artifacts ('boot-smoke-' + $run + '.log')
+            $bootArgs = @('-screen-fullscreen', '0', '-screen-width', '800', '-screen-height', '480', '-logFile', $bootLog, '-rowmate-perf-boot')
+            if (-not $splash) { $bootArgs += @('-rowmate-boot-splash', 'off') }
+            $bootInfo = New-Object System.Diagnostics.ProcessStartInfo
+            $bootInfo.FileName = $exe
+            $bootInfo.Arguments = (($bootArgs | ForEach-Object { Quote-Arg $_ }) -join ' ')
+            $bootInfo.UseShellExecute = $false
+            $boot = [System.Diagnostics.Process]::Start($bootInfo)
+            if (-not $boot.WaitForExit(30000)) {
+                $boot.Kill()
+                $bootProblems += ('corrida ' + $run + ': no termino en 30 s')
+                continue
+            }
+            if ($boot.ExitCode -ne 0) { $bootProblems += ('corrida ' + $run + ': salio con ' + $boot.ExitCode) }
+            $perf = @()
+            if (Test-Path $bootLog) { $perf = @(Select-String -Path $bootLog -Pattern 'arranque: primer cuadro del shell (\d+) ms') }
+            if ($perf.Count -eq 0) { $bootProblems += ('corrida ' + $run + ': sin la linea [PERF] arranque'); continue }
+            $ms = [int]$perf[0].Matches[0].Groups[1].Value
+            if ($splash) { $with += $ms } else { $without += $ms }
+            Write-Host ('  arranque ' + $run + ' (' + ($(if ($splash) { 'con capa' } else { 'sin capa' })) + '): ' + $ms + ' ms')
+        }
+    }
+    finally {
+        $env:ROWMATE_DATA_DIR = $previousData
+        $env:ROWMATE_BLE = $previousBle
+        Remove-Item -Recurse -Force -Path $bootDir -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $crashRoot) {
+        $newCrashes = @(Get-ChildItem -LiteralPath $crashRoot -Directory | Where-Object { $crashesBefore -notcontains $_.Name })
+        if ($newCrashes.Count -gt 0) { $bootProblems += ($newCrashes.Count.ToString() + ' carpeta(s) nueva(s) en Crashes') }
+    }
+    if ($with.Count -eq 5 -and $without.Count -eq 5) {
+        $medianWith = ($with | Sort-Object)[2]
+        $medianWithout = ($without | Sort-Object)[2]
+        Write-Host ('[build] -BootSmoke: mediana con la capa ' + $medianWith + ' ms, sin la capa ' + $medianWithout + ' ms, diferencia ' + ($medianWith - $medianWithout) + ' ms')
+        if (($medianWith - $medianWithout) -gt 100) { $bootProblems += 'la capa de arranque suma mas de 100 ms' }
+    }
+    else {
+        $bootProblems += 'faltan medidas (5 con y 5 sin la capa)'
+    }
+    if ($bootProblems.Count -gt 0) {
+        foreach ($p in $bootProblems) { Write-Host ('[build] -BootSmoke: ' + $p) }
+        $code = 8
+    }
+    else {
+        Write-Host '[build] -BootSmoke: ok (10 salidas limpias, sin Crashes)'
+    }
+}
+
+# It. 14 (QA-V14-01; AC-APP-15-05): -CloseSmoke. Build de DESARROLLO de la variante normal (Builds/Windows/dev-smoke); 7 arranques
+# con ROWMATE_DATA_DIR en una carpeta temporal propia (borrada en finally) y ROWMATE_BLE=off: 5 en ventana SIN -screen-* (la ventana
+# inicial y la subclase del WndProc como en la app) y 2 en pantalla completa (-screen-fullscreen 1, la 3a y la 4a). En cada uno espera la ventana,
+# deja correr 6 s y manda WM_CLOSE con CloseMainWindow (el mismo camino que la X y Alt+F4). Cada corrida tiene que salir con 0 en
+# <= 30 s, con "subclase de la ventana retirada" en su registro, y al final no puede haber carpetas nuevas en Crashes. Codigo 11 si
+# falla. Solo Windows.
+if ($CloseSmoke -and $code -eq 0) {
+    if ($Target -ne 'Windows') {
+        Write-Host '[build] -CloseSmoke: solo en Windows.'
+        exit 3
+    }
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $closeDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\close-smoke-' + [guid]::NewGuid().ToString('N'))
+    $crashRoot = Join-Path ([System.IO.Path]::GetTempPath()) 'iguisoft\RowMate\Crashes'
+    $crashesBefore = @()
+    if (Test-Path $crashRoot) { $crashesBefore = @(Get-ChildItem -LiteralPath $crashRoot -Directory | ForEach-Object { $_.Name }) }
+    New-Item -ItemType Directory -Force -Path $closeDir | Out-Null
+    $previousData = $env:ROWMATE_DATA_DIR
+    $previousBle = $env:ROWMATE_BLE
+    $closeProblems = @()
+    $closeRuns = 7
+    try {
+        $env:ROWMATE_DATA_DIR = $closeDir
+        $env:ROWMATE_BLE = 'off'
+        for ($run = 0; $run -lt $closeRuns; $run++) {
+            # Las de pantalla completa en el medio: la ultima vuelve a ventana (Unity recuerda el modo para el proximo arranque).
+            $fullscreen = ($run -eq 2) -or ($run -eq 3)
+            $closeLog = Join-Path $artifacts ('close-smoke-' + $run + '.log')
+            $closeArgs = @('-logFile', $closeLog)
+            if ($fullscreen) { $closeArgs += @('-screen-fullscreen', '1') }
+            $closeInfo = New-Object System.Diagnostics.ProcessStartInfo
+            $closeInfo.FileName = $exe
+            $closeInfo.Arguments = (($closeArgs | ForEach-Object { Quote-Arg $_ }) -join ' ')
+            $closeInfo.UseShellExecute = $false
+            $player = [System.Diagnostics.Process]::Start($closeInfo)
+            for ($wait = 0; $wait -lt 60 -and $player.MainWindowHandle -eq [IntPtr]::Zero -and -not $player.HasExited; $wait++) {
+                Start-Sleep -Milliseconds 500
+                $player.Refresh()
+            }
+            Start-Sleep -Seconds 6
+            $player.Refresh()
+            $sent = $false
+            if (-not $player.HasExited) { $sent = $player.CloseMainWindow() }
+            if (-not $player.WaitForExit(30000)) {
+                $player.Kill()
+                $closeProblems += ('corrida ' + $run + ': no termino en 30 s despues de WM_CLOSE')
+                continue
+            }
+            $mode = 'ventana'
+            if ($fullscreen) { $mode = 'pantalla completa' }
+            if (-not $sent) { $closeProblems += ('corrida ' + $run + ' (' + $mode + '): no se pudo mandar WM_CLOSE') }
+            if ($player.ExitCode -ne 0) { $closeProblems += ('corrida ' + $run + ' (' + $mode + '): salio con 0x' + ('{0:X}' -f $player.ExitCode)) }
+            $restored = @()
+            if (Test-Path $closeLog) { $restored = @(Select-String -Path $closeLog -SimpleMatch -Pattern 'subclase de la ventana retirada') }
+            if ($restored.Count -eq 0) { $closeProblems += ('corrida ' + $run + ' (' + $mode + '): el registro no dice que el WndProc original volvio') }
+            Write-Host ('  cierre ' + $run + ' (' + $mode + '): salida 0x' + ('{0:X}' -f $player.ExitCode))
+        }
+    }
+    finally {
+        $env:ROWMATE_DATA_DIR = $previousData
+        $env:ROWMATE_BLE = $previousBle
+        Remove-Item -Recurse -Force -Path $closeDir -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $crashRoot) {
+        $newCrashes = @(Get-ChildItem -LiteralPath $crashRoot -Directory | Where-Object { $crashesBefore -notcontains $_.Name })
+        if ($newCrashes.Count -gt 0) { $closeProblems += ($newCrashes.Count.ToString() + ' carpeta(s) nueva(s) en Crashes') }
+    }
+    if ($closeProblems.Count -gt 0) {
+        foreach ($p in $closeProblems) { Write-Host ('[build] -CloseSmoke: ' + $p) }
+        $code = 11
+    }
+    else {
+        Write-Host ('[build] -CloseSmoke: ok (' + $closeRuns + ' cierres con WM_CLOSE, 5 en ventana y 2 en pantalla completa, salida 0, sin Crashes)')
+    }
+}
 
 # Humo de la base en el player (solo con -DbSmoke, en un build de desarrollo de Windows que salio bien).
 if ($DbSmoke -and $code -eq 0) {

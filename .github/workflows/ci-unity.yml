@@ -1,31 +1,96 @@
-# CI de Unity, opcional (AC-APP-19-05; 02-tech-design §1.1; QA-V2-14): EditMode y PlayMode con GameCI, sin y con el modo
-# simulador, a pedido y solo si el repositorio tiene la licencia de Unity en los secretos (UNITY_LICENSE, UNITY_EMAIL,
-# UNITY_PASSWORD). El CI de dotnet es ci-core.yml.
-# Con simulator: true, el define se activa SOLO para la corrida de tests, en el checkout efímero del runner, como
-# tools/unity/run-unity-tests.ps1 -Simulator en la PC: tools/unity/ci-simulator-define.sh enable lo agrega a
-# ProjectSettings.asset y deja la marca de SimulatorDefine; Unity recibe -rowmateSimulatorTestRun (lo acepta
-# SimulatorInUnityTests.CommittedSettingsDoNotEnableTheSimulator) y al final "restore" deja todo como en el commit antes de
-# que se guarde la caché. Este workflow no compila players ni commitea nada (R-01).
+# CI de Unity (AC-APP-19-05 a -11; 14-pulido-plataformas/02-tech-design §8). El CI de dotnet es ci-core.yml y corre siempre.
+# - gate: lee los secretos SOLO en el env de un paso y dice si hay licencia (unity) y firma de Android (android-signed). Sin
+#   UNITY_LICENSE, UNITY_EMAIL o UNITY_PASSWORD deja un aviso que nombra el secreto que falta y remite a tools/unity/README.md
+#   (seccion "It. 14: CI"); los jobs de Unity se saltean y el workflow queda en verde (AC-APP-19-07).
+# - unity-tests: EditMode y PlayMode con GameCI, sin y con el modo simulador. Con simulator: true, el define se activa SOLO para la
+#   corrida de tests, en el checkout efimero del runner, como tools/unity/run-unity-tests.ps1 -Simulator en la PC:
+#   tools/unity/ci-simulator-define.sh enable lo agrega a ProjectSettings.asset y deja la marca de SimulatorDefine; Unity recibe
+#   -rowmateSimulatorTestRun (lo acepta SimulatorInUnityTests.CommittedSettingsDoNotEnableTheSimulator) y al final "restore" deja
+#   todo como en el commit antes de que se guarde la cache.
+# - build-windows y build-android: la variante NORMAL con GameCI y RowMate.EditorTools.BuildCli.Build (sin el define del simulador:
+#   BuildOutputInspector frena un rastro con la salida 2). Artefactos RowMate-Windows y RowMate-Android (o -debugsigned sin los
+#   secretos de firma), 14 dias (AC-APP-19-06, -09). En Linux no se reescribe el VS_VERSIONINFO del .exe (aviso, R14-13).
+# - build-apple: solo a mano (opcion apple), en macOS, sin firmar: proyecto de Xcode de iOS compilado con CODE_SIGNING_ALLOWED=NO y la
+#   app de macOS (AC-APP-19-08). Listo para cuando haya licencia; la firma queda para la 10b.
+# Nada de credenciales versionadas: todo entra por secrets.* en env o with (AC-APP-19-09).
 name: ci-unity
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      tests:
+        description: Tests de Unity (EditMode y PlayMode, sin y con simulador)
+        type: boolean
+        default: true
+      builds:
+        description: Builds de Windows y Android (variante normal)
+        type: boolean
+        default: true
+      apple:
+        description: Job de Apple (iOS y macOS sin firmar, runner de macOS)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-unity-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  gate:
+    name: Secretos de Unity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      unity: ${{ steps.check.outputs.unity }}
+      android-signed: ${{ steps.check.outputs.android-signed }}
+    steps:
+      - name: Hay licencia y firma?
+        id: check
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          ANDROID_KEYALIAS_NAME: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          ANDROID_KEYALIAS_PASS: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+        run: |
+          unity=true
+          for name in UNITY_LICENSE UNITY_EMAIL UNITY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::warning::Falta el secreto $name: los jobs de Unity se saltean (ver tools/unity/README.md, seccion It. 14: CI)"
+              unity=false
+            fi
+          done
+          signed=true
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASS ANDROID_KEYALIAS_NAME ANDROID_KEYALIAS_PASS; do
+            if [ -z "${!name}" ]; then
+              signed=false
+            fi
+          done
+          if [ "$unity" = "true" ] && [ "$signed" = "false" ]; then
+            echo "::notice::Sin los secretos ANDROID_KEYSTORE_*: el APK sale firmado con la llave de depuracion (RowMate-Android-debugsigned)"
+          fi
+          echo "unity=$unity" >> "$GITHUB_OUTPUT"
+          echo "android-signed=$signed" >> "$GITHUB_OUTPUT"
+
   unity-tests:
     name: Unity ${{ matrix.testMode }}${{ matrix.simulator && ' + simulador' || '' }}
+    needs: gate
+    if: ${{ needs.gate.outputs.unity == 'true' && (github.event_name == 'push' || inputs.tests) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         testMode: [EditMode, PlayMode]
         simulator: [false, true]
     steps:
-      - name: Requiere la licencia de Unity en los secretos
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        run: |
-          if [ -z "$UNITY_LICENSE" ]; then echo "::error::Falta el secreto UNITY_LICENSE (ver tools/unity/README.md)"; exit 1; fi
       - uses: actions/checkout@v4
         with:
           lfs: true
@@ -49,7 +114,7 @@ jobs:
           # QA-V6a-REN-15 (It. 6a): en ubuntu-latest GameCI corre el Editor sobre un servidor X virtual (OpenGL por software): las
           # pruebas con la categoria GPU (sondas de color de +-1, conteos de SetPass) no valen ahi y quedan afuera, como en -nographics.
           customParameters: ${{ matrix.simulator && '-rowmateSimulatorTestRun' || '' }} -testCategory "!GPU"
-      - name: Restaurar los defines y sacar la marca (antes de guardar la caché)
+      - name: Restaurar los defines y sacar la marca (antes de guardar la cache)
         if: ${{ always() && matrix.simulator }}
         run: bash tools/unity/ci-simulator-define.sh restore
       - uses: actions/upload-artifact@v4
@@ -57,3 +122,131 @@ jobs:
         with:
           name: unity-${{ matrix.testMode }}-sim-${{ matrix.simulator }}
           path: artifacts-${{ matrix.testMode }}-sim-${{ matrix.simulator }}
+          retention-days: 14
+
+  build-windows:
+    name: Build Windows (normal)
+    needs: gate
+    if: ${{ needs.gate.outputs.unity == 'true' && (github.event_name == 'push' || inputs.builds) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: build-windows-${{ hashFiles('Packages/packages-lock.json') }}
+      - name: Build (BuildCli, variante normal)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.3.27f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: RowMate.EditorTools.BuildCli.Build
+          customParameters: -rowmateTarget Windows -rowmateBackend Mono -rowmateOutput build/RowMate-Windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RowMate-Windows
+          path: build/RowMate-Windows
+          retention-days: 14
+          if-no-files-found: error
+
+  build-android:
+    name: Build Android (normal, ARM64)
+    needs: gate
+    if: ${{ needs.gate.outputs.unity == 'true' && (github.event_name == 'push' || inputs.builds) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: build-android-${{ hashFiles('Packages/packages-lock.json') }}
+      - name: Build (BuildCli, variante normal, IL2CPP)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.3.27f1
+          targetPlatform: Android
+          buildMethod: RowMate.EditorTools.BuildCli.Build
+          customParameters: -rowmateTarget Android -rowmateBackend IL2CPP -rowmateOutput build/RowMate-Android
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.gate.outputs.android-signed == 'true' && 'RowMate-Android' || 'RowMate-Android-debugsigned' }}
+          path: build/RowMate-Android/RowMate.apk
+          retention-days: 14
+          if-no-files-found: error
+
+  build-apple:
+    name: Build Apple (iOS y macOS sin firmar, manual)
+    needs: gate
+    if: ${{ needs.gate.outputs.unity == 'true' && github.event_name == 'workflow_dispatch' && inputs.apple }}
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: build-apple-${{ hashFiles('Packages/packages-lock.json') }}
+      - name: Proyecto de Xcode de iOS (BuildCli)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.3.27f1
+          targetPlatform: iOS
+          buildMethod: RowMate.EditorTools.BuildCli.Build
+          customParameters: -rowmateTarget iOS -rowmateBackend IL2CPP -rowmateOutput build/RowMate-iOS-xcode
+      - name: Compilar iOS sin firmar
+        run: |
+          xcodebuild -project build/RowMate-iOS-xcode/Unity-iPhone.xcodeproj -scheme Unity-iPhone -configuration Release -sdk iphoneos \
+            -derivedDataPath build/ios-derived CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          mkdir -p build/RowMate-iOS-unsigned
+          (cd build/ios-derived/Build/Products/Release-iphoneos && zip -qry "$GITHUB_WORKSPACE/build/RowMate-iOS-unsigned/RowMate-iOS-unsigned.zip" ./*.app)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RowMate-iOS-unsigned
+          path: build/RowMate-iOS-unsigned
+          retention-days: 14
+          if-no-files-found: error
+      - name: App de macOS (BuildCli)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.3.27f1
+          targetPlatform: StandaloneOSX
+          buildMethod: RowMate.EditorTools.BuildCli.Build
+          customParameters: -rowmateTarget macOS -rowmateBackend Mono -rowmateOutput build/RowMate-macOS-app
+      - name: Comprimir la app de macOS
+        run: |
+          mkdir -p build/RowMate-macOS-unsigned
+          (cd build/RowMate-macOS-app && zip -qry "$GITHUB_WORKSPACE/build/RowMate-macOS-unsigned/RowMate-macOS-unsigned.zip" RowMate.app)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RowMate-macOS-unsigned
+          path: build/RowMate-macOS-unsigned
+          retention-days: 14
+          if-no-files-found: error

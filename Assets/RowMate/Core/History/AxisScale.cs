@@ -156,6 +156,12 @@ namespace RowMate.Core.History
             return result;
         }
 
+        // It. 14 (#32, DT14-28): saca la marca intermedia cuya etiqueta queda a menos de 4 dp de la de un borde (AxisCrowding).
+        public static int DropCrowded(double[] centersDp, double[] labelExtentsDp, bool[] visible, int count, double minGapDp = AxisCrowding.MinGapDp)
+        {
+            return AxisCrowding.DropCrowded(centersDp, labelExtentsDp, visible, count, minGapDp);
+        }
+
         // getBestInitialIntervalValue (utils.dart:299-310).
         public static double BestInitialValue(double min, double max, double interval, double baseline = 0)
         {

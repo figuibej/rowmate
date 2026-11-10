@@ -27,3 +27,7 @@
 # It. 10a: el plugin de Bluetooth de Windows va SIN LFS (un clon sin LFS lo tiene igual; native/windows/build.ps1 -Check
 # compara su SHA-256 con el que compila).
 Assets/Plugins/Windows/x86_64/RowMateBle.dll -filter -diff -merge -text
+# It. 14 (02-tech-design §2.2, QA-G14-16): el ícono generado por tools/icon y sus hojas CAP-01/CAP-02 van SIN LFS (son chicos;
+# ci-core no baja LFS y AppIconAssetsAreCurrentTests los compara byte a byte).
+Assets/RowMate/Art/Identity/**/*.png -filter -diff binary
+docs/migration/iterations/14-pulido-plataformas/snapshots/CAP-0[12].png -filter -diff binary

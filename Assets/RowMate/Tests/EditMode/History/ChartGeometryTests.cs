@@ -146,9 +146,41 @@ namespace RowMate.Tests.EditMode.History
             Assert.That(buffer.Y[2], Is.EqualTo(geometry.Frame.Area.Bottom), "a todo el alto");
             buffer.Clear();
             geometry.WriteStrip(buffer, 1);
-            Assert.That(buffer.Y[0], Is.EqualTo(12));
-            Assert.That(buffer.Y[2], Is.EqualTo(15), "3 dp encima del área");
-            Assert.That(buffer.X[0], Is.EqualTo(geometry.PixelX(5) + 1).Within(1e-3), "2 dp de hueco entre franjas");
+            // It. 14 (#37, AC-DEBT-08): cada tramo es una cápsula de radio 1,5 (centro + contorno con su borde suavizado); el contorno
+            // macizo (los vértices de índice impar, alfa > 0) ocupa lo mismo que el rectángulo de antes.
+            Assert.That(buffer.VertexCount, Is.EqualTo(8 * ChartGeometry.StadiumVertices));
+            double minX = double.MaxValue, minY = double.MaxValue, maxY = double.MinValue;
+            for (var i = 1; i < ChartGeometry.StadiumVertices; i += 2)
+            {
+                minX = Math.Min(minX, buffer.X[i]);
+                minY = Math.Min(minY, buffer.Y[i]);
+                maxY = Math.Max(maxY, buffer.Y[i]);
+            }
+
+            Assert.That(minY, Is.EqualTo(12).Within(1e-3));
+            Assert.That(maxY, Is.EqualTo(15).Within(1e-3), "3 dp encima del área");
+            Assert.That(minX, Is.EqualTo(geometry.PixelX(5) + 1).Within(1e-3), "2 dp de hueco entre franjas");
+            Assert.That(ChartMeshBuffer.AlphaOf(buffer.Rgba[2]), Is.EqualTo(0), "el borde suavizado va a alfa 0");
+        }
+
+        [Test, Category("AC-HIS-13-06")]
+        public void RoundCapsAtBothEnds()
+        {
+            // It. 14 (#37): un disco de 2 dp en el primer punto y en el último visible, en el color de la métrica.
+            var geometry = Prepared(HistorySeeds.Points(1), ChartMetric.Watts);
+            var caps = Buffer(geometry);
+            geometry.WriteSeriesCaps(caps, geometry.YMax, 1, 1);
+            Assert.That(caps.VertexCount, Is.EqualTo(2 * ChartGeometry.DiskVertices));
+            var line = Buffer(geometry);
+            geometry.WriteSeriesLine(line, geometry.YMax, 1, 1);
+            Assert.That(caps.X[0], Is.EqualTo((line.X[1] + line.X[2]) / 2).Within(1e-3), "el primero, en el primer punto");
+            var last = line.VertexCount - 4;
+            var c = ChartGeometry.DiskVertices;
+            Assert.That(caps.X[c], Is.EqualTo((line.X[last + 1] + line.X[last + 2]) / 2).Within(1e-3), "el otro, en el último");
+            Assert.That(caps.Rgba[0] >> 8, Is.EqualTo(ChartMeshBuffer.Pack(geometry.SeriesColor, 1) >> 8));
+            var none = Buffer(geometry);
+            geometry.WriteSeriesCaps(none, geometry.YMax, 0, 1);
+            Assert.That(none.VertexCount, Is.EqualTo(0), "sin curva a la vista, sin extremos");
         }
 
         [Test, Category("AC-HIS-13-06")]

@@ -43,6 +43,9 @@ namespace RowMate.Core.History
     // - Raw: los valores tal cual, con los ceros (AC-HIS-13-02), en double (el tooltip los formatea con toStringAsFixed).
     // - Plotted: lo que se dibuja (float): igual que Raw salvo el split, invertido como lento − ritmo, con el ritmo 0 al piso
     //   (DT9-08, Q-24: el legacy pone lento − 0 = arriba). Lento = el máximo de los ritmos > 0 (0 si no hay ninguno).
+    //   It. 14 (QA-V14-07, AC-DEBT-07, #32): la referencia del eje (PaceReference) es ese lento salvo que el rango de los ritmos > 0 sea
+    //   menor de 10 s: entonces el rango se abre a ±5 s del centro (SplitRange.Widen) y la referencia es su borde lento. Curva, etiquetas
+    //   y líneas objetivo usan la referencia; SlowestPace sigue siendo el ritmo real más lento.
     // - Las franjas (StepBands) y, perezosas por métrica, sus vistas (ejes, objetivos y etiquetas).
     public sealed class SessionChartData
     {
@@ -54,7 +57,7 @@ namespace RowMate.Core.History
         private readonly ChartMetricView?[] _views = new ChartMetricView?[MetricCount];
         private readonly IReadOnlyList<IntervalStep> _flatSteps;
 
-        private SessionChartData(double[] x, double[][] raw, float[][] plotted, double[] maxPlotted, double slowestPace,
+        private SessionChartData(double[] x, double[][] raw, float[][] plotted, double[] maxPlotted, double slowestPace, double paceReference,
                                  IReadOnlyList<StepBand> bands, IReadOnlyList<IntervalStep> flatSteps)
         {
             X = x;
@@ -62,6 +65,7 @@ namespace RowMate.Core.History
             _plotted = plotted;
             _maxPlotted = maxPlotted;
             SlowestPace = slowestPace;
+            PaceReference = paceReference;
             Bands = bands;
             _flatSteps = flatSteps;
         }
@@ -71,6 +75,9 @@ namespace RowMate.Core.History
         public double[] X { get; }
 
         public double SlowestPace { get; }
+
+        // El "lento" del eje del split: SlowestPace, o el borde lento del rango abierto a 10 s (0 sin ritmo).
+        public double PaceReference { get; }
 
         public bool HasPace => SlowestPace > 0;
 
@@ -99,6 +106,7 @@ namespace RowMate.Core.History
             }
 
             double slowest = 0;
+            var fastest = double.PositiveInfinity;
             for (var i = 0; i < n; i++)
             {
                 var p = points[i] ?? throw new ArgumentException("SessionChartData: un punto nulo.", nameof(points));
@@ -112,6 +120,18 @@ namespace RowMate.Core.History
                 {
                     slowest = p.Pace500mSeconds;
                 }
+
+                if (p.Pace500mSeconds > 0 && p.Pace500mSeconds < fastest)
+                {
+                    fastest = p.Pace500mSeconds;
+                }
+            }
+
+            var reference = slowest;
+            var fastEdge = slowest;
+            if (slowest > 0)
+            {
+                SplitRange.Widen(fastest, slowest, out fastEdge, out reference);
             }
 
             var maxPlotted = new double[MetricCount];
@@ -122,7 +142,7 @@ namespace RowMate.Core.History
                 var max = double.NegativeInfinity;
                 for (var i = 0; i < n; i++)
                 {
-                    var y = m == (int)ChartMetric.Split ? PlottedPace(values[i], slowest) : values[i];
+                    var y = m == (int)ChartMetric.Split ? PlottedPace(values[i], reference) : values[i];
                     target[i] = (float)y;
                     if (y > max)
                     {
@@ -130,10 +150,16 @@ namespace RowMate.Core.History
                     }
                 }
 
+                // El rango abierto entero entra en el eje (la curva constante queda en el medio, no arriba).
+                if (m == (int)ChartMetric.Split && reference - fastEdge > max)
+                {
+                    max = reference - fastEdge;
+                }
+
                 maxPlotted[m] = n == 0 ? 0 : max;
             }
 
-            return new SessionChartData(x, raw, plotted, maxPlotted, slowest, StepBands.Build(points), flatSteps);
+            return new SessionChartData(x, raw, plotted, maxPlotted, slowest, reference, StepBands.Build(points), flatSteps);
         }
 
         // DT9-08: ritmo > 0 → lento − ritmo; si no, el piso.
@@ -162,7 +188,7 @@ namespace RowMate.Core.History
                 return view;
             }
 
-            var targets = TargetLines.Build(Bands, _flatSteps, metric, SlowestPace);
+            var targets = TargetLines.Build(Bands, _flatSteps, metric, PaceReference);
             // sd:390-397: el máximo de la curva y de los puntos de las líneas objetivo.
             var max = _maxPlotted[index];
             for (var i = 0; i < targets.Count; i++)
@@ -180,7 +206,7 @@ namespace RowMate.Core.History
             {
                 for (var i = 0; i < y.Ticks.Length; i++)
                 {
-                    yLabels.Add(metric == ChartMetric.Split ? HistoryFormats.AxisPace(SlowestPace, y.Ticks[i]) : HistoryFormats.AxisValue(y.Ticks[i]));
+                    yLabels.Add(metric == ChartMetric.Split ? HistoryFormats.AxisPace(PaceReference, y.Ticks[i]) : HistoryFormats.AxisValue(y.Ticks[i]));
                 }
             }
 

@@ -1,7 +1,7 @@
 {
-    "version": 6,
+    "version": 7,
     "editorVersion": "6000.3.27f1",
-    "appliedAtUtc": "2026-11-08T15:12:54.6774502Z",
+    "appliedAtUtc": "2026-11-10T01:38:47.3520806Z",
     "steps": [
         {
             "id": "player.identity",
@@ -51,17 +51,32 @@
         {
             "id": "player.window",
             "status": "ok",
-            "detail": "ventana 1280×720 redimensionable; sin splash; fondo bg.app; Android con barras del sistema visibles"
+            "detail": "ventana 1280×720 redimensionable, sin Alt+Enter de Unity; sin splash; fondo bg.app; Android con barras del sistema visibles"
+        },
+        {
+            "id": "identity.import",
+            "status": "ok",
+            "detail": "46 PNG de Art/Identity; reimportados 46"
+        },
+        {
+            "id": "identity.standalone",
+            "status": "ok",
+            "detail": "Standalone: 1024, 512, 256, 128, 64, 48, 32, 16"
+        },
+        {
+            "id": "identity.mobile",
+            "status": "ok",
+            "detail": "Android: adaptativo 432, 324, 216, 162, 108, 81, redondo y legacy 192, 144, 96, 72, 48, 36, arranque splash-mark (centrar); iOS: LaunchScreen.storyboard, multitarea en iPad"
         },
         {
             "id": "ui.fonts",
             "status": "ok",
-            "detail": "FontAsset creados: 1, ya existían: 10; getFontFeatures apagado en 1; kerning K2 (pares): Inter-Regular-SDF 1498, Inter-Medium-SDF 1750, Inter-SemiBold-SDF 1750, Inter-Bold-SDF 1750, RowMateNumericSC-SemiBold-SDF 0, RowMateNumericSC-Bold-SDF 1272, RowMateNumericSC-ExtraBold-SDF 0, JetBrainsMono-Regular-SDF 0; FontAsset de Barlow borrados: 0; USS reimportados"
+            "detail": "FontAsset creados: 0, ya existían: 11; getFontFeatures apagado en 0; kerning K2 (pares): Inter-Regular-SDF 1498, Inter-Medium-SDF 1750, Inter-SemiBold-SDF 1750, Inter-Bold-SDF 1750, RowMateNumericSC-SemiBold-SDF 0, RowMateNumericSC-Bold-SDF 1272, RowMateNumericSC-ExtraBold-SDF 0, JetBrainsMono-Regular-SDF 0; FontAsset de Barlow borrados: 0; USS reimportados"
         },
         {
             "id": "ui.panel",
             "status": "ok",
-            "detail": "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app; respaldos: íconos, Noto Emoji"
+            "detail": "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app; respaldos: íconos, Noto Emoji; marca de arranque boot-mark.png"
         },
         {
             "id": "scene.assets",

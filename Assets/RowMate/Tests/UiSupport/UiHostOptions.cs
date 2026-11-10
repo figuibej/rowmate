@@ -133,6 +133,13 @@ namespace RowMate.Tests.UiSupport
         // El build del simulador marca los archivos con _SIM y [SIM] (DT12-16).
         public bool SimulatorBuild;
 
+        // It. 14 (DT14-10; CAP-03, CAP-04, BootSplashTests): la capa de arranque encima del shell, como en la app.
+        public bool BootSplash;
+
+        // It. 14 (DT14-22): el lector de pantalla forzado encendido (AssistiveSupport.screenReaderStatusOverride) mientras dura el
+        // anfitrión, con el puente del lector y un FakeA11yAnnouncer (ScreenReader*Tests, CAP-27).
+        public bool ScreenReader;
+
         public UiHostOptions Clone()
         {
             return (UiHostOptions)MemberwiseClone();

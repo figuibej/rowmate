@@ -16,6 +16,9 @@
 #    (QA-G10a-05). -Update reescribe jni-signatures.txt con lo de javap (solo si cambia la API, junto con la tabla de C#).
 #    It. 12: javap -s -public de com.rowmate.export.RmExport -> lo compara con native/android/golden/export-signatures.txt
 #    (codigo 4 si difiere; -Update tambien lo reescribe).
+#    It. 14 (14-pulido-plataformas/02-tech-design DT14-24): las fuentes de RowMateUi (RmHaptics), sin UnityPlayer, VIBRATE,
+#    Vibrator, androidx ni red (codigo 3); javap -s -public de com.rowmate.ui.RmHaptics -> native/android/golden/ui-signatures.txt
+#    (codigo 4 si difiere; -Update tambien lo reescribe).
 # 5. -Golden: compila Wire.kt + EventRing.kt + golden/EmitFixture.kt para la JVM, lo corre y compara su salida byte a byte con
 #    Assets/RowMate/Tests/Golden/ble/events-v1.bin. Codigo 5 si difiere.
 # Codigo 1: faltan herramientas o no compila. 0: todo bien. No instala nada ni toca variables del sistema (JAVA_HOME solo
@@ -31,9 +34,11 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $sources = Join-Path $repo 'Assets\Plugins\Android\RowMateBle'
 $exportSources = Join-Path $repo 'Assets\Plugins\Android\RowMateExport'
 $exportManifest = Join-Path $repo 'Assets\Plugins\Android\RowMateExport.androidlib\AndroidManifest.xml'
+$uiSources = Join-Path $repo 'Assets\Plugins\Android\RowMateUi'
 $goldenDir = Join-Path $PSScriptRoot 'golden'
 $signaturesFile = Join-Path $goldenDir 'jni-signatures.txt'
 $exportSignaturesFile = Join-Path $goldenDir 'export-signatures.txt'
+$uiSignaturesFile = Join-Path $goldenDir 'ui-signatures.txt'
 $tableFile = Join-Path $repo 'Assets\RowMate\Core\Ble\Native\RmBleJniSignatures.cs'
 $eventsGolden = Join-Path $repo 'Assets\RowMate\Tests\Golden\ble\events-v1.bin'
 
@@ -98,6 +103,16 @@ foreach ($f in $exportKt) {
         if ($text.Contains($p)) { Fail 3 ($f.Name + " contiene '" + $p + "'") }
     }
 }
+# It. 14: la respuesta tactil de la interfaz, sin permisos, sin el reproductor de Unity y sin red (DT14-24, AC-POL-03).
+$uiKt = @(Get-ChildItem -LiteralPath $uiSources -Filter '*.kt' -File | Sort-Object Name)
+if ($uiKt.Count -eq 0) { Fail 1 'no hay fuentes Kotlin en Assets/Plugins/Android/RowMateUi' }
+$uiForbidden = @('UnityPlayer', 'com.unity3d', 'VIBRATE', 'Vibrator', 'androidx', 'java.net', 'uses-permission')
+foreach ($f in $uiKt) {
+    $text = [System.IO.File]::ReadAllText($f.FullName)
+    foreach ($p in $uiForbidden) {
+        if ($text.Contains($p)) { Fail 3 ($f.Name + " contiene '" + $p + "'") }
+    }
+}
 $manifestText = [System.IO.File]::ReadAllText($exportManifest)
 foreach ($p in @('uses-permission', 'INTERNET', 'WRITE_EXTERNAL_STORAGE')) {
     if ($manifestText.Contains($p)) { Fail 3 ("RowMateExport.androidlib/AndroidManifest.xml contiene '" + $p + "'") }
@@ -115,10 +130,10 @@ function Invoke-Kotlinc([string[]]$KotlinArgs, [string]$Name) {
 
 # ---- 3. Compilacion contra android.jar ----
 $classes = Join-Path $OutDir 'classes'
-$compileArgs = @('-classpath', $androidJar, '-jvm-target', '17', '-Werror', '-d', $classes) + @($kt | ForEach-Object { $_.FullName }) + @($exportKt | ForEach-Object { $_.FullName })
+$compileArgs = @('-classpath', $androidJar, '-jvm-target', '17', '-Werror', '-d', $classes) + @($kt | ForEach-Object { $_.FullName }) + @($exportKt | ForEach-Object { $_.FullName }) + @($uiKt | ForEach-Object { $_.FullName })
 $code = Invoke-Kotlinc $compileArgs 'android'
 if ($code -ne 0) { Fail 1 ('kotlinc fallo (codigo ' + $code + ')') }
-Write-Host ('check.ps1: ' + ($kt.Count + $exportKt.Count) + ' fuentes Kotlin compiladas contra ' + $platform.Name + ' (' + $kt.Count + ' de RowMateBle, ' + $exportKt.Count + ' de RowMateExport)')
+Write-Host ('check.ps1: ' + ($kt.Count + $exportKt.Count + $uiKt.Count) + ' fuentes Kotlin compiladas contra ' + $platform.Name + ' (' + $kt.Count + ' de RowMateBle, ' + $exportKt.Count + ' de RowMateExport, ' + $uiKt.Count + ' de RowMateUi)')
 
 # ---- 4. Firmas JNI ----
 $javapOut = & $javap -s -public -cp $classes com.rowmate.ble.RmBle
@@ -208,6 +223,43 @@ if (($exportJavap -join "`n") -ne ($exportGolden -join "`n")) {
     Fail 4 'las firmas de RmExport no coinciden con native/android/golden/export-signatures.txt'
 }
 Write-Host ('check.ps1: firmas de RmExport: ' + $exportJavap.Count + ' metodos, iguales a export-signatures.txt')
+
+# ---- 4c. Firmas de RmHaptics (It. 14, DT14-24) ----
+$uiOut = & $javap -s -public -cp $classes com.rowmate.ui.RmHaptics
+if ($LASTEXITCODE -ne 0) { Fail 1 'javap fallo con com.rowmate.ui.RmHaptics' }
+$uiJavap = New-Object System.Collections.Generic.List[string]
+$pendingName = $null
+foreach ($line in $uiOut) {
+    $t = $line.Trim()
+    $m = [regex]::Match($t, '^public .*?\s([A-Za-z_][A-Za-z0-9_$]*)\(.*\);$')
+    if ($m.Success) { $pendingName = $m.Groups[1].Value; continue }
+    $d = [regex]::Match($t, '^descriptor: (\(.*)$')
+    if ($d.Success -and $null -ne $pendingName) {
+        if ($pendingName -notmatch '[$<]') { $uiJavap.Add($pendingName + ' ' + $d.Groups[1].Value) }
+    }
+    if (-not $t.StartsWith('public') ) { $pendingName = $null }
+}
+$uiJavap.Sort([System.StringComparer]::Ordinal)
+if ($Update) {
+    $header = @('# Firmas de com.rowmate.ui.RmHaptics (nombre y descriptor, orden ordinal). Las genera native/android/check.ps1 -Update', '# con javap -s; las llama Platform/Haptics/AndroidHaptics por AndroidJavaClass (It. 14, DT14-24).')
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($uiSignaturesFile, (($header + $uiJavap) -join "`n") + "`n", $utf8)
+    Write-Host ('check.ps1: ui-signatures.txt reescrito (' + $uiJavap.Count + ' metodos)')
+}
+$uiGolden = New-Object System.Collections.Generic.List[string]
+if (Test-Path -LiteralPath $uiSignaturesFile) {
+    foreach ($line in [System.IO.File]::ReadAllLines($uiSignaturesFile)) {
+        $t = $line.Trim()
+        if ($t -ne '' -and -not $t.StartsWith('#')) { $uiGolden.Add($t) }
+    }
+}
+$uiGolden.Sort([System.StringComparer]::Ordinal)
+if (($uiJavap -join "`n") -ne ($uiGolden -join "`n")) {
+    Write-Host 'javap:'; $uiJavap | ForEach-Object { Write-Host ('  ' + $_) }
+    Write-Host 'ui-signatures.txt:'; $uiGolden | ForEach-Object { Write-Host ('  ' + $_) }
+    Fail 4 'las firmas de RmHaptics no coinciden con native/android/golden/ui-signatures.txt'
+}
+Write-Host ('check.ps1: firmas de RmHaptics: ' + $uiJavap.Count + ' metodos, iguales a ui-signatures.txt')
 
 # ---- 5. Fijacion del formato en la JVM ----
 if ($Golden) {

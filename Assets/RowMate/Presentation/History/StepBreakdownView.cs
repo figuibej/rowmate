@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using RowMate.Core.Design;
 using RowMate.Core.History;
 using RowMate.Presentation.Controls;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace RowMate.Presentation.History
@@ -12,20 +14,40 @@ namespace RowMate.Presentation.History
     //   ├── #session-step-<n>-badge .rm-step-perf__badge   28 × 28 r 6, #00B4D8 @16 %, el número (índice + 1) en #00B4D8 12/700
     //   └── .rm-step-perf__text
     //       ├── #session-step-<n>-line1   "{dur}  ·  {dist}m" 11 text.secondary
-    //       └── .rm-step-perf__values      "{W}W", "{spm} spm", "{split}/500m" 12/600 blanco, separados por 12
+    //       └── .rm-step-perf__values      "{W}W", "{spm} spm", "{split}/500m" blanco, separados por 12
     // Sin tipo, nombre, objetivo ni cumplimiento (paridad).
+    // It. 14 (TY-01, AC-POL-02; 00-arte-pulido §3.2): las cifras de las dos líneas en RowMate Numeric SC (cifras tabulares de la fuente:
+    // la línea 1 en 600 al tamaño de caption, los valores en num.xs 13/700) y los tres valores en COLUMNAS de ancho fijo por lista (el
+    // máximo de la columna en todas las filas, alineados a la derecha): de una fila a otra las cifras y las unidades caen en el mismo
+    // lugar. Sin elementos nuevos; el ancho se recalcula con un dato nuevo o un cambio de letra (GeometryChangedEvent), nunca por cuadro.
     public sealed class StepBreakdownView : VisualElement
     {
+        private const int Columns = 3;
+
         private readonly List<Row> _rows = new List<Row>();
+        private readonly float[] _columnWidths = new float[Columns];
 
         public StepBreakdownView()
         {
             name = "session-steps-list";
             AddToClassList("rm-step-perf-rows");
             pickingMode = PickingMode.Ignore;
+            RegisterCallback<GeometryChangedEvent>(_ => EqualizeColumns());
         }
 
         public int Count { get; private set; }
+
+        // El ancho común de la columna c (0 W, 1 spm, 2 split), en dp (0 antes del primer layout).
+        public float ColumnWidth(int column)
+        {
+            return _columnWidths[column];
+        }
+
+        public Label ValueAt(int index, int column)
+        {
+            var row = _rows[index];
+            return column == 0 ? row.Watts : column == 1 ? row.Spm : row.Split;
+        }
 
         public Label BadgeAt(int index)
         {
@@ -77,6 +99,42 @@ namespace RowMate.Presentation.History
             }
 
             Count = rows.Count;
+            EqualizeColumns();
+        }
+
+        // TY-01: cada columna toma el ancho de su valor más ancho en todas las filas visibles.
+        private void EqualizeColumns()
+        {
+            if (panel == null || Count == 0)
+            {
+                return;
+            }
+
+            for (var c = 0; c < Columns; c++)
+            {
+                var max = 0f;
+                for (var i = 0; i < Count; i++)
+                {
+                    var label = ValueAt(i, c);
+                    var size = label.MeasureTextSize(label.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
+                    if (size.x > max)
+                    {
+                        max = size.x;
+                    }
+                }
+
+                max = Mathf.Ceil(max);
+                if (!(max > 0) || Math.Abs(max - _columnWidths[c]) < 0.5f)
+                {
+                    continue;
+                }
+
+                _columnWidths[c] = max;
+                for (var i = 0; i < _rows.Count; i++)
+                {
+                    ValueAt(i, c).style.minWidth = max;
+                }
+            }
         }
 
         private Row CreateRow(int index)
@@ -99,6 +157,7 @@ namespace RowMate.Presentation.History
             text.pickingMode = PickingMode.Ignore;
             var line1 = Text(prefix + "-line1", "rm-step-perf__line1");
             line1.AddToClassList("rm-type-caption");
+            line1.AddToClassList("rm-step-perf__line1--tabular");
             text.Add(line1);
             var values = new VisualElement();
             values.AddToClassList("rm-step-perf__values");
@@ -118,7 +177,7 @@ namespace RowMate.Presentation.History
         private static Label Value(string name)
         {
             var label = Text(name, "rm-step-perf__value");
-            label.AddToClassList("rm-type-button-s");
+            label.AddToClassList("rm-type-num-xs");
             return label;
         }
 

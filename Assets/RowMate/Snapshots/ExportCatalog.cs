@@ -173,7 +173,7 @@ namespace RowMate.Snapshots
 
         private static IEnumerable<string> SavedChecks(UiTestHost h, string title, string action)
         {
-            return Expect(h, ("título " + title, () => h.Shell.Toasts.CurrentAction?.Title == title && h.Shell.Toasts.Text.text == title),
+            return Expect(h, ("título " + title, () => h.Shell.Toasts.CurrentAction?.Title == title && RowMate.Core.Design.PathBreak.Strip(h.Shell.Toasts.Text.text) == title),
                 ("nombre " + FileName, () => h.Shell.Toasts.Detail.text == FileName && h.IsShown("toast-detail")),
                 ("acción " + action, () => h.Shell.Toasts.Action.Label.text == action && h.IsShown("toast-action")),
                 ("archivo escrito", () => h.FakeExporter!.Files.Count == 1 && h.FakeExporter.Files[0].FileName == FileName),

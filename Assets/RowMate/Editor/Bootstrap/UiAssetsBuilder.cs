@@ -51,6 +51,7 @@ namespace RowMate.EditorTools
 
             var icons = AssetDatabase.LoadAssetAtPath<FontAsset>(FontAssetPaths.IconsOutline);
             var emoji = AssetDatabase.LoadAssetAtPath<FontAsset>(FontAssetPaths.EmojiFallback);
+            var bootMark = AssetDatabase.LoadAssetAtPath<Texture2D>(UiAssets.BootMarkPath);
             var assets = AssetDatabase.LoadAssetAtPath<UiAssets>(UiAssets.AssetPath);
             if (assets == null)
             {
@@ -58,6 +59,7 @@ namespace RowMate.EditorTools
                 assets.name = "UiAssets";
                 assets.Set(panel, es, en, null);
                 assets.SetFallbacks(icons, emoji);
+                assets.SetBootMark(bootMark);
                 AssetDatabase.CreateAsset(assets, UiAssets.AssetPath);
                 created += " UiAssets";
             }
@@ -65,12 +67,13 @@ namespace RowMate.EditorTools
             {
                 assets.Set(panel, es, en, null);
                 assets.SetFallbacks(icons, emoji);
+                assets.SetBootMark(bootMark);
                 EditorUtility.SetDirty(assets);
             }
 
             AssetDatabase.SaveAssets();
             return BootstrapState.Step.Ok(id, (created.Length > 0 ? "creado:" + created + "; " : "") + "panel con RowMateTheme.tss, ConstantPixelSize 1, fondo bg.app; respaldos: "
-                + (icons != null ? "íconos" : "SIN íconos") + ", " + (emoji != null ? "Noto Emoji" : "SIN Noto Emoji"));
+                + (icons != null ? "íconos" : "SIN íconos") + ", " + (emoji != null ? "Noto Emoji" : "SIN Noto Emoji") + "; marca de arranque " + (bootMark != null ? "boot-mark.png" : "SIN boot-mark.png"));
         }
 
         private static void Configure(PanelSettings panel, ThemeStyleSheet theme)

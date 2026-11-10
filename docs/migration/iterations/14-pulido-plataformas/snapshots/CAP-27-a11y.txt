@@ -1,0 +1,25 @@
+1. Button · Atrás
+2. Button · Exportar TCX
+3. Header · Escalera
+4. Header · Resumen
+5. StaticText · Tiempo: 11:00
+6. StaticText · Distancia: 2253m
+7. StaticText · Watts: 150
+8. StaticText · SPM: 24.1
+9. StaticText · Split: 03:00
+10. StaticText · Pulso: 139/150
+11. Header · Rendimiento por paso
+12. StaticText · 1, 1:00  ·  183m, 100W, 20.0 spm, 2:30/500m
+13. StaticText · 2, 2:00  ·  432m, 150W, 24.1 spm, 2:13/500m
+14. StaticText · 3, 1:00  ·  153m, 60W, 18.0 spm, 3:00/500m
+15. StaticText · 4, 2:00  ·  432m, 150W, 24.1 spm, 2:13/500m
+16. StaticText · 5, 1:00  ·  153m, 60W, 18.0 spm, 3:00/500m
+17. StaticText · 6, 2:00  ·  433m, 138W, 22.1 spm, 2:02/500m
+18. StaticText · 7, 1:00  ·  152m, 60W, 18.0 spm, 3:00/500m
+19. StaticText · 8, 1:05  ·  183m, 100W, 20.0 spm, 2:30/500m
+20. TabButton · Vatios · [Selected]
+21. TabButton · SPM
+22. TabButton · Split 500m
+23. TabButton · Distancia
+24. TabButton · Pulso
+25. Image · Vatios: de 60 W a 150 W

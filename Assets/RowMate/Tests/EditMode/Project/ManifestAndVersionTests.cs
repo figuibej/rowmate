@@ -24,6 +24,8 @@ namespace RowMate.Tests.EditMode.Project
             { "com.unity.shadergraph", "17.3.0" },
             { "com.unity.test-framework", "1.6.0" },
             { "com.unity.ugui", "2.0.0" },
+            // It. 14 (DT14-17, ADR 026): el módulo de accesibilidad de Unity 6.3 (AccessibilityHierarchy, AssistiveSupport) para el lector.
+            { "com.unity.modules.accessibility", "1.0.0" },
             { "com.unity.modules.androidjni", "1.0.0" },
             { "com.unity.modules.animation", "1.0.0" },
             { "com.unity.modules.audio", "1.0.0" },

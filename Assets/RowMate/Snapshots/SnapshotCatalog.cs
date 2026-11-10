@@ -25,7 +25,13 @@ namespace RowMate.Snapshots
         // it3 = RoutinesCatalog, it4a (por defecto desde la 4a) = WorkoutCatalog. It. 6a: it6a (por defecto desde la 6a) = SceneCatalog.
         public static IReadOnlyList<SnapshotScenario> For(string set)
         {
-            // It. 12: it12 (por defecto desde la 12) = ExportCatalog ("Exportar TCX").
+            // It. 14: it14 (por defecto desde la 14) = PolishCatalog (pulido, identidad, lector y deuda).
+            if (string.Equals(set, "it14", StringComparison.OrdinalIgnoreCase))
+            {
+                return PolishCatalog.All;
+            }
+
+            // It. 12: it12 ("Exportar TCX") = ExportCatalog.
             if (string.Equals(set, "it12", StringComparison.OrdinalIgnoreCase))
             {
                 return ExportCatalog.All;

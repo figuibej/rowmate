@@ -60,6 +60,12 @@ namespace RowMate.Tests.UiSupport
             return Assets().Thumbnails;
         }
 
+        // It. 14: la marca de la capa de arranque del mismo UiAssets.
+        public static Texture2D? BootMark()
+        {
+            return Assets().BootMark;
+        }
+
         public static string StringsEs()
         {
             return Text(UiAssets.StringsEsPath);

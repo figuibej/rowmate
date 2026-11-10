@@ -72,8 +72,16 @@ namespace RowMate.Bootstrap
             }
 
             var shell = new AppShellView(ui, options.TopLayer);
+            // It. 14 (DT14-10, DT14-11): la señal de "shell listo" siempre (la mide -rowmate-perf-boot) y la capa de arranque si se pide,
+            // como última hija del shell.
+            var ready = new ShellReadySignal(shell.Tabs);
+            if (options.BootSplash)
+            {
+                shell.AttachBootSplash(new BootSplashView(ui, ready, options.BootMark));
+            }
+
             root.Add(shell);
-            return new ShellHandle(shell, motion, pacing, new BackNavigation(options.BackButton, shell.Popups, shell.Dialogs, shell.Pages), fade);
+            return new ShellHandle(shell, motion, pacing, new BackNavigation(options.BackButton, shell.Popups, shell.Dialogs, shell.Pages), fade, ready);
         }
     }
 }

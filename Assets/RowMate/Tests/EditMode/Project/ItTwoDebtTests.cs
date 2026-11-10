@@ -174,7 +174,35 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(workflow, Does.Contain("        if: ${{ always() && matrix.simulator }}\n        run: bash tools/unity/ci-simulator-define.sh restore\n"));
             Assert.That(workflow, Does.Contain("customParameters: ${{ matrix.simulator && '" + SimulatorInUnityTests.TestRunArgument + "' || '' }}"));
             Assert.That(workflow, Does.Contain("sim-${{ matrix.simulator }}-${{ hashFiles("), "caché de Library/ separada con y sin el define");
-            Assert.That(workflow, Does.Not.Contain("unity-builder"), "no compila players");
+            // R-01 reescrita en la It. 14 (§8.4, QA-G14-09; AC-APP-19-06): los players se compilan SOLO en jobs build-*, ninguno con el
+            // define del simulador, y cada uno con su caché de Library/ propia (build-<plataforma>-…), distinta de la de los tests.
+            var parsed = MiniYaml.Parse(workflow);
+            foreach (var job in parsed["jobs"]!.Entries)
+            {
+                var builds = false;
+                foreach (var scalar in job.Value.Scalars())
+                {
+                    builds |= scalar.Value.Value != null && scalar.Value.Value.StartsWith("game-ci/unity-builder@", StringComparison.Ordinal);
+                }
+
+                if (!builds)
+                {
+                    continue;
+                }
+
+                Assert.That(job.Key, Does.StartWith("build-"), "solo los jobs build-* compilan players");
+                foreach (var scalar in job.Value.Scalars())
+                {
+                    var value = scalar.Value.Value ?? "";
+                    Assert.That(value, Does.Not.Contain("ci-simulator-define.sh").And.Not.Contain("ROWMATE_SIMULATOR")
+                        .And.Not.Contain(SimulatorInUnityTests.TestRunArgument).And.Not.Contain("-rowmateSimulator"), job.Key + ": sin el simulador");
+                    if (scalar.Key.EndsWith(".key", StringComparison.Ordinal))
+                    {
+                        Assert.That(value, Does.StartWith(job.Key + "-"), job.Key + ": caché propia por plataforma");
+                    }
+                }
+            }
+
             Assert.That(Regex.IsMatch(workflow, @"^    if:.*secrets\.", RegexOptions.Multiline), Is.False, "secrets no va en jobs.<id>.if");
             var script = File.ReadAllBytes(RepoPaths.Combine("tools/unity/ci-simulator-define.sh"));
             for (var i = 0; i < script.Length; i++)

@@ -27,7 +27,8 @@ namespace RowMate.Presentation.Shell
     //   ├── #dialog-layer .rm-layer            capa 3 (DialogLayer)
     //   ├── #toast-layer .rm-layer             capa 4 (ToastLayer)
     //   ├── #popup-layer .rm-layer             capa 5 (PopupLayer: el ⋮, el menú de texto y las ayudas)
-    //   └── #simulator-layer .rm-layer         capa 6, último hijo: por encima de todo (solo con el define)
+    //   ├── #simulator-layer .rm-layer         capa 6: por encima de todo (solo con el define)
+    //   └── #boot-splash .rm-boot-splash       It. 14: la capa de arranque, ÚLTIMA hija mientras vive (BootSplashView, DT14-10)
     // UI Toolkit dibuja y rinde eventos en orden de árbol: la capa del simulador queda arriba sin depender de ninguna pantalla
     // (AC-APP-03-07). Las capas se crean ANTES que las pantallas (las reciben por UiContext) y se agregan en este orden.
     public sealed class AppShellView : VisualElement, IDisposable
@@ -147,6 +148,18 @@ namespace RowMate.Presentation.Shell
         public HistoryScreenView? HistoryScreen { get; }
 
         public VisualElement? TopLayer { get; }
+
+        // It. 14 (DT14-10): la capa de arranque mientras vive (null antes de agregarla y después de que sale de la jerarquía).
+        public BootSplashView? BootSplash => _bootSplash != null && _bootSplash.parent == this ? _bootSplash : null;
+
+        private BootSplashView? _bootSplash;
+
+        // La capa de arranque como ÚLTIMA hija (QA-G14-02); ella misma se vuelve a poner adelante si después se agrega otra capa.
+        public void AttachBootSplash(BootSplashView splash)
+        {
+            _bootSplash = splash ?? throw new ArgumentNullException(nameof(splash));
+            Add(splash);
+        }
 
         public HrmNoticePresenter HrmNotices { get; }
 

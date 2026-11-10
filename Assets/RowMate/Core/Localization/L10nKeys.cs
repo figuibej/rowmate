@@ -306,5 +306,13 @@ namespace RowMate.Core.Localization
         public const string ExportTcxOpenFolder = "exportTcxOpenFolder";
         public const string ExportTcxFailed = "exportTcxFailed";
         public const string ExportTcxShareTitle = "exportTcxShareTitle";
+
+        // ── Nuevas de la It. 14 (14-pulido-plataformas/01-po-spec §4): 252 → 256 ──
+        // El indicador de carga de la escena del primer entrenamiento (#21, AC-DEBT-09) y los textos que solo oye el lector de
+        // pantalla (AC-APP-03-12, -14): la métrica con su valor, el cambio de paso y el resumen del gráfico.
+        public const string WorkoutSceneLoading = "workoutSceneLoading";
+        public const string A11yLabelValue = "a11yLabelValue";
+        public const string A11yStepProgress = "a11yStepProgress";
+        public const string A11yChartSummary = "a11yChartSummary";
     }
 }

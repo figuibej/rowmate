@@ -769,3 +769,58 @@
 .rm-toast__action .rm-button__label {
     color: var(--rm-accent-on-tonal);
 }
+
+/* ════ It. 14 — Pulido EXR, identidad y plataformas (14-pulido-plataformas/04-design-notes; 00-arte-pulido §2 y §3; contrato de
+   02-tech-design §6 y §7). Cero tokens, fuentes ni glifos nuevos. Lo que mueve el código (BootSplashMotion, el indicador de la
+   escena, HudReflowMotion) va en C#; acá solo aspecto. ════ */
+
+/* Tracking según la caja (A14-08, V14-06): el 0,08 em de .rm-type-label es para MAYÚSCULAS; con minúsculas, 0,04 em (4 en la
+   unidad de TextCore, como el M3 de la barra del legacy). Por ahora solo en las pestañas; el HUD queda en 0,08 (QA-G14-17). */
+.rm-type-label.rm-type-label--mixed {
+    letter-spacing: 4px;
+}
+
+/* TY-01 (Rendimiento por paso): la línea de arriba con las cifras tabulares de RowMate Numeric SC 600 al tamaño de caption; los
+   valores ya van en num.xs (13/700). Los valores, alineados a la derecha de su columna de ancho fijo (StepBreakdownView). */
+.rm-step-perf__text > .rm-step-perf__line1--tabular {
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-SemiBold-SDF.asset");
+}
+
+.rm-step-perf__values > .rm-step-perf__value {
+    -unity-text-align: middle-right;
+}
+
+/* TY-02 (tarjetas del Historial): fecha y hora con las cifras tabulares de RowMate Numeric SC 600 (el tamaño de bodyXs): las
+   cifras caen en el mismo lugar de una tarjeta a otra, en la misma familia que los valores de la fila de abajo. */
+.rm-history-card__top > .rm-history-card__date {
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-SemiBold-SDF.asset");
+}
+
+/* #36 (AC-DEBT-06): la columna entera se achica junta (StatRowView: un FitBox por columna) y entre columnas quedan 4 dp (2 + 2). */
+.rm-stat {
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.rm-stat__stack {
+    align-items: center;
+}
+
+.rm-stat__stack > .rm-stat__label {
+    margin-top: 2px;
+}
+
+/* #37 (AC-DEBT-08): el error del Historial con el ícono del vacío (56 al 12 %), 12 encima del texto. */
+.rm-history .rm-empty__icon.rm-history__error-icon {
+    opacity: 0.12;
+    margin-bottom: 12px;
+}
+
+/* Arranque (AC-APP-16-10): la marca escalada entera en su caja (sin estirar) y el indicador de los 1 500 ms en accent.primary. */
+.rm-boot-splash__mark {
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.rm-boot-splash__spinner {
+    color: var(--rm-accent-primary);
+}

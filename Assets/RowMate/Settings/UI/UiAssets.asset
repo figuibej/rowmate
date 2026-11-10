@@ -24,3 +24,4 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 2c70bc324bea22c4aa48d97c59fdf83b, type: 3}
   - {fileID: 2800000, guid: e5af6d3ec6f2492419e5a46c82e788e1, type: 3}
   - {fileID: 2800000, guid: caa21cdf381f7f64caaa7eb96de99df3, type: 3}
+  _bootMark: {fileID: 2800000, guid: ff2f1353357c25141b0374f64d829f64, type: 3}

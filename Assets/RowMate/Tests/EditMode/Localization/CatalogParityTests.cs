@@ -126,6 +126,19 @@ namespace RowMate.Tests.EditMode.Localization
             { "hrmConnectFailed", "name:String" },
             // La de la It. 12 (12-exportar-tcx/01-po-spec §4): la carpeta abreviada, como texto.
             { "exportTcxSaved", "folder:String" },
+            // Las 3 de la It. 14 (14-pulido-plataformas/01-po-spec §4): solo las oye el lector; los números del paso como enteros.
+            { "a11yLabelValue", "label:String, value:String" },
+            { "a11yStepProgress", "current:int, total:int, type:String" },
+            { "a11yChartSummary", "metric:String, min:String, max:String" },
+        };
+
+        // Las 4 claves de la It. 14 (14-pulido-plataformas/01-po-spec §4), en su orden, con es y en.
+        private static readonly string[][] ItFourteenKeys =
+        {
+            new[] { "workoutSceneLoading", "Preparando escena…", "Preparing scene…" },
+            new[] { "a11yLabelValue", "{label}: {value}", "{label}: {value}" },
+            new[] { "a11yStepProgress", "Paso {current} de {total}: {type}", "Step {current} of {total}: {type}" },
+            new[] { "a11yChartSummary", "{metric}: de {min} a {max}", "{metric}: from {min} to {max}" },
         };
 
         // Las 12 claves de la It. 4b (04b-hud-exr/01-po-spec §11.2), en su orden, con es y en.
@@ -212,19 +225,19 @@ namespace RowMate.Tests.EditMode.Localization
 
         private static LocalizationCatalog En => LocalizationFixture.Catalog("en");
 
-        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12, AC-STR-09-23: 252 claves en es y las mismas 252 en en (159 del legacy +
-        // 15 de la It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5 + 5 de la It. 9 + 12 de la It. 10a + 5 de la
-        // It. 11 + 7 de la It. 12).
-        [Test, Category("AC-APP-10-01"), Category("AC-APP-10-10"), Category("AC-APP-10-11"), Category("AC-APP-10-12"), Category("AC-STR-09-23")]
+        // AC-APP-10-01, AC-APP-10-10, AC-APP-10-11, AC-APP-10-12, AC-STR-09-23, AC-APP-11-03: 256 claves en es y las mismas 256 en en
+        // (159 del legacy + 15 de la It. 1 + 16 de la It. 3 + 12 de la It. 4a + 12 de la It. 4b + 9 de la It. 5 + 5 de la It. 9 + 12 de la
+        // It. 10a + 5 de la It. 11 + 7 de la It. 12 + 4 de la It. 14).
+        [Test, Category("AC-APP-10-01"), Category("AC-APP-10-10"), Category("AC-APP-10-11"), Category("AC-APP-10-12"), Category("AC-STR-09-23"), Category("AC-APP-11-03")]
         public void SameKeysInBothLanguages()
         {
             var es = Es;
             var en = En;
             Assert.That(es.Locale, Is.EqualTo("es"));
             Assert.That(en.Locale, Is.EqualTo("en"));
-            Assert.That(es.Keys.Count, Is.EqualTo(252));
-            Assert.That(en.Keys.Count, Is.EqualTo(252));
-            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(252), "claves repetidas en es");
+            Assert.That(es.Keys.Count, Is.EqualTo(256));
+            Assert.That(en.Keys.Count, Is.EqualTo(256));
+            Assert.That(new HashSet<string>(es.Keys).Count, Is.EqualTo(256), "claves repetidas en es");
             Assert.That(en.Keys, Is.EquivalentTo(es.Keys), "una clave existe en un solo idioma");
             Assert.That(en.Keys, Is.EqualTo(es.Keys), "mismo orden en los dos archivos");
             Assert.That(LocalizationFixture.LegacyTexts("es").Count, Is.EqualTo(159));
@@ -431,8 +444,8 @@ namespace RowMate.Tests.EditMode.Localization
             }
 
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
-            Assert.That(withParameters, Is.EqualTo(2 * 39), "30 hasta la It. 4b + 3 de la It. 5 + 4 de la It. 10a + 1 de la It. 11 + 1 de la It. 12");
-            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(39));
+            Assert.That(withParameters, Is.EqualTo(2 * 42), "30 hasta la It. 4b + 3 de la It. 5 + 4 de la It. 10a + 1 de la It. 11 + 1 de la It. 12 + 3 de la It. 14");
+            Assert.That(ExpectedPlaceholders.Count, Is.EqualTo(42));
         }
 
         // AC-APP-10-07: las 15 claves nuevas con los textos de la spec y los tipos de §3.3, al final del catálogo.
@@ -692,6 +705,33 @@ namespace RowMate.Tests.EditMode.Localization
             Assert.That(LocalizationFixture.Es.Get(L10nKeys.Retry), Is.EqualTo("Reintentar"), "se reusa");
             Assert.That(LocalizationFixture.En.Get(L10nKeys.HistoryFree), Is.EqualTo("Free"), "se reusa");
             Assert.That(Es.Contains("navProfile") && Es.Contains("profileUploadToStrava"), Is.True, "las de Strava siguen en el catálogo");
+        }
+
+        // 14-pulido-plataformas/01-po-spec §4 (AC-APP-11-03): las 4 claves de la It. 14 con sus textos es/en, al final del catálogo; tres
+        // con parámetros (los del lector). Los textos nuevos usan … (U+2026).
+        [Test, Category("AC-APP-11-03")]
+        public void FourItFourteenKeys()
+        {
+            var es = Es;
+            var en = En;
+            var legacy = ToDictionary(LocalizationFixture.LegacyTexts("es"));
+            Assert.That(ItFourteenKeys.Length, Is.EqualTo(4));
+            for (var i = 0; i < ItFourteenKeys.Length; i++)
+            {
+                var key = ItFourteenKeys[i][0];
+                Assert.That(legacy.ContainsKey(key), Is.False, key + " no existía en el legacy");
+                Assert.That(es.Message(key), Is.EqualTo(ItFourteenKeys[i][1]), "es/" + key);
+                Assert.That(en.Message(key), Is.EqualTo(ItFourteenKeys[i][2]), "en/" + key);
+                Assert.That(es.Keys[252 + i], Is.EqualTo(key), "las de la It. 14 van al final, en el orden de la spec");
+                Assert.That(en.Keys[252 + i], Is.EqualTo(key));
+                ExpectedPlaceholders.TryGetValue(key, out var expected);
+                Assert.That(LocalizationFixture.Describe(es.Placeholders(key)), Is.EqualTo(expected ?? ""), "es/" + key);
+                Assert.That(LocalizationFixture.Describe(en.Placeholders(key)), Is.EqualTo(expected ?? ""), "en/" + key);
+            }
+
+            Assert.That(LocalizationFixture.Es.Format(L10nKeys.A11yStepProgress, MessageArg.Number("current", 2), MessageArg.Number("total", 5),
+                MessageArg.Text("type", "Trabajo")), Is.EqualTo("Paso 2 de 5: Trabajo"));
+            Assert.That(LocalizationFixture.En.Get(L10nKeys.WorkoutSceneLoading), Is.EqualTo("Preparing scene…"));
         }
 
         // AC-APP-10-08: no se pierde ninguna de las 159 claves del legacy (incluidas las sin uso y las de código muerto).

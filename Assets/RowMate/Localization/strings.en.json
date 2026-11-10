@@ -551,5 +551,45 @@
   "exportTcxDocuments": "Documents",
   "exportTcxOpenFolder": "Open folder",
   "exportTcxFailed": "Couldn't export the session",
-  "exportTcxShareTitle": "Share session"
+  "exportTcxShareTitle": "Share session",
+  "workoutSceneLoading": "Preparing scene…",
+  "a11yLabelValue": "{label}: {value}",
+  "@a11yLabelValue": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yStepProgress": "Step {current} of {total}: {type}",
+  "@a11yStepProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yChartSummary": "{metric}: from {min} to {max}",
+  "@a11yChartSummary": {
+    "placeholders": {
+      "metric": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  }
 }

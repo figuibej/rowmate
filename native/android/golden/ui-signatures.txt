@@ -1,0 +1,5 @@
+# Firmas de com.rowmate.ui.RmHaptics (nombre y descriptor, orden ordinal). Las genera native/android/check.ps1 -Update
+# con javap -s; las llama Platform/Haptics/AndroidHaptics por AndroidJavaClass (It. 14, DT14-24).
+bind (Landroid/app/Activity;)V
+isBound ()Z
+perform (I)Z

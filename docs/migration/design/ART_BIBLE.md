@@ -1067,3 +1067,19 @@ La escena del lago: cielo, luz, hora, Lago alpino y agua degradada (WP-D2). Fuen
 | §9 | El reparto medido de la escena del lago, el tope de SetPass de Alto en **80** (confirmado: medido 61) y Medio y Bajo en 50; sin impostores en la 6a (DT6a-14) |
 
 **Las sondas de las tomas** (04-design-notes §10.4, medidas en la corrida publicada): las de contrato del cielo de CAP-02 (`#0B4FA8` y `#2C70BE`, diferencia 0); el matiz de la hora a ≤ 6,4° del de Core (CAP-01, -03 y -04; tope 8°); la ventana de CAP-04 en 98,9° y croma 0,090 (85°-110°, ≥ 0,04); el velo de CAP-20 y CAP-21 con el canal máximo × 0,851 y × 0,853 y el croma × 0,72 y × 0,73; el brillo del sol, 38 dp en CAP-02 (mínimo 28) y 30,5 dp en `it6a-brillo` (mínimo 30).
+
+---
+
+## Cambios de la It. 14
+
+Pulido EXR, identidad y plataformas (WP-D). Fuente: [14-pulido-plataformas/04-design-notes](../iterations/14-pulido-plataformas/04-design-notes.md) (DD14-01 a -11, WD-01 a -05) sobre [00-arte-pulido](../iterations/14-pulido-plataformas/00-arte-pulido.md), con lo que mandó la spec y el diseño técnico, y las tomas `it14` revisadas, 2026-11-10. Ningún token, fuente, glifo ni color nuevo.
+
+| Dónde | Qué cambió |
+|---|---|
+| §1 (identidad, nuevo) | **Ícono "RowMate"**: "amanecer de regata" (dos remos cruzados en X delante de un sol ámbar que asoma, palas en dos olas), sobre **`bg.app` liso `#0D1B2A`** (el degradé del arte se descarta, DT14-03); remos `text.primary`, sol `step.warmup` → `metric.split`, olas `accent.primary` y `brand.seed`. Tres niveles por tamaño final (M ≥ 49 px, S 25-48, XS ≤ 24: solo los remos, nada menor a 2 px a 16). Sin texto. Generado por código (slot `app.icon`, ASSET_SLOTS §1.6) |
+| §1 (identidad, nuevo) | **Arranque oscuro**: ningún cuadro con otro fondo que `#0D1B2A` (o negro antes del primer cuadro en Windows). La capa de arranque muestra la marca de **96 dp** centrada (no 160) y se va con un solo fundido (ANIMATION_BIBLE §2.1) |
+| §4.2 | La regla de cifras tabulares se amplía a **todo número que cambia en su lugar o se alinea en filas o columnas**: fechas y horas de las tarjetas del Historial y las filas por paso del Detalle también van en RowMate Numeric SC (TY-01: `num.xs` 13/700 con columnas de ancho fijo por lista; TY-02: 600 al tamaño de `bodyXs`). Exentos: números dentro de una frase, identificadores, campos que escribe el usuario, insignias de índice, simulador y diagnóstico. Lo audita `TypographyAuditTests` |
+| §4.3 | **Tracking según la caja**: 0,08 em (8 en TextCore) solo con MAYÚSCULAS; con minúsculas, **0,04 em (4)** con `.rm-type-label--mixed`. Hoy en las pestañas; en los rótulos del HUD queda pendiente de las sondas de la 4b |
+| §3.10 | El aviso con acción sigue en vidrio (`glass.fallback` 86 %); el contraste se mide sobre la composición del peor caso (la línea `metric.watts` detrás): ≥ 4,5:1 en todo |
+| Historial (arte de la 9 §4 y §7.1) | Cada columna de la fila de números (tarjeta y Resumen) se achica **entera** (valor y etiqueta) con 4 dp de aire; la línea de la serie con **extremos redondos** (disco de 2 dp); la tira de tipo en **cápsulas de radio 1,5**; ninguna etiqueta intermedia de eje a menos de 4 dp de la de un borde; el error del Historial con el ícono `history` de 56 al 12 % del vacío |
+

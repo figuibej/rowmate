@@ -126,7 +126,7 @@ Todos tienen **3 LOD + impostor**, apoyan en terreno o muro (nada flota) y respe
 | `ui.icons` | Fuente de íconos "RowMate Icons": Material Symbols Rounded recortada a los glifos de la app (§4). **Glifos de fuente, no SVG** (QA-P-09, cerrado al iniciar la It. 2). Placeholder: íconos provisorios dibujados por código (§4.4) | [GitHub (versión fijada)](https://github.com/google/material-design-icons/tree/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont) · [catálogo](https://fonts.google.com/icons) | Apache 2.0 | 2 |
 | `ui.thumbnail.<entorno>` | Miniaturas del selector | **Horneadas en el Editor** desde la escena real por el arnés (conjunto `thumbs`, `tools/unity/bake-thumbnails.ps1`; B8-04) y asignadas a `UiAssets` por `ThumbnailAssets`: `Assets/RowMate/Art/Textures/Thumbnails/{lake,river,coast,regatta}.png`, **456 × 288**, 12:00, `relZ < 150`, siempre con los *fallbacks* procedurales (se versionan en un repo público), con `thumbnails.json` (la huella de los shaders y de Art que vigila dotnet: si cambia, re-hornear). Sin la textura: la tarjeta con el degradé de las 12 h y un `[SLOT] ui.thumbnail.<id>`. Opcional (gate): 6, 12, 18 y 22 h (ART_BIBLE §7.6) | propio | 8 |
 | `brand.strava` | Botón "Connect with Strava" y logo "Powered by Strava" | [Guía de marca de Strava](https://developers.strava.com/guidelines/), en **PNG @2x** | Guía de marca de Strava (usar sin modificar) | 12 |
-| `brand.appIcon` / `brand.splash` | Ícono y arranque "RowMate" | lo diseña `rowmate-designer`: original vectorial fuera de Unity, exportado a PNG en los tamaños de cada plataforma (en Unity no entra ningún SVG) | propio | 14 |
+| `app.icon` / `app.splash` | Ícono y arranque "RowMate" (It. 14): **generado (procedural)**, sin ningún archivo de terceros. La geometría ("amanecer de regata": dos remos cruzados delante de un sol sobre dos olas) vive en Core como datos (`Core/Design/AppIconGeometry`, niveles M/S/XS por tamaño), la rasteriza `AppIconRaster` (8 × 8 muestras) y la escribe `PngEncoder` con deflate propio, siempre los mismos bytes. `tools/icon` (dotnet) escribe `Assets/RowMate/Art/Identity/**` (Windows, Android adaptativo/redondo/*legacy* y arranque, iOS y macOS) y las hojas CAP-01 y CAP-02; `AppIconAssetsAreCurrent` los compara byte a byte. La marca de arranque es `Art/Identity/boot-mark.png` (384 px = 96 dp × 4) en `UiAssets.BootMark`. Origen: [14/00-arte-pulido §1](../iterations/14-pulido-plataformas/00-arte-pulido.md) y [02-tech-design §2](../iterations/14-pulido-plataformas/02-tech-design.md) | propio (generado) | propio | 14 |
 | `audio.*` | Reservado (BKL-03, fuera de paridad) | — | — | — |
 
 ---
@@ -522,3 +522,10 @@ La escena del lago con todo procedural (WP-D2). Fuente: [06a-escena-lago/04-desi
 | §1.4 | `prop.pine` sin impostor en la 6a (LOD2 de 120 triángulos hasta 400 m; DT6a-14) |
 | §2 | **La lista definitiva de Mixamo** para la It. 7 (P-09): Y Bot obligatorio, X Bot recomendado, el personaje realista y el clip `Sitting Idle` opcionales; ninguna animación para remar. Reemplaza a la "preliminar" |
 | §7 | La recomendación de D-ART-08: no por defecto; se vuelve a ofrecer en el gate de la It. 8 |
+
+## Cambios de la It. 14
+
+| Dónde | Qué cambió |
+|---|---|
+| §1.6 | `brand.appIcon` / `brand.splash` pasan a **`app.icon` / `app.splash`, generados (procedural)**: ninguna herramienta externa, ningún SVG ni archivo de terceros (A14-12). El ícono sale de Core y `tools/icon`; el arranque es la capa `BootSplashView` con `boot-mark.png` |
+| §1.6 | `ui.font.numeric`: además del HUD y el tablero, la fecha de las tarjetas del Historial y las filas por paso del Detalle (TY-01, TY-02). "RowMate Numeric" de Inter sigue sin hacer (no hay Python) |

@@ -37,15 +37,19 @@ namespace RowMate.App.Composition
             var logger = services.Logger;
             var language = new LanguageState(services.Locale.PreferredLanguageTags, logger);
             var texts = new DerivedObservable<AppLanguage, Localizer>(language.Current, services.Texts.For, logger);
-            // It. 10a (§6.2): la hora del diagnóstico con el programador y la vibración de "Listo".
-            var device = new DeviceStore(services.Devices.Rower, logger, services.Scheduler, services.Haptics);
+            // It. 14 (DT14-23): el ciclo de vida va antes, porque la respuesta táctil lo usa (nada en segundo plano).
+            var lifecycle = services.Lifecycle ?? ForegroundLifecycle.Instance;
+            // It. 14 (DT14-23): la política de la háptica (250 ms, Success sobre Medium, nada en segundo plano), compartida por el
+            // remo y el entrenamiento; sin puerto, ninguna.
+            var haptics = services.Haptics == null ? null : new HapticGate(services.Haptics, services.Scheduler, lifecycle);
+            // It. 10a (§6.2): la hora del diagnóstico con el programador y la vibración de "Listo" (y de la reconexión, #51).
+            var device = new DeviceStore(services.Devices.Rower, logger, services.Scheduler, haptics);
             var heartRate = new HeartRateStore(services.Devices.HeartRate, logger);
             var shell = new ShellStore(services.Shell, logger);
             var scene = new SceneSettings(logger);
             // legacy: main.dart:83 (RoutinesProvider sobre DatabaseService). La fecha de creación, con su propio reloj.
             var routines = new RoutinesStore(services.Routines, services.CreationClock ?? services.Scheduler, logger);
             // legacy: main.dart:82 (WorkoutProvider sobre BleService, HeartRateService y DatabaseService): vive con la app.
-            var lifecycle = services.Lifecycle ?? ForegroundLifecycle.Instance;
             var workout = new WorkoutEngine(services.Devices.Rower, services.Devices.HeartRate, services.Sessions, services.Scheduler,
                 lifecycle, logger);
             var workoutRest = new WorkoutStore(workout, device, routines, lifecycle, logger);
@@ -61,9 +65,14 @@ namespace RowMate.App.Composition
             // It. 12 (§4, DT12-11): "Exportar TCX", uno por app (salir del Detalle no cancela). Solo lee la base.
             var export = new TcxExportService(services.Sessions, services.Exporter ?? NoFileExporter.Instance, services.Scheduler,
                 services.ExportZone ?? LocalZone, texts, services.SimulatorBuild, logger);
+            // It. 14 (AC-POL-03): pausa, reanudar, cambio de paso y rutina completada; sin puerto, ninguna.
+            var workoutHaptics = haptics == null ? null : new WorkoutHaptics(workout, haptics);
             return new AppContext(services.Devices, device, heartRate, shell, scene, routines, workout, workoutRest, language, texts,
                 services.Accessibility.Current, services.Scheduler, lifecycle, logger, systemBars, preferences, seriesPanels, sceneEnvironment,
-                history, services.Sessions, services.Routines, export);
+                history, services.Sessions, services.Routines, export)
+            {
+                WorkoutHaptics = workoutHaptics,
+            };
         }
 
         // La zona del equipo sin exportador de la plataforma (AppServices.ExportZone = null).

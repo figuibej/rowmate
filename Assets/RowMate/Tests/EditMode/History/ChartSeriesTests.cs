@@ -38,6 +38,45 @@ namespace RowMate.Tests.EditMode.History
             Assert.That(data.View(ChartMetric.Split).YLabels.First(), Is.EqualTo("3:00"));
         }
 
+        // QA-V14-07 (AC-DEBT-07, #32, WD-03): con un split casi constante (rango de los ritmos > 0 menor de 10 s), el eje se abre a ±5 s del
+        // centro (SplitRange.Widen): la referencia "lenta" del gráfico pasa a ser el borde lento del rango abierto. La curva queda en el
+        // medio en lugar del piso y las etiquetas van de 2:10 hacia arriba, no de 2:05 a 0:25.
+        [Test, Category("AC-DEBT-07")]
+        public void ConstantSplitOpensTheAxisToTenSeconds()
+        {
+            var data = SessionChartData.Build(new[] { P(5, 150, 125), P(10, 150, 125), P(15, 0, 0), P(20, 150, 125) }, new IntervalStep[0]);
+            Assert.That(data.SlowestPace, Is.EqualTo(125), "el ritmo más lento real no cambia");
+            Assert.That(data.PaceReference, Is.EqualTo(130), "el borde lento del rango abierto (125 ± 5)");
+            Assert.That(data.Plotted(ChartMetric.Split), Is.EqualTo(new float[] { 5, 5, 0, 5 }), "la curva en el medio; la parada sigue al piso");
+            var view = data.View(ChartMetric.Split);
+            Assert.That(view.YLabels.First(), Is.EqualTo("2:10"), "el piso es 2:10, no 2:05");
+            Assert.That(view.Y.Max, Is.EqualTo(11).Within(1e-9), "10 s de rango con el 10 % de aire");
+            Assert.That(5 / view.Y.Max, Is.InRange(0.4, 0.6), "la curva cerca de la mitad del alto");
+            foreach (var label in view.YLabels)
+            {
+                Assert.That(label, Does.StartWith("2:").Or.StartWith("1:5"), "ninguna etiqueta lejos del ritmo real (" + label + ")");
+            }
+        }
+
+        [Test, Category("AC-DEBT-07")]
+        public void NarrowSplitNearZeroDoesNotGoBelowZero()
+        {
+            var data = SessionChartData.Build(new[] { P(5, 150, 3), P(10, 150, 4) }, new IntervalStep[0]);
+            Assert.That(data.PaceReference, Is.EqualTo(10), "0 a 10 s: el rango abierto no baja de 0");
+            Assert.That(data.Plotted(ChartMetric.Split), Is.EqualTo(new float[] { 7, 6 }));
+        }
+
+        [Test, Category("AC-DEBT-07")]
+        public void WideSplitKeepsTheSlowestAsReference()
+        {
+            var data = SessionChartData.Build(new[] { P(5, 150, 120), P(10, 150, 130) }, new IntervalStep[0]);
+            Assert.That(data.PaceReference, Is.EqualTo(130), "10 s justos: sin abrir");
+            Assert.That(data.Plotted(ChartMetric.Split), Is.EqualTo(new float[] { 10, 0 }), "como en la It. 9");
+            var none = SessionChartData.Build(new[] { P(5, 150, 0) }, new IntervalStep[0]);
+            Assert.That(none.PaceReference, Is.EqualTo(0), "sin ritmo, sin referencia");
+            Assert.That(none.HasPace, Is.False);
+        }
+
         [Test, Category("AC-HIS-13-03")]
         public void WithoutPaceTheCurveIsFlatAndHasNoYLabels()
         {

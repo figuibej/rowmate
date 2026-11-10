@@ -14,6 +14,9 @@ namespace RowMate.Presentation.History
     //   el cambio de métrica: viejas 0-120, nuevas 100-220); en el split, m:ss del ritmo; sin ritmo, ninguna (Q-24).
     // - X: centradas en su marca, debajo del área (#chart-x-<i>); las de los bordes se empujan adentro del marco (como fl_chart).
     // Los textos y las posiciones cambian solo al cambiar de métrica o de ancho; en cada cuadro de una animación, solo la opacidad.
+    // - It. 14 (#32, AC-DEBT-07; DT14-28): una marca INTERMEDIA cuya etiqueta quedaría a menos de 4 dp de la de un borde no se dibuja
+    //   (AxisTicks.DropCrowded sobre las posiciones finales, ya empujadas adentro del marco), en X y en Y. Sigue en XTexts/YTexts (son
+    //   las marcas del eje); XDropped/YDropped dicen cuáles quedaron ocultas. Sin asignar: arreglos que crecen solo al preparar.
     public sealed class ChartAxisLabels : VisualElement
     {
         public const string AxisClass = "rm-chart__axis";
@@ -25,6 +28,11 @@ namespace RowMate.Presentation.History
         private readonly int[] _yCount = new int[2];
         private int _xCount;
         private int _currentY;
+        private double[] _centers = new double[8];
+        private double[] _extents = new double[8];
+        private bool[] _visible = new bool[8];
+        private bool[] _xDropped = new bool[8];
+        private bool[] _yDropped = new bool[8];
 
         public ChartAxisLabels()
         {
@@ -50,6 +58,17 @@ namespace RowMate.Presentation.History
         public Label YAt(int index)
         {
             return _y[_currentY][index];
+        }
+
+        // La etiqueta X i no se dibuja porque chocaba con la de un borde (#32).
+        public bool XDropped(int index)
+        {
+            return index < _xDropped.Length && _xDropped[index];
+        }
+
+        public bool YDropped(int index)
+        {
+            return index < _yDropped.Length && _yDropped[index];
         }
 
         // Los textos de las marcas X de la vista actual, en orden (pruebas y sondas).
@@ -117,10 +136,14 @@ namespace RowMate.Presentation.History
                 y = Mathf.Clamp(y, 0, (float)frame.Height - LabelHeight);
                 label.style.translate = new Translate(right - width, y);
                 label.style.display = DisplayStyle.Flex;
+                Grow(count);
+                _centers[i] = y + LabelHeight / 2;
+                _extents[i] = LabelHeight;
             }
 
             Hide(labels, count);
             _yCount[_currentY] = count;
+            DropCrowded(labels, count, _yDropped, true);
             if (keepPrevious)
             {
                 var old = _y[1 - _currentY];
@@ -147,10 +170,14 @@ namespace RowMate.Presentation.History
                 x0 = Mathf.Clamp(x0, (float)ChartSpecs.Padding, Math.Max((float)ChartSpecs.Padding, (float)(frame.Width - ChartSpecs.RightMargin) - textWidth));
                 label.style.translate = new Translate(x0, top);
                 label.style.display = DisplayStyle.Flex;
+                Grow(xCount);
+                _centers[i] = x0 + textWidth / 2.0;
+                _extents[i] = textWidth;
             }
 
             Hide(_x, xCount);
             _xCount = xCount;
+            DropCrowded(_x, xCount, _xDropped, false);
         }
 
         // Cada cuadro de una animación: la opacidad de las X (el marco), de las Y nuevas y de las que salen.
@@ -181,6 +208,45 @@ namespace RowMate.Presentation.History
                 Hide(old, 0);
                 _yCount[1 - _currentY] = 0;
             }
+        }
+
+        // Las Y van de arriba hacia abajo en pantalla con los valores al revés; DropCrowded solo mira distancias, así que el orden da igual
+        // mientras los bordes sean la primera y la última marca.
+        private void DropCrowded(List<Label> labels, int count, bool[] dropped, bool vertical)
+        {
+            Array.Clear(dropped, 0, dropped.Length);
+            if (count < 3)
+            {
+                return;
+            }
+
+            AxisTicks.DropCrowded(_centers, _extents, _visible, count);
+            for (var i = 0; i < count; i++)
+            {
+                if (_visible[i])
+                {
+                    continue;
+                }
+
+                dropped[i] = true;
+                labels[i].style.display = DisplayStyle.None;
+            }
+        }
+
+        // Los arreglos de trabajo crecen solo al preparar (una métrica con más marcas), nunca por cuadro.
+        private void Grow(int count)
+        {
+            if (_centers.Length >= count)
+            {
+                return;
+            }
+
+            var size = Math.Max(count, _centers.Length * 2);
+            _centers = new double[size];
+            _extents = new double[size];
+            _visible = new bool[size];
+            Array.Resize(ref _xDropped, size);
+            Array.Resize(ref _yDropped, size);
         }
 
         private void Ensure(List<Label> labels, int count, string prefix)

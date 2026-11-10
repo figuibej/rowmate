@@ -27,6 +27,7 @@ namespace RowMate.Bootstrap
         [SerializeField] private FontAsset? _emojiFallback;
         [SerializeField] private RowMate.Scene.Slots.SceneWorldDefinition? _sceneWorld;
         [SerializeField] private Texture2D?[] _thumbnails = new Texture2D?[4];
+        [SerializeField] private Texture2D? _bootMark;
 
         public PanelSettings? Panel => _panel;
 
@@ -53,6 +54,18 @@ namespace RowMate.Bootstrap
         public const string ThumbnailsFolder = "Assets/RowMate/Art/Textures/Thumbnails";
 
         public Texture2D?[] Thumbnails => _thumbnails ??= new Texture2D?[4];
+
+        // It. 14 (DT14-10; AC-APP-16-10): la marca de la capa de arranque (Art/Identity/boot-mark.png, 384 px = 96 dp × 4, de tools/icon).
+        // Sin ella, la capa sale igual (fondo bg.app, sin marca).
+        public const string BootMarkPath = "Assets/RowMate/Art/Identity/boot-mark.png";
+
+        public Texture2D? BootMark => _bootMark;
+
+        // Para UiAssetsBuilder (Editor, It. 14).
+        public void SetBootMark(Texture2D? mark)
+        {
+            _bootMark = mark;
+        }
 
         public void SetThumbnails(Texture2D?[] thumbnails)
         {

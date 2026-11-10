@@ -8,9 +8,9 @@ namespace RowMate.Presentation.History
     // La fila de números de la tarjeta del historial y del Resumen del detalle (AC-HIS-07-04, -06, AC-HIS-10-01; legacy
     // _StatColumn, history_screen.dart:109-152):
     //   .rm-stat-row                             5 o 6 columnas del mismo ancho (flex 1 1 0)
-    //   └── .rm-stat > FitBox (valor) + FitBox (etiqueta): cada uno se achica hasta entrar (FittedBox del legacy)
+    //   └── .rm-stat > FitBox > .rm-stat__stack: la columna entera se achica junta hasta entrar (FittedBox del legacy; It. 14, #36)
     //       ├── .rm-stat__value .rm-type-num-stat   16/700 en el color BASE de la métrica (§10.2: el Tiempo en text.primary)
-    //       └── .rm-stat__label .rm-type-caption    11/500 text.tertiary
+    //       └── .rm-stat__label .rm-type-caption    11/500 text.tertiary, 2 debajo
     // Las columnas se reusan: Bind cambia solo los textos que cambiaron (una recarga con lo mismo no toca nada, Q-22).
     public sealed class StatRowView : VisualElement
     {
@@ -116,8 +116,9 @@ namespace RowMate.Presentation.History
 
         private Column CreateColumn(int index)
         {
-            // El valor y la etiqueta en dos FitBox, cada una del alto natural de su texto y con el contenido centrado: un valor que
-            // se achica queda en la misma línea media que los demás y su etiqueta, en su lugar (sin MotionDriver: en el acto).
+            // It. 14 (#36, AC-DEBT-06): la columna ENTERA (valor y etiqueta juntos) en un solo FitBox: si no entra, se achica todo junto
+            // (el FittedBox sobre la Column del legacy) y la etiqueta nunca queda más chica que su valor. El aire entre columnas es de 4 dp
+            // (.rm-stat, 2 + 2). La caja toma el alto natural del contenido y lo centra (sin MotionDriver: en el acto).
             var root = new VisualElement { name = _namePrefix + "-" + index };
             root.AddToClassList("rm-stat");
             root.pickingMode = PickingMode.Ignore;
@@ -131,21 +132,23 @@ namespace RowMate.Presentation.History
             label.AddToClassList("rm-type-caption");
             label.pickingMode = PickingMode.Ignore;
             label.enableRichText = false;
-            var valueBox = Fit(value);
-            var labelBox = Fit(label);
-            labelBox.AddToClassList("rm-stat__label-box");
-            root.Add(valueBox);
-            root.Add(labelBox);
+            var stack = new VisualElement();
+            stack.AddToClassList("rm-stat__stack");
+            stack.pickingMode = PickingMode.Ignore;
+            stack.Add(value);
+            stack.Add(label);
+            var box = Fit(stack);
+            root.Add(box);
             Add(root);
-            return new Column(root, valueBox, labelBox, value, label);
+            return new Column(root, box, value, label);
         }
 
-        private static FitBox Fit(Label text)
+        private static FitBox Fit(VisualElement content)
         {
             var box = new FitBox(false, false, null);
             box.AddToClassList("rm-stat__box");
-            box.Add(text);
-            // La caja toma el alto natural del texto (sin escala: el contenido es absoluto y su layout no cambia con la escala).
+            box.Add(content);
+            // La caja toma el alto natural del contenido (sin escala: el contenido es absoluto y su layout no cambia con la escala).
             box.Content.RegisterCallback<GeometryChangedEvent>(evt =>
             {
                 var height = evt.newRect.height;
@@ -159,21 +162,18 @@ namespace RowMate.Presentation.History
 
         private sealed class Column
         {
-            public Column(VisualElement root, FitBox box, FitBox labelBox, Label value, Label label)
+            public Column(VisualElement root, FitBox box, Label value, Label label)
             {
                 Root = root;
                 Box = box;
-                LabelBox = labelBox;
                 Value = value;
                 Label = label;
             }
 
             public VisualElement Root { get; }
 
-            // La del valor (FitAt).
+            // La de la columna entera (FitAt): valor y etiqueta.
             public FitBox Box { get; }
-
-            public FitBox LabelBox { get; }
 
             public Label Value { get; }
 

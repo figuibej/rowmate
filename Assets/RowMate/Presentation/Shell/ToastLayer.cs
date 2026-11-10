@@ -34,6 +34,10 @@ namespace RowMate.Presentation.Shell
     //   único hijo que recibe el puntero), creados UNA vez. Tocar la acción la ejecuta y el aviso sale en el acto. Tiene la prioridad
     //   de un aviso común (VisibleSlot = Common): lo reemplazan Show, ShowLink y ShowHrm, y un fijo del remo vuelve al vencer.
     //   El título y el detalle van dentro de #toast-body (columna), que en los otros avisos solo tiene el texto.
+    // - It. 14 (#69, AC-DEBT-05; DT14-29): el reloj del aviso con acción (ToastClock) se DETIENE mientras el puntero o el foco están
+    //   encima de la cápsula y sigue al salir con lo que le quedaba; la ruta del título y del detalle lleva cortes después de cada
+    //   '' (PathBreak, sin renglones de una sola letra). Shown avisa cada Show nuevo (texto y número) para el lector (AC-APP-03-14:
+    //   cada aviso una vez); la vuelta del fijo del remo después de un aviso común no es un Show nuevo.
     public sealed class ToastLayer : VisualElement, IDisposable
     {
         public const double NarrowWindowDp = 600;
@@ -61,6 +65,9 @@ namespace RowMate.Presentation.Shell
         private LinkToast? _link;
         private HrmToast? _hrm;
         private ActionToast? _action;
+        // It. 14 (#69): el reloj del aviso con acción, en pausa con el puntero o el foco encima.
+        private ToastClock? _clock;
+        private double _clockMark;
 
         public ToastLayer(UiContext ui, ShellLayout layout)
         {
@@ -111,7 +118,17 @@ namespace RowMate.Presentation.Shell
             _layout.ObstaclesChanged += Reposition;
             _layout.Changed += Reposition;
             Toast.RegisterCallback<GeometryChangedEvent>(_ => Reposition());
+            Toast.RegisterCallback<PointerEnterEvent>(_ => SetPause(hover: true));
+            Toast.RegisterCallback<PointerLeaveEvent>(_ => SetPause(hover: false));
+            Toast.RegisterCallback<FocusInEvent>(_ => SetPause(focus: true));
+            Toast.RegisterCallback<FocusOutEvent>(_ => SetPause(focus: false));
         }
+
+        // It. 14 (AC-APP-03-14): cada Show nuevo (texto visible sin los cortes de ruta y el número de Show).
+        public event Action<string, long>? Shown;
+
+        // It. 14 (#69): el reloj del aviso con acción a la vista (null si no hay); IsPaused con el puntero o el foco encima.
+        public ToastClock? ActionClock => _visible && _action != null ? _clock : null;
 
         public VisualElement Toast { get; }
 
@@ -213,6 +230,42 @@ namespace RowMate.Presentation.Shell
             Present(toast.Title, toast.Duration, null, null, toast);
         }
 
+        // #69: pausa o sigue el reloj del aviso con acción (lo que ya corrió se descuenta antes de cambiar).
+        private void SetPause(bool? hover = null, bool? focus = null)
+        {
+            var clock = _clock;
+            if (clock == null || _disposed || !_visible || _action == null)
+            {
+                return;
+            }
+
+            var now = _ui.App.Scheduler.MonotonicSeconds;
+            if (!clock.IsPaused)
+            {
+                clock.Advance((now - _clockMark) * 1000.0);
+            }
+
+            _clockMark = now;
+            var wasPaused = clock.IsPaused;
+            if (hover.HasValue)
+            {
+                clock.SetHover(hover.Value);
+            }
+
+            if (focus.HasValue)
+            {
+                clock.SetFocus(focus.Value);
+            }
+
+            if (clock.IsPaused == wasPaused)
+            {
+                return;
+            }
+
+            _timer?.Dispose();
+            _timer = clock.IsPaused ? null : _ui.App.Scheduler.Schedule(TimeSpan.FromMilliseconds(Math.Max(0, clock.RemainingMs)), OnTimer);
+        }
+
         private void OnActionClicked()
         {
             var action = _visible ? _action : null;
@@ -226,11 +279,19 @@ namespace RowMate.Presentation.Shell
             action.OnAction();
         }
 
-        private void Present(string text, TimeSpan? duration, LinkToast? link, HrmToast? hrm = null, ActionToast? action = null)
+        private void Present(string text, TimeSpan? duration, LinkToast? link, HrmToast? hrm = null, ActionToast? action = null, bool announce = true)
         {
             ShowCount++;
             _timer?.Dispose();
             _timer = duration.HasValue ? _ui.App.Scheduler.Schedule(duration.Value, OnTimer) : null;
+            // It. 14 (#69): el aviso con acción cuenta con ToastClock (se pausa con el puntero o el foco encima).
+            _clock = action != null && duration.HasValue ? new ToastClock(duration.Value.TotalMilliseconds) : null;
+            _clockMark = _ui.App.Scheduler.MonotonicSeconds;
+            var spoken = text;
+            if (action != null)
+            {
+                text = PathBreak.Insert(text);
+            }
             _link = link;
             _hrm = hrm;
             _action = action;
@@ -242,11 +303,16 @@ namespace RowMate.Presentation.Shell
             Text.EnableInClassList("rm-type-title-xs", linkLike);
             Indicator.Show(link != null ? ModeFor(link.Kind) : hrm != null ? ModeFor(hrm.Kind)
                 : action != null && action.Check ? LinkIndicator.Mode.Check : LinkIndicator.Mode.None);
-            var detail = action?.Detail;
+            var detail = action?.Detail != null ? PathBreak.Insert(action.Detail) : null;
             Detail.text = detail ?? "";
             Detail.style.display = string.IsNullOrEmpty(detail) ? DisplayStyle.None : DisplayStyle.Flex;
             Action.SetLabel(action?.ActionText ?? "");
             Action.style.display = action != null ? DisplayStyle.Flex : DisplayStyle.None;
+            if (announce)
+            {
+                Shown?.Invoke(spoken, ShowCount);
+            }
+
             if (_visible && !_transition.IsLeaving)
             {
                 var changed = !string.Equals(text, _text, StringComparison.Ordinal);
@@ -318,7 +384,7 @@ namespace RowMate.Presentation.Shell
             var sticky = _sticky;
             if (sticky != null && !_disposed && _visible && !ReferenceEquals(_link, sticky))
             {
-                Present(sticky.Text, null, sticky);
+                Present(sticky.Text, null, sticky, announce: false);
                 return;
             }
 
@@ -329,6 +395,7 @@ namespace RowMate.Presentation.Shell
         {
             _timer?.Dispose();
             _timer = null;
+            _clock = null;
             if (_disposed || !_visible)
             {
                 return;

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Herramienta (It. 14, DT14-06): genera o chequea los PNG del icono (Art/Identity) y CAP-01/CAP-02 desde Core/Design/AppIcon*. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>RowMate.Icon</AssemblyName>
+    <RootNamespace>RowMate.Icon</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(RepoRoot)tools/icon/**/*.cs" LinkBase="icon" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RowMate.Core/RowMate.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -18,7 +18,7 @@ namespace RowMate.Presentation.History
     //   └── #history-body .rm-history__body            los estados, centrados entre las dos barras
     //       ├── #history-loading > Spinner 32/3       solo en la primera carga sin datos, tras 120 ms de gracia y fundido de 160
     //       ├── #history-empty .rm-empty               history 56 @12 %, 12, historyEmpty en text.tertiary (AC-HIS-07-01)
-    //       ├── #history-error                         historyLoadError + #history-retry (tonal; Q-13, DV-95, AC-HIS-06-04)
+    //       ├── #history-error                         history 56 @12 % (It. 14, #37) + historyLoadError + #history-retry (tonal; Q-13, DV-95, AC-HIS-06-04)
     //       └── HistoryListView (#history-list)
     // Con una lista a la vista el indicador nunca vuelve (HistoryStore no vuelve a Loading) y una recarga fallida deja la lista
     // igual y muestra el aviso historyLoadError de 4 s (HistoryStore.ReloadFailed → ToastLayer). Tocar una tarjeta apila el
@@ -69,6 +69,11 @@ namespace RowMate.Presentation.History
             _loadingFade = new EnterMotion(ui.Motion);
 
             _error = State("history-error");
+            // It. 14 (#37, AC-DEBT-08): el error lleva el mismo ícono de 56 al 12 % que el vacío, 12 encima del texto (CAP-25).
+            var errorIcon = new IconView(Icons.History, false, 56) { name = "history-error-icon" };
+            errorIcon.AddToClassList("rm-empty__icon");
+            errorIcon.AddToClassList("rm-history__error-icon");
+            _error.Add(errorIcon);
             _errorText = new Label { name = "history-error-text" };
             _errorText.AddToClassList("rm-history__error-text");
             _errorText.AddToClassList("rm-type-body");

@@ -37,7 +37,10 @@ namespace RowMate.EditorTools
         // remero, los remos, la salpicadura, el agua que responde y la boya (scene.materials).
         // 6 = It. 8 (08-entornos-selector/02-tech-design §1.2 B0): Scenes/Environments/{River,Coast,Regatta}.asset en SceneWorld (scene.assets)
         // y las miniaturas del selector en UiAssets (scene.boot).
-        public const int CurrentVersion = 6;
+        // 7 = It. 14 (14-pulido-plataformas/02-tech-design DT14-07, §2.4): identidad (identity.import, identity.standalone e
+        // identity.mobile: íconos de Windows, Android e iOS, arranque de Android y storyboard de iOS) y allowFullscreenSwitch en 0
+        // (player.window). Si después de Reaplicar cambian HorizonFar.mat o HorizonNear.mat, se revierten (#55).
+        public const int CurrentVersion = 7;
         public const string StatePath = "ProjectSettings/RowMateBootstrap.json";
         public const string LogPrefix = "[BOOTSTRAP] ";
 
@@ -160,6 +163,9 @@ namespace RowMate.EditorTools
                 RunStep(results, "urp.tiers", UrpProvisioner.Apply);
                 RunStep(results, "urp.tidy", UrpProvisioner.Tidy);
                 RunStep(results, "player.window", PlayerSettingsStep.ApplyWindow);
+                RunStep(results, "identity.import", IdentityStep.ApplyImport);
+                RunStep(results, "identity.standalone", IdentityStep.ApplyStandalone);
+                RunStep(results, "identity.mobile", IdentityStep.ApplyMobile);
                 RunStep(results, "ui.fonts", FontAssetBuilder.Apply);
                 RunStep(results, "ui.panel", UiAssetsBuilder.Apply);
                 RunStep(results, "scene.assets", SceneAssetsBuilder.Apply);
@@ -245,6 +251,11 @@ namespace RowMate.EditorTools
                 case "player.window":
                     return "Paso manual: Project Settings > Player > Resolution: Windowed 1280 × 720, Resizable Window; Splash Image: Show Splash Screen apagado, "
                         + "fondo #0D1B2A; Android: Start in fullscreen apagado y Render outside safe area encendido.";
+                case "identity.import":
+                case "identity.standalone":
+                case "identity.mobile":
+                    return "Paso manual: correr tools/icon (dotnet) para regenerar Art/Identity y después RowMate/Bootstrap/Reaplicar; los valores esperados "
+                        + "están en 14-pulido-plataformas/02-tech-design §2.4.";
                 case "ui.fonts":
                     return "Paso manual: por cada .ttf de Assets/RowMate/UI/Fonts e Icons, Create > Text Core > Font Asset (SDFAA, dinámico) con los tamaños de "
                         + "02-tech-design §1.3, guardado en la carpeta Generated con el nombre de FontAssetPaths; después Reimport de Typography.uss y del tema.";

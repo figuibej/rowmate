@@ -60,9 +60,13 @@ namespace RowMate.Snapshots
             _manifest.Title = title;
         }
 
+        // It. 14 (CAP-27): la carpeta de salida de la corrida en curso (para los archivos extra de una toma, como CAP-27-a11y.txt).
+        public static string? CurrentOutput { get; private set; }
+
         public void Start()
         {
             Directory.CreateDirectory(_output);
+            CurrentOutput = _output;
             Debug.Log("[SNAPSHOT] " + _scenarios.Count + " tomas → " + _output + " (" + _pipeline + ")");
             // Antes de la primera toma: los atlas de las fuentes en un estado fijo (QA-V3-06; FontAtlasWarmup).
             Debug.Log(FontAtlasWarmup.Run());

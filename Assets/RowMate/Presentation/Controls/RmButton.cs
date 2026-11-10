@@ -84,6 +84,9 @@ namespace RowMate.Presentation.Controls
 
         public bool IsBusy => _spinner != null && _spinner.IsShown;
 
+        // It. 14 (#41): el indicador de ocupado (null hasta el primer SetBusy(true)).
+        public Spinner? BusySpinner => _spinner;
+
         public void SetLabel(string label)
         {
             if (Label.text != label)

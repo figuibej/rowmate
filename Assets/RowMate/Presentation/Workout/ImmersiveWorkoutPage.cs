@@ -100,6 +100,8 @@ namespace RowMate.Presentation.Workout
             if (_scene != null)
             {
                 _sceneFade = new SceneFadeMotion(ui.Motion, ApplySceneFade, OnSceneFadeDone);
+                // It. 14 (#21, AC-DEBT-09): ¿la escena estaba lista al entrar? Si no, el indicador de carga (SceneLoadingController).
+                _sceneReadyAtEnter = _scene.Readiness.Value == ImmersiveSceneReadiness.Ready;
             }
 
             _reflow = new HudReflowMotion(ui.Motion, ApplyReflow);
@@ -203,6 +205,7 @@ namespace RowMate.Presentation.Workout
             _reflow.Stop();
             _sceneReadiness?.Dispose();
             _sceneReadiness = null;
+            _sceneLoading?.Stop();
             _pacingRelease?.Dispose();
             _pacingRelease = null;
             CloseScene();
@@ -573,8 +576,19 @@ namespace RowMate.Presentation.Workout
             view.SetSceneOpacity(_cascade.IsRunning ? _cascade.BackdropOpacity : 1);
         }
 
+        // It. 14 (#21): el indicador de carga de la escena (solo en una entrada con la escena sin preparar).
+        private SceneLoadingController? _sceneLoading;
+        private bool _sceneReadyAtEnter = true;
+
+        public SceneLoadingController? SceneLoading => _sceneLoading;
+
         private void OnSceneReadiness(ImmersiveSceneReadiness readiness)
         {
+            if (readiness == ImmersiveSceneReadiness.Ready)
+            {
+                _sceneLoading?.SceneReady(_ui.Motion.Now);
+            }
+
             if (readiness != ImmersiveSceneReadiness.Ready || _view == null || _sceneShown || _flightPending || _exiting || _popped)
             {
                 return;
@@ -658,6 +672,15 @@ namespace RowMate.Presentation.Workout
             if (_lastLayout != null)
             {
                 view.Backdrop.SetHorizon(_lastLayout.Horizon);
+            }
+
+            if (view.SceneLoading != null && !_sceneReadyAtEnter)
+            {
+                _sceneLoading = new SceneLoadingController(view.SceneLoading, _ui.Motion, false, _openedAt);
+                if (_scene != null && _scene.Readiness.Value == ImmersiveSceneReadiness.Ready)
+                {
+                    _sceneLoading.SceneReady(_ui.Motion.Now);
+                }
             }
 
             var zones = new HudZones(view, () => _layout.ImmersiveInsets, _ui.ReserveWrench);

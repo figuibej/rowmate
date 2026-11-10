@@ -16,7 +16,7 @@ namespace RowMate.Presentation.Shell
     //   ├── #tab-bar-pill .rm-tab-bar__pill           56 × 32, x por código (CriticalSpring ω 22)
     //   └── #tab-<destino> .rm-tab [.rm-tab--selected] (Button) × 4 o 5
     //       ├── .rm-tab__icon-box (56 × 32) > .rm-tab__state + .rm-tab__icon .rm-icon + .rm-focus-ring
-    //       └── .rm-tab__label .rm-type-label
+    //       └── .rm-tab__label .rm-type-label .rm-type-label--mixed (It. 14: 0,04 em)
     // Tocar una pestaña llama a ShellStore.Tap (It. 9, DT9-04): elige (el elegido no cambia nada) y SIEMPRE avisa con Tapped (Historial
     // recarga también si ya estaba elegido, AC-HIS-06-02). Al cambiar (cuadro 0): el glifo del nuevo pasa a su variante elegida (y
     // .rm-icon--filled en Workout y Perfil); la píldora va al nuevo con el resorte, conservando su velocidad; el ícono nuevo
@@ -250,6 +250,8 @@ namespace RowMate.Presentation.Shell
                 Label = new Label();
                 Label.AddToClassList("rm-tab__label");
                 Label.AddToClassList("rm-type-label");
+                // It. 14 (A14-08, V14-06): texto con minúsculas → tracking de 0,04 em (Skin.uss), no el 0,08 de las MAYÚSCULAS.
+                Label.AddToClassList("rm-type-label--mixed");
                 Label.pickingMode = PickingMode.Ignore;
                 Button.Add(Label);
             }

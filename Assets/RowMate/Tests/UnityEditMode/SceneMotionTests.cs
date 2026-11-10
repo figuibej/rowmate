@@ -114,22 +114,30 @@ namespace RowMate.Tests.UnityEditMode
             rig.AssertIdle("terminó el reacomodo");
         }
 
-        [Test]
-        public void AnotherClassChangeInTheMiddleStartsFromWhereItIs()
+        // It. 14 (T-07, la regla de los 400 ms; reemplaza "arranca desde donde está" de la 6a): otro cambio de clase antes de 400 ms
+        // del anterior no repite la entrada (arrastrar el borde): el HUD queda a pleno en el acto. Pasados los 400, entra otra vez en 200.
+        [Test, Category("AC-APP-15-10")]
+        public void AnotherClassChangeWithinFourHundredIsAtOnce()
         {
             var rig = new Rig();
             var opacity = -1.0;
             var motion = new HudReflowMotion(rig.Driver, o => opacity = o);
             motion.OnOrientationClassChanged();
             rig.RunFor(100);
-            var mid = opacity;
-            Assert.That(mid, Is.GreaterThan(0).And.LessThan(1));
+            Assert.That(opacity, Is.GreaterThan(0).And.LessThan(1));
+            motion.OnOrientationClassChanged();
+            Assert.That(opacity, Is.EqualTo(1), "a los 100 ms del anterior: en el acto");
+            rig.AssertIdle("sin entrada repetida");
+            rig.RunFor(350);
+            motion.OnOrientationClassChanged();
+            Assert.That(opacity, Is.EqualTo(1), "a los ~350 ms del anterior: sigue en el acto");
+            rig.RunFor(450);
             var start = rig.Now;
             motion.OnOrientationClassChanged();
-            Assert.That(opacity, Is.EqualTo(mid).Within(Eps), "sin saltos: arranca desde donde está");
+            Assert.That(opacity, Is.EqualTo(0), "espaciado más de 400 ms: entra otra vez");
             rig.Frame();
             var t = HudTimelines.Ms(rig.Now - start);
-            Assert.That(opacity, Is.EqualTo(mid + (1 - mid) * SceneTimelines.HudReflow(t, false)).Within(Eps));
+            Assert.That(opacity, Is.EqualTo(SceneTimelines.HudReflow(t, false)).Within(Eps));
             rig.RunFor(300);
             Assert.That(opacity, Is.EqualTo(1));
             rig.AssertIdle("terminó");

@@ -44,7 +44,7 @@ namespace RowMate.Tests.EditMode.Project
 
             var cli = Read(Cli);
             Assert.That(cli, Does.Contain("public const string It5Output = \"" + It5 + "\";"));
-            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it12\";"), "desde la 6a, it6a por defecto");
+            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it14\";"), "desde la 6a, it6a por defecto");
             Assert.That(File.Exists(RepoPaths.Combine(Catalog)), Is.True, "SeriesCatalog");
         }
 

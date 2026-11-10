@@ -291,8 +291,23 @@ namespace RowMate.Tests.UiSupport
             {
                 Pipeline = options.Pipeline, BoatZoneOutline = options.BoatZoneOutline, Scene = options.FakeScene ?? _sceneBridge,
                 Thumbnails = UiAssetsLocator.Thumbnails(),
+                BootSplash = options.BootSplash, BootMark = options.BootSplash ? UiAssetsLocator.BootMark() : null,
             });
             Handle.Shell.Ui.TextMenuTouchMode = options.TextMenuTouchMode;
+            // It. 14 (DT14-22): el lector de pantalla forzado encendido mientras dura el anfitrión, con el puente y el anunciador falso.
+            ScreenReader?.Dispose();
+            ScreenReader = null;
+            if (options.ScreenReader)
+            {
+                if (!_screenReaderForced)
+                {
+                    _screenReaderForced = true;
+                    UnityEngine.Accessibility.AssistiveSupport.screenReaderStatusOverride = UnityEngine.Accessibility.AssistiveSupport.ScreenReaderStatusOverride.ForceEnabled;
+                }
+
+                ScreenReader = new RowMate.Presentation.Accessibility.ScreenReaderBridge(Handle.Shell, Announcer);
+            }
+
             if (options.StartApp)
             {
                 App.Start();
@@ -1031,6 +1046,14 @@ namespace RowMate.Tests.UiSupport
             }
 
             _disposed = true;
+            ScreenReader?.Dispose();
+            ScreenReader = null;
+            if (_screenReaderForced)
+            {
+                _screenReaderForced = false;
+                UnityEngine.Accessibility.AssistiveSupport.screenReaderStatusOverride = UnityEngine.Accessibility.AssistiveSupport.ScreenReaderStatusOverride.OSDriven;
+            }
+
             Handle.Dispose();
             _sceneBridge?.Dispose();
             _sceneBridge = null;
@@ -1093,7 +1116,25 @@ namespace RowMate.Tests.UiSupport
         private void TickAll()
         {
             Handle.Tick();
+            ScreenReader?.Tick(Scheduler.MonotonicSeconds);
             SceneTick();
+        }
+
+        // ── It. 14: el lector de pantalla (DT14-22) ──
+
+        // El puente del lector (solo con UiHostOptions.ScreenReader) y lo que anunció.
+        public RowMate.Presentation.Accessibility.ScreenReaderBridge? ScreenReader { get; private set; }
+
+        public FakeA11yAnnouncer Announcer { get; } = new FakeA11yAnnouncer();
+
+        private bool _screenReaderForced;
+
+        // Reconcilia ya (sin esperar los 250 ms) y devuelve el volcado del árbol.
+        public string A11yDump()
+        {
+            var bridge = ScreenReader ?? throw new InvalidOperationException("A11yDump: el anfitrión no tiene el lector (UiHostOptions.ScreenReader).");
+            bridge.RebuildNow();
+            return bridge.Dump();
         }
 
         public void SceneTick()

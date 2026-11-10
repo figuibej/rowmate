@@ -14,8 +14,19 @@ namespace RowMate.Presentation.Device
     //   ├── #device-link-text .rm-type-body-m (una línea)
     //   └── #device-link-action (botón de texto)
     // Lo dibuja LinkBannerSpec (App). El crecer y colapsar con la regla del empuje es de WP-D.
+    // It. 14 (#40, AC-DEBT-01; 02-tech-design §7): el nombre se ve COMPLETO en hasta 2 líneas (white-space normal) y la acción no se
+    // achica (flex-shrink 0); si ni en 2 líneas entra al lado de la acción, la acción baja debajo (.rm-link-banner--stacked, según el
+    // ancho medido). Solo un nombre de más de 24 caracteres se corta con "…" (DT10-14, en LinkNoticeText). Los estilos del ajuste van
+    // en línea (el Designer puede sumar la clase).
     public sealed class LinkBanner : VisualElement
     {
+        public const string StackedClass = "rm-link-banner--stacked";
+
+        // Hasta 2 líneas al lado de la acción (con un 5 % de margen por la partición de palabras).
+        public const double MaxLines = 2;
+
+        private bool _stacked;
+
         private readonly Motion.BleMotion.Grow _grow;
         private readonly UiContext _ui;
         private LinkBannerKind _kind;
@@ -34,10 +45,15 @@ namespace RowMate.Presentation.Device
             Text.AddToClassList("rm-link-banner__text");
             Text.pickingMode = PickingMode.Ignore;
             Text.enableRichText = false;
+            Text.style.whiteSpace = WhiteSpace.Normal;
+            Text.style.overflow = Overflow.Visible;
+            Text.style.textOverflow = TextOverflow.Clip;
             Add(Text);
             Action = new RmButton("device-link-action", "text", null, "", () => onAction(_kind));
             Action.AddToClassList("rm-link-banner__action");
+            Action.style.flexShrink = 0;
             Add(Action);
+            RegisterCallback<GeometryChangedEvent>(_ => Relayout());
             style.display = DisplayStyle.None;
             _grow = new Motion.BleMotion.Grow(ui.Motion, this);
         }
@@ -49,6 +65,41 @@ namespace RowMate.Presentation.Device
         public RmButton Action { get; }
 
         public LinkBannerKind Kind => _kind;
+
+        // #40: la acción quedó debajo del texto.
+        public bool IsStacked => _stacked;
+
+        // ¿Entra el texto en hasta 2 líneas al lado de la acción? Si no, la acción baja (y el texto toma todo el ancho al lado del
+        // indicador). Solo cambia estilos cuando cambia el estado (sin bucles de layout).
+        private void Relayout()
+        {
+            var width = contentRect.width;
+            if (!(width > 0) || string.IsNullOrEmpty(Text.text))
+            {
+                return;
+            }
+
+            var indicator = Indicator.layout.width + Indicator.resolvedStyle.marginRight;
+            var action = Action.layout.width + Action.resolvedStyle.marginLeft;
+            var beside = width - indicator - action;
+            var natural = Text.MeasureTextSize(Text.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined).x;
+            var stacked = natural > beside * MaxLines * 0.95;
+            if (stacked == _stacked)
+            {
+                if (stacked)
+                {
+                    Text.style.width = Math.Max(0, width - indicator);
+                }
+
+                return;
+            }
+
+            _stacked = stacked;
+            EnableInClassList(StackedClass, stacked);
+            style.flexWrap = stacked ? Wrap.Wrap : StyleKeyword.Null;
+            Text.style.width = stacked ? Math.Max(0, width - indicator) : StyleKeyword.Null;
+            Action.style.marginLeft = stacked ? StyleKeyword.Auto : StyleKeyword.Null;
+        }
 
         public void Render(LinkBannerSpec spec)
         {
@@ -73,6 +124,7 @@ namespace RowMate.Presentation.Device
             if (Text.text != spec.Text)
             {
                 Text.text = spec.Text;
+                Relayout();
             }
 
             Action.SetLabel(spec.ActionText);

@@ -551,5 +551,45 @@
   "exportTcxDocuments": "Documentos",
   "exportTcxOpenFolder": "Abrir carpeta",
   "exportTcxFailed": "No se pudo exportar la sesión",
-  "exportTcxShareTitle": "Compartir sesión"
+  "exportTcxShareTitle": "Compartir sesión",
+  "workoutSceneLoading": "Preparando escena…",
+  "a11yLabelValue": "{label}: {value}",
+  "@a11yLabelValue": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yStepProgress": "Paso {current} de {total}: {type}",
+  "@a11yStepProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yChartSummary": "{metric}: de {min} a {max}",
+  "@a11yChartSummary": {
+    "placeholders": {
+      "metric": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  }
 }

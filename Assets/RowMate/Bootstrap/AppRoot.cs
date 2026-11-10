@@ -99,6 +99,12 @@ namespace RowMate.Bootstrap
         // sin UI (con el exportador de la app: en desarrollo, ROWMATE_DATA_DIR\exports) y registra los nombres; sale con 0 o 1. Solo con
         // la carpeta de datos de desarrollo: nunca Documentos.
         public const string ExportSmokeArgument = "-rowmate-export-smoke";
+
+        // It. 14 (14-pulido-plataformas/02-tech-design DT14-12; AC-APP-16-10): -rowmate-boot-splash off: sin la capa de arranque (para
+        // medir la diferencia en el MISMO build); -rowmate-perf-boot: escribe "[PERF] arranque: primer cuadro del shell {ms}" (desde que
+        // arrancó el proceso hasta "shell listo") y sale con 0 un segundo después. Los dos solo en desarrollo (build.ps1 -BootSmoke).
+        public const string BootSplashArgument = "-rowmate-boot-splash";
+        public const string PerfBootArgument = "-rowmate-perf-boot";
 #endif
 
         [SerializeField] private UiAssets? _assets;
@@ -124,6 +130,11 @@ namespace RowMate.Bootstrap
         private SceneBridge? _sceneBridge;
         private RowMate.Platform.Display.ThermalAdapter? _thermal;
         private RowMate.Core.Scene.IRenderAssetQuality? _assetQuality;
+        // It. 14 (DT14-13 a DT14-16): la ventana de Windows (mínimo, Alt+Enter sin pitido) y F11 / Alt+Enter; null fuera del player de Windows.
+        private RowMate.Platform.Display.WindowsWindowFrame? _windowFrame;
+        private RowMate.Platform.Display.WindowModeController? _windowMode;
+        // It. 14 (DT14-17 a DT14-22): el puente del lector de pantalla (solo trabaja con el lector encendido).
+        private RowMate.Presentation.Accessibility.ScreenReaderBridge? _screenReader;
 
         public UiAssets? Assets => _assets;
 
@@ -174,6 +185,9 @@ namespace RowMate.Bootstrap
             // Barra de título de Windows en el tema del sistema desde el primer cuadro (legacy win32_window.cpp:147, QA-V2-08);
             // al recuperar el foco la vuelve a aplicar PlatformServices.Refresh.
             _platform.TitleBar.Apply();
+
+            // 3a. It. 14 (AC-APP-15-05 a -07, -09): la ventana inicial, el mínimo, F11 / Alt+Enter y las orientaciones de iPhone.
+            SetUpWindow(logger);
 
             // 3b. Ciclo de vida y pantalla siempre encendida (It. 4a §4.2, §4.4): el primer pedido, antes de armar la UI
             //     (AC-APP-14-01: desde el arranque, en toda la app; lib/main.dart:42). ScreenKeepAwake vuelve a pedir al volver
@@ -279,8 +293,21 @@ namespace RowMate.Bootstrap
 
             // 7. La UI (ShellHost). En un build normal SimulatorLayerFactory devuelve null (sin capa).
             _shell = ShellHost.Build(_app, root, new ShellHostOptions(_scheduler, _platform.IsDesktop, _platform.BackButton, _platform.Display,
-                SimulatorLayerFactory.CreateOrNull(_backend, _app, _scheduler), _platform.Clipboard, _platform.Keyboard) { Pipeline = _surface!.Pipeline, Scene = _sceneBridge, Thumbnails = _assets!.Thumbnails });
+                SimulatorLayerFactory.CreateOrNull(_backend, _app, _scheduler), _platform.Clipboard, _platform.Keyboard)
+            {
+                Pipeline = _surface!.Pipeline, Scene = _sceneBridge, Thumbnails = _assets!.Thumbnails,
+                // It. 14 (DT14-10, AC-APP-16-10): la capa de arranque desde el primer cuadro.
+                BootSplash = BootSplashEnabled(), BootMark = _assets.BootMark,
+            });
             _pacer = new FramePacer(_shell.Pacing);
+            // It. 14 (DT14-17): el lector de pantalla (con el lector apagado, Tick solo lee un bool).
+            _screenReader = new RowMate.Presentation.Accessibility.ScreenReaderBridge(_shell.Shell, new RowMate.Presentation.Accessibility.UnityA11yAnnouncer());
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (HasArgument(PerfBootArgument))
+            {
+                WatchBootForPerf();
+            }
+#endif
 
             // 8. El remo empieza a escuchar (el simulado se conecta), las rutinas se cargan sin esperar (AC-APP-01-09) y el
             //    pulsómetro intenta su reconexión (main.dart:68-83). Corre antes del primer Update: el scheduler no avanza antes
@@ -357,6 +384,8 @@ namespace RowMate.Bootstrap
             }
 
             _shell.Tick();
+            _screenReader?.Tick(_scheduler!.MonotonicSeconds);
+            _windowMode?.Update();
             if (_warmup != null && _warmup.Tick())
             {
                 _warmup = null;
@@ -555,6 +584,11 @@ namespace RowMate.Bootstrap
         // (AC-APP-14-03). Un guardado que ya cerró el editor ya hizo commit (el editor espera el commit, AC-RUT-08-07).
         private void OnDestroy()
         {
+            // It. 14 (DT14-14, QA-G14-04): el WndProc original vuelve ANTES de que se apague el dominio (también lo hace Application.quitting).
+            _windowFrame?.Uninstall();
+            _windowFrame = null;
+            _screenReader?.Dispose();
+            _screenReader = null;
             _warmup?.Dispose();
             _warmup = null;
             _shell?.Dispose();
@@ -599,6 +633,112 @@ namespace RowMate.Bootstrap
             _scheduler?.Dispose();
             _platform?.SleepSource.Dispose();
         }
+
+        // It. 14 (AC-APP-15-05 a -07, -09; DT14-13 a DT14-16, QA-G14-10): Windows: la subclase del WndProc (mínimo de 640 × 360 lógicos,
+        // Alt+Enter sin pitido), la ventana inicial de 1280 × 720 lógicos centrada en el área de trabajo (salvo que la línea de comandos
+        // traiga -screen-* o -popupwindow) y F11 / Alt+Enter. macOS: 800 × 600 lógicos (el mínimo queda para la 10b, D-04). iPhone: sin
+        // vertical invertida (UnityAppController manda sobre Info.plist). No se lee ni se escribe el registro.
+        private void SetUpWindow(IAppLogger logger)
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            try
+            {
+                var window = RowMate.Platform.Display.WindowsWndProcApi.FindPlayerWindow();
+                if (window == IntPtr.Zero)
+                {
+                    logger.Log(LogLevel.Warning, "PLATFORM", "no se encontró la ventana del player: sin mínimo ni pantalla completa");
+                    return;
+                }
+
+                var api = new RowMate.Platform.Display.WindowsWndProcApi();
+                _windowFrame = new RowMate.Platform.Display.WindowsWindowFrame(api, window);
+                var installed = _windowFrame;
+                if (!installed.Install(uninstall => Application.quitting += uninstall))
+                {
+                    logger.Log(LogLevel.Warning, "PLATFORM", "no se pudo subclasificar la ventana: sin mínimo de 640 × 360");
+                }
+                else
+                {
+                    // QA-V14-01: al salir, el registro dice si el WndProc original volvió (WM_CLOSE lo restaura antes de que Unity apague).
+                    Application.quitting += () => logger.Log(LogLevel.Info, "PLATFORM",
+                        RowMate.Platform.Display.WindowsWindowFrame.Describe(installed.LastUninstall));
+                }
+
+                var frame = new RowMate.Platform.Display.PlayerWindowFrame(api, window);
+                if (WindowGeometry.ShouldPlaceInitial(Environment.GetCommandLineArgs()))
+                {
+                    frame.PlaceInitial();
+                }
+
+                // QA-V14-03: el área de contenido en bg.app hasta el primer cuadro (otra vez después de ubicarla: el área creció).
+                RowMate.Platform.Display.WindowsBootBackground.Paint(window);
+                var firstPaint = RowMate.Platform.Display.WindowsBootBackground.FirstPaintMs;
+                logger.Log(LogLevel.Info, "PLATFORM", double.IsNaN(firstPaint)
+                    ? "fondo de la ventana en bg.app desde AppRoot (sin la pintura temprana)"
+                    : "fondo de la ventana en bg.app a los " + firstPaint.ToString("0", CultureInfo.InvariantCulture) + " ms del arranque");
+                _windowMode = new RowMate.Platform.Display.WindowModeController(frame);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Warning, "PLATFORM", "ventana sin configurar: " + error.GetType().Name);
+            }
+#elif UNITY_STANDALONE_OSX && !UNITY_EDITOR
+            if (WindowGeometry.ShouldPlaceInitial(Environment.GetCommandLineArgs()))
+            {
+                Screen.SetResolution(WindowGeometry.MacInitialWidth, WindowGeometry.MacInitialHeight, FullScreenMode.Windowed);
+            }
+#elif UNITY_IOS && !UNITY_EDITOR
+            if (UnityEngine.iOS.Device.generation.ToString().StartsWith("iPhone", StringComparison.Ordinal))
+            {
+                Screen.autorotateToPortraitUpsideDown = false;
+            }
+#else
+            _ = logger;
+#endif
+        }
+
+        // La capa de arranque: siempre, salvo -rowmate-boot-splash off en desarrollo (la medición de DT14-12).
+        private static bool BootSplashEnabled()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            return !string.Equals(ArgumentValue(BootSplashArgument), "off", StringComparison.OrdinalIgnoreCase);
+#else
+            return true;
+#endif
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // -rowmate-perf-boot (DT14-12): "[PERF] arranque: primer cuadro del shell {ms}" desde que arrancó el proceso, y sale con 0 un
+        // segundo después (build.ps1 -BootSmoke toma la mediana de 5 con y sin la capa).
+        private void WatchBootForPerf()
+        {
+            var shell = _shell!;
+            var logger = _logger!;
+            var scheduler = _scheduler!;
+            shell.Ready.Ready += () =>
+            {
+                double ms;
+                try
+                {
+                    ms = (DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).TotalMilliseconds;
+                }
+                catch (Exception)
+                {
+                    ms = Time.realtimeSinceStartupAsDouble * 1000.0;
+                }
+
+                logger.Log(LogLevel.Info, "PERF", "arranque: primer cuadro del shell " + ms.ToString("0", CultureInfo.InvariantCulture) + " ms (capa de arranque "
+                    + (BootSplashEnabled() ? "sí" : "no") + ")");
+                _ = QuitAfter(scheduler, TimeSpan.FromSeconds(1));
+            };
+        }
+
+        private static async System.Threading.Tasks.Task QuitAfter(UnityScheduler scheduler, TimeSpan delay)
+        {
+            await scheduler.Delay(delay);
+            Application.Quit(0);
+        }
+#endif
 
         // It. 12 (DT12-03): la zona del equipo AL EXPORTAR, sin caché (el equipo pudo cambiar de zona u horario de verano). En el hilo
         // principal, una vez por exportación (TcxExportService).

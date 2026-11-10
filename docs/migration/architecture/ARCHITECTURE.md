@@ -1291,3 +1291,15 @@ Detalle en [06a-escena-lago/02-tech-design](../iterations/06a-escena-lago/02-tec
 | §20.1 | La resolución de cada nivel es **el tamaño de la RT de la escena** (Alto 1; Medio 0,85; Bajo 0,75), no el `renderScale` de los assets de URP, que queda en 1 y nunca se toca en ejecución (QA-G6aT-05). Medido en el Editor (Direct3D 11, E-920 a las 12 h, el peor cuadro de la sesión): Alto 91 *draw calls* / 61 SetPass y 216 k triángulos; Medio 71 / 46 y 156 k; Bajo 58 / 33 y 107 k. El tope de SetPass de Alto queda en **80** (el permiso de "ampliarlo en la It. 6a con medición"); Medio y Bajo siguen en 50 |
 | §20.2 | 0 B por cuadro de la escena medido con `FrameAllocations.WatchScene` (lo nuestro y el dibujo de URP, con el control positivo). La escena no suma elementos al HUD con la escena a la vista (56-57) |
 | §20.3 | La "resolución dinámica" de la adaptación es la resolución de la RT de la escena (`SceneHost.SetResolution`), no `renderScale`; la distancia de sombras se baja en el asset activo solo en el *player* (`PlayerUrpAssetQuality`), nunca en el Editor |
+
+## Cambios de la It. 14 (WP-B, implementación)
+
+Detalle en [14-pulido-plataformas/02-tech-design](../iterations/14-pulido-plataformas/02-tech-design.md) y ADR 025 y 026.
+
+| Sección | Qué cambió |
+|---|---|
+| §4.1 | `AppRoot.Awake` configura la ventana de Windows (`WindowsWindowFrame`: subclase del `WndProc` con mínimo de 640 × 360 lógicos y sin pitido en `Alt+Enter`, restaurada en `Application.quitting` y `OnDestroy`; ventana inicial de 1280 × 720 lógicos centrada salvo `-screen-*`/`-popupwindow`) y `Update` corre `WindowModeController` (`F11`/`Alt+Enter`) y `ScreenReaderBridge` |
+| §14 | `ShellHost` arma siempre `ShellReadySignal` ("shell listo") y, en la app, `BootSplashView` como última hija del shell; `UiAssets` suma `BootMark` |
+| §16 | Bootstrapper v7: pasos `identity.import`, `identity.standalone` (íconos por `SetIcons`) e `identity.mobile` (Android por `SerializedObject`; iOS con `LaunchScreen.storyboard` y multitarea en iPad); `player.window` pone `allowFullscreenSwitch` en 0. `Packages/manifest.json` suma `com.unity.modules.accessibility` |
+| §19 | `BuildCli` suma `-rowmateTarget iOS|macOS` (sin firmar; íconos de Mac en memoria) y la firma de Android por argumentos (`AndroidSigning`, en memoria). `ApplePostprocess` y `WindowsVersionInfoPostprocess` (VS_VERSIONINFO; `build.ps1` lo exige con el código 9). `build.ps1 -BootSmoke` (código 8). `ci-unity.yml` con el job `gate`, los builds de Windows y Android y el de Apple manual |
+| §20.2 | El lector de pantalla no suma elementos ni asigna con el lector apagado; el indicador de carga de la escena (#21) es un solo `Label` que dibuja su arco (+1 elemento solo en la primera entrada demorada) |

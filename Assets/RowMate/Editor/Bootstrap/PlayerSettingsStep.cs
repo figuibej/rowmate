@@ -100,12 +100,15 @@ namespace RowMate.EditorTools
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             PlayerSettings.resizableWindow = true;
+            // It. 14 (DT14-15, AC-APP-15-07): F11 y Alt+Enter los maneja WindowModeController (FullScreenWindow en el monitor de la
+            // ventana y vuelta al rectángulo anterior); Unity no tiene que tener su propio camino con Alt+Enter.
+            PlayerSettings.allowFullscreenSwitch = false;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SplashScreen.showUnityLogo = false;
             PlayerSettings.SplashScreen.backgroundColor = RowMate.Presentation.Controls.TokenColors.ToColor(RowMate.Core.Design.Tokens.BgApp);
             PlayerSettings.Android.startInFullscreen = false;
             PlayerSettings.Android.renderOutsideSafeArea = true;
-            return BootstrapState.Step.Ok(id, "ventana 1280×720 redimensionable; sin splash; fondo bg.app; Android con barras del sistema visibles");
+            return BootstrapState.Step.Ok(id, "ventana 1280×720 redimensionable, sin Alt+Enter de Unity; sin splash; fondo bg.app; Android con barras del sistema visibles");
         }
 
         // Manejador de entrada = Input System. No hay API pública: SerializedObject sobre ProjectSettings.asset.

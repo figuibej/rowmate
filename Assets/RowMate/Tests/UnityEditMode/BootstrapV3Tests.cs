@@ -20,8 +20,8 @@ namespace RowMate.Tests.UnityEditMode
         {
             var state = BootstrapState.Load(ProjectBootstrapper.StatePath);
             Assert.That(state, Is.Not.Null);
-            Assert.That(state!.version, Is.EqualTo(6));
-            Assert.That(ProjectBootstrapper.CurrentVersion, Is.EqualTo(6));
+            Assert.That(state!.version, Is.EqualTo(7));
+            Assert.That(ProjectBootstrapper.CurrentVersion, Is.EqualTo(7));
             var ids = new string[state.steps.Count];
             for (var i = 0; i < ids.Length; i++)
             {
@@ -32,7 +32,7 @@ namespace RowMate.Tests.UnityEditMode
             Assert.That(ids, Is.EqualTo(new[]
             {
                 "player.identity", "player.scripting", "player.android", "player.ios", "player.rendering", "player.runtime", "player.input",
-                "urp.tiers", "urp.tidy", "player.window", "ui.fonts", "ui.panel", "scene.assets", "scene.materials", "scene.boot", "defines.check",
+                "urp.tiers", "urp.tidy", "player.window", "identity.import", "identity.standalone", "identity.mobile", "ui.fonts", "ui.panel", "scene.assets", "scene.materials", "scene.boot", "defines.check",
             }));
         }
 
