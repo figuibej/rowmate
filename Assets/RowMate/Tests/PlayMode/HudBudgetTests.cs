@@ -79,6 +79,56 @@ namespace RowMate.Tests.PlayMode
             }
         }
 
+        // It. 15 (AC-D15-30; 14-pulido-plataformas/02-tech-design DT14-30, gate QA-G14-03, R14-10; QA-V15-02): el peor caso de la 4b con la
+        // escena DEMORADA (FakeImmersiveScene sin preparar al entrar): el indicador de carga (+1) a la vista desde los 120 ms y, cuando la
+        // escena queda lista justo en el peor momento (las tres flechas, BPM, Próximo, la cuenta grande y el sello, a los 5,5 s), su fundido
+        // de 0,6 s con el fondo provisorio todavía a la vista (+1) mientras el indicador se va. Se cuenta cuadro a cuadro de los 5,0 a los
+        // 6,2 s, en los cuatro perfiles: el máximo ≤ 60.
+        [UnityTest, Category("AC-D15-30"), Category("AC-DEBT-09"), Category("AC-WKT-17-01")]
+        public IEnumerator DelayedScene()
+        {
+            foreach (var profile in new[] { DeviceProfile.TV, DeviceProfile.TH, DeviceProfile.L640, DeviceProfile.W1280 })
+            {
+                var fake = new FakeImmersiveScene(new RecordingLogger());
+                CreateWorkout(RoutineSeeds.Budget, o =>
+                {
+                    o.Profile = profile;
+                    o.IsDesktop = profile.Code == DeviceProfile.W1280.Code;
+                    o.FakeScene = fake;
+                }, k => RowerScripts.R4(k).CopyWith(heartRate: 140));
+                yield return StartRoutine("Presupuesto 4b");
+                Assert.That(Hud.SceneLoading, Is.Not.Null);
+                var indicator = Hud.SceneLoading!;
+                Assert.That(indicator.IsShown, Is.True, profile.Code + ": el indicador a la vista mientras la escena no está");
+                yield return AdvanceTo(5.0);
+                var worst = 0;
+                var worstText = "";
+                var sawBoth = false;
+                while (H.Scheduler.MonotonicSeconds < SessionStart + 6.2)
+                {
+                    if (fake.Readiness.Value != RowMate.Presentation.Workout.ImmersiveSceneReadiness.Ready && H.Scheduler.MonotonicSeconds >= SessionStart + 5.4)
+                    {
+                        fake.SetReadiness(RowMate.Presentation.Workout.ImmersiveSceneReadiness.Ready);
+                    }
+
+                    H.Step();
+                    yield return null;
+                    var count = CountVisible(Immersive.Root);
+                    sawBoth |= indicator.IsShown && Hud.Backdrop.style.display.value != DisplayStyle.None && Hud.SceneShown;
+                    if (count > worst)
+                    {
+                        worst = count;
+                        worstText = DescribeVisible(Immersive.Root);
+                    }
+                }
+
+                Assert.That(fake.InPlace, Is.EqualTo(1), profile.Code + ": la escena demorada en su lugar");
+                Assert.That(sawBoth, Is.True, profile.Code + ": hubo cuadros con el indicador, el provisorio y la escena a la vez (el peor caso)");
+                Debug.Log("[HBT] escena demorada en " + profile.Code + ": hasta " + worst + " elementos");
+                Assert.That(worst, Is.LessThanOrEqualTo(MaxVisibleElements), profile.Code + ": " + worst + " elementos: " + worstText);
+            }
+        }
+
         // §3.13 (QA-G4bT-11 (a), (c); QA-V4b-05): el trabajo del HUD (aplicar el estado y el generateVisualContent de la fila) con 200
         // pasos, a lo sumo 16 ms por cuadro, de los 26,2 a los 31,5 s de Serie larga: el halo de los últimos 5 s, la cuenta grande
         // (3, 2, 1), el cambio de paso a los 30 s con el pulgar que pasa a la 1 y el halo que se apaga. Serie larga no tiene objetivos

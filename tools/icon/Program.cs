@@ -9,6 +9,7 @@ namespace RowMate.Icon
     // Genera o chequea el ícono de RowMate (It. 14, DT14-06; 02-tech-design §2.2) desde Core/Design/AppIcon* (geometría propia y
     // procedural, PNG con deflate propio: los mismos bytes en cada corrida y en cada plataforma):
     //   Assets/RowMate/Art/Identity/**                                  Windows, Android, arranque, iOS y macOS
+    //   Assets/RowMate/Art/Identity/RowMate.ico                         It. 15 (AC-D15-20): 16, 24, 32, 48, 64 y 256 px en PNG
     //   docs/migration/iterations/14-pulido-plataformas/snapshots/      CAP-01.png y CAP-02.png
     //   sin argumentos   escribe todos los archivos (solo los que cambian)
     //   --check          no escribe; sale con 1 si alguno difiere de lo generado (o falta)

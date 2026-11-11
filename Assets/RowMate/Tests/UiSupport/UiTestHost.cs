@@ -283,6 +283,7 @@ namespace RowMate.Tests.UiSupport
             {
                 CreationClock = CreationClock, Lifecycle = Lifecycle, SystemUi = SystemUi, Preferences = PreferencesFor(options),
                 Exporter = ExporterFor(options), ExportZone = options.ExportZone ?? (() => options.LocalZone), SimulatorBuild = options.SimulatorBuild,
+                Haptics = options.Haptics,
             });
             _sceneBridge?.Dispose();
             _sceneBridge = options.Scene == SceneMode.Real ? CreateScene(options) : null;

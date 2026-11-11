@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using RowMate.Core.Localization;
+using RowMate.Tests.Support;
 
 namespace RowMate.Tests.EditMode.Localization
 {
@@ -66,7 +69,19 @@ namespace RowMate.Tests.EditMode.Localization
             }
 
             Assert.That(missing, Is.Empty, "claves del catálogo sin constante en L10nKeys: " + string.Join(", ", missing));
-            Assert.That(byValue.Count, Is.EqualTo(256));
+            Assert.That(byValue.Count, Is.EqualTo(258));
+        }
+
+        // It. 15 (#79, AC-D15-27): la cabecera de L10nKeys.cs dice el número real de claves (decía 202 con 256 en el catálogo).
+        [Test, Category("AC-D15-27")]
+        public void HeaderCountMatchesCatalog()
+        {
+            var path = RepoPaths.Combine("Assets", "RowMate", "Core", "Localization", "L10nKeys.cs");
+            var match = Regex.Match(File.ReadAllText(path), @"// Las ([0-9]+) claves del catálogo");
+            Assert.That(match.Success, Is.True, "la cabecera dice \"Las N claves del catálogo\"");
+            var header = int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            Assert.That(header, Is.EqualTo(LocalizationFixture.Catalog("es").Keys.Count), "cabecera de L10nKeys.cs");
+            Assert.That(header, Is.EqualTo(Constants().Count), "y las constantes");
         }
 
         // Ningún texto del catálogo queda vacío (el usuario nunca ve un texto vacío en lugar de uno real).

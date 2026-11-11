@@ -140,7 +140,7 @@ namespace RowMate.Tests.EditMode.History
             }
         }
 
-        [Test, Category("AC-HIS-06-03")]
+        [Test, Category("AC-HIS-06-03"), Category("AC-D15-07")]
         public void EqualListDoesNotEmitAndTheSpinnerIsOnlyForTheFirstLoad()
         {
             Add(1);

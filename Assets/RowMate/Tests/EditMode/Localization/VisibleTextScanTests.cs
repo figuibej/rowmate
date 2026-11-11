@@ -145,6 +145,117 @@ namespace RowMate.Tests.EditMode.Localization
                     }
                 }
             }
+
+            // It. 15 (#79, AC-D15-27, DT15-15): el argumento de texto de los controles de la app, por su posición en la firma real
+            // (no cualquier literal: el nombre y la variante también son literales con letras).
+            foreach (var control in TextArguments)
+            {
+                foreach (Match match in control.Value.Matches(code))
+                {
+                    var literal = Argument(code, match.Index + match.Length, control.Key.Position);
+                    if (literal != null && HasLetter(literal))
+                    {
+                        yield return new Finding(relative, SourceScan.LineOf(code, match.Index), literal);
+                    }
+                }
+            }
+        }
+
+        // Control → posición (desde 0) del argumento que se ve como texto, sacada de las firmas: RmButton(name, variant,
+        // iconCodepoint, label, …) y SwitchToggle(name, label). IconButton y Fab no tienen texto (solo el glifo); ErrorLine, TextClamp
+        // y RmTextField reciben el Label o lo arman con el catálogo.
+        public static readonly KeyValuePair<(string Control, int Position), Regex>[] TextArguments =
+        {
+            new KeyValuePair<(string, int), Regex>(("RmButton", 3), new Regex(@"\bnew\s+RmButton\s*\(")),
+            new KeyValuePair<(string, int), Regex>(("SwitchToggle", 1), new Regex(@"\bnew\s+SwitchToggle\s*\(")),
+        };
+
+        private static readonly Regex LiteralOnly = new Regex(@"^\s*" + Literal + @"\s*$");
+
+        // El argumento n.º position de la llamada que abre en start (justo después del paréntesis), si es un literal; null si no.
+        // Respeta paréntesis, llaves y corchetes anidados y las comillas.
+        private static string? Argument(string code, int start, int position)
+        {
+            var depth = 0;
+            var index = 0;
+            var from = start;
+            for (var i = start; i < code.Length; i++)
+            {
+                var c = code[i];
+                if (c == '"')
+                {
+                    var verbatim = i > 0 && code[i - 1] == '@';
+                    for (i++; i < code.Length; i++)
+                    {
+                        if (!verbatim && code[i] == '\\')
+                        {
+                            i++;
+                            continue;
+                        }
+
+                        if (code[i] == '"')
+                        {
+                            if (verbatim && i + 1 < code.Length && code[i + 1] == '"')
+                            {
+                                i++;
+                                continue;
+                            }
+
+                            break;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (c == '(' || c == '{' || c == '[')
+                {
+                    depth++;
+                }
+                else if ((c == ')' || c == '}' || c == ']') && depth > 0)
+                {
+                    depth--;
+                }
+                else if ((c == ',' || c == ')') && depth == 0)
+                {
+                    if (index == position)
+                    {
+                        var match = LiteralOnly.Match(code.Substring(from, i - from));
+                        return match.Success ? match.Groups[1].Value : null;
+                    }
+
+                    if (c == ')')
+                    {
+                        return null;
+                    }
+
+                    index++;
+                    from = i + 1;
+                }
+            }
+
+            return null;
+        }
+
+        [Test, Category("AC-D15-27")]
+        public void FindsTextArgumentOfAppControls()
+        {
+            // El texto de un botón como literal se encuentra; el nombre y la variante (también literales) no; una clave del catálogo
+            // o un texto vacío tampoco; un literal con paréntesis o comas adentro no confunde la posición.
+            var sample = "var a = new RmButton(\"save\", \"text\", null, \"Guardar\", Save);\n"
+                + "var b = new RmButton(\"retry\", \"tonal\", Icons.Refresh, texts.Get(L10nKeys.Retry), (\n    ) => Retry());\n"
+                + "var c = new RmButton(\"x\", \"text\", null, \"\", Go);\n"
+                + "var d = new RmButton(Name(\"a, b\"), \"text (raro)\", Icons.Add, \"Agregar paso\", Add, 14, \"rm-type-body-xs\");\n"
+                + "var e = new SwitchToggle(\"sim-hr\", \"Pulsómetro simulado\");\n"
+                + "// var f = new RmButton(\"no\", \"text\", null, \"Comentario\", F);\n"
+                + "var g = new IconButton(\"close\", Icons.Close, Close);";
+            var found = new List<string>();
+            foreach (var finding in Scan("sample.cs", sample))
+            {
+                found.Add(finding.Literal);
+            }
+
+            Assert.That(found, Is.EqualTo(new[] { "Guardar", "Agregar paso", "Pulsómetro simulado" }));
         }
 
         private static Dictionary<string, string> Allowlist()

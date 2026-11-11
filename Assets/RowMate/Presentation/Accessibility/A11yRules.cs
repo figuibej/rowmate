@@ -51,10 +51,12 @@ namespace RowMate.Presentation.Accessibility
             ("rm-history-card", Kind.Card),
             ("rm-scan-card", Kind.Card),
             ("rm-step-row", Kind.Card),
-            ("rm-step-perf", Kind.Text),
+            ("rm-step-perf", Kind.Card), // It. 15 (#33, AC-D15-02): la fila se elige (botón, con Selected si está marcada)
             ("rm-field", Kind.Field),
             ("rm-switch-row", Kind.Switch),
             ("rm-toast", Kind.Text),
+            // It. 15 (#80, AC-D15-28): los paneles "Series anteriores" y "Parciales 500 m" (texto dibujado): su título y si están expandidos.
+            ("rm-hud-series-panel", Kind.Text),
             ("rm-dialog__message", Kind.Text),
             ("rm-empty__title", Kind.Text),
             ("rm-chart", Kind.Chart),
@@ -167,7 +169,7 @@ namespace RowMate.Presentation.Accessibility
 
                     break;
                 case Kind.IconButton:
-                    label = element is IconButton icon && icon.Help != null ? icon.Help.Text : element.tooltip ?? "";
+                    label = element is IconButton icon && (icon.SpokenName != null || icon.Help != null) ? icon.AccessibleName ?? "" : element.tooltip ?? "";
                     if (label.Length == 0)
                     {
                         label = Gather(element, false);
@@ -188,7 +190,23 @@ namespace RowMate.Presentation.Accessibility
                     break;
                 case Kind.Card:
                 case Kind.Text:
+                    if (element is RowMate.Presentation.Workout.SeriesPanelView series)
+                    {
+                        label = series.TitleText;
+                        if (series.Motion.Expanded)
+                        {
+                            state |= A11yState.Expanded;
+                        }
+
+                        break;
+                    }
+
                     label = Gather(element, true);
+                    if (element.ClassListContains("rm-step-perf--selected"))
+                    {
+                        state |= A11yState.Selected;
+                    }
+
                     break;
                 case Kind.Field:
                     if (element is RmTextField field)

@@ -58,7 +58,11 @@ namespace RowMate.Tests.EditMode.Export
                 Assert.That(notes.InnerText, Is.EqualTo("[SIM] a & <b> \"c\" 'd' "), seed.Name + ": Notes vuelve al texto (sin los inválidos)");
                 var children = activities[0]!.ChildNodes.Cast<XmlNode>().Select(n => n.LocalName).ToArray();
                 Assert.That(children.First(), Is.EqualTo("Id"));
-                Assert.That(children.Last(), Is.EqualTo("Notes"), "orden del esquema TCX v2: Id, Lap+, Notes");
+                Assert.That(children.Last(), Is.EqualTo("Creator"), "orden del esquema TCX v2: Id, Lap+, Notes, Creator (It. 15, AC-D15-15)");
+                Assert.That(children[children.Length - 2], Is.EqualTo("Notes"));
+                var creator = (XmlElement)activities[0]!.LastChild!;
+                Assert.That(creator.GetAttribute("type", "http://www.w3.org/2001/XMLSchema-instance"), Is.EqualTo("Device_t"));
+                Assert.That(creator.SelectSingleNode("t:Name", ns)!.InnerText, Is.EqualTo("RowMate"));
             }
         }
     }

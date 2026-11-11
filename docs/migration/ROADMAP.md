@@ -547,6 +547,20 @@ Camino crítico: 1 → 2 → 3 → 4a → 4b → 5 → 6a → 6b → 7 → 8. En
 
 ---
 
+### It. 15 — Deuda resoluble en la PC (`15-deuda-pc`)
+
+**Fuera del plan de paridad**: la pidió el usuario después de la It. 14. No suma IDs a la matriz (§4).
+
+**Objetivo.** Resolver los issues de deuda abiertos que se pueden hacer **y verificar** en la PC (Windows, sin teléfono, sin Mac, sin remo ni pulsómetro): Historial (#32 a #35, #37 a #39, #67), Exportar TCX (#66, #70 a #73) y el pulido de la It. 14 (#74 a #76, #78 a #82). #77 queda fuera (el usuario aceptó el vidrio).
+
+**Demo.** En `Builds/Windows/simulator`: exportar desde la tarjeta del Historial; en el Detalle, tocar una fila y ver su franja, el split sin picos y el *tooltip* con sombra; `Vatios` y `Split 500m` en todas las pantallas; la ventana que vuelve a abrir donde se cerró.
+
+**Verificación.** [dotnet] TCX (`Creator`, distancia), curva, catálogo, herramientas y matriz. [Editor] Historial, HUD, lector, pruebas y capturas que faltaban, inestables con su causa. [Device-Win] sonda `-rowmate-perf-history`, ventana recordada y `[PERF]` de 120 s (NO VERIFICABLE si la pantalla sigue en modo de reserva).
+
+**Spec.** [01-po-spec](iterations/15-deuda-pc/01-po-spec.md): 40 criterios, decisiones DV-140 a DV-148 (entre ellas #75: un nombre por métrica).
+
+---
+
 ## 3. Backlog post-paridad
 
 Las mejoras que no existen en el legacy (botes fantasma, cámaras extra, sonido, clima, minimapa, personalización, zonas de FC, mejoras del editor, borrado de sesiones, etc.) están en [FEATURE_INVENTORY §6.2](product/FEATURE_INVENTORY.md) (BKL-01 a BKL-26). No entran en estas iteraciones; se priorizan con el usuario al terminar la paridad. Las que más acercan la app a EXR son BKL-01 (otros botes), BKL-02 (cámaras, con D-ART-07 y D-ANI-07 ya especificadas por el Designer), BKL-03 (sonido) y BKL-05 (minimapa).

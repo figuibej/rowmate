@@ -9,9 +9,12 @@ namespace RowMate.Core.Design
     // UI/Icons/MaterialSymbolsRounded[...].codepoints y con el cmap de las dos fuentes versionadas.
     // 44 glifos en la fuente de contorno y 7 en la rellena (timer, favorite y person están en las dos); la It. 3 suma
     // arrow_back y more_vert (03-rutinas/02-tech-design §7.1).
+    // It. 15 (#66, AC-D15-11, -12; DT15-14): suma download y ios_share (el botón de exportar, en lugar del glifo dibujado) y saca los
+    // de Strava sin uso: cloud_upload, cloud_download, cloud_done y link (quedan person y link_off, que se usan). Quedan 43 de
+    // contorno y 6 rellenos. Los dos nuevos se escriben con escape (no con el carácter del área privada).
     public static class Icons
     {
-        // ── Contorno (44) ────────────────────────────────────────────────────────
+        // ── Contorno (43) ────────────────────────────────────────────────────────
         public const string Rowing = "";
         public const string FitnessCenter = "";
         public const string Whatshot = "";
@@ -35,10 +38,7 @@ namespace RowMate.Core.Design
         public const string HeartBroken = "";
         public const string Refresh = "";
         public const string Person = "";                // también relleno (pestaña Perfil elegida)
-        public const string CloudUpload = "";
-        public const string CloudDownload = "";
         public const string DeleteSweep = "";
-        public const string Link = "";
         public const string LinkOff = "";
         public const string Warning = "";
         public const string Error = "";
@@ -55,13 +55,14 @@ namespace RowMate.Core.Design
         public const string ArrowDropUp = "";
         public const string ArrowDropDown = "";
         public const string ArrowBack = "";             // It. 3: flecha de volver del editor
+        public const string Download = "\uF090";                 // It. 15: exportar TCX (Windows y escritorio)
+        public const string IosShare = "\uE6B8";                 // It. 15: exportar TCX (Android: hoja de compartir)
         public const string MoreVert = "";              // It. 3: menú ⋮ de la tarjeta de rutina
 
-        // ── Solo relleno (4; los otros 3 rellenos son Timer, Favorite y Person) ──
+        // ── Solo relleno (3; los otros 3 rellenos son Timer, Favorite y Person) ──
         public const string PlayArrow = "";
         public const string Pause = "";
         public const string CheckCircle = "";
-        public const string CloudDone = "";
 
         private static readonly IconInfo[] Table =
         {
@@ -88,11 +89,7 @@ namespace RowMate.Core.Design
             Outline("heart_broken", HeartBroken),
             Outline("refresh", Refresh),
             Both("person", Person),
-            Outline("cloud_upload", CloudUpload),
-            Filled("cloud_done", CloudDone),
-            Outline("cloud_download", CloudDownload),
             Outline("delete_sweep", DeleteSweep),
-            Outline("link", Link),
             Outline("link_off", LinkOff),
             Outline("warning", Warning),
             Outline("error", Error),
@@ -113,9 +110,11 @@ namespace RowMate.Core.Design
             Outline("arrow_drop_down", ArrowDropDown),
             Outline("arrow_back", ArrowBack),
             Outline("more_vert", MoreVert),
+            Outline("download", Download),
+            Outline("ios_share", IosShare),
         };
 
-        // Los 48 nombres de ASSET_SLOTS §4.3, en el orden de esa tabla.
+        // Los 46 nombres de ASSET_SLOTS §4.3 (It. 15), en el orden de esa tabla.
         public static IReadOnlyList<IconInfo> All => Table;
 
         // Por nombre del catálogo de Material Symbols ("bluetooth_connected"); KeyNotFoundException si no existe.

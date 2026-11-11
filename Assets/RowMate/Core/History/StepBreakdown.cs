@@ -8,8 +8,10 @@ namespace RowMate.Core.History
     // Una fila del "Rendimiento por paso" (AC-HIS-11-01, -03, -04): el índice del paso en la rutina expandida (la insignia
     // muestra índice + 1), cuántos puntos tiene, su duración (puntos × intervalo), la distancia (último − primero, puede ser
     // negativa), la potencia y el split promedio redondeados y el SPM promedio (se muestra con 1 decimal).
+    // It. 15 (#33, AC-D15-02): TypeName = el tipo guardado del primer punto del paso ("work" si no tiene, como StepBands), para el
+    // borde de 1 dp de la fila marcada en el color de su tipo (StepBandPalette.For).
     public sealed record StepBreakdownRow(int StepIndex, int PointCount, int DurationSeconds, int DistanceMeters, int AvgWatts, double AvgSpm,
-                                          int AvgSplitSeconds)
+                                          int AvgSplitSeconds, string TypeName = StepTypeNames.Work)
     {
         public string Badge => Fmt.Integer(StepIndex + 1L);
 
@@ -83,7 +85,8 @@ namespace RowMate.Core.History
             var avgWatts = (int)DartMath.Round((double)watts / n);
             var avgSplit = (int)DartMath.Round((double)split / n);
             var distance = points[n - 1].DistanceMeters - points[0].DistanceMeters;
-            return new StepBreakdownRow(stepIndex, n, checked(n * interval), distance, avgWatts, spm / n, avgSplit);
+            return new StepBreakdownRow(stepIndex, n, checked(n * interval), distance, avgWatts, spm / n, avgSplit,
+                points[0].StepTypeName ?? StepTypeNames.Work);
         }
     }
 }

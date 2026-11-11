@@ -1083,3 +1083,15 @@ Pulido EXR, identidad y plataformas (WP-D). Fuente: [14-pulido-plataformas/04-de
 | §3.10 | El aviso con acción sigue en vidrio (`glass.fallback` 86 %); el contraste se mide sobre la composición del peor caso (la línea `metric.watts` detrás): ≥ 4,5:1 en todo |
 | Historial (arte de la 9 §4 y §7.1) | Cada columna de la fila de números (tarjeta y Resumen) se achica **entera** (valor y etiqueta) con 4 dp de aire; la línea de la serie con **extremos redondos** (disco de 2 dp); la tira de tipo en **cápsulas de radio 1,5**; ninguna etiqueta intermedia de eje a menos de 4 dp de la de un borde; el error del Historial con el ícono `history` de 56 al 12 % del vacío |
 
+
+## Cambios de la It. 15
+
+Deuda visual resoluble en la PC (WP-D). Fuente: [15-deuda-pc/04-design-notes](../iterations/15-deuda-pc/04-design-notes.md) sobre [00-arte-deuda](../iterations/15-deuda-pc/00-arte-deuda.md), con lo que mandaron la spec y el gate. Cero tokens, colores ni fuentes nuevas.
+
+| Dónde | Qué cambió |
+|---|---|
+| §4.3 | El tracking según la caja llega al **HUD**: un rótulo de `HudCard` con alguna minúscula (`Split 500m`, `Vatios`/`Watts`, `kcal`) va a **0,04 em** (`.rm-hud-card__label--mixed`); `SPM` y `BPM` siguen en 0,08. La regla es por contenido, no por clave: vale igual en es y en en |
+| §4.2 | Las cifras de los ejes del gráfico del Detalle son RowMate Numeric SC 600 a 11 dp en `text.tertiary` (`.rm-chart-axis__num`; ya lo eran desde la 9 por `.rm-chart__axis`): `AxisCrowding` mide con esa cara. "RowMate Numeric" de Inter queda cerrado sin hacer |
+| Historial | La tarjeta suma el botón de exportar (`download` de la fuente, 18 `text.secondary`, área de 40 que sobresale del renglón sin cambiar su alto) a la izquierda del *chevron*. La fila marcada de `Rendimiento por paso` lleva un borde de 1 dp en el color de su tipo (relleno 7/9, el contenido no se mueve) y sus franjas suben al 22 % en 160 ms `ease.enter`. El *tooltip* del cursor tiene sombra negra al 35 %, 8 dp de desenfoque y +2 dp en y (hermano 9-slice generado) |
+| §3.11 | Con el simulador, la AppBar suma 28 dp a la izquierda (`.rm-has-sim-ribbon`): el título arranca en 44 y el glifo de la flecha de volver en 44-68, fuera de la cinta. El build normal no cambia |
+| Escena | La "estela" rectangular de V14-12 es la **popa del casco** (toma AUX-15-01 con el casco oculto): no se agrega estela (AC-SCN-13-04 sigue). La popa va a issues |

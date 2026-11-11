@@ -76,11 +76,17 @@ namespace RowMate.Platform.Display
     }
 
     // La ventana del player de Windows para WindowModeController y la ubicación inicial (It. 14, DT14-15, DT14-16).
+    // It. 15 (#74, AC-D15-19, DV-145; DT15-08, gate m-09): Capture arma lo que se guarda al cerrar (la ventana normal en dp, o la de antes
+    // de la pantalla completa) y RestoreSaved la vuelve a poner. Unity aplica antes su propio rectángulo guardado (Screenmanager*): el
+    // nuestro se aplica DESPUÉS, en el primer cuadro (SetWindowPos sobre el HWND del player), así gana siempre. No lee ni escribe el
+    // registro.
     public sealed class PlayerWindowFrame : IWindowFrame
     {
         private readonly WindowsWndProcApi _api;
         private readonly IntPtr _window;
         private WindowRect? _pendingPlacement;
+        private WindowRect? _pendingExterior;
+        private bool _pendingMaximize;
         private int _waitFrames;
 
         public PlayerWindowFrame(WindowsWndProcApi api, IntPtr window)
@@ -94,6 +100,7 @@ namespace RowMate.Platform.Display
         public void EnterFullscreen()
         {
             _pendingPlacement = null;
+            _pendingExterior = null;
             var display = Screen.mainWindowDisplayInfo;
             Screen.SetResolution(display.width, display.height, FullScreenMode.FullScreenWindow);
         }
@@ -125,8 +132,66 @@ namespace RowMate.Platform.Display
             return initial;
         }
 
+        // Lo guardado al cerrar (dp lógicos con la escala del monitor de la ventana).
+        public SavedWindow Capture(WindowModeState state)
+        {
+            var dpi = _api.DpiFor(_window);
+            var scale = WindowGeometry.ScaleFor(dpi);
+            var fullscreen = (state != null && state.IsFullscreen) || Screen.fullScreenMode != FullScreenMode.Windowed;
+            if (!WindowsWndProcApi.NormalPlacement(_window, out var exterior, out var maximized))
+            {
+                exterior = WindowsWndProcApi.ExteriorRect(_window);
+            }
+
+            var restore = default(WindowRect);
+            if (fullscreen && state != null)
+            {
+                var edges = _api.FrameEdges(_window, dpi, true);
+                var content = state.Restore;
+                restore = new WindowRect(content.X - edges.Left, content.Y - edges.Top, content.Width + edges.Width, content.Height + edges.Height);
+            }
+
+            return WindowPlacement.Capture(exterior, scale, maximized, fullscreen, restore);
+        }
+
+        // La ventana guardada, si se ve al menos en un 50 % en algún monitor (true); si no, false y el llamador usa PlaceInitial.
+        public bool RestoreSaved(SavedWindow? saved)
+        {
+            var dpi = _api.DpiFor(_window);
+            var choice = WindowPlacement.Choose(saved, WindowsWndProcApi.Monitors(), _api.FrameEdges(_window, dpi, true));
+            if (choice == null)
+            {
+                return false;
+            }
+
+            if (Screen.fullScreenMode != FullScreenMode.Windowed)
+            {
+                Screen.SetResolution(Math.Max(1, choice.Rect.Width), Math.Max(1, choice.Rect.Height), FullScreenMode.Windowed);
+            }
+
+            // En el primer cuadro (después de lo que Unity restaura por su cuenta).
+            _pendingPlacement = null;
+            _pendingExterior = choice.Rect;
+            _pendingMaximize = choice.Maximized;
+            _waitFrames = 1;
+            return true;
+        }
+
         public void Tick()
         {
+            if (_pendingExterior != null)
+            {
+                if (_waitFrames > 0)
+                {
+                    _waitFrames--;
+                    return;
+                }
+
+                WindowsWndProcApi.PlaceExterior(_window, _pendingExterior.Value, _pendingMaximize);
+                _pendingExterior = null;
+                return;
+            }
+
             if (_pendingPlacement == null)
             {
                 return;

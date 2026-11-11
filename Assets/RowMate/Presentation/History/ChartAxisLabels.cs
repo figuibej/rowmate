@@ -20,6 +20,9 @@ namespace RowMate.Presentation.History
     public sealed class ChartAxisLabels : VisualElement
     {
         public const string AxisClass = "rm-chart__axis";
+
+        // It. 15 (#37/#76, AC-D15-25, DT15-22): las cifras en RowMate Numeric SC 600 a 11 dp en text.tertiary (la USS de WP-D).
+        public const string NumClass = "rm-chart-axis__num";
         public const float LabelHeight = 14;
         public const float XLabelGap = 4;
 
@@ -34,6 +37,15 @@ namespace RowMate.Presentation.History
         private bool[] _xDropped = new bool[8];
         private bool[] _yDropped = new bool[8];
 
+        // It. 15 (#34, AC-D15-04; QA-V15-01): la opacidad de cada animación va en TRES capas (las X, el juego Y 0 y el juego Y 1), no en
+        // cada etiqueta. Medido con las pilas del Profiler: una opacidad en línea que cambia rehace el estilo del elemento y UI Toolkit
+        // vuelve a aplicar (y copia) los grupos de TODOS sus estilos en línea (la posición, el alto, el ancho, el traslado, el display) en
+        // cada cuadro del cambio de métrica. Las capas no tienen otro estilo en línea que la opacidad (por una opacidad sola no se copia
+        // nada, 06a V2-01): sin alto (las etiquetas son absolutas) y arriba a la izquierda de #chart-axis, así las etiquetas quedan donde
+        // estaban.
+        private readonly VisualElement _xLayer;
+        private readonly VisualElement[] _yLayers = new VisualElement[2];
+
         public ChartAxisLabels()
         {
             name = "chart-axis";
@@ -44,7 +56,20 @@ namespace RowMate.Presentation.History
             style.top = 0;
             style.right = 0;
             style.bottom = 0;
+            _xLayer = Layer("chart-axis-x");
+            _yLayers[0] = Layer("chart-axis-y0");
+            _yLayers[1] = Layer("chart-axis-y1");
         }
+
+        private VisualElement Layer(string layerName)
+        {
+            var layer = new VisualElement { name = layerName, pickingMode = PickingMode.Ignore, usageHints = UsageHints.DynamicColor };
+            Add(layer);
+            return layer;
+        }
+
+        // La capa de las X (su opacidad es la de las etiquetas X; pruebas).
+        public VisualElement XLayer => _xLayer;
 
         public int XCount => _xCount;
 
@@ -122,7 +147,7 @@ namespace RowMate.Presentation.History
             var yLabels = view.YLabels;
             var ticks = view.Y.Ticks;
             var count = Math.Min(yLabels.Count, ticks.Length);
-            Ensure(labels, count, "chart-y-");
+            Ensure(labels, count, "chart-y-", _yLayers[_currentY]);
             var right = (float)(area.Left - ChartSpecs.YLabelGap);
             var width = (float)(right - ChartSpecs.Padding + ChartSpecs.Padding / 2);
             for (var i = 0; i < count; i++)
@@ -157,7 +182,7 @@ namespace RowMate.Presentation.History
             var xLabels = view.XLabels;
             var xTicks = view.X.Ticks;
             var xCount = Math.Min(xLabels.Count, xTicks.Length);
-            Ensure(_x, xCount, "chart-x-");
+            Ensure(_x, xCount, "chart-x-", _xLayer);
             var top = (float)(area.Bottom + XLabelGap);
             for (var i = 0; i < xCount; i++)
             {
@@ -183,25 +208,11 @@ namespace RowMate.Presentation.History
         // Cada cuadro de una animación: la opacidad de las X (el marco), de las Y nuevas y de las que salen.
         public void SetAlphas(double xAlpha, double newYAlpha, double oldYAlpha)
         {
-            var x = (float)xAlpha;
-            for (var i = 0; i < _xCount; i++)
-            {
-                SetOpacity(_x[i], x);
-            }
-
-            var current = _y[_currentY];
-            var n = (float)newYAlpha;
-            for (var i = 0; i < _yCount[_currentY]; i++)
-            {
-                SetOpacity(current[i], n);
-            }
-
+            SetOpacity(_xLayer, (float)xAlpha);
+            SetOpacity(_yLayers[_currentY], (float)newYAlpha);
             var old = _y[1 - _currentY];
             var o = (float)oldYAlpha;
-            for (var i = 0; i < _yCount[1 - _currentY]; i++)
-            {
-                SetOpacity(old[i], o);
-            }
+            SetOpacity(_yLayers[1 - _currentY], o);
 
             if (o <= 0 && _yCount[1 - _currentY] > 0)
             {
@@ -249,21 +260,22 @@ namespace RowMate.Presentation.History
             Array.Resize(ref _yDropped, size);
         }
 
-        private void Ensure(List<Label> labels, int count, string prefix)
+        private static void Ensure(List<Label> labels, int count, string prefix, VisualElement layer)
         {
             while (labels.Count < count)
             {
                 var label = new Label { name = prefix + labels.Count };
                 label.AddToClassList(AxisClass);
+                label.AddToClassList(NumClass);
                 label.pickingMode = PickingMode.Ignore;
                 label.enableRichText = false;
                 label.style.position = Position.Absolute;
                 label.style.left = 0;
                 label.style.top = 0;
                 label.style.height = LabelHeight;
-                // La opacidad cambia en cada cuadro de la entrada y del cambio: sin el hint, UIR vuelve a teselar el texto (basura).
+                // La opacidad (de su capa) cambia en cada cuadro de la entrada y del cambio: sin el hint, UIR vuelve a teselar el texto.
                 label.usageHints = UsageHints.DynamicColor;
-                Add(label);
+                layer.Add(label);
                 labels.Add(label);
             }
         }
@@ -295,19 +307,11 @@ namespace RowMate.Presentation.History
             }
         }
 
-        // El ancho del texto (sin panel todavía: una estimación por caracteres).
+        // El ancho del texto con los avances de la cara SC (AxisCrowding.LabelWidthDp, medidos en el hmtx; It. 15, DT15-22): el mismo
+        // con o sin panel, y sin medir el Label (no asigna).
         private static float Measure(Label label)
         {
-            if (label.panel != null)
-            {
-                var size = label.MeasureTextSize(label.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
-                if (size.x > 0)
-                {
-                    return Mathf.Ceil(size.x) + 1;
-                }
-            }
-
-            return label.text.Length * 7f;
+            return Mathf.Ceil((float)AxisCrowding.LabelWidthDp(label.text)) + 1;
         }
     }
 }

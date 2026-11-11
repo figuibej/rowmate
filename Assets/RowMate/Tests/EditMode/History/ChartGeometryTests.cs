@@ -163,6 +163,61 @@ namespace RowMate.Tests.EditMode.History
             Assert.That(ChartMeshBuffer.AlphaOf(buffer.Rgba[2]), Is.EqualTo(0), "el borde suavizado va a alfa 0");
         }
 
+        [Test, Category("AC-D15-02")]
+        public void SelectedStepBandsReach22()
+        {
+            // It. 15 (#33, DT15-02): todas las franjas del paso marcado van de 10 a 22 % según su t; la que se desmarca baja con el
+            // suyo; los vértices son los mismos (no se vuelve a teselar).
+            var points = HistorySeeds.Points(1);
+            var data = SessionChartData.Build(points, Flat);
+            var geometry = Prepared(points, ChartMetric.Watts);
+            var series = geometry.SeriesCount;
+            var bands = data.Bands;
+            var step = bands[2].StepIndex;
+            var other = bands[4].StepIndex;
+            Assert.That(step, Is.Not.EqualTo(other));
+
+            var plain = Buffer(geometry);
+            geometry.WriteBands(plain, 1);
+            var marked = Buffer(geometry);
+            geometry.WriteBands(marked, 1, ChartVisual.Rest(geometry.YMax).WithSteps(step, 1, -1, 0));
+            Assert.That(marked.VertexCount, Is.EqualTo(plain.VertexCount), "mismos vértices");
+            var full = (int)(0.22 * 255 + 0.5);
+            var rest = (int)(0.10 * 255 + 0.5);
+            for (var b = 0; b < bands.Count; b++)
+            {
+                var expected = bands[b].StepIndex == step ? full : rest;
+                for (var v = 0; v < 4; v++)
+                {
+                    Assert.That(marked.X[4 * b + v], Is.EqualTo(plain.X[4 * b + v]));
+                    Assert.That(ChartMeshBuffer.AlphaOf(marked.Rgba[4 * b + v]), Is.EqualTo(expected), "franja " + b + " (paso " + bands[b].StepIndex + ")");
+                    Assert.That(marked.Rgba[4 * b + v] >> 8, Is.EqualTo(plain.Rgba[4 * b + v] >> 8), "el color del tipo no cambia");
+                }
+            }
+
+            // A mitad de la transición: el que entra y el que sale en 16 %; los dos en el mismo cuadro.
+            var half = Buffer(geometry);
+            geometry.WriteBands(half, 1, ChartVisual.Rest(geometry.YMax).WithSteps(other, 0.5, step, 0.5));
+            var mid = (int)(0.16 * 255 + 0.5);
+            for (var b = 0; b < bands.Count; b++)
+            {
+                var index = bands[b].StepIndex;
+                var expected = index == step || index == other ? mid : rest;
+                Assert.That(ChartMeshBuffer.AlphaOf(half.Rgba[4 * b]), Is.EqualTo(expected), "franja " + b);
+            }
+
+            // WriteFrame lleva la marca y respeta el alfa estático (la entrada del gráfico).
+            var frame = Buffer(geometry);
+            ChartGeometry.WriteFrame(frame, geometry, null, ChartVisual.Rest(geometry.YMax).WithSteps(step, 1, -1, 0));
+            Assert.That(ChartMeshBuffer.AlphaOf(frame.Rgba[8]), Is.EqualTo(full), "la franja 2 en el cuadro entero");
+            Assert.That(geometry.SeriesCount, Is.EqualTo(series), "sin volver a teselar");
+            Assert.That(ChartGeometry.BandAlphaFor(0), Is.EqualTo(ChartSpecs.BandAlpha));
+            Assert.That(ChartGeometry.BandAlphaFor(1), Is.EqualTo(ChartSpecs.BandSelectedAlpha));
+            Assert.That(ChartSpecs.BandSelectedAlpha, Is.EqualTo(0.22));
+            Assert.That(default(ChartVisual).SelectedStep, Is.EqualTo(-1), "default no marca nada");
+            Assert.That(ChartVisual.Rest(100).StepEmphasis(0), Is.EqualTo(0));
+        }
+
         [Test, Category("AC-HIS-13-06")]
         public void RoundCapsAtBothEnds()
         {
@@ -258,6 +313,28 @@ namespace RowMate.Tests.EditMode.History
             Assert.That(buffer.Indices, Is.SameAs(indices));
             Assert.Throws<InvalidOperationException>(() => ChartGeometry.WriteFrame(new ChartMeshBuffer(10, 10), geometry, null,
                 ChartVisual.Rest(geometry.YMax)), "la capacidad es fija: pasarse es un error, no crece");
+        }
+    }
+
+    // MB · Los mensajes de capacidad de la malla escriben los números con el formateador de enteros de la app (It. 15, #38,
+    // AC-D15-07 c): antes un literal "65 535" y enteros concatenados.
+    [TestFixture]
+    public sealed class ChartMeshBufferTests
+    {
+        [Test, Category("AC-D15-07")]
+        public void CapacityMessagesUseAppFormat()
+        {
+            var tooMany = Assert.Throws<ArgumentOutOfRangeException>(() => new ChartMeshBuffer(4, 6).EnsureCapacity(ChartMeshBuffer.MaxVertices + 1, 6));
+            Assert.That(tooMany!.Message, Does.Contain("más de " + RowMate.Core.Text.Fmt.Integer(ChartMeshBuffer.MaxVertices) + " vértices"));
+            var buffer = new ChartMeshBuffer(3, 3);
+            Assert.That(buffer.VertexCapacity, Is.EqualTo(3));
+            var geometry = new ChartGeometry();
+            geometry.Prepare(SessionChartData.Build(HistorySeeds.Points(1), RoutineExpansion.Flatten(HistorySeeds.Escalera().Steps)), ChartMetric.Watts,
+                ChartFrame.For(379, ChartSpecs.Height, 2.625));
+            var vertices = Assert.Throws<InvalidOperationException>(() => geometry.WriteBands(buffer, 1));
+            Assert.That(vertices!.Message, Does.Contain("(capacidad " + RowMate.Core.Text.Fmt.Integer(3) + ")"));
+            var indices = Assert.Throws<InvalidOperationException>(() => geometry.WriteBands(new ChartMeshBuffer(400, 3), 1));
+            Assert.That(indices!.Message, Does.Contain("no entran más índices (capacidad " + RowMate.Core.Text.Fmt.Integer(3) + ")"));
         }
     }
 }

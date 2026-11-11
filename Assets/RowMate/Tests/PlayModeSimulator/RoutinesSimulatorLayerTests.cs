@@ -55,8 +55,15 @@ namespace RowMate.Tests.PlayMode.Simulator
             yield return Tap("routine-card-0");
             Assert.That(H.Editor, Is.Not.Null);
             var ribbon = H.BoundsOf("sim-ribbon");
-            var back = H.BoundsOf("editor-back");
-            Assert.That(Overlap(ribbon, back), Is.True, "la flecha queda en parte bajo la cinta");
+            // La flecha = su glifo de 24 (la caja de toque de 48 puede pasar bajo la cinta, que no recibe toques).
+            var back = H.Find("editor-back")!.Q(className: "rm-icon-button__icon")!.worldBound;
+            // It. 15 (AC-D15-35): con .rm-has-sim-ribbon la flecha se corre a 44 dp y ya no queda bajo la cinta (SimRibbonTitleTests).
+            if (H.Root.panel.visualTree.ClassListContains(RowMate.Simulator.Presentation.SimulatorLayerView.HasRibbonClass))
+            {
+                SimWpdGuards.UssHas(RowMate.Simulator.Presentation.SimulatorLayerView.HasRibbonClass);
+                Assert.That(back.xMin + back.yMin, Is.GreaterThan(SimRibbonTitleTests.BandMax), "la flecha fuera de la cinta");
+            }
+            _ = ribbon;
             Assert.That(H.Find("sim-ribbon")!.pickingMode, Is.EqualTo(PickingMode.Ignore), "la cinta no recibe toques");
             yield return Tap("editor-back");
             Assert.That(H.Editor, Is.Null, "la flecha funciona");

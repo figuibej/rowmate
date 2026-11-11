@@ -2,7 +2,7 @@
 # RowMate.EditorTools.BuildCli.Build. Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 #
 #   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-BleSmoke] [-ExportSmoke] [-BootSmoke] [-CloseSmoke] [-Out <carpeta>]
-#                         [-AllowNewFolder] [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
+#                         [-PerfHistory] [-WindowSmoke] [-AllowNewFolder] [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
 #
 # - Builds de DESARROLLO (-Simulator, -SmokeTest o -DbSmoke) en Windows: SIEMPRE en la misma carpeta (QA-V3-08 de la It. 3).
 #   Un player de desarrollo abre el puerto de PlayerConnection de Unity y Windows pregunta por el Firewall una vez por cada
@@ -30,6 +30,15 @@
 #   hay exactamente <nombre>.tcx y <nombre>_2.tcx, el primero es XML bien formado (TrainingCenterDatabase, vueltas y puntos) e igual,
 #   nombre y bytes, al que arma tools/sessions tcx con la zona del equipo (m-05), y la carpeta Documentos\RowMate\TCX no cambio (la
 #   lista de archivos antes y despues; nunca se escribe ahi). Nunca abre el Explorador. Codigo 7 si falla. Solo Windows.
+# - -PerfHistory (It. 15, 15-deuda-pc/02-tech-design Sec. 2.1, DT15-19; AC-D15-03): build de DESARROLLO de la variante normal
+#   (Builds/Windows/dev-smoke); siembra F-9P (200 sesiones) con tools/sessions en una carpeta de datos temporal propia (borrada en
+#   finally) y corre el player en ventana de 1280 x 720 con ROWMATE_DATA_DIR ahi, ROWMATE_BLE=off y -rowmate-perf-history. Pasa si el
+#   registro tiene "[PERF] history: recarga R ms . base B ms . gc N . detalle D ms . rueda p95 P ms . >33 ms Q %" con R <= 50, D <= 50,
+#   P <= 16.7 y Q <= 1. Codigo 13 si falla. Solo Windows.
+# - -WindowSmoke (It. 15, AC-D15-19, gate m-09): build de DESARROLLO de la variante normal; con ROWMATE_DATA_DIR temporal (borrada en
+#   finally) y ROWMATE_BLE=off abre el player SIN -screen-*, le pone la ventana en (140, 90, 1000 x 640) con SetWindowPos (Add-Type),
+#   la cierra con WM_CLOSE, comprueba que prefs.json (el temporal) tiene window.x/y/width/height/maximized, la vuelve a abrir y compara
+#   GetWindowRect con lo puesto (+- 2 px). No lee ni escribe el registro. Codigo 14 si falla. Solo Windows.
 # - Windows: si el RowMate.exe de la carpeta de salida esta en uso, espera 2 min y reintenta, hasta 20 veces, sin cerrar nada.
 # - Con -Simulator: BuildCli pasa ROWMATE_SIMULATOR por extraScriptingDefines (nunca a PlayerSettings) y fuerza Development
 #   (R-01, AC-BLE-13-01). Sin -Simulator: al terminar, BuildOutputInspector busca rastros del simulador en la carpeta del
@@ -39,7 +48,7 @@
 # Salida por defecto: Builds/<Target>/<normal|simulator|dev-smoke>/RowMate.exe (Builds/ esta en .gitignore).
 # Codigos: 0 bien; 1 el build fallo; 2 rastros del simulador en un build normal; 3 falta un modulo; 4 el humo de -DbSmoke
 # fallo; 5 build de desarrollo con otra carpeta (QA-V3-08); 6 el humo de -BleSmoke fallo; 7 el humo de -ExportSmoke fallo; 8 el humo de
-# -BootSmoke fallo (It. 14); 11 el humo de -CloseSmoke fallo (It. 14, QA-V14-01); 9 RowMate.exe sin el VS_VERSIONINFO de RowMate (It. 14, todo build de Windows); 10 proyecto abierto en
+# -BootSmoke fallo (It. 14); 11 el humo de -CloseSmoke fallo (It. 14, QA-V14-01); 13 -PerfHistory fallo y 14 -WindowSmoke fallo (It. 15); 9 RowMate.exe sin el VS_VERSIONINFO de RowMate (It. 14, todo build de Windows); 10 proyecto abierto en
 # otro Editor; 12 no encuentra Unity.exe.
 param(
     [ValidateSet('Windows', 'Android')]
@@ -53,6 +62,8 @@ param(
     [switch]$ExportSmoke,
     [switch]$BootSmoke,
     [switch]$CloseSmoke,
+    [switch]$PerfHistory,
+    [switch]$WindowSmoke,
     [string]$Out = '',
     [switch]$AllowNewFolder,
     [string]$Unity = '',
@@ -99,7 +110,7 @@ function Quote-Arg([string]$Value) {
 $variant = 'normal'
 if ($Simulator) { $variant = 'simulator' }
 # QA-V3-08: la carpeta fija de cada build de desarrollo (antes de abrir Unity: una negativa no toca nada).
-$development = $Simulator -or $SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke -or $BootSmoke -or $CloseSmoke
+$development = $Simulator -or $SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke -or $BootSmoke -or $CloseSmoke -or $PerfHistory -or $WindowSmoke
 $fixedOut = 'Builds/' + $Target + '/' + $variant
 if ($development -and -not $Simulator) { $fixedOut = 'Builds/' + $Target + '/dev-smoke' }
 if ($Out -eq '') {
@@ -136,7 +147,7 @@ $log = Join-Path $artifacts ('build-' + $Target.ToLowerInvariant() + '-' + $vari
 $unityArgs = @('-batchmode', '-quit', '-projectPath', $repo, '-executeMethod', $buildMethod, '-logFile', $log,
     '-rowmateTarget', $Target, '-rowmateBackend', $Backend, '-rowmateOutput', (Get-FullPath $Out))
 if ($Simulator) { $unityArgs += '-rowmateSimulator' }
-if ($SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke -or $BootSmoke -or $CloseSmoke) { $unityArgs += '-rowmateSmokeTest' }
+if ($SmokeTest -or $DbSmoke -or $BleSmoke -or $ExportSmoke -or $BootSmoke -or $CloseSmoke -or $PerfHistory -or $WindowSmoke) { $unityArgs += '-rowmateSmokeTest' }
 
 # It. 10a: si el RowMate.exe de la salida esta en uso (un build abierto), se espera: cada 2 min, hasta 20 veces. Nunca se cierra nada.
 if ($Target -eq 'Windows') {
@@ -338,6 +349,158 @@ if ($CloseSmoke -and $code -eq 0) {
     else {
         Write-Host ('[build] -CloseSmoke: ok (' + $closeRuns + ' cierres con WM_CLOSE, 5 en ventana y 2 en pantalla completa, salida 0, sin Crashes)')
     }
+}
+
+# It. 15 (AC-D15-03, DT15-19): -PerfHistory. Ver el encabezado.
+if ($PerfHistory -and $code -eq 0) {
+    if ($Target -ne 'Windows') {
+        Write-Host '[build] -PerfHistory: solo en Windows.'
+        exit 3
+    }
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $perfDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\perf-history-' + [guid]::NewGuid().ToString('N'))
+    $perfLog = Join-Path $artifacts 'perf-history.log'
+    $sessionsProject = Join-Path $repo 'tools\dotnet\RowMate.SessionList\RowMate.SessionList.csproj'
+    $cmd = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($null -ne $cmd) { $dotnet = $cmd.Source } else { $dotnet = 'C:\Program Files\dotnet\dotnet.exe' }
+    New-Item -ItemType Directory -Force -Path $perfDir | Out-Null
+    try {
+        $seed = & $dotnet run --project $sessionsProject --configuration Release -- seed F-9P --data-dir $perfDir --variant normal
+        if ($LASTEXITCODE -ne 0) { throw ('tools/sessions seed fallo (codigo ' + $LASTEXITCODE + ')') }
+        foreach ($l in @($seed)) { Write-Host ('  ' + $l) }
+        $perfArgs = @('-logFile', $perfLog, '-screen-fullscreen', '0', '-screen-width', '1280', '-screen-height', '720', '-rowmate-perf-history')
+        $perfInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $perfInfo.FileName = $exe
+        $perfInfo.Arguments = (($perfArgs | ForEach-Object { Quote-Arg $_ }) -join ' ')
+        $perfInfo.UseShellExecute = $false
+        $perfInfo.EnvironmentVariables['ROWMATE_DATA_DIR'] = $perfDir
+        $perfInfo.EnvironmentVariables['ROWMATE_BLE'] = 'off'
+        $player = [System.Diagnostics.Process]::Start($perfInfo)
+        if (-not $player.WaitForExit(180000)) {
+            Write-Host '[build] -PerfHistory: el player no termino en 180 s (se cierra el que lanzo este script).'
+            $player.Kill()
+            $code = 13
+        }
+        $line = $null
+        if (Test-Path $perfLog) { $line = @(Select-String -Path $perfLog -Pattern '\[PERF\] history:' | ForEach-Object { $_.Line }) | Select-Object -Last 1 }
+        if ($null -eq $line) {
+            Write-Host '[build] -PerfHistory: el registro no tiene la linea [PERF] history'
+            $code = 13
+        }
+        else {
+            Write-Host ('  ' + $line)
+            $m = [regex]::Match($line, 'recarga ([\d.]+) ms . base ([\d.]+) ms . gc (\d+) . detalle ([\d.]+) ms . rueda p95 ([\d.]+) ms . >33 ms ([\d.]+) %')
+            if (-not $m.Success) { Write-Host '[build] -PerfHistory: la linea no tiene el formato esperado'; $code = 13 }
+            else {
+                $inv = [System.Globalization.CultureInfo]::InvariantCulture
+                $reload = [double]::Parse($m.Groups[1].Value, $inv)
+                $detail = [double]::Parse($m.Groups[4].Value, $inv)
+                $p95 = [double]::Parse($m.Groups[5].Value, $inv)
+                $slow = [double]::Parse($m.Groups[6].Value, $inv)
+                $perfProblems = @()
+                if ($reload -gt 50) { $perfProblems += ('recarga ' + $reload + ' ms > 50') }
+                if ($detail -gt 50) { $perfProblems += ('detalle ' + $detail + ' ms > 50') }
+                if ($p95 -gt 16.7) { $perfProblems += ('rueda p95 ' + $p95 + ' ms > 16.7') }
+                if ($slow -gt 1) { $perfProblems += ('rueda ' + $slow + ' % de cuadros > 33 ms (tope 1 %)') }
+                if ($perfProblems.Count -gt 0) {
+                    foreach ($p in $perfProblems) { Write-Host ('[build] -PerfHistory: ' + $p) }
+                    $code = 13
+                }
+                else { Write-Host '[build] -PerfHistory: ok (recarga, detalle y rueda dentro de los topes)' }
+            }
+        }
+    }
+    catch {
+        Write-Host ('[build] -PerfHistory: ' + $_.Exception.Message)
+        $code = 13
+    }
+    finally {
+        Remove-Item -Recurse -Force -Path $perfDir -ErrorAction SilentlyContinue
+    }
+}
+
+# It. 15 (AC-D15-19, gate m-09): -WindowSmoke. Ver el encabezado.
+if ($WindowSmoke -and $code -eq 0) {
+    if ($Target -ne 'Windows') {
+        Write-Host '[build] -WindowSmoke: solo en Windows.'
+        exit 3
+    }
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $windowDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\window-smoke-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $windowDir | Out-Null
+    if (-not ('RowMateWindowSmoke' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class RowMateWindowSmoke {
+    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int hh, uint flags);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
+}
+'@
+    }
+    $windowProblems = @()
+    $wanted = @(140, 90, 1000, 640)
+    $placed = $null
+    try {
+        for ($run = 0; $run -lt 2; $run++) {
+            $windowLog = Join-Path $artifacts ('window-smoke-' + $run + '.log')
+            $info = New-Object System.Diagnostics.ProcessStartInfo
+            $info.FileName = $exe
+            $info.Arguments = '-logFile ' + (Quote-Arg $windowLog)
+            $info.UseShellExecute = $false
+            $info.EnvironmentVariables['ROWMATE_DATA_DIR'] = $windowDir
+            $info.EnvironmentVariables['ROWMATE_BLE'] = 'off'
+            $player = [System.Diagnostics.Process]::Start($info)
+            for ($wait = 0; $wait -lt 60 -and $player.MainWindowHandle -eq [IntPtr]::Zero -and -not $player.HasExited; $wait++) {
+                Start-Sleep -Milliseconds 500
+                $player.Refresh()
+            }
+            Start-Sleep -Seconds 5
+            $player.Refresh()
+            $h = $player.MainWindowHandle
+            if ($h -eq [IntPtr]::Zero) { $windowProblems += ('corrida ' + $run + ': sin ventana'); if (-not $player.HasExited) { $player.Kill() }; break }
+            $r = New-Object RowMateWindowSmoke+RECT
+            if ($run -eq 0) {
+                [void][RowMateWindowSmoke]::SetWindowPos($h, [IntPtr]::Zero, $wanted[0], $wanted[1], $wanted[2], $wanted[3], 0x0014)
+                Start-Sleep -Seconds 2
+                [void][RowMateWindowSmoke]::GetWindowRect($h, [ref]$r)
+                $placed = @($r.Left, $r.Top, ($r.Right - $r.Left), ($r.Bottom - $r.Top))
+                Write-Host ('  ventana puesta: ' + ($placed -join ', '))
+            }
+            else {
+                [void][RowMateWindowSmoke]::GetWindowRect($h, [ref]$r)
+                $restored = @($r.Left, $r.Top, ($r.Right - $r.Left), ($r.Bottom - $r.Top))
+                Write-Host ('  ventana al reabrir: ' + ($restored -join ', '))
+                for ($k = 0; $k -lt 4; $k++) {
+                    if ([Math]::Abs($restored[$k] - $placed[$k]) -gt 2) { $windowProblems += ('al reabrir: ' + ($restored -join ', ') + ' en lugar de ' + ($placed -join ', ')); break }
+                }
+            }
+            [void][RowMateWindowSmoke]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
+            if (-not $player.WaitForExit(30000)) { $player.Kill(); $windowProblems += ('corrida ' + $run + ': no termino en 30 s despues de WM_CLOSE') }
+            if ($run -eq 0) {
+                $prefsFile = Join-Path $windowDir 'prefs.json'
+                $prefs = ''
+                if (Test-Path -LiteralPath $prefsFile) { $prefs = [System.IO.File]::ReadAllText($prefsFile) }
+                foreach ($key in @('window.x', 'window.y', 'window.width', 'window.height', 'window.maximized')) {
+                    if (-not $prefs.Contains('"' + $key + '"')) { $windowProblems += ('prefs.json sin ' + $key) }
+                }
+                Write-Host ('  prefs.json: ' + ($prefs -replace '\s', ''))
+            }
+        }
+    }
+    catch {
+        $windowProblems += $_.Exception.Message
+    }
+    finally {
+        Remove-Item -Recurse -Force -Path $windowDir -ErrorAction SilentlyContinue
+    }
+    if ($windowProblems.Count -gt 0) {
+        foreach ($p in $windowProblems) { Write-Host ('[build] -WindowSmoke: ' + $p) }
+        $code = 14
+    }
+    else { Write-Host '[build] -WindowSmoke: ok (la ventana vuelve al lugar y tamano en que se cerro, +- 2 px; prefs.json temporal)' }
 }
 
 # Humo de la base en el player (solo con -DbSmoke, en un build de desarrollo de Windows que salio bien).

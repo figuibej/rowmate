@@ -97,18 +97,19 @@ namespace RowMate.Tests.UnityEditMode
         {
             var rig = new Rig();
             var opacity = -1.0;
-            var motion = new HudReflowMotion(rig.Driver, o => opacity = o);
+            var motion = new HudReflowMotion(rig.Driver, (g, o, _) => { if (g == 0) { opacity = o; } });
             Assert.That(motion.Opacity, Is.EqualTo(1), "quieto: a pleno");
             var start = rig.Now;
             motion.OnOrientationClassChanged();
             Assert.That(opacity, Is.EqualTo(0), "las piezas quedan en 0 en el layout nuevo");
-            for (var k = 1; k <= 16; k++)
+            for (var k = 1; k <= 22; k++)
             {
                 rig.Frame();
                 var t = HudTimelines.Ms(rig.Now - start);
                 var expected = t >= MotionSpecs.HudReflowMs ? 1.0 : SceneTimelines.HudReflow(t, false);
                 Assert.That(opacity, Is.EqualTo(expected).Within(Eps), "en " + t + " ms");
-                Assert.That(motion.IsFinite, Is.EqualTo(t < MotionSpecs.HudReflowMs));
+                // It. 15 (AC-D15-32): el grupo 0 sigue la curva de siempre; la cascada termina con el grupo 2 a los 280.
+                Assert.That(motion.IsFinite, Is.EqualTo(t < MotionSpecs.HudReflowMs + 2 * MotionSpecs.HudReflowGroupDelayMs));
             }
 
             rig.AssertIdle("terminó el reacomodo");
@@ -121,7 +122,7 @@ namespace RowMate.Tests.UnityEditMode
         {
             var rig = new Rig();
             var opacity = -1.0;
-            var motion = new HudReflowMotion(rig.Driver, o => opacity = o);
+            var motion = new HudReflowMotion(rig.Driver, (g, o, _) => { if (g == 0) { opacity = o; } });
             motion.OnOrientationClassChanged();
             rig.RunFor(100);
             Assert.That(opacity, Is.GreaterThan(0).And.LessThan(1));
@@ -148,13 +149,13 @@ namespace RowMate.Tests.UnityEditMode
         {
             var rig = new Rig(reduceMotion: true);
             var opacity = -1.0;
-            var motion = new HudReflowMotion(rig.Driver, o => opacity = o);
+            var motion = new HudReflowMotion(rig.Driver, (g, o, _) => { if (g == 0) { opacity = o; } });
             motion.OnOrientationClassChanged();
             Assert.That(opacity, Is.EqualTo(1));
             rig.AssertIdle("reducido: en el acto");
 
             var other = new Rig();
-            var instant = new HudReflowMotion(other.Driver, o => opacity = o);
+            var instant = new HudReflowMotion(other.Driver, (g, o, _) => { if (g == 0) { opacity = o; } });
             opacity = -1;
             instant.OnOrientationClassChanged(true);
             Assert.That(opacity, Is.EqualTo(1));
@@ -166,7 +167,7 @@ namespace RowMate.Tests.UnityEditMode
         {
             var rig = new Rig();
             var applied = 0;
-            var motion = new HudReflowMotion(rig.Driver, _ => applied++);
+            var motion = new HudReflowMotion(rig.Driver, (_, _, _) => applied++);
             motion.OnOrientationClassChanged();
             rig.RunFor(50);
             motion.Stop();

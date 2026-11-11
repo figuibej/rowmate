@@ -19,7 +19,7 @@ namespace RowMate.Presentation.History
     // AC-HIS-10-01; legacy SessionDetailScreen, lib/features/history/session_detail_screen.dart; 02-tech-design §5.3):
     //   #session-detail .rm-page .rm-session
     //   ├── #session-appbar .rm-appbar: #session-back (arrow_back, ayuda navBack) + título (RoutineName ?? workoutFree, Q-09)
-//   │   + .rm-appbar__actions > #session-export (It. 12: ExportTcxButton, solo con la sesión exportable)
+    //   │   + .rm-appbar__actions > #session-export (It. 12: ExportTcxButton, solo con la sesión exportable)
     //   └── #session-body
     //       ├── #session-loading > Spinner 32/3 | #session-no-telemetry (sessionNoTelemetry) | #session-error (sessionLoadError
     //       │   + #session-retry)
@@ -31,7 +31,9 @@ namespace RowMate.Presentation.History
     // La flecha, "Atrás" de Android y Escape vuelven (IClosesOnEscape); al salir se dispone el store y la lista recarga
     // (AC-HIS-06-02). Las secciones entran en cascada de 35 ms si los datos llegan después del push; si llegan durante el push,
     // entran con la página. Strava no aparece (descartada; la It. 12 es "Exportar TCX").
-    public sealed class SessionDetailPage : IPage, IClosesOnEscape
+    // It. 15: una fila de "Rendimiento por paso" se marca y resalta sus franjas (#33, DT15-02; Escape primero desmarca, DT15-03) y la
+    // página conserva el primer elemento visible al cambiar el ancho (ScrollAnchor, #82, AC-D15-33; el cursor se oculta en ese cuadro).
+    public sealed class SessionDetailPage : IPage, IClosesOnEscape, IHandlesEscape
     {
         private readonly UiContext _ui;
         private readonly ShellLayout _layout;
@@ -125,6 +127,7 @@ namespace RowMate.Presentation.History
             Steps = Section("session-steps");
             _stepsTitle = SectionTitle(Steps);
             StepRows = new StepBreakdownView();
+            StepRows.RowActivated += OnStepRow;
             Steps.Add(StepRows);
 
             Selector = new SegmentedControl(false, ui.Motion) { name = "session-metric" };
@@ -144,6 +147,8 @@ namespace RowMate.Presentation.History
             Chart.AddToClassList("rm-session__chart");
             Content.Add(Chart);
 
+            Anchor = ScrollAnchor.Attach(Scroll);
+            Content.RegisterCallback<GeometryChangedEvent>(OnContentGeometry);
             layout.RegisterClearance(Scroll, Content, () => ChartSpecs.Padding + 4 + _layout.Insets.Bottom);
             Root.Bind(_store.State, Render);
             Root.Bind(_store.Metric, OnMetric);
@@ -172,6 +177,37 @@ namespace RowMate.Presentation.History
         public SegmentedControl Selector { get; }
 
         public SessionChartView Chart { get; }
+
+        public ScrollAnchor Anchor { get; }
+
+        // El paso marcado en "Rendimiento por paso" (índice del paso; −1 ninguno). Estado de la vista: se pierde al salir (DT15-02).
+        public int SelectedStep { get; private set; } = -1;
+
+        // Marca el paso de esa fila; la misma fila desmarca y otra la reemplaza (AC-D15-02).
+        public void ToggleStepRow(int row)
+        {
+            var step = StepRows.StepIndexAt(row);
+            SelectStep(step == SelectedStep ? -1 : step);
+        }
+
+        public void SelectStep(int stepIndex)
+        {
+            SelectedStep = stepIndex;
+            StepRows.SetSelected(stepIndex >= 0 ? StepRows.RowOfStep(stepIndex) : -1);
+            Chart.SelectStep(stepIndex);
+        }
+
+        // Escape: con una fila marcada solo la desmarca (DT15-03); si no, cierra como siempre (IClosesOnEscape).
+        public bool TryHandleEscape()
+        {
+            if (SelectedStep < 0)
+            {
+                return false;
+            }
+
+            SelectStep(-1);
+            return true;
+        }
 
         public AppBarView AppBar => _appBar;
 
@@ -235,6 +271,25 @@ namespace RowMate.Presentation.History
             _closed = true;
             _layout.SetSurface(this, null);
             _ui.Pages.Pop(this);
+        }
+
+        private void OnStepRow(int row)
+        {
+            ToggleStepRow(row);
+        }
+
+        // Cambió el ancho del contenido (redimensionar, rotar): el cursor se oculta en ese cuadro (AC-D15-33).
+        private float _contentWidth = -1;
+
+        private void OnContentGeometry(GeometryChangedEvent evt)
+        {
+            var width = evt.newRect.width;
+            if (_contentWidth >= 0 && Math.Abs(width - _contentWidth) > 0.5f)
+            {
+                Chart.Cursor.Hide();
+            }
+
+            _contentWidth = width;
         }
 
         private VisualElement Center(VisualElement body, string id)

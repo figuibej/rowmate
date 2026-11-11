@@ -40,8 +40,11 @@ namespace RowMate.Presentation.Controls
         // La ayuda emergente (solo flecha, ⋮ y tacho).
         public Tooltip? Help { get; private set; }
 
-        // Texto de la ayuda, que también es el nombre accesible (DT-05).
-        public string? AccessibleName => Help?.AccessibleName;
+        // Texto de la ayuda, que también es el nombre accesible (DT-05), salvo que SpokenName dé otro (It. 15: la tarjeta del Historial
+        // dice "Exportar TCX: {session}" y su ayuda, "Exportar TCX").
+        public string? AccessibleName => SpokenName != null ? SpokenName() : Help?.AccessibleName;
+
+        public Func<string>? SpokenName { get; set; }
 
         public void SetTooltip(UiContext ui, Func<string> text)
         {

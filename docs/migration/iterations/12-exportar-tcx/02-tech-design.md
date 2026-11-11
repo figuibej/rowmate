@@ -296,7 +296,7 @@ public void ShowAction(ActionToast toast);
 
 - Reusa `#toast`: suma, creados **una vez**, `#toast-detail` (`Label` `caption`, ajusta, nunca `…`) y `#toast-action` (`RmButton` variante `text`, `.rm-type-button-s`, `pickingMode = Position`, el resto de la cápsula sigue en `Ignore`). Clase `.rm-toast--action` (y `.rm-toast--link` para el check). Los otros avisos los ocultan.
 - Éxito: título `exportTcxSaved` con `{folder}` = `ExportFolderLabel.For`, detalle = nombre del archivo, `LinkIndicator` en `Check` (D12-04), acción `exportTcxOpenFolder` → `Export.Reveal(file)` y salida en el acto. Error: título `exportTcxFailed`, sin detalle ni indicador, acción `retry` → `Export.ExportAsync(session)`. Duración 6 s (`ExportMotionSpecs.NoticeMs`).
-- Ancho (≥ 600 dp): `clamp(max(título, detalle) + 32 + indicador + acción + 8; 344; 560)`; < 600: de 16 a 16 y el texto en varias líneas (CAP-06). Posición y obstáculos: los de hoy (sobre la barra de pestañas, CAP-11).
+- Ancho (≥ 600 dp): `clamp(max(título, detalle) + 32 + indicador + acción + 8; 344; 560)`; < 600: de 16 a 16 y el texto en varias líneas (CAP-06). Posición y obstáculos: los de hoy (sobre la barra de pestañas en las pestañas; en el Detalle, al pie de la pantalla, CAP-11. *Corregido en la It. 15*, #72, QA-V12-03).
 - Prioridad (DT12-14): `VisibleSlot` = `Common`. Reducir movimiento: el `ToastTransition` de siempre.
 - `ExportNoticePresenter(ui, toasts, export)`: se suscribe a `Notices` y arma el `ActionToast` con el `Localizer` vigente. Lo crea `AppShellView` junto a `HrmNotices`.
 

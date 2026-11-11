@@ -16,6 +16,9 @@ namespace RowMate.Presentation.History
     //       ├── #session-step-<n>-line1   "{dur}  ·  {dist}m" 11 text.secondary
     //       └── .rm-step-perf__values      "{W}W", "{spm} spm", "{split}/500m" blanco, separados por 12
     // Sin tipo, nombre, objetivo ni cumplimiento (paridad).
+    // It. 15 (#33, AC-D15-02, DV-146): cada fila se puede elegir (toque, o Tab + Enter/Espacio) y avisa con RowActivated; la marcada
+    // lleva .rm-step-perf--selected y un borde de 1 dp en el color de su tipo (StepBandPalette), con el relleno 1 dp menor para que
+    // el contenido no se mueva. El estado (qué fila) es del Detalle (DT15-02); acá solo se dibuja. Un anillo de foco por fila.
     // It. 14 (TY-01, AC-POL-02; 00-arte-pulido §3.2): las cifras de las dos líneas en RowMate Numeric SC (cifras tabulares de la fuente:
     // la línea 1 en 600 al tamaño de caption, los valores en num.xs 13/700) y los tres valores en COLUMNAS de ancho fijo por lista (el
     // máximo de la columna en todas las filas, alineados a la derecha): de una fila a otra las cifras y las unidades caen en el mismo
@@ -26,6 +29,15 @@ namespace RowMate.Presentation.History
 
         private readonly List<Row> _rows = new List<Row>();
         private readonly float[] _columnWidths = new float[Columns];
+        private IReadOnlyList<StepBreakdownRow> _source = Array.Empty<StepBreakdownRow>();
+
+        public const string SelectedClass = "rm-step-perf--selected";
+
+        // La fila (posición en la lista) que se tocó o se activó con el teclado.
+        public event Action<int>? RowActivated;
+
+        // La fila marcada (−1 ninguna).
+        public int SelectedRow { get; private set; } = -1;
 
         public StepBreakdownView()
         {
@@ -71,8 +83,68 @@ namespace RowMate.Presentation.History
             return _rows[index].Root;
         }
 
+        // El índice del paso de la fila (−1 fuera de rango).
+        public int StepIndexAt(int row)
+        {
+            return row >= 0 && row < _source.Count ? _source[row].StepIndex : -1;
+        }
+
+        // La fila de un paso (−1 si no está).
+        public int RowOfStep(int stepIndex)
+        {
+            for (var i = 0; i < _source.Count; i++)
+            {
+                if (_source[i].StepIndex == stepIndex)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        // Marca una fila (−1 ninguna): la clase (borde de 1 dp y relleno compensado, Skin.uss) y el borde en el color del tipo.
+        public void SetSelected(int row)
+        {
+            if (row >= Count)
+            {
+                row = -1;
+            }
+
+            for (var i = 0; i < _rows.Count; i++)
+            {
+                var selected = i == row;
+                var root = _rows[i].Root;
+                if (root.ClassListContains(SelectedClass) == selected && (i != row || i != SelectedRow))
+                {
+                    continue;
+                }
+
+                root.EnableInClassList(SelectedClass, selected);
+                if (selected)
+                {
+                    // El ancho del borde y el relleno que lo compensa son de la USS (.rm-step-perf--selected, Skin.uss); el color, del tipo.
+                    var color = TokenColors.ToColor(StepBandPalette.For(_source[i].TypeName));
+                    root.style.borderTopColor = color;
+                    root.style.borderBottomColor = color;
+                    root.style.borderLeftColor = color;
+                    root.style.borderRightColor = color;
+                }
+                else
+                {
+                    root.style.borderTopColor = StyleKeyword.Null;
+                    root.style.borderBottomColor = StyleKeyword.Null;
+                    root.style.borderLeftColor = StyleKeyword.Null;
+                    root.style.borderRightColor = StyleKeyword.Null;
+                }
+            }
+
+            SelectedRow = row;
+        }
+
         public void Bind(IReadOnlyList<StepBreakdownRow> rows)
         {
+            _source = rows ?? throw new ArgumentNullException(nameof(rows));
             while (_rows.Count < rows.Count)
             {
                 _rows.Add(CreateRow(_rows.Count));
@@ -99,6 +171,11 @@ namespace RowMate.Presentation.History
             }
 
             Count = rows.Count;
+            if (SelectedRow >= Count)
+            {
+                SetSelected(-1);
+            }
+
             EqualizeColumns();
         }
 
@@ -144,7 +221,31 @@ namespace RowMate.Presentation.History
             root.AddToClassList("rm-step-perf");
             // Las transparencias de un token van por código (ADR 016): fila blanca @4 %, insignia #00B4D8 @16 % (AC-HIS-11-02).
             root.style.backgroundColor = TokenColors.WithAlpha(Tokens.TextPrimary, 0.04);
-            root.pickingMode = PickingMode.Ignore;
+            // It. 15: la fila se elige (toque, Enter o Espacio) y se enfoca con Tab.
+            root.pickingMode = PickingMode.Position;
+            root.focusable = true;
+            var at = index;
+            root.AddManipulator(new Clickable(() => RowActivated?.Invoke(at)));
+            root.RegisterCallback<NavigationSubmitEvent>(evt =>
+            {
+                if (evt.target != root)
+                {
+                    return;
+                }
+
+                evt.StopPropagation();
+                RowActivated?.Invoke(at);
+            });
+            root.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Space || evt.target != root)
+                {
+                    return;
+                }
+
+                evt.StopPropagation();
+                RowActivated?.Invoke(at);
+            });
             var badgeBox = new VisualElement { name = prefix + "-badge" };
             badgeBox.AddToClassList("rm-step-perf__badge");
             badgeBox.style.backgroundColor = TokenColors.WithAlpha(Tokens.AccentPrimary, 0.16);
@@ -170,6 +271,7 @@ namespace RowMate.Presentation.History
             values.Add(split);
             text.Add(values);
             root.Add(text);
+            root.Add(RmButton.FocusRing());
             Add(root);
             return new Row(root, badge, line1, watts, spm, split);
         }

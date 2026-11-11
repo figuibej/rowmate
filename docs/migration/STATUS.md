@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-10 (coordinador, OK de la It. 14) |
-| Fase | **Plan completo**, salvo la 6b (postergada, issue #6) y la 10b (flotante hasta que haya Mac). La It. 14 (`14-pulido-plataformas`), la última, quedó **cerrada** con el OK del usuario ([reporte](iterations/14-pulido-plataformas/REPORT.md); decisiones del cierre en [01-po-spec §12](iterations/14-pulido-plataformas/01-po-spec.md)) |
-| Próximo paso | A pedido del usuario: cargar los secretos de Unity (cierra #10), instalar Android Build Support y probar en un teléfono (#7, #46), la 10b con una Mac, la 6b, y las demos con hardware (10a, 11, 12, P-17) |
+| Actualizado | 2026-11-11 (coordinador, OK de la It. 15 y arranque de la 6b) |
+| Fase | **Plan completo**, salvo la 6b (postergada, issue #6) y la 10b (flotante hasta que haya Mac). Después del plan, la It. 15 (`15-deuda-pc`, deuda resoluble en la PC) quedó **cerrada** con el OK del usuario ([reporte](iterations/15-deuda-pc/REPORT.md), [01-po-spec §9](iterations/15-deuda-pc/01-po-spec.md)) |
+| Próximo paso | **It. 6b en curso** (pedida por el usuario después de la 15). Después, a pedido del usuario: cargar los secretos de Unity (cierra #10), instalar Android Build Support y probar en un teléfono (#7, #46), la 10b con una Mac y las demos con hardware (10a, 11, 12, P-17) |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs; desde el 2026-11-09, la 13 descartada y 25 IDs de Strava descartados (133 vivos). El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
@@ -29,6 +29,7 @@
 | 12 | Exportar TCX (reemplaza a "Strava: conexión y subida") | **Cerrada** ([reporte](iterations/12-exportar-tcx/REPORT.md)); el usuario dio el OK ("dale"): rigen los valores por defecto de su gate (DV-116 a DV-127). Deuda en los issues #66 a #73. Sin FAIL; 25 PASS y 3 NO VERIFICABLE: AC-STR-09-24 (Android), -25 (Apple, 10b) y -27 (subida a Strava, demo del usuario) |
 | 13 | ~~Strava: sincronización y Perfil~~ | **Descartada** (Strava pago: decisión del usuario del 2026-11-09) |
 | 14 | Pulido, identidad, plataformas y CI | **Cerrada** ([reporte](iterations/14-pulido-plataformas/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). QA: APROBADO CON OBSERVACIONES en la ronda 2. Sin FAIL; 38 PASS y 6 NO VERIFICABLE (DPI con dos monitores, 60 fps con la pantalla normal, la corrida real del CI y el arrastre de Android/Apple). Cerró los issues #21, #36, #40, #41, #42, #44 y #69; deuda en los issues #74 a #83 |
+| 15 | Deuda resoluble en la PC (fuera del plan de paridad, pedida por el usuario) | **Cerrada** ([reporte](iterations/15-deuda-pc/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate, DV-140 a DV-148). Deuda nueva en los issues #84 a #90 ([spec](iterations/15-deuda-pc/01-po-spec.md), [verificación](iterations/15-deuda-pc/05-qa-verification.md)). QA: RECHAZADO en las rondas 1 y 2; el PO la acepta con 2 FAIL con la causa medida (AC-D15-04 → #34, AC-D15-39 → #78). 38 PASS, 2 FAIL, 0 NO VERIFICABLE. Resuelve #32, #35, #37, #38, #39, #66, #71, #72, #75, #76, #79 y #82; en parte #33, #34, #67, #70, #73, #74, #78, #80 y #81; #77 fuera |
 
 ## Decisiones
 
@@ -49,7 +50,23 @@
 - **Gate de la It. 9**: el usuario dio el OK ("pushea y pasa a la 10"), así que rigen los valores por defecto de la tabla "Gate de la It. 9" de abajo (DV-90 a DV-95, tiempo y distancia del monitor, etiquetas X como `fl_chart` con issue prioritario).
 - **Gates de la It. 10a y la It. 11**: el usuario dio el OK; rigen los valores por defecto de sus tablas (abajo).
 
-### Para confirmar en el gate de la It. 14
+### Para confirmar en el gate de la It. 15
+
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §6 y §9](iterations/15-deuda-pc/01-po-spec.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-140: un nombre por métrica (`Vatios`/`Watts`, `Split 500m`); `Split` solo en columnas angostas | Se acepta | Nombres del legacy por pantalla |
+| DV-141: split `m:ss` en Historial y Detalle; `mm:ss` en Dispositivo y HUD | Se acepta | `mm:ss` en todos lados |
+| DV-142: la curva no se pasa entre dos puntos | Se acepta | La cúbica de `fl_chart` con su pico |
+| DV-143: botón de exportar también en la tarjeta | Se acepta | Solo en el Detalle |
+| DV-144: vuelta con distancia negativa → `0`; `<Creator>` RowMate | Se acepta | El negativo del legacy; sin `Creator` |
+| DV-145: la ventana recuerda lugar, tamaño y maximizado (no la pantalla completa) | Se acepta | Siempre centrada en 1280 × 720 |
+| DV-146: tocar una fila de `Rendimiento por paso` resalta sus franjas al 22 % | Se acepta | Sin vínculo fila ↔ franja |
+| DV-147 / DV-148: `Show BLE debug` sigue en inglés; no se hace FIT | Se acepta | Pasa al catálogo; FIT en otra iteración |
+| Cierre: AC-D15-04 y AC-D15-39 FAIL con la causa medida, a #34 y #78 | Se acepta | Otra ronda de corrección antes del commit |
+
+### Gate de la It. 14 (valores que rigen)
 
 Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §8 y §12](iterations/14-pulido-plataformas/01-po-spec.md).
 
@@ -189,7 +206,7 @@ El usuario dio el OK ("pushea y arranca la proxima iteracion"): rigen los valore
 | Cierre de NV (It. 2 a 6a) y rendimiento de la escena | Módulos **Windows Build Support (IL2CPP)** (con Visual Studio 2022 "Desarrollo de escritorio con C++" y Windows SDK 10.0.22621+) y **Android Build Support** (con OpenJDK y Android SDK & NDK Tools), más **un Android de gama media** (clase Galaxy A54 / Pixel 6a, Android 8+ de 64 bits) con depuración USB. Cierran IL2CPP (AC-BASE-01, R3-01; R5-04), AC-SCN-01-09 (60 fps con la escena, 30 min), la fila de 200 píldoras en el teléfono (R4b-02) y las partes Android de las It. 2 a 6a | Pendiente. Sin él, el rendimiento en el teléfono queda NO VERIFICABLE hasta la 14 (regla 9). **Recomendado para la 6b** (60 fps con el agua avanzada) |
 | It. 6a (opcional) | **Terrain Sample Asset Pack** (Asset Store de Unity, gratis, 1,6 GB) | Opcional (P-02): la 6a se ve completa con terreno procedural |
 | It. 2 (opcional, 5 minutos en la PC) | Abrir la app legacy después de la nueva (AC-APP-16-03); probar el build con Windows en modo claro (AC-APP-05-01 y, de la It. 3, AC-APP-05-10); los idiomas preferidos `Français (France)`, `Español (Argentina)` (AC-APP-09-06) | Pendiente |
-| CI de Unity (opcional) | Los secretos `UNITY_LICENSE`, `UNITY_EMAIL` y `UNITY_PASSWORD` (y, opcionales, los 4 de firma de Android), según [tools/unity/README.md](../../tools/unity/README.md) §It. 14: CI. Antes, arreglar el test intermitente de la It. 11 | Pendiente (P-08, #10). `ci-core` corre en verde; `ci-unity` se saltea en verde sin los secretos |
+| CI de Unity (opcional) | Los secretos `UNITY_LICENSE`, `UNITY_EMAIL` y `UNITY_PASSWORD` (y, opcionales, los 4 de firma de Android), según [tools/unity/README.md](../../tools/unity/README.md) §It. 14: CI. El intermitente de la It. 11 tiene su causa original corregida en la 15, pero falló 1 vez en 4 corridas completas por otra causa (#78): en el CI puede salir rojo de vez en cuando | Pendiente (P-08, #10). `ci-core` corre en verde; `ci-unity` se saltea en verde sin los secretos |
 | It. 10a / 10b / 11 | Remo AMS-670B, Mac con Xcode + iPhone, pulsómetro | Pendiente |
 | It. 12 (demo, opcional) | Una cuenta gratis de Strava (u otro servicio que acepte TCX) para subir a mano el archivo exportado ([spec §1](iterations/12-exportar-tcx/01-po-spec.md)). Ya no hacen falta credenciales de la API | Pendiente |
 
@@ -284,3 +301,5 @@ Riesgos:
 | 2026-11-09 | coordinador | Deuda de la It. 12 en los issues #66 a #73. El usuario dio el OK a la It. 12 ("dale"): rigen los valores por defecto de su gate. Empieza la It. 14 |
 | 2026-11-10 | rowmate-po | **Cierre de la It. 14**, la última del plan: aceptada por el PO, sin FAIL; esperando el OK del usuario. QA: RECHAZADO en la ronda 1 (7 mayores: cierre con la X, barra de título fuera de la pantalla, cuadro blanco al arrancar y 4 AC sin prueba) y APROBADO CON OBSERVACIONES en la ronda 2 (dotnet `-Matrix` 3984/4023 pasan, 0 fallan; herramientas 194/194; matriz 867 PASA, 0 FALLA; Unity EditMode 4098/4152 y con simulador 4292/4346, 0 fallan; PlayMode 690/690 y con simulador 767/767 en la segunda corrida (1 intermitente de la It. 11 en la primera); builds normal, simulador, `-CloseSmoke`, `-BootSmoke` y `-BleSmoke` OK; 38 AC PASS, 0 FAIL, 6 NV). Decisiones del PO al cerrar: DV-V14-03, el vidrio del aviso (QA-V14-11), AC-POL-06 NV y la deuda a 10 issues ([01-po-spec §12](iterations/14-pulido-plataformas/01-po-spec.md)). Cierra #21, #36, #40, #41, #42, #44 y #69. Plan completo salvo la 6b (postergada) y la 10b (flotante). Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-10 | coordinador | Deuda de la It. 14 en los issues #74 a #83. El usuario dio el OK a la It. 14 ("ok"): rigen los valores por defecto de su gate (DV-128 a DV-139, DV-V14-03 y el aviso de vidrio de QA-V14-11). Se cerraron en GitHub #21, #36, #40, #41, #42, #44 y #69. Plan completo salvo la 6b (postergada) y la 10b (flotante) |
+| 2026-11-10 | rowmate-po | **Cierre de la It. 15** (deuda resoluble en la PC, fuera del plan): aceptada por el PO con 2 FAIL con la causa medida; esperando el OK del usuario. QA: RECHAZADO en la ronda 1 (5 mayores) y en la ronda 2 (2 mayores: AC-D15-04 y el intermitente del banner con otra causa) (dotnet `-Matrix` 4045/4084 pasan, 0 fallan; matriz 890 PASA, 0 FALLA, 18 EN EQUIPO; Unity EditMode 4163/4217 y con simulador 4357/4411, 0 fallan; PlayMode 731/732 y con simulador 811-812/813, con los topes de la escena fallando por la VM de WSL; builds normal, simulador y humos de desarrollo OK; 38 AC PASS, 2 FAIL, 0 NV). Cierra #32, #35, #37, #38, #39, #66, #71, #72, #75, #76, #79 y #82; el resto, a issues agrupados. Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-11 | coordinador | Deuda de la It. 15 en los issues #84 a #90. El usuario dio el OK a la It. 15 ("ok"): rigen los valores por defecto de su gate (DV-140 a DV-148 y los 2 FAIL a #34 y #78). Se cerraron en GitHub #32, #35, #37, #38, #39, #66, #71, #72, #75, #76, #79 y #82; los 9 en parte tienen un comentario con lo que queda. Empieza la It. 6b |

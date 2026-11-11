@@ -225,6 +225,9 @@ namespace RowMate.Presentation.Workout
 
         public double TitleScale => _titleScale;
 
+        // It. 15 (#80): el título que se dibuja (el lector lo lee como nombre del panel).
+        public string TitleText => _titleText;
+
         public bool IsInteractive => _interactive;
 
         // El desplazamiento de las filas (base; RowsScroll) y su tope.

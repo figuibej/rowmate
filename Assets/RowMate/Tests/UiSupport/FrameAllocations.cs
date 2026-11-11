@@ -130,12 +130,14 @@ namespace RowMate.Tests.UiSupport
             var before = PanelAllocations;
             _inPanel = true;
             StartRecorder();
+            AllocationProfile.Measured.Begin();
             try
             {
                 step();
             }
             finally
             {
+                AllocationProfile.Measured.End();
                 if (!_inDraw)
                 {
                     PanelAllocations += StopRecorder();
@@ -298,12 +300,14 @@ namespace RowMate.Tests.UiSupport
                 {
                     var before = allocations.DrawAllocations;
                     allocations.BeginDraw();
+                    AllocationProfile.Measured.Begin();
                     try
                     {
                         original(context);
                     }
                     finally
                     {
+                        AllocationProfile.Measured.End();
                         allocations.EndDraw();
                         allocations._treeAllocations[index] += allocations.DrawAllocations - before;
                         allocations._treeDraws[index]++;
@@ -384,7 +388,17 @@ namespace RowMate.Tests.UiSupport
             }
 
             _clockUsed = true;
-            var count = GcAllocations.During(action);
+            int count;
+            AllocationProfile.Measured.Begin();
+            try
+            {
+                count = GcAllocations.During(action);
+            }
+            finally
+            {
+                AllocationProfile.Measured.End();
+            }
+
             ClockAllocations += count;
             if (count > 0)
             {
@@ -449,7 +463,15 @@ namespace RowMate.Tests.UiSupport
                 return;
             }
 
-            StepAllocations += GcAllocations.During(action);
+            AllocationProfile.Measured.Begin();
+            try
+            {
+                StepAllocations += GcAllocations.During(action);
+            }
+            finally
+            {
+                AllocationProfile.Measured.End();
+            }
         }
 
         // Después de cada `yield return null`: el cuadro que terminó.

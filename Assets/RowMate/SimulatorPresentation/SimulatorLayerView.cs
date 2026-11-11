@@ -95,6 +95,10 @@ namespace RowMate.Simulator.Presentation
 
             Ribbon = new SimulatorRibbon();
             Add(Ribbon);
+            // It. 15 (#82, AC-D15-35, DT15-13): con la cinta, la raíz del panel lleva .rm-has-sim-ribbon y la USS corre el título de la
+            // AppBar a 44 dp (la cinta no cambia; el build normal no tiene la clase).
+            RegisterCallback<AttachToPanelEvent>(evt => evt.destinationPanel?.visualTree.AddToClassList(HasRibbonClass));
+            RegisterCallback<DetachFromPanelEvent>(evt => evt.originPanel?.visualTree.RemoveFromClassList(HasRibbonClass));
 
             _fabBottom = new SpringMotion(ui.Motion, OnFabBottom);
             _laneSwap = new LaneSwap(this);
@@ -119,6 +123,8 @@ namespace RowMate.Simulator.Presentation
         public SimulatorPanelView? Panel { get; }
 
         public SimulatorRibbon Ribbon { get; }
+
+        public const string HasRibbonClass = "rm-has-sim-ribbon";
 
         public SimulatorPanelStore? Store => _store;
 

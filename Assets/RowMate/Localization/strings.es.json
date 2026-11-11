@@ -385,8 +385,8 @@
   "routinesLoadError": "No se pudieron cargar las rutinas",
   "retry": "Reintentar",
   "hudSpm": "SPM",
-  "hudSplit": "Split /500m",
-  "hudWatts": "Watts",
+  "hudSplit": "Split 500m",
+  "hudWatts": "Vatios",
   "hudUnitWatts": "W",
   "hudKcal": "kcal",
   "hudBpm": "BPM",
@@ -481,7 +481,7 @@
       }
     }
   },
-  "historyStatPower": "Watts",
+  "historyStatPower": "Vatios",
   "historyStatSpm": "SPM",
   "historyStatSplit": "Split",
   "historyLoadError": "No se pudo cargar el historial",
@@ -591,5 +591,14 @@
         "type": "String"
       }
     }
-  }
+  },
+  "exportTcxFor": "Exportar TCX: {session}",
+  "@exportTcxFor": {
+    "placeholders": {
+      "session": {
+        "type": "String"
+      }
+    }
+  },
+  "exportTcxOpenFolderFailed": "No se pudo abrir la carpeta"
 }

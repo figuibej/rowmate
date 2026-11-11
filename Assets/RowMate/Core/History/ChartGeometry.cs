@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RowMate.Core.Design;
+using RowMate.Core.Text;
 
 namespace RowMate.Core.History
 {
@@ -87,7 +88,7 @@ namespace RowMate.Core.History
         {
             if (vertices > MaxVertices)
             {
-                throw new ArgumentOutOfRangeException(nameof(vertices), vertices, "ChartMeshBuffer: más de 65 535 vértices.");
+                throw new ArgumentOutOfRangeException(nameof(vertices), vertices, "ChartMeshBuffer: más de " + Fmt.Integer(MaxVertices) + " vértices.");
             }
 
             if (vertices > X.Length)
@@ -120,7 +121,7 @@ namespace RowMate.Core.History
         {
             if (VertexCount >= X.Length)
             {
-                throw new InvalidOperationException("ChartMeshBuffer: no entran más vértices (capacidad " + X.Length + ").");
+                throw new InvalidOperationException("ChartMeshBuffer: no entran más vértices (capacidad " + Fmt.Integer(X.Length) + ").");
             }
 
             X[VertexCount] = (float)x;
@@ -133,7 +134,7 @@ namespace RowMate.Core.History
         {
             if (IndexCount + 3 > Indices.Length)
             {
-                throw new InvalidOperationException("ChartMeshBuffer: no entran más índices (capacidad " + Indices.Length + ").");
+                throw new InvalidOperationException("ChartMeshBuffer: no entran más índices (capacidad " + Fmt.Integer(Indices.Length) + ").");
             }
 
             Indices[IndexCount++] = (ushort)a;
@@ -251,7 +252,8 @@ namespace RowMate.Core.History
             for (var i = 0; i < bands.Count; i++)
             {
                 var color = StepBandPalette.For(bands[i].TypeName).Rgb;
-                _bands[i] = new BandPx(Clamp(PixelX(bands[i].Start), area.Left, area.Right), Clamp(PixelX(bands[i].End), area.Left, area.Right), color);
+                _bands[i] = new BandPx(Clamp(PixelX(bands[i].Start), area.Left, area.Right), Clamp(PixelX(bands[i].End), area.Left, area.Right), color,
+                    bands[i].StepIndex);
             }
 
             // 4. Objetivos.
@@ -323,7 +325,7 @@ namespace RowMate.Core.History
             buffer.Clear();
             var yMax = visual.YMax;
             var reveal = visual.Reveal;
-            current.WriteBands(buffer, visual.StaticAlpha);
+            current.WriteBands(buffer, visual.StaticAlpha, visual);
             current.WriteBaseline(buffer, visual.StaticAlpha);
             if (previous != null && visual.OldLabelsAlpha > 0)
             {
@@ -390,6 +392,13 @@ namespace RowMate.Core.History
         // Franjas: el color del tipo @10 % a todo el alto del área (AC-HIS-14-02).
         public void WriteBands(ChartMeshBuffer buffer, double alpha)
         {
+            WriteBands(buffer, alpha, default);
+        }
+
+        // It. 15 (#33, AC-D15-02, DT15-02): las franjas del paso marcado (todas las de ese índice) van de 10 a 22 % según su t en
+        // el cuadro (ChartVisual.StepEmphasis). Mismos vértices que sin marca: solo cambia el alfa.
+        public void WriteBands(ChartMeshBuffer buffer, double alpha, in ChartVisual visual)
+        {
             if (alpha <= 0)
             {
                 return;
@@ -401,7 +410,7 @@ namespace RowMate.Core.History
                 var band = _bands[i];
                 if (band.X1 > band.X0)
                 {
-                    Rect(buffer, band.X0, area.Top, band.X1, area.Bottom, ChartMeshBuffer.Pack(band.Color, ChartSpecs.BandAlpha * alpha));
+                    Rect(buffer, band.X0, area.Top, band.X1, area.Bottom, ChartMeshBuffer.Pack(band.Color, BandAlphaFor(visual.StepEmphasis(band.StepIndex)) * alpha));
                 }
             }
         }
@@ -957,6 +966,13 @@ namespace RowMate.Core.History
             IndexBudget = indices;
         }
 
+        // El alfa de una franja según cuánto de la marca tiene (0 → 10 %, 1 → 22 %).
+        public static double BandAlphaFor(double emphasis)
+        {
+            var t = emphasis > 0 ? emphasis < 1 ? emphasis : 1 : 0;
+            return ChartSpecs.BandAlpha + (ChartSpecs.BandSelectedAlpha - ChartSpecs.BandAlpha) * t;
+        }
+
         private static double Clamp(double value, double min, double max)
         {
             return value < min ? min : value > max ? max : value;
@@ -969,12 +985,16 @@ namespace RowMate.Core.History
 
         private readonly struct BandPx
         {
-            public BandPx(double x0, double x1, Rgb color)
+            public BandPx(double x0, double x1, Rgb color, int stepIndex)
             {
                 X0 = x0;
                 X1 = x1;
                 Color = color;
+                StepIndex = stepIndex;
             }
+
+            // It. 15 (#33): el índice del paso (StepBand.StepIndex), para resaltar todas las franjas de un paso.
+            public int StepIndex { get; }
 
             public double X0 { get; }
 

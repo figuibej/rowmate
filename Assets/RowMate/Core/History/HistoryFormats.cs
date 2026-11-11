@@ -28,6 +28,14 @@ namespace RowMate.Core.History
             return MinutesColonSeconds(seconds);
         }
 
+        // It. 15 (#75, AC-D15-23, DV-141): el split de la tarjeta y del resumen en m:ss (2:13, 10:05), como las filas por paso, los
+        // ejes y el tooltip; "--:--" sin dato (≤ 0). Cambio frente al legacy (workout_session.dart:94-98, mm:ss); Dispositivo y el
+        // HUD siguen con SessionStats.SplitFormatted (mm:ss).
+        public static string SummarySplit(long seconds)
+        {
+            return seconds <= 0 ? TimeFormats.NoSplit : MinutesColonSeconds(seconds);
+        }
+
         // sd:254: '$durStr  ·  ${dist}m' (dos espacios a cada lado del punto medio).
         public static string StepLine1(int seconds, int meters)
         {

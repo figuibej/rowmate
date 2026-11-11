@@ -107,15 +107,42 @@ namespace RowMate.Tests.EditMode.Export
             Assert.That(lastLap, Does.Contain("<TotalTimeSeconds>0</TotalTimeSeconds>\n        <DistanceMeters>0</DistanceMeters>"));
         }
 
-        [Test, Category("AC-STR-09-05")]
+        [Test, Category("AC-STR-09-05"), Category("AC-D15-14")]
         public void NegativeDistanceKept()
         {
-            // El monitor reinicia la distancia: la vuelta da negativo, como el legacy (sin tope, DV-127).
+            // El monitor reinicia la distancia: los Trackpoint llevan la distancia del monitor tal cual (DV-127). La vuelta, que
+            // en el legacy daba −15, desde la It. 15 sale en 0 (AC-D15-14, DV-144; cambió con su AC, gate m-01).
             var seed = TcxSeeds.T1;
             var points = new List<DataPoint>(seed.Points) { [1] = seed.Points[1] with { DistanceMeters = 0 } };
             points[2] = seed.Points[2] with { DistanceMeters = 5 };
             var xml = TcxBuilder.Build(seed.Session, points, new TcxOptions(TestZones.UtcMinus3, false));
-            Assert.That(xml, Does.Contain("        <DistanceMeters>-15</DistanceMeters>\n"));
+            Assert.That(xml, Does.Not.Contain("<DistanceMeters>-"), "ninguna distancia negativa");
+            Assert.That(xml, Does.Contain("      <Lap StartTime=\"2026-11-05T19:02:05-03:00\">\n        <TotalTimeSeconds>10</TotalTimeSeconds>\n"
+                + "        <DistanceMeters>0</DistanceMeters>\n"), "la vuelta del reinicio, en 0");
+            var distances = Trackpoints(xml).Select(p => Between(p, "<DistanceMeters>", "</DistanceMeters>")).ToArray();
+            Assert.That(distances.Take(3), Is.EqualTo(new[] { "20", "0", "5" }), "los Trackpoint, como los dio el monitor");
+        }
+
+        [Test, Category("AC-D15-14")]
+        public void NegativeLapDistanceIsZero()
+        {
+            // Reinicio a mitad de la vuelta 2 (20 → 25 s): último − primero < 0 → 0; la vuelta 1 no cambia.
+            var seed = TcxSeeds.T1;
+            var points = new List<DataPoint>(seed.Points);
+            points[4] = seed.Points[4] with { DistanceMeters = 3 };
+            var xml = TcxBuilder.Build(seed.Session, points, new TcxOptions(TestZones.UtcMinus3, false));
+            var laps = Lines(xml).Where(l => l.StartsWith("        <DistanceMeters>", StringComparison.Ordinal)).ToArray();
+            Assert.That(laps, Is.EqualTo(new[]
+            {
+                "        <DistanceMeters>42</DistanceMeters>", "        <DistanceMeters>0</DistanceMeters>", "        <DistanceMeters>0</DistanceMeters>",
+            }));
+            Assert.That(Trackpoints(xml)[4], Does.Contain("<DistanceMeters>3</DistanceMeters>"), "el punto, tal cual");
+
+            // Sin reinicio, nada cambia en las vueltas (T-1 contra el golden en T1EqualsGoldenByteForByte).
+            foreach (var other in new[] { TcxSeeds.T2, TcxSeeds.T3, TcxSeeds.T5, TcxSeeds.T6, TcxSeeds.ThreeHours })
+            {
+                Assert.That(Build(other), Does.Not.Contain("<DistanceMeters>-"), other.Name);
+            }
         }
 
         [Test, Category("AC-STR-09-05")]
@@ -197,7 +224,7 @@ namespace RowMate.Tests.EditMode.Export
             var notes = Array.IndexOf(lines, "      <Notes>Escalera &amp; &lt;Co&gt; &quot;A&quot; &apos;B&apos;</Notes>");
             Assert.That(notes, Is.GreaterThan(0));
             Assert.That(lines[notes - 1], Is.EqualTo("      </Lap>"), "después de la última vuelta (DV-117)");
-            Assert.That(lines[notes + 1], Is.EqualTo("    </Activity>"));
+            Assert.That(lines[notes + 1], Is.EqualTo("      <Creator xsi:type=\"Device_t\">"), "y antes de Creator (It. 15, AC-D15-15)");
             Assert.That(lines.Count(l => l.Contains("<Notes>")), Is.EqualTo(1));
         }
 
@@ -272,14 +299,62 @@ namespace RowMate.Tests.EditMode.Export
             Assert.That(Build(TcxSeeds.T1), Is.EqualTo(Build(TcxSeeds.T1)));
         }
 
-        [Test, Category("AC-STR-09-12")]
+        [Test, Category("AC-D15-15")]
+        public void CreatorClosesActivity()
+        {
+            // Después de Notes (T-1) o de la última vuelta (T-2, libre): exactamente estas líneas y después </Activity>.
+            var expected = new[]
+            {
+                "      <Creator xsi:type=\"Device_t\">", "        <Name>RowMate</Name>", "        <UnitId>0</UnitId>", "        <ProductID>0</ProductID>",
+                "        <Version>", "          <VersionMajor>1</VersionMajor>", "          <VersionMinor>0</VersionMinor>",
+                "          <BuildMajor>0</BuildMajor>", "          <BuildMinor>0</BuildMinor>", "        </Version>", "      </Creator>", "    </Activity>",
+            };
+            foreach (var seed in new[] { TcxSeeds.T1, TcxSeeds.T2 })
+            {
+                var lines = Lines(Build(seed));
+                var creator = Array.IndexOf(lines, expected[0]);
+                Assert.That(creator, Is.GreaterThan(0), seed.Name);
+                Assert.That(lines.Skip(creator).Take(expected.Length), Is.EqualTo(expected), seed.Name);
+                Assert.That(lines.Count(l => l.Contains("<Creator")), Is.EqualTo(1), seed.Name);
+            }
+
+            var t1 = Lines(Build(TcxSeeds.T1));
+            Assert.That(t1[Array.IndexOf(t1, expected[0]) - 1], Does.StartWith("      <Notes>"), "T-1: después de Notes");
+            var t2 = Lines(Build(TcxSeeds.T2));
+            Assert.That(t2[Array.IndexOf(t2, expected[0]) - 1], Is.EqualTo("      </Lap>"), "T-2 es libre (sin Notes): después de la vuelta");
+            var two = TcxBuilder.Build(TcxSeeds.T2.Session, TcxSeeds.T2.Points, new TcxOptions(TestZones.UtcMinus3, false, "2.3"));
+            Assert.That(two, Does.Contain("          <VersionMajor>2</VersionMajor>\n          <VersionMinor>3</VersionMinor>\n"
+                + "          <BuildMajor>0</BuildMajor>\n          <BuildMinor>0</BuildMinor>\n"));
+        }
+
+        [TestCase("1.0.0", 1, 0, 0, 0)]
+        [TestCase("2.3", 2, 3, 0, 0)]
+        [TestCase("1.2.3.4.5", 1, 2, 3, 4)]
+        [TestCase("1.4.0-beta", 1, 4, 0, 0)]
+        [TestCase("", 0, 0, 0, 0)]
+        [TestCase(null, 0, 0, 0, 0)]
+        [TestCase("x.7", 0, 7, 0, 0)]
+        [TestCase("99999.1", 65535, 1, 0, 0)]
+        [Category("AC-D15-15")]
+        public void VersionPartsFromAppVersion(string? version, int major, int minor, int buildMajor, int buildMinor)
+        {
+            Assert.That(TcxBuilder.VersionParts(version), Is.EqualTo(new[] { major, minor, buildMajor, buildMinor }));
+            Assert.That(new TcxOptions(TestZones.Utc, false).AppVersion, Is.EqualTo("1.0.0"), "por defecto");
+        }
+
+        [Test, Category("AC-STR-09-12"), Category("AC-D15-17")]
         public void ThreeHoursUnder200Ms()
         {
-            // m-09: una corrida de calentamiento y la mediana de 5.
+            // m-09: una corrida de calentamiento y la mediana de 5. It. 15 (#71, AC-D15-17): el primer Build es el calentamiento (y
+            // mide el tamaño); antes del bucle se junta la basura de las otras pruebas, así una recolección ajena no cae dentro de
+            // la mediana. El umbral no cambia.
             var seed = TcxSeeds.ThreeHours;
             Assert.That(seed.Points.Count, Is.EqualTo(2160));
             var options = new TcxOptions(TestZones.UtcMinus3, false);
             var size = TcxDocument.Encode(TcxBuilder.Build(seed.Session, seed.Points, options)).Length;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
             var times = new double[5];
             for (var i = 0; i < times.Length; i++)
             {

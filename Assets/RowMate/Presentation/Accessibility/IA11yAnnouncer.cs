@@ -16,6 +16,9 @@ namespace RowMate.Presentation.Accessibility
 
         // El elemento enfocado salió del árbol: el foco va a otro (o null = el primero).
         void LayoutChanged(AccessibilityNode? focus);
+
+        // It. 15 (#80, AC-D15-28): una lista se desplazó una página por el lector (lo primero a la vista).
+        void PageScrolled(string text, AccessibilityNode? node);
     }
 
     // El de Unity 6.3 (UnityEngine.AccessibilityModule): Narrador en Windows (UIA del UnityPlayer.dll), TalkBack en Android, VoiceOver
@@ -50,6 +53,16 @@ namespace RowMate.Presentation.Accessibility
             }
 
             AssistiveSupport.notificationDispatcher.SendLayoutChanged(focus);
+        }
+
+        public void PageScrolled(string text, AccessibilityNode? node)
+        {
+            if (!AssistiveSupport.isScreenReaderEnabled)
+            {
+                return;
+            }
+
+            AssistiveSupport.notificationDispatcher.SendPageScrolledAnnouncement(text ?? "", node);
         }
     }
 }

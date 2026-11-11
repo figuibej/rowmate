@@ -400,7 +400,7 @@ public sealed class SessionDetailStore : IDisposable
   - `PointerDown` muestra el cursor en ese cuadro.
   - Si el dedo se mueve más de 6 dp con |dx| > |dy|, el gráfico captura el puntero (`CapturePointer` + `StopPropagation`) y la página no se desplaza.
   - Si el primer movimiento es vertical, suelta el puntero, oculta el cursor y deja desplazar a la `ScrollView`.
-  - `PointerUp` oculta el cursor **en el acto** (spec, con la salida de 160).
+  - `PointerUp` oculta el cursor con la salida de 160 ms (`ease.exit`, AC-HIS-13-07). *Corregido en la It. 15* (#39): decía también "en el acto".
 - **Tooltip**:
   - Caja `glass.fallback`, borde 1 `border.default`, r 8 y relleno 6/10, con el texto de `HistoryFormats.WriteTooltip`.
   - Va centrado sobre el punto, 10 dp arriba. Si no entra, va abajo, ajustado a 4 dp de cada borde.
@@ -431,7 +431,7 @@ La línea de tiempo del gráfico **no** está acá: es `ChartTimeline` (Core) y 
 | Vértices de la malla grande (TV / W1280) | ≤ 4 500 / ≤ 9 500 (capacidad fija del *buffer*) | `ChartGeometryTests` con la sesión de 60 min a 1 Hz |
 | Preparar el detalle (`Build` + `Prepare`) | ≤ 2 ms con 746 puntos y ≤ 6 ms con 3 600, en el escritorio | `RowMate.Chart.Prepare` en `HistoryPerformanceTests` |
 | `generateVisualContent` en la entrada o el cambio | ≤ 0,2 ms de CPU en el escritorio (≤ 0,6 en el Android de referencia: **NO VERIFICABLE** sin el equipo) | `RowMate.Chart.Generate` y `LastGenerateMs` |
-| Basura por cuadro | **0 B** en la entrada, el cambio, el cursor y el desplazamiento | `FrameAllocations` (nada de `GC.GetAllocatedBytesForCurrentThread`) |
+| Basura por cuadro | **0 B** en la entrada, el cambio, el cursor y el desplazamiento. *Corregido en la It. 15* (#39, AC-D15-04): lo que se mide es en cuántos cuadros asigna: el cursor en 0 de 60, la entrada (48 cuadros) y el cambio de métrica (24) en 1 como mucho (el de armado) | `FrameAllocations` (nada de `GC.GetAllocatedBytesForCurrentThread`) |
 | Cursor | 0 repintados de la malla grande | contador de repintados de `SessionChartView` |
 | Lista `F-9P` | Primera vista ≤ 1,0 s; ningún cuadro > 50 ms al recargar; desplazamiento a 60 fps | `[PERF]` Device-Win con `seed F-9P`; en el Editor, `HistoryPerformanceTests` como indicio |
 | Detalle de 1 h (746 puntos) | ≤ 0,5 s desde el toque | ídem |
@@ -462,7 +462,7 @@ El HUD no se toca: el tope de 60 elementos del inmersivo (`HudBudgetTests`) no c
 | CAP-06 | TV | F-9 n.º 2, Vatios | título `Entrenamiento libre`; sin `#session-steps`; 0 franjas; X `3:44` … `33:44` |
 | CAP-07 | TV | F-9 n.º 1, Vatios | 8 filas (1, 2, 6 y 8 con sus textos); 8 franjas; 7 separadores; 6 objetivos; Y `0` … `198`; mínimos en 425 y 430 s |
 | CAP-08 | TV | n.º 1, SPM | objetivos 18/20/22; Y `0` … `26` |
-| CAP-09 | TV | n.º 1, Split | Y `3:00` … `2:00`; los ceros en y = base; los objetivos en las marcas 2:10, 2:08 y 2:06 |
+| CAP-09 | TV | n.º 1, Split | Y `3:00` … `2:00`; los ceros en y = base; los objetivos a la altura de su ritmo (2:10, 2:08 y 2:06; *Corregido en la It. 15*, #39) |
 | CAP-10 | TV | n.º 1, Pulso | color `#EF476F`; 0 objetivos; Y `0` … `165` |
 | CAP-11 | TV | n.º 1, Distancia | 0 objetivos; máximo 2253 |
 | CAP-12 | TV | n.º 3, Vatios | 2 filas; 2 franjas; X `0:05` … `3:00` |
@@ -674,7 +674,7 @@ Desvíos (una línea cada uno):
 - **Fila de números**: el valor y la etiqueta van en dos `FitBox` del alto natural de su texto, centradas: un valor achicado queda en la misma línea media (en CAP-03 se veían como superíndices).
 - **El selector** se achica hasta 0,70 (gate M-02); las flechas mueven el foco por `KeyDown` y por `NavigationMoveEvent` (una vez por cuadro).
 - **Malla en trozos de ≤ 1 024 vértices** y con los triángulos dados vuelta al sentido del reloj al copiar (UI Toolkit no dibujaba el área de la curva, que Core escribe al revés).
-- **Basura por cuadro** (`FrameAllocations`, `HistoryPerformanceTests`): el cursor da 0; la entrada asigna en ≈ 16 de 48 cuadros (el panel mientras las etiquetas funden y en el dibujo de la malla mientras crece) y el cambio de métrica en ≈ 10 de 24 (el panel, mientras funden las etiquetas Y). `WriteFrame` (Core) da 0. Son eventos de 700 y 300 ms, no gasto continuo: queda para issues.
+- **Basura por cuadro** (`FrameAllocations`, `HistoryPerformanceTests`): el cursor asigna en 3 de 60 cuadros (REPORT §3; *Corregido en la It. 15*, #39: decía 0); la entrada asigna en ≈ 16 de 48 cuadros (el panel mientras las etiquetas funden y en el dibujo de la malla mientras crece) y el cambio de métrica en ≈ 10 de 24 (el panel, mientras funden las etiquetas Y). `WriteFrame` (Core) da 0. Son eventos de 700 y 300 ms, no gasto continuo: queda para issues. *Corregido en la It. 15* (#39): AC-D15-04 mide con `FrameAllocations` en cuántos cuadros asigna el Detalle de `F-9P` n.º 1: el cursor en 0 de 60, la entrada en ≤ 1 de 48 y el cambio de métrica en ≤ 1 de 24 (el de armado).
 - **Tooltip** dibujado carácter por carácter (`DrawnFont`, sin cadenas por cuadro); `TooltipText` arma la cadena solo para pruebas y sondas.
 - **Capturas**: las CAP y los VID van con los dispositivos de prueba y sin la capa del simulador (la llave no tapa tarjetas); la DEMO, con el simulador. CAP-08 a -11 y -14 van desplazadas hasta el gráfico (en TV no entra con las 8 filas). VID-01 recarga con `History.LoadAsync()` después de `AddFinished` (lo que hace el cierre). DEMO-02 crea `Demo 9` por el repositorio (el editor es de la It. 3).
 - **`HistoryStore` (de WP-A) recarga también al volver a reposo**: Terminar a mano vuelve a reposo apenas el cierre vuelve, sin publicar `Saved`, y la lista no recargaba (lo encontró `HistorySimulatorTests.FinishedSessionOnTop`). `HistoryStoreTests.ReloadTriggers` lo cubre.

@@ -20,6 +20,35 @@ namespace RowMate.Tests.PlayMode
     // - QA-V3-04: UiTestHost.Type deja el cursor al final y Tap mueve el foco como un clic (el arnés, no la app).
     public sealed class RoutineMotionDebtTests : RoutinesUiTestBase
     {
+        // It. 15 (#38d, AC-D15-07): una rutina agregada con la pestaña Rutinas oculta (display: none) está a la vista con su alto final a
+        // los ≤ 400 ms de mostrar la pestaña (antes el Grow esperaba un layout que no llegaba y quedaba en alto 0).
+        [UnityTest, Category("AC-D15-07")]
+        public IEnumerator AddedWhileTabHiddenIsVisibleWithin400Ms()
+        {
+            CreateRoutines(RoutineSeeds.Lista);
+            yield return GoToRoutines();
+            var before = Screen.List.Count;
+            yield return Tap("tab-history");
+            var created = H.App.Routines.CreateAsync("Oculta", "", new[] { new IntervalStep(0, 0, StepType.Work) { DurationSeconds = 60 } });
+            for (var i = 0; i < 120 && !created.IsCompleted; i++)
+            {
+                yield return null;
+            }
+
+            yield return Frames(3);
+            H.Tap("tab-routines");
+            yield return Frames(2);
+            H.Advance(0.4);
+            yield return Frames(3);
+            Assert.That(Screen.List.Count, Is.EqualTo(before + 1));
+            for (var i = 0; i < Screen.List.Count; i++)
+            {
+                var card = Screen.List.CardAt(i)!;
+                Assert.That(card.parent.layout.height, Is.GreaterThan(20), "tarjeta " + i + " con su alto final");
+                Assert.That(card.resolvedStyle.opacity, Is.GreaterThan(0.99f), "tarjeta " + i + " a la vista");
+            }
+        }
+
         // VID-01 a los 8 s: el tacho de la única serie. Antes, el bloque desaparecía en el cuadro 0 y el vacío aparecía entero.
         [UnityTest, Category("QA-V3-02"), Category("AC-RUT-14-10")]
         public IEnumerator LastBlockCollapsesBeforeTheEmptyText()

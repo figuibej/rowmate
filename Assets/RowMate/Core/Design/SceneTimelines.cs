@@ -62,6 +62,28 @@ namespace RowMate.Core.Design
             return reduced ? 1 : HudTimelines.Ease(Tokens.EaseEnter, tMsSinceChange, 0, MotionSpecs.HudReflowMs);
         }
 
+        // It. 15 (AC-D15-32, DT15-11): la entrada de un grupo del HUD en la cascada (0 a HudReflowGroups − 1): el progreso con
+        // ease.enter de 0 a 1, que arranca a los grupo × 40 ms y dura 200. La opacidad es el progreso y el traslado, (1 − progreso) ×
+        // 8 dp × la escala del HUD (HudReflowShift). Con reducir movimiento, 1 (la regla de los 400 ms la aplica el dueño).
+        public static double HudReflowGroup(int group, long tMsSinceChange, bool reduced)
+        {
+            if (reduced)
+            {
+                return 1;
+            }
+
+            var g = group < 0 ? 0 : group >= MotionSpecs.HudReflowGroups ? MotionSpecs.HudReflowGroups - 1 : group;
+            var start = g * MotionSpecs.HudReflowGroupDelayMs;
+            return HudTimelines.Ease(Tokens.EaseEnter, tMsSinceChange, start, MotionSpecs.HudReflowMs);
+        }
+
+        // El traslado hacia abajo (dp) de un grupo con ese progreso.
+        public static double HudReflowShift(double progress, double hudScale)
+        {
+            var p = progress < 0 ? 0 : progress > 1 ? 1 : progress;
+            return (1 - p) * MotionSpecs.HudReflowShiftDp * hudScale;
+        }
+
         // La toma aérea empieza con el diálogo de completado: a los 300 ms del fin (AC-WKT-21-01).
         public static long AerialStartMsAfterEnd => (long)MotionSpecs.CompletedDialogDelayMs;
 

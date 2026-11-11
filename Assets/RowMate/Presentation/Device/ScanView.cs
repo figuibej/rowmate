@@ -52,6 +52,8 @@ namespace RowMate.Presentation.Device
             EmptyArea.AddToClassList("rm-device-empty");
             EmptyArea.AddToClassList("rm-scroll");
             ScrollPolicy.Apply(EmptyArea, ui.IsDesktop);
+            // It. 15 (#82, AC-D15-33): el ancla de desplazamiento al cambiar el ancho.
+            Anchor = ScrollAnchor.Attach(EmptyArea);
             Results = new ScanResultList(ui, onTapResult ?? (_ => { }));
             EmptyArea.Add(Results);
             _empty = new VisualElement();
@@ -245,6 +247,8 @@ namespace RowMate.Presentation.Device
         public Label Hint { get; }
 
         public ScrollView EmptyArea { get; }
+
+        public ScrollAnchor Anchor { get; }
 
         public Label EmptyTitle { get; }
 

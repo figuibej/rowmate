@@ -170,6 +170,9 @@ namespace RowMate.Presentation.Workout
 
         public ImmersiveCascadeMotion Cascade => _cascade;
 
+        // It. 15 (AC-D15-32): la cascada de la reubicación (pruebas).
+        public HudReflowMotion Reflow => _reflow;
+
         public ImmersiveExitMotion Exit => _exit;
 
         public FinishWorkoutDialog? FinishDialog => _finishDialog != null && _finishDialog.IsOpen ? _finishDialog : null;
@@ -630,8 +633,10 @@ namespace RowMate.Presentation.Workout
             _scene.Close();
         }
 
-        // DT6a-06: al cambiar de clase de ventana (vertical ↔ horizontal) las piezas del HUD entran en 200 en el layout nuevo.
-        private void ApplyReflow(double opacity)
+        // DT6a-06: al cambiar de clase de ventana (vertical ↔ horizontal) las piezas del HUD entran en el layout nuevo. It. 15 (#82,
+        // AC-D15-32, DT15-11): en 3 grupos (0 barra superior con la de pasos, 1 tarjetas, 2 banda, fila de abajo y controles) con su
+        // retraso y 8 dp × la escala del HUD de traslado (translate: nunca layout; sin elementos nuevos).
+        private void ApplyReflow(int group, double opacity, double shiftDp)
         {
             var view = _view;
             if (view == null || _exiting || _cascade.IsRunning)
@@ -639,13 +644,36 @@ namespace RowMate.Presentation.Workout
                 return;
             }
 
+            var s = _zones?.Layout?.Scale ?? 1;
+            var shift = shiftDp * s;
             for (var i = 0; i < Pieces.Length; i++)
             {
+                if (ReflowGroupOf(Pieces[i]) != group)
+                {
+                    continue;
+                }
+
                 var element = view.PieceOf(Pieces[i]);
                 if (element != null)
                 {
                     SetOpacity(element, opacity);
+                    element.style.translate = Math.Abs(shift) < 1e-4 ? (StyleTranslate)StyleKeyword.Null : new Translate(0, (float)shift);
                 }
+            }
+        }
+
+        // El grupo de la cascada de la reubicación de cada pieza (arte A14-05).
+        public static int ReflowGroupOf(HudPiece piece)
+        {
+            switch (piece)
+            {
+                case HudPiece.TopBar:
+                    return 0;
+                case HudPiece.Spm:
+                case HudPiece.SplitWatts:
+                    return 1;
+                default:
+                    return 2;
             }
         }
 

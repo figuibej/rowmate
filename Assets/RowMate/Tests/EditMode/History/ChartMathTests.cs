@@ -96,6 +96,109 @@ namespace RowMate.Tests.EditMode.History
             Assert.That(outY.Take(count).Min(), Is.GreaterThanOrEqualTo(0f), "el sobrepaso de la cúbica no baja de la base");
             Assert.That(ChartSpecs.CurveSmoothness, Is.EqualTo(0.2));
         }
+
+        // It. 15 (#32, AC-D15-01, DT15-01): la curva no sale del rango de los dos puntos de cada tramo.
+        private static (float[] X, float[] Y, int Count) Smooth(float[] xs, float[] ys)
+        {
+            var outX = new float[ChartSmoothing.Capacity(xs.Length, xs[xs.Length - 1] - xs[0])];
+            var outY = new float[outX.Length];
+            var count = ChartSmoothing.Tessellate(xs, ys, xs.Length, (float)ChartSpecs.SmoothMinSpacing, -1000f, outX, outY);
+            return (outX, outY, count);
+        }
+
+        // Los vértices que caen fuera de [mín, máx] del tramo al que pertenecen (por su x), con la tolerancia dada.
+        private static int OutOfRange(float[] xs, float[] ys, (float[] X, float[] Y, int Count) curve, double tolerance)
+        {
+            var outside = 0;
+            for (var v = 0; v < curve.Count; v++)
+            {
+                var segment = 1;
+                while (segment < xs.Length - 1 && curve.X[v] > xs[segment])
+                {
+                    segment++;
+                }
+
+                var low = Math.Min(ys[segment - 1], ys[segment]);
+                var high = Math.Max(ys[segment - 1], ys[segment]);
+                if (curve.Y[v] < low - tolerance || curve.Y[v] > high + tolerance)
+                {
+                    outside++;
+                }
+            }
+
+            return outside;
+        }
+
+        [Test, Category("AC-D15-01")]
+        public void StepNeverLeavesSegmentRange()
+        {
+            // Escalón 100 → 200 W con mesetas (como Escalera): con la cúbica de fl_chart el tramo de la meseta subía a 210.
+            var xs = new float[] { 0, 30, 60, 90, 120, 150 };
+            var watts = new float[] { 100, 100, 100, 200, 200, 200 };
+            var curve = Smooth(xs, watts);
+            Assert.That(curve.Count, Is.GreaterThan(xs.Length), "los tramos de 30 dp se subdividen");
+            Assert.That(OutOfRange(xs, watts, curve, 0), Is.EqualTo(0), "ningún vértice fuera de su tramo");
+            Assert.That(curve.Y.Take(curve.Count).Max(), Is.LessThanOrEqualTo(200f));
+            Assert.That(curve.Y.Take(curve.Count).Min(), Is.GreaterThanOrEqualTo(100f));
+
+            // El split invertido (la escala Y es afín: se prueba en valores): 2:20 → 2:10 → 2:20 y un pozo de 0 (sin ritmo).
+            var split = new float[] { 140, 140, 130, 130, 0, 140 };
+            var inverted = Smooth(xs, split);
+            Assert.That(OutOfRange(xs, split, inverted, 0), Is.EqualTo(0), "el split, en su eje");
+
+            // En dp: con el área de 172 dp y yMax 220, ±0,5 dp es ±0,64 W; el resultado ya es exacto.
+            Assert.That(OutOfRange(xs, watts, curve, 0.5 * 220 / 172), Is.EqualTo(0));
+        }
+
+        [Test, Category("AC-D15-01")]
+        public void FlatPairIsStraight()
+        {
+            var xs = new float[] { 0, 24, 48, 72 };
+            var ys = new float[] { 50, 150, 150, 50 };
+            var curve = Smooth(xs, ys);
+            for (var v = 0; v < curve.Count; v++)
+            {
+                if (curve.X[v] >= 24 && curve.X[v] <= 48)
+                {
+                    Assert.That(curve.Y[v], Is.EqualTo(150f), "dos valores iguales seguidos: tramo recto (x " + curve.X[v] + ")");
+                }
+            }
+        }
+
+        [Test, Category("AC-D15-01")]
+        public void InsideControlsUnchanged()
+        {
+            // Un tramo monótono con los controles adentro (la curva suave de siempre) sale igual al bit que la cúbica sin recorte:
+            // se recalcula acá con la fórmula de fl_chart (TheLegacyCubic) y se compara vértice por vértice.
+            var xs = new float[] { 0, 12, 24, 36 };
+            var ys = new float[] { 0, 10, 20, 30 };
+            var curve = Smooth(xs, ys);
+            var expected = new System.Collections.Generic.List<float> { ys[0] };
+            float tempX = 0, tempY = 0;
+            for (var i = 1; i < xs.Length; i++)
+            {
+                var next = i + 1 < xs.Length ? i + 1 : i;
+                var c1x = xs[i - 1] + tempX;
+                var c1y = ys[i - 1] + tempY;
+                tempX = (xs[next] - xs[i - 1]) / 2 * 0.2f;
+                tempY = (ys[next] - ys[i - 1]) / 2 * 0.2f;
+                var c2x = xs[i] - tempX;
+                var c2y = ys[i] - tempY;
+                Assert.That(c1y, Is.InRange(Math.Min(ys[i - 1], ys[i]), Math.Max(ys[i - 1], ys[i])), "los controles ya caían adentro");
+                Assert.That(c2y, Is.InRange(Math.Min(ys[i - 1], ys[i]), Math.Max(ys[i - 1], ys[i])));
+                for (var k = 1; k < 4; k++)
+                {
+                    var t = (float)k / 4;
+                    var u = 1 - t;
+                    expected.Add(u * u * u * ys[i - 1] + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * ys[i]);
+                }
+
+                expected.Add(ys[i]);
+                Assert.That(c1x + c2x, Is.GreaterThan(0));
+            }
+
+            Assert.That(curve.Y.Take(curve.Count), Is.EqualTo(expected), "igual al bit");
+        }
     }
 
     // HT · El punto más cercano en x, sobre los originales (AC-HIS-13-07).

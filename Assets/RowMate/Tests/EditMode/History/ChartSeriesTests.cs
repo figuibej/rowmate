@@ -88,7 +88,7 @@ namespace RowMate.Tests.EditMode.History
             Assert.That(data.View(ChartMetric.HeartRate).YLabels.Last(), Is.EqualTo("100"), "pulso plano en 0: eje de 100 con etiquetas");
         }
 
-        [Test, Category("AC-HIS-13-01")]
+        [Test, Category("AC-HIS-13-01"), Category("AC-D15-07")]
         public void OnePointDoesNotFail()
         {
             var data = SessionChartData.Build(new[] { P(5, 150, 133, 150) }, new IntervalStep[0]);

@@ -162,6 +162,11 @@ namespace RowMate.Presentation.Routines
                             item.Slot.style.overflow = Overflow.Hidden;
                             Enqueue(_pendingGrow, item);
                         }
+                        else if (!tabVisible)
+                        {
+                            // It. 15 (#38d, AC-D15-07): con la pestaña oculta (display: none) el Grow espera un layout que no llega y la
+                            // tarjeta quedaba en alto 0 al volver: aparece directo, en su alto natural.
+                        }
                         else
                         {
                             item.Grow.Play();

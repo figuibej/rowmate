@@ -46,12 +46,12 @@ namespace RowMate.Snapshots
                 ("6 tarjetas en orden", () => Names(h) == "Escalera|Libre|Escalera|Libre|Libre|Rutina borrada"),
                 ("fechas", () => Card(h, 0).DateLabel.text == "05/11/2026  18:40" && Card(h, 5).DateLabel.text == "01/10/2026  21:05"),
                 ("columnas 6/6/6/5/5/6", () => Columns(h) == "6/6/6/5/5/6"),
-                ("n.º 1", () => Values(h, 0) == "11:00 2253m 150 24.1 03:00 139/150"),
-                ("n.º 2", () => Values(h, 1) == "33:44 7923m 160 22.0 02:10 145/145"),
-                ("n.º 3 cortada", () => Values(h, 2) == "03:00 651m 150 24.1 02:30 140/150"),
+                ("n.º 1", () => Values(h, 0) == "11:00 2253m 150 24.1 3:00 139/150"),
+                ("n.º 2", () => Values(h, 1) == "33:44 7923m 160 22.0 2:10 145/145"),
+                ("n.º 3 cortada", () => Values(h, 2) == "03:00 651m 150 24.1 2:30 140/150"),
                 ("n.º 4 sin puntos", () => Values(h, 3) == "00:00 0m 0 0.0 --:--"),
-                ("n.º 5 sin pulso", () => Values(h, 4) == "1:02:05 13796m 140 20.0 02:15"),
-                ("n.º 6", () => Values(h, 5) == "04:00 851m 150 24.1 02:30 136/150"));
+                ("n.º 5 sin pulso", () => Values(h, 4) == "1:02:05 13796m 140 20.0 2:15"),
+                ("n.º 6", () => Values(h, 5) == "04:00 851m 150 24.1 2:30 136/150"));
             cap01.WithProbe(PixelProbe.Dominant("metric.watts", "history-card-0-stat-2 .rm-stat__value", Tokens.MetricWatts.Rgb.ToHex(), 3), true)
                 .WithProbe(PixelProbe.Dominant("metric.hr", "history-card-0-stat-5 .rm-stat__value", Tokens.MetricHr.Rgb.ToHex(), 3), true);
             all.Add(cap01);

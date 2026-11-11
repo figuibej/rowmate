@@ -87,6 +87,9 @@ namespace RowMate.Platform.Display
         // Lo que pasó en la última Uninstall que hizo algo (None si nunca se sacó).
         public WndProcRestore LastUninstall { get; private set; }
 
+        // It. 15 (#74, AC-D15-19): WM_CLOSE llegó (la X, Alt+F4): antes de apagar, la app guarda la ventana (también en quitting).
+        public event Action? Closing;
+
         public static string Describe(WndProcRestore restore)
         {
             switch (restore)
@@ -177,6 +180,15 @@ namespace RowMate.Platform.Display
 
             if (message == WmClose)
             {
+                try
+                {
+                    Closing?.Invoke();
+                }
+                catch (Exception)
+                {
+                    // Guardar la ventana nunca frena el cierre.
+                }
+
                 Uninstall();
                 if (LastUninstall == WndProcRestore.Restored && _api.PostMessage(window, message, wParam, lParam))
                 {
@@ -324,6 +336,138 @@ namespace RowMate.Platform.Display
 
             SetWindowPos(window, IntPtr.Zero, rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, SwpNoZOrder | SwpNoActivate);
         }
+
+        // ── It. 15 (#74, AC-D15-19, DT15-08): guardar y restaurar la ventana ──
+
+        // El rectángulo EXTERIOR en estado normal (rcNormalPosition: coordenadas del área de trabajo, iguales a las de la pantalla con
+        // la barra de tareas abajo) y si está maximizada.
+        public static bool NormalPlacement(IntPtr window, out WindowRect exterior, out bool maximized)
+        {
+            var placement = new WindowPlacementData { Length = Marshal.SizeOf(typeof(WindowPlacementData)) };
+            maximized = IsZoomed(window);
+            if (!GetWindowPlacement(window, ref placement))
+            {
+                exterior = default;
+                return false;
+            }
+
+            var r = placement.NormalPosition;
+            exterior = new WindowRect(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
+            return true;
+        }
+
+        // El rectángulo exterior en la pantalla (GetWindowRect).
+        public static WindowRect ExteriorRect(IntPtr window)
+        {
+            var rect = new Rect32();
+            return GetWindowRect(window, ref rect) ? new WindowRect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top) : default;
+        }
+
+        // Los monitores actuales: su área de trabajo (px) y su escala (GetDpiForMonitor; 1 si falla), en el orden de EnumDisplayMonitors.
+        public static System.Collections.Generic.List<MonitorArea> Monitors()
+        {
+            var list = new System.Collections.Generic.List<MonitorArea>(4);
+            _monitors = list;
+            try
+            {
+                EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, OnMonitor, IntPtr.Zero);
+            }
+            finally
+            {
+                _monitors = null;
+            }
+
+            return list;
+        }
+
+        // Pone el exterior en rect (sin activar ni cambiar el orden) y, si corresponde, la maximiza.
+        public static void PlaceExterior(IntPtr window, WindowRect rect, bool maximize)
+        {
+            SetWindowPos(window, IntPtr.Zero, rect.X, rect.Y, rect.Width, rect.Height, SwpNoZOrder | SwpNoActivate);
+            if (maximize)
+            {
+                ShowWindow(window, SwMaximize);
+            }
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(MonitorEnumProc))]
+        private static bool OnMonitor(IntPtr monitor, IntPtr hdc, IntPtr rect, IntPtr data)
+        {
+            var info = new MonitorInfo { Size = Marshal.SizeOf(typeof(MonitorInfo)) };
+            if (!GetMonitorInfoW(monitor, ref info))
+            {
+                return true;
+            }
+
+            var scale = 1.0;
+            try
+            {
+                if (GetDpiForMonitor(monitor, 0, out var dpiX, out _) == 0 && dpiX > 0)
+                {
+                    scale = WindowGeometry.ScaleFor((int)dpiX);
+                }
+            }
+            catch (Exception)
+            {
+                // Sin shcore (Windows viejo): escala 1.
+            }
+
+            var w = info.Work;
+            _monitors?.Add(new MonitorArea(new WindowRect(w.Left, w.Top, w.Right - w.Left, w.Bottom - w.Top), scale));
+            return true;
+        }
+
+        private static System.Collections.Generic.List<MonitorArea>? _monitors;
+        private const int SwMaximize = 3;
+
+        private delegate bool MonitorEnumProc(IntPtr monitor, IntPtr hdc, IntPtr rect, IntPtr data);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WindowPlacementData
+        {
+            public int Length;
+            public int Flags;
+            public int ShowCmd;
+            public Point32 MinPosition;
+            public Point32 MaxPosition;
+            public Rect32 NormalPosition;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MonitorInfo
+        {
+            public int Size;
+            public Rect32 Monitor;
+            public Rect32 Work;
+            public uint Flags;
+        }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowPlacement(IntPtr window, ref WindowPlacementData placement);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsZoomed(IntPtr window);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr window, ref Rect32 rect);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ShowWindow(IntPtr window, int command);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc callback, IntPtr data);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetMonitorInfoW(IntPtr monitor, ref MonitorInfo info);
+
+        [DllImport("shcore.dll")]
+        private static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
 
         // La ventana del player: la de clase UnityWndClass del hilo que corre los scripts (el que creó la ventana).
         public static IntPtr FindPlayerWindow()

@@ -140,6 +140,10 @@ namespace RowMate.Tests.UiSupport
         // anfitrión, con el puente del lector y un FakeA11yAnnouncer (ScreenReader*Tests, CAP-27).
         public bool ScreenReader;
 
+        // It. 15 (AC-D15-30, ItFourteenGapTests.HapticEvents): la respuesta táctil de la app (un FakeHaptics que registra); null = ninguna, como
+        // en Windows y el Editor.
+        public RowMate.Core.Ports.IHaptics? Haptics;
+
         public UiHostOptions Clone()
         {
             return (UiHostOptions)MemberwiseClone();

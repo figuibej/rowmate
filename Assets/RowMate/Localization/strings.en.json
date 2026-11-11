@@ -385,7 +385,7 @@
   "routinesLoadError": "Couldn't load routines",
   "retry": "Retry",
   "hudSpm": "SPM",
-  "hudSplit": "Split /500m",
+  "hudSplit": "Split 500m",
   "hudWatts": "Watts",
   "hudUnitWatts": "W",
   "hudKcal": "kcal",
@@ -591,5 +591,14 @@
         "type": "String"
       }
     }
-  }
+  },
+  "exportTcxFor": "Export TCX: {session}",
+  "@exportTcxFor": {
+    "placeholders": {
+      "session": {
+        "type": "String"
+      }
+    }
+  },
+  "exportTcxOpenFolderFailed": "Couldn't open the folder"
 }

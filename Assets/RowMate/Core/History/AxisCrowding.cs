@@ -1,4 +1,5 @@
 using System;
+using RowMate.Core.Design;
 
 namespace RowMate.Core.History
 {
@@ -41,6 +42,42 @@ namespace RowMate.Core.History
             }
 
             return kept;
+        }
+
+        // It. 15 (AC-D15-25, DT15-22): el ancho de una etiqueta de eje en RowMate Numeric SC 600 (los avances de ChartSpecs, medidos
+        // en el hmtx de la fuente), sin medir el Label. Un carácter que no es cifra, ":", ".", "-" ni espacio cuenta como una cifra.
+        public static double LabelWidthDp(string text, double fontSizeDp = ChartSpecs.AxisFontSizeDp)
+        {
+            if (text == null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            double em = 0;
+            for (var i = 0; i < text.Length; i++)
+            {
+                em += AdvanceEm(text[i]);
+            }
+
+            return em * fontSizeDp;
+        }
+
+        // El avance de un carácter de los ejes, en em.
+        public static double AdvanceEm(char c)
+        {
+            switch (c)
+            {
+                case ':':
+                    return ChartSpecs.AxisColonAdvanceEm;
+                case '.':
+                    return ChartSpecs.AxisPeriodAdvanceEm;
+                case '-':
+                    return ChartSpecs.AxisMinusAdvanceEm;
+                case ' ':
+                    return ChartSpecs.AxisSpaceAdvanceEm;
+                default:
+                    return ChartSpecs.AxisDigitAdvanceEm;
+            }
         }
 
         // El aire entre dos etiquetas centradas (negativo si se pisan).

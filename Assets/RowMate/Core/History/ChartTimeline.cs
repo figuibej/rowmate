@@ -22,7 +22,27 @@ namespace RowMate.Core.History
             NewTargetsAlpha = newTargetsAlpha;
             OldTargetsAlpha = oldTargetsAlpha;
             Finished = finished;
+            _selected = 0;
+            _leaving = 0;
+            SelectedT = 0;
+            LeavingT = 0;
         }
+
+        private ChartVisual(in ChartVisual other, int selectedStep, double selectedT, int leavingStep, double leavingT)
+            : this(other.StaticAlpha, other.Reveal, other.AreaAlpha, other.NewSeriesAlpha, other.OldSeriesAlpha, other.YMax, other.NewLabelsAlpha,
+                other.OldLabelsAlpha, other.NewTargetsAlpha, other.OldTargetsAlpha, other.Finished)
+        {
+            _selected = selectedStep < 0 ? 0 : selectedStep + 1;
+            _leaving = leavingStep < 0 ? 0 : leavingStep + 1;
+            SelectedT = Clamp01(selectedT);
+            LeavingT = Clamp01(leavingT);
+        }
+
+        // It. 15 (#33, AC-D15-02, DT15-02): el paso marcado (índice + 1; 0 = ninguno, así default(ChartVisual) no marca nada) y el
+        // que se desmarca, cada uno con su t = cuánto de la marca tiene (0 = franja al 10 %, 1 = al 22 %): el que entra va de 0 a 1 y
+        // el que sale de 1 a 0 (StepHighlightMotion, ease.enter en 160 ms). Solo cambia el alfa de las franjas: no se vuelve a teselar.
+        private readonly int _selected;
+        private readonly int _leaving;
 
         public double StaticAlpha { get; }
 
@@ -47,6 +67,49 @@ namespace RowMate.Core.History
         public double OldTargetsAlpha { get; }
 
         public bool Finished { get; }
+
+        // El índice del paso marcado, o -1.
+        public int SelectedStep => _selected - 1;
+
+        public double SelectedT { get; }
+
+        // El índice del paso que se desmarca, o -1.
+        public int LeavingStep => _leaving - 1;
+
+        public double LeavingT { get; }
+
+        // El mismo cuadro con la marca de paso (sin asignar: es un struct).
+        public ChartVisual WithSteps(int selectedStep, double selectedT, int leavingStep, double leavingT)
+        {
+            return new ChartVisual(this, selectedStep, selectedT, leavingStep, leavingT);
+        }
+
+        // Cuánto de la marca tiene un paso en este cuadro (0 a 1): el máximo entre la que entra y la que sale.
+        public double StepEmphasis(int stepIndex)
+        {
+            if (stepIndex < 0)
+            {
+                return 0;
+            }
+
+            var emphasis = 0.0;
+            if (stepIndex == SelectedStep)
+            {
+                emphasis = SelectedT;
+            }
+
+            if (stepIndex == LeavingStep && LeavingT > emphasis)
+            {
+                emphasis = LeavingT;
+            }
+
+            return emphasis;
+        }
+
+        private static double Clamp01(double value)
+        {
+            return value > 0 ? value < 1 ? value : 1 : 0;
+        }
 
         // Quieto: todo a la vista, solo la métrica actual.
         public static ChartVisual Rest(double yMax)

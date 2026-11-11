@@ -328,7 +328,7 @@ Con dos columnas, la entrada de §2.1 escalona la izquierda (Resumen y Pasos) y 
 
 | Ítem | Tope |
 |---|---|
-| Vértices del gráfico (TV / W1280) | ≤ 4 500 / ≤ 9 500: línea 4·n, área 2·n, franjas, tira, objetivos y grilla. Muy por debajo de los 65 535 por malla |
+| Vértices del gráfico (TV / W1280) | ≤ 4 500 / ≤ 9 500 en un cuadro quieto (una curva): línea 4·n, área 2·n, franjas, tira, objetivos y grilla. En el fundido cruzado del cambio de métrica hay dos curvas y el *buffer* tiene la suma. Muy por debajo de los 65 535 por malla. *Corregido en la It. 15* (#34, AC-D15-08) |
 | Preparar los datos (paso 1 de §7.2) | ≤ 2 ms una sola vez, antes de `t0`, fuera de la entrada |
 | Repintar la malla (revelado o transformación) | ≤ **0,6 ms** de CPU por cuadro en el Android de referencia y ≤ 0,2 en escritorio. Cuadros con repintado: ≈ 42 en la entrada y ≈ 18 en un cambio de métrica |
 | Cursor y tooltip | 0 repintados de la malla grande. La malla chica tiene ≤ 40 vértices |

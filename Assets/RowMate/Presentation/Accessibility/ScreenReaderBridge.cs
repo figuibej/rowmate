@@ -26,6 +26,12 @@ namespace RowMate.Presentation.Accessibility
     //   el cambio de paso ("Paso 2 de 5: Trabajo") y la rutina completada.
     // ForceEnabled (pruebas) usa AssistiveSupport.screenReaderStatusOverride; IsActiveHierarchySupported dice si Unity aceptó la jerarquía
     // (en el Editor puede no hacer nada: R14-01; el modelo propio, Items, es el que comparan las pruebas y CAP-27).
+    // It. 15 (#80, AC-D15-28, -29):
+    // - Marcos: ScreenFrame pasa del panel a píxeles de pantalla con la escala REAL del panel (ancho de la pantalla / ancho del panel),
+    //   origen arriba a la izquierda (y hacia abajo, como el panel); ScreenReaderFrameTests fija la convención con TryGetNodeAt.
+    // - Desplazamiento: cada nodo dentro de una lista (Rutinas, Historial, Dispositivo) responde a scrolled moviendo su lista una página
+    //   y avisando con SendPageScrolledAnnouncement (el nombre del primer elemento a la vista; sin textos nuevos).
+    // - Diálogo: el que lo abrió es el enfocado CUANDO se abre (DialogLayer.Opening), no el último invocado fuera de un diálogo.
     public sealed class ScreenReaderBridge : IDisposable
     {
         public const double StructureSeconds = 0.25;
@@ -47,6 +53,7 @@ namespace RowMate.Presentation.Accessibility
         private VisualElement? _focused;
         private VisualElement? _opener;
         private IDisposable? _workout;
+        private readonly Action<ModalDialog> _onDialogOpening;
         private bool _active;
         private bool _disposed;
         private double _nextStructure;
@@ -58,6 +65,98 @@ namespace RowMate.Presentation.Accessibility
         {
             _shell = shell ?? throw new ArgumentNullException(nameof(shell));
             _announcer = announcer ?? throw new ArgumentNullException(nameof(announcer));
+            _onDialogOpening = OnDialogOpening;
+        }
+
+        // Los nombres de las listas que informan el desplazamiento (AC-D15-28).
+        public static readonly string[] ScrollLists = { "routines-list", "history-list", "device-connected-scroll", "device-empty-area" };
+
+        // El que abrió el diálogo de arriba (null sin diálogo o si no había foco).
+        public VisualElement? DialogOpener => _opener;
+
+        // Desplazamientos pedidos por el lector (pruebas).
+        public int ScrollCount { get; private set; }
+
+        // El rectángulo de un elemento en píxeles de pantalla (origen arriba a la izquierda): worldBound × (ancho de la pantalla / ancho
+        // del panel). Sin panel, la escala de la pantalla (DpScale).
+        public static Rect ScreenFrame(VisualElement element, double fallbackScale)
+        {
+            var bounds = element.worldBound;
+            var scale = PanelToScreenScale(element, fallbackScale);
+            return new Rect(bounds.x * scale, bounds.y * scale, bounds.width * scale, bounds.height * scale);
+        }
+
+        public static float PanelToScreenScale(VisualElement element, double fallbackScale)
+        {
+            var root = element?.panel?.visualTree;
+            var width = root != null ? root.worldBound.width : 0;
+            if (width > 0 && Screen.width > 0)
+            {
+                return Screen.width / width;
+            }
+
+            return (float)Math.Max(0.01, fallbackScale);
+        }
+
+        // La lista (ScrollView) que contiene a un elemento, si es una de ScrollLists.
+        public static ScrollView? ListOf(VisualElement element)
+        {
+            for (var e = element?.parent; e != null; e = e.parent)
+            {
+                if (e is ScrollView scroll && Array.IndexOf(ScrollLists, scroll.name) >= 0)
+                {
+                    return scroll;
+                }
+            }
+
+            return null;
+        }
+
+        // Una página de la lista hacia adelante o atrás (el gesto de desplazamiento del lector). true si se movió.
+        public bool ScrollPage(VisualElement element, AccessibilityScrollDirection direction)
+        {
+            var scroll = ListOf(element);
+            if (scroll == null)
+            {
+                return false;
+            }
+
+            var page = Math.Max(1f, scroll.contentViewport.layout.height * 0.9f);
+            var forward = direction == AccessibilityScrollDirection.Down || direction == AccessibilityScrollDirection.Forward
+                || direction == AccessibilityScrollDirection.Right;
+            var max = Math.Max(0f, scroll.contentContainer.layout.height - scroll.contentViewport.layout.height);
+            var from = scroll.scrollOffset.y;
+            var to = Mathf.Clamp(from + (forward ? page : -page), 0, max);
+            if (Math.Abs(to - from) < 0.5f)
+            {
+                return false;
+            }
+
+            scroll.scrollOffset = new Vector2(scroll.scrollOffset.x, to);
+            ScrollCount++;
+            _announcer.PageScrolled(FirstVisibleName(scroll, to), NodeOf(element));
+            return true;
+        }
+
+        private string FirstVisibleName(ScrollView scroll, float top)
+        {
+            var content = scroll.contentContainer;
+            for (var i = 0; i < content.childCount; i++)
+            {
+                var child = content[i];
+                if (child.resolvedStyle.display == DisplayStyle.None || child.layout.yMax <= top)
+                {
+                    continue;
+                }
+
+                var text = A11yRules.Gather(child, true);
+                if (text.Length > 0)
+                {
+                    return text;
+                }
+            }
+
+            return "";
         }
 
         // Lo que el lector alcanza, en orden de recorrido (el mismo modelo que la jerarquía de Unity).
@@ -109,10 +208,6 @@ namespace RowMate.Presentation.Accessibility
             }
 
             _focused = element;
-            if (IsDialogOpener(element))
-            {
-                _opener = element;
-            }
 
             // El botón que hace el clic: el elemento o el primer Button de adentro (la pestaña es una caja con su botón).
             var target = element as Button ?? element.Q<Button>() ?? element;
@@ -198,6 +293,7 @@ namespace RowMate.Presentation.Accessibility
             }
 
             _shell.Toasts.Shown += OnToast;
+            _shell.Dialogs.Opening += _onDialogOpening;
             _workout = _shell.Ui.App.Workout.State.Subscribe(OnWorkout, false);
         }
 
@@ -210,6 +306,7 @@ namespace RowMate.Presentation.Accessibility
 
             _active = false;
             _shell.Toasts.Shown -= OnToast;
+            _shell.Dialogs.Opening -= _onDialogOpening;
             _workout?.Dispose();
             _workout = null;
             try
@@ -397,12 +494,13 @@ namespace RowMate.Presentation.Accessibility
         private void Configure(AccessibilityNode node, VisualElement element, A11yItem item)
         {
             Update(node, item);
-            var scale = (float)Math.Max(0.01, _shell.Ui.Display.DpScale);
-            node.frameGetter = () =>
+            var fallback = _shell.Ui.Display.DpScale;
+            node.frameGetter = () => ScreenFrame(element, fallback);
+            if (ListOf(element) != null)
             {
-                var bounds = element.worldBound;
-                return new Rect(bounds.x * scale, bounds.y * scale, bounds.width * scale, bounds.height * scale);
-            };
+                node.scrolled += direction => ScrollPage(element, direction);
+            }
+
             if (item.Role == A11yRole.Button || item.Role == A11yRole.TabButton || item.Role == A11yRole.Toggle || item.Role == A11yRole.TextField)
             {
                 node.invoked += () => Invoke(element);
@@ -505,10 +603,16 @@ namespace RowMate.Presentation.Accessibility
             return null;
         }
 
-        // Un botón que abre un diálogo: no se sabe de antemano; se recuerda el último invocado fuera de un diálogo.
-        private bool IsDialogOpener(VisualElement element)
+        // Se abre un diálogo: el que lo abrió es el enfocado en ese momento (el del lector; si no hay, el del panel). Uno abierto encima de
+        // otro no pisa al primero (al cerrar todo, el foco vuelve al de afuera).
+        private void OnDialogOpening(ModalDialog dialog)
         {
-            return _shell.Dialogs.Top == null;
+            if (_shell.Dialogs.Top != null)
+            {
+                return;
+            }
+
+            _opener = _focused ?? _shell.panel?.focusController?.focusedElement as VisualElement;
         }
 
         private void OnToast(string text, long showId)

@@ -824,3 +824,69 @@
 .rm-boot-splash__spinner {
     color: var(--rm-accent-primary);
 }
+
+/* ════ It. 15 — Deuda resoluble en la PC (15-deuda-pc/04-design-notes; contrato de 02-tech-design §3 WP-D y DT15-04, -10, -13,
+   -22). Cero tokens, fuentes ni colores nuevos. Lo que depende del dato (el color del tipo de paso, la sombra 9-slice del tooltip)
+   va en C#; acá solo aspecto. ════ */
+
+/* #67 (AC-D15-09, DT15-04): el botón de exportar de la tarjeta. Glifo de 18 (IconView) en text.secondary y área de toque de 40; el
+   área sobresale 11 dp arriba y abajo del renglón (que mide lo que el glifo), así el alto de la tarjeta no cambia. La capa de
+   estado queda en un círculo de 32 (4 de aire, como el resto de los botones de ícono). */
+.rm-icon-button.rm-export-button--card {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    margin-top: -11px;
+    margin-bottom: -11px;
+    border-radius: 20px;
+}
+
+.rm-export-button--card > .rm-button__state {
+    border-radius: 16px;
+}
+
+.rm-export-button--card > .rm-icon-button__icon {
+    color: var(--rm-text-secondary);
+}
+
+/* #33 (AC-D15-02, DV-146): la fila marcada de Rendimiento por paso. Borde de 1 dp (el color del tipo lo pone StepBreakdownView en
+   línea: StepBandPalette) y el relleno 7/9 que lo compensa, así el contenido no se mueve ni un dp. Sin transición de USS: la
+   marca cambia con Enter/Espacio o un toque y las capturas tienen que salir iguales (Motion.uss, regla 2); las franjas animan por
+   código (StepHighlightMotion, 160 ms ease.enter). */
+.rm-step-perf.rm-step-perf--selected {
+    border-width: 1px;
+    padding: 7px 9px;
+}
+
+/* #76 (AC-D15-24, DT15-10; arte A15-07): los rótulos del HUD con alguna minúscula (Split 500m, Vatios/Watts, kcal) van a 0,04 em;
+   los de mayúsculas (SPM, BPM) siguen con el 0,08 de .rm-type-label. Dos clases: le gana a .rm-type-label (Typography.uss). */
+.rm-hud-card__label.rm-hud-card__label--mixed {
+    letter-spacing: 4px;
+}
+
+/* #37/#76 (AC-D15-25, DT15-22; arte D15-01): las cifras de los ejes del gráfico en RowMate Numeric SC 600 a 11 dp en text.tertiary,
+   la misma cara que la fecha de la tarjeta (TY-02). .rm-chart__axis (Base.uss) ya lo pedía desde la 9; esta clase es el contrato de
+   la 15 con AxisCrowding (ChartSpecs.AxisDigitAdvanceEm mide esta cara). */
+.rm-chart__axis.rm-chart-axis__num {
+    font-size: 11px;
+    -unity-font-definition: url("project://database/Assets/RowMate/UI/Fonts/Generated/RowMateNumericSC-SemiBold-SDF.asset");
+    color: var(--rm-text-tertiary);
+    letter-spacing: 0;
+}
+
+/* #82 (AC-D15-35, DT15-13; arte 82-e): solo con el simulador (la clase la pone SimulatorLayerView en la raíz del panel), la AppBar
+   corre su contenido 28 dp a la derecha: el título de una pestaña arranca en 44 y el glifo de la flecha de volver queda en 44-68,
+   los dos fuera de la cinta SIMULADOR (x + y > 56,5). Va en los márgenes del título y de la flecha, no en el relleno de .rm-appbar:
+   ese relleno es el área segura, que ShellLayout pone en línea. El build normal no cambia. */
+.rm-has-sim-ribbon .rm-appbar__title {
+    margin-left: 44px;
+}
+
+.rm-has-sim-ribbon .rm-appbar__back {
+    margin-left: 32px;
+}
+
+.rm-has-sim-ribbon .rm-appbar--with-back .rm-appbar__title {
+    margin-left: 20px;
+}

@@ -14,6 +14,8 @@ namespace RowMate.Presentation.Shell
     //   segundo renglón, el check y "Abrir carpeta" (Reveal; el aviso sale en el acto).
     // - Failed: "No se pudo exportar la sesión", sin detalle ni indicador, y "Reintentar" (vuelve a exportar la misma sesión).
     // Share (Android) no avisa el éxito: el servicio no publica Saved.
+    // - OpenFolderFailed (It. 15, #70, AC-D15-13): "No se pudo abrir la carpeta", 4 s (ExportMotionSpecs.OpenFolderFailedMs), sin acción
+    //   (el detalle técnico con la ruta abreviada ya lo registró el servicio).
     public sealed class ExportNoticePresenter : IDisposable
     {
         private readonly UiContext _ui;
@@ -62,10 +64,23 @@ namespace RowMate.Presentation.Shell
             return new ActionToast(texts.Get(L10nKeys.ExportTcxFailed), null, false, texts.Get(L10nKeys.Retry), onAction, duration);
         }
 
+        // El texto del aviso de OpenFolderFailed (pruebas y tomas).
+        public static string OpenFolderFailedText(Localizer texts)
+        {
+            return texts.Get(L10nKeys.ExportTcxOpenFolderFailed);
+        }
+
         private void OnNotice(TcxExportNotice notice)
         {
             if (_subscription == null)
             {
+                return;
+            }
+
+            if (notice.Kind == TcxExportNoticeKind.OpenFolderFailed)
+            {
+                _toasts.Show(OpenFolderFailedText(_ui.Texts), TimeSpan.FromMilliseconds(ExportMotionSpecs.OpenFolderFailedMs));
+                Shown++;
                 return;
             }
 

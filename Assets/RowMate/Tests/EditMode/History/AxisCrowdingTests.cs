@@ -38,6 +38,49 @@ namespace RowMate.Tests.EditMode.History
             Assert.Throws<ArgumentOutOfRangeException>(() => AxisCrowding.DropCrowded(new double[1], new double[1], new bool[1], 2));
         }
 
+        [Test, Category("AC-D15-25")]
+        public void UsesNumericScAdvance()
+        {
+            // It. 15 (DT15-22, arte D15-01): los ejes en RowMate Numeric SC 600 a 11 dp. Las 10 cifras miden lo mismo (tabulares) y el
+            // ancho de una etiqueta sale de los avances del hmtx, sin medir el Label.
+            for (var d = '0'; d <= '9'; d++)
+            {
+                Assert.That(AxisCrowding.AdvanceEm(d), Is.EqualTo(RowMate.Core.Design.ChartSpecs.AxisDigitAdvanceEm), "cifra " + d);
+            }
+
+            Assert.That(RowMate.Core.Design.ChartSpecs.AxisFontSizeDp, Is.EqualTo(11));
+            Assert.That(AxisCrowding.LabelWidthDp("10:00"), Is.EqualTo(11 * (4 * 0.507 + 0.304)).Within(1e-9));
+            Assert.That(AxisCrowding.LabelWidthDp("1:11"), Is.EqualTo(AxisCrowding.LabelWidthDp("8:88")), "alinean entre renglones");
+            Assert.That(AxisCrowding.LabelWidthDp("25.5"), Is.EqualTo(11 * (3 * 0.507 + 0.242)).Within(1e-9));
+
+            // DV-137 sigue: el eje X de 0:00 a 5:00 con 3:44 al lado de 5:00 (CAP-06 de la 9), con los anchos de la SC. Ninguna marca
+            // que queda a la vista está a menos de 4 dp de la de un borde.
+            var texts = new[] { "0:00", "1:00", "2:00", "3:00", "3:44", "5:00" };
+            var centers = new double[] { 0, 60, 120, 180, 224, 250 };
+            var widths = new double[texts.Length];
+            for (var i = 0; i < texts.Length; i++)
+            {
+                widths[i] = AxisCrowding.LabelWidthDp(texts[i]);
+            }
+
+            // Con la SC (≈ 20 dp por etiqueta en vez de 24) 3:44 a 26 dp de 5:00 deja 5,9 dp de aire y queda; a 23 dp (2,9 dp) se va.
+            foreach (var at in new[] { 224.0, 227.0 })
+            {
+                centers[4] = at;
+                var visible = new bool[texts.Length];
+                AxisTicks.DropCrowded(centers, widths, visible, texts.Length);
+                Assert.That(visible[4], Is.EqualTo(at < 225), "3:44 en " + at);
+                for (var i = 1; i < texts.Length - 1; i++)
+                {
+                    if (visible[i])
+                    {
+                        Assert.That(AxisCrowding.Gap(centers, widths, i, 0), Is.GreaterThanOrEqualTo(AxisCrowding.MinGapDp), texts[i]);
+                        Assert.That(AxisCrowding.Gap(centers, widths, i, texts.Length - 1), Is.GreaterThanOrEqualTo(AxisCrowding.MinGapDp), texts[i]);
+                    }
+                }
+            }
+        }
+
         [Test, Category("AC-DEBT-07")]
         public void ConstantSplitOpensToPlusMinusFive()
         {

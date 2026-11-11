@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RowMate.Core.Design;
+using RowMate.Core.Export;
 using RowMate.Core.History;
 using RowMate.Core.Localization;
 using RowMate.Core.Models;
@@ -11,7 +12,9 @@ namespace RowMate.App.History
     // resueltos: el id (la clave estable de la lista virtual), el nombre (el de la rutina guardado en la sesión o historyFree),
     // la fecha local "dd/MM/yyyy  HH:mm" y las 5 o 6 columnas con sus etiquetas en el idioma vigente. Se vuelve a armar al
     // cambiar el idioma (gate m-03).
-    public sealed record HistoryCardModel(long Id, string Name, string Date, IReadOnlyList<HistoryCardColumn> Columns)
+    // It. 15 (#67, AC-D15-09, DT15-04): CanExport = la tarjeta lleva el botón de exportar: la sesión tiene id y datos
+    // (TcxExportRules.HasData sobre las estadísticas de la lista; con 0 puntos valen 0, así que equivale a IsExportable).
+    public sealed record HistoryCardModel(long Id, string Name, string Date, IReadOnlyList<HistoryCardColumn> Columns, bool CanExport = false)
     {
         public static HistoryCardModel From(HistoryEntry entry, Localizer l10n)
         {
@@ -33,7 +36,18 @@ namespace RowMate.App.History
             }
 
             return new HistoryCardModel(entry.Session.Id ?? 0, entry.Session.RoutineName ?? l10n.Get(L10nKeys.HistoryFree),
-                HistoryFormats.CardDate(entry.Session.StartedAt), columns);
+                HistoryFormats.CardDate(entry.Session.StartedAt), columns, CanExportEntry(entry));
+        }
+
+        // La regla de DT15-04, también para la vista (sin armar el modelo).
+        public static bool CanExportEntry(HistoryEntry entry)
+        {
+            if (entry == null)
+            {
+                throw new ArgumentNullException(nameof(entry));
+            }
+
+            return entry.Session.Id.HasValue && TcxExportRules.HasData(entry.Stats);
         }
     }
 

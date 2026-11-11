@@ -33,6 +33,7 @@ namespace RowMate.Tests.PlayMode
             yield return null;
             using (var measured = FrameAllocations.WatchTree(root))
             {
+                AllocationProfile.Begin("bat-" + AllocationProfile.Slug(what));
                 for (var i = 0; i < WindowFrames; i++)
                 {
                     measured.Clock(advance);
@@ -41,6 +42,7 @@ namespace RowMate.Tests.PlayMode
                     measured.Sample();
                 }
 
+                AllocationProfile.End();
                 measured.Stop();
                 Debug.Log("[BAT] " + what + ": " + measured);
                 Assert.That(measured.Frames, Is.EqualTo(WindowFrames));
@@ -81,9 +83,16 @@ namespace RowMate.Tests.PlayMode
             yield return Settle();
             Adapter.NeverRespond(FakeBleDevices.RowId);
             Adapter.DropLink(FakeBleDevices.RowId);
-            yield return Settle();
+            // #78 (QA-V14-15): la caída agenda el intento a los 3 s. Con el tope normal de 2 s, Settle más la ventana medida
+            // (1 + WindowFrames cuadros, ≈ 2,02 s) podían pasar los 3 s según el layout, y el intento asignaba dentro de la medición.
+            yield return Settle(maxSeconds: 0.5);
             var banner = H.DeviceScreen!.Scan.LinkBanner;
             Assert.That(banner.Kind, Is.EqualTo(LinkBannerKind.Reconnecting));
+            var due = H.App.Device.State.Value.Link.NextAttemptAt;
+            Assert.That(due, Is.Not.Null, "esperando el intento");
+            var window = (WindowFrames + 1) * UiTestHost.FrameSeconds;
+            Assert.That(due!.Value - H.Scheduler.MonotonicSeconds, Is.GreaterThan(window + 0.1),
+                "la ventana medida termina antes del intento");
             // Dentro de la espera de 3 s: el arco se llena cuadro a cuadro (sin intentos en la ventana de 2 s).
             yield return Measure(H.DeviceScreen.Scan, "caja del enlace (arco de espera)");
             Assert.That(banner.Indicator.Fraction, Is.GreaterThan(0.5), "el arco avanzó");

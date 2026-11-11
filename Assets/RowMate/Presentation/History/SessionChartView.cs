@@ -34,6 +34,9 @@ namespace RowMate.Presentation.History
         private readonly VisualElement _mesh;
         private readonly ChartGeometry[] _geometries = new ChartGeometry[MetricCount];
         private readonly ChartMeshBuffer _buffer = new ChartMeshBuffer(1024, 2048);
+
+        // It. 15 (QA-V15-01): la malla grande se entrega con DrawMesh desde arreglos propios de tamaño fijo (ChartMeshUpload).
+        private readonly ChartMeshUpload _upload = new ChartMeshUpload();
         private SessionChartData? _data;
         private ChartMetric _metric = ChartMetric.Watts;
         private ChartGeometry? _previous;
@@ -45,6 +48,10 @@ namespace RowMate.Presentation.History
         private float _height = -1;
         private bool _entryRequested;
         private bool _entryDone;
+        private int _stepSelected = -1;
+        private double _stepSelectedT;
+        private int _stepLeaving = -1;
+        private double _stepLeavingT;
 
         public SessionChartView(MotionDriver motion)
         {
@@ -66,11 +73,13 @@ namespace RowMate.Presentation.History
             _mesh.style.right = 0;
             _mesh.style.bottom = 0;
             _mesh.generateVisualContent += Generate;
+            _mesh.RegisterCallback<DetachFromPanelEvent>(_ => _upload.Dispose());
             Add(_mesh);
             Labels = new ChartAxisLabels();
             Add(Labels);
             Cursor = new SessionChartCursor(this, motion);
             Add(Cursor);
+            StepHighlight = new StepHighlightMotion(motion, ApplyStepHighlight);
             RegisterCallback<GeometryChangedEvent>(OnGeometry);
         }
 
@@ -97,6 +106,18 @@ namespace RowMate.Presentation.History
         public VisualElement MeshLayer => _mesh;
 
         public ChartVisual Visual => _visual;
+
+        // It. 15 (#33, AC-D15-02): la marca del paso elegido en "Rendimiento por paso" (todas sus franjas del 10 al 22 %).
+        public StepHighlightMotion StepHighlight { get; }
+
+        // El cuadro que se dibuja: la línea de tiempo con la marca del paso.
+        public ChartVisual DrawnVisual => _visual.WithSteps(_stepSelected, _stepSelectedT, _stepLeaving, _stepLeavingT);
+
+        // Marca un paso (índice del paso en la rutina; −1 desmarca), con su animación de 160 ms.
+        public void SelectStep(int stepIndex)
+        {
+            StepHighlight.Select(stepIndex);
+        }
 
         public bool IsAnimating => _phase != Phase.Idle;
 
@@ -253,7 +274,6 @@ namespace RowMate.Presentation.History
             return true;
         }
 
-        // Copia un buffer de Core a la malla (sin asignar: un vértice por vez). Color sin compensación, como los Allocate del HUD.
         // Lo más grande que se pide a UI Toolkit de una vez (en vértices): una malla grande en un solo Allocate pasa por el camino
         // de "exceso" del asignador temporal de UIR, que asigna en cada cuadro (medido en HistoryPerformanceTests); en trozos de
         // este tamaño, no.
@@ -261,7 +281,7 @@ namespace RowMate.Presentation.History
 
         // Copia un buffer de Core a la malla (sin asignar: un vértice por vez), en trozos de triángulos seguidos cuyo rango de
         // vértices no pasa de ChunkVertices (los índices se corren al comienzo del trozo). Color sin compensación, como los
-        // Allocate del HUD.
+        // Allocate del HUD. It. 15 (QA-V15-01): solo para mallas chicas (el punto del cursor); la grande va por ChartMeshUpload.
         internal static void Copy(MeshGenerationContext context, ChartMeshBuffer buffer)
         {
             var ic = buffer.IndexCount;
@@ -330,6 +350,15 @@ namespace RowMate.Presentation.History
 
                 t = end;
             }
+        }
+
+        private void ApplyStepHighlight(int selected, double selectedT, int leaving, double leavingT)
+        {
+            _stepSelected = selected;
+            _stepSelectedT = selectedT;
+            _stepLeaving = leaving;
+            _stepLeavingT = leavingT;
+            _mesh.MarkDirtyRepaint();
         }
 
         private void Finish()
@@ -456,9 +485,10 @@ namespace RowMate.Presentation.History
             {
                 GenerateCount++;
                 var previous = _previous != null && _previous.IsPrepared ? _previous : null;
-                ChartGeometry.WriteFrame(_buffer, current, previous, in _visual);
+                var visual = _visual.WithSteps(_stepSelected, _stepSelectedT, _stepLeaving, _stepLeavingT);
+                ChartGeometry.WriteFrame(_buffer, current, previous, in visual);
                 LastVertexCount = _buffer.VertexCount;
-                Copy(context, _buffer);
+                _upload.Draw(context, _buffer);
             }
 
             LastGenerateMs = (Stopwatch.GetTimestamp() - started) * 1000.0 / Stopwatch.Frequency;

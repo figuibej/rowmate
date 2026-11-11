@@ -32,6 +32,8 @@ namespace RowMate.Simulator.Presentation
             _store = store ?? throw new ArgumentNullException(nameof(store));
             name = "sim-panel";
             AddToClassList("rm-sim-panel");
+            // It. 15 (#79, AC-D15-26): diagnóstico del simulador, fuera de la auditoría de textos del catálogo.
+            AddToClassList("rm-audit-exempt");
 
             var header = new VisualElement();
             header.AddToClassList("rm-sim-panel__header");

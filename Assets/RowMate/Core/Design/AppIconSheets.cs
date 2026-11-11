@@ -230,8 +230,80 @@ namespace RowMate.Core.Design
         public byte[] Bytes { get; }
     }
 
+    // El .ico de Windows (It. 15, #74, AC-D15-20): un ICONDIR con una entrada por tamaño y cada imagen como PNG (Vista o posterior),
+    // con el PNG/deflate propio de la 14: los mismos bytes en cada corrida. Little endian; ancho y alto 0 = 256. Sin fecha ni datos
+    // del equipo. Se versiona en Art/Identity, pero Unity no lo usa (PlayerSettings no cambia: el ícono del build sale de los PNG).
+    public static class AppIconIco
+    {
+        // Los 6 tamaños del .ico (16, 24, 32, 48, 64 y 256 px).
+        public static readonly int[] Sizes = { 16, 24, 32, 48, 64, 256 };
+
+        public const string FileName = "RowMate.ico";
+
+        public static byte[] Encode(IReadOnlyList<KeyValuePair<int, byte[]>> pngBySize)
+        {
+            if (pngBySize == null)
+            {
+                throw new ArgumentNullException(nameof(pngBySize));
+            }
+
+            var count = pngBySize.Count;
+            if (count == 0 || count > 255)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pngBySize), count, "AppIconIco: entre 1 y 255 imágenes.");
+            }
+
+            var total = 6 + 16 * count;
+            for (var i = 0; i < count; i++)
+            {
+                total += pngBySize[i].Value.Length;
+            }
+
+            var ico = new byte[total];
+            PutU16(ico, 0, 0);
+            PutU16(ico, 2, 1);
+            PutU16(ico, 4, count);
+            var offset = 6 + 16 * count;
+            for (var i = 0; i < count; i++)
+            {
+                var size = pngBySize[i].Key;
+                var png = pngBySize[i].Value;
+                if (size < 1 || size > 256)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(pngBySize), size, "AppIconIco: de 1 a 256 px.");
+                }
+
+                var entry = 6 + 16 * i;
+                ico[entry] = (byte)(size == 256 ? 0 : size);
+                ico[entry + 1] = (byte)(size == 256 ? 0 : size);
+                ico[entry + 2] = 0;
+                ico[entry + 3] = 0;
+                PutU16(ico, entry + 4, 1);
+                PutU16(ico, entry + 6, 32);
+                PutU32(ico, entry + 8, png.Length);
+                PutU32(ico, entry + 12, offset);
+                Array.Copy(png, 0, ico, offset, png.Length);
+                offset += png.Length;
+            }
+
+            return ico;
+        }
+
+        private static void PutU16(byte[] data, int at, int value)
+        {
+            data[at] = (byte)(value & 0xFF);
+            data[at + 1] = (byte)((value >> 8) & 0xFF);
+        }
+
+        private static void PutU32(byte[] data, int at, int value)
+        {
+            PutU16(data, at, value & 0xFFFF);
+            PutU16(data, at + 2, (value >> 16) & 0xFFFF);
+        }
+    }
+
     // Todo lo que genera tools/icon (02-tech-design §2.2), en un orden fijo. AppIconAssetsAreCurrent lo vuelve a generar en
-    // memoria y lo compara byte a byte con lo versionado.
+    // memoria y lo compara byte a byte con lo versionado. It. 15 (AC-D15-20): también Art/Identity/RowMate.ico.
     public static class AppIconOutputs
     {
         public const string IdentityFolder = "Assets/RowMate/Art/Identity";
@@ -287,6 +359,15 @@ namespace RowMate.Core.Design
             {
                 Add(IdentityFolder + "/Apple/macOS/icon-" + size + ".png", Render(AppIconVariant.MacPlate, size));
             }
+
+            // It. 15 (#74, AC-D15-20): el .ico con los PNG de la placa (los mismos que Standalone).
+            var icoImages = new List<KeyValuePair<int, byte[]>>();
+            foreach (var size in AppIconIco.Sizes)
+            {
+                icoImages.Add(new KeyValuePair<int, byte[]>(size, Render(AppIconVariant.Plate, size).ToPng(true)));
+            }
+
+            outputs.Add(new AppIconOutput(IdentityFolder + "/" + AppIconIco.FileName, AppIconIco.Encode(icoImages)));
 
             Add(SnapshotsFolder + "/CAP-01.png", AppIconSheets.Cap01(size => Render(AppIconVariant.Plate, size)), false);
             Add(SnapshotsFolder + "/CAP-02.png", AppIconSheets.Cap02(Render(AppIconVariant.AdaptiveBackground, 432), Render(AppIconVariant.AdaptiveForeground, 432)), false);

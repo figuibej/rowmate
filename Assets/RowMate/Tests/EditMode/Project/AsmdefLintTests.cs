@@ -42,6 +42,8 @@ namespace RowMate.Tests.EditMode.Project
         private static readonly HashSet<string> UnityPackageAssemblies = new HashSet<string>(StringComparer.Ordinal)
         {
             "Unity.InputSystem",
+            // It. 15 (QA-V15-02): el Input System de prueba (InputTestFixture) en RowMate.Tests.UnityEditMode, para WindowMode.
+            "Unity.InputSystem.TestFramework",
             "Unity.RenderPipelines.Core.Runtime",
             "Unity.RenderPipelines.Universal.Runtime",
             "Unity.RenderPipelines.Universal.Editor",

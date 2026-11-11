@@ -13,11 +13,18 @@ namespace RowMate.Core.Export
     // - <Notes> con el nombre de la rutina DESPUÉS de la última vuelta (orden del esquema TCX v2, DV-117), con [SIM] en el
     //   simulador (DV-123), y escapado y limpio (TcxXml, DV-120);
     // - vueltas sin la rutina (TcxLaps, DV-118) y calorías con la base reparada en memoria y tiempo 0 sin error (DV-119).
+    // It. 15 (#73): una vuelta con distancia negativa (el monitor reinició la distancia) sale en 0, los Trackpoint no cambian
+    // (AC-D15-14, DV-144); y la actividad cierra con <Creator> RowMate y la versión de la app (AC-D15-15, DT15-07).
     // Determinista: mismo resultado para la misma sesión, puntos y zona (AC-STR-09-11). Sin puntos → ArgumentException (el
     // servicio nunca lo llama así: TcxExportRules.IsExportable).
     public static class TcxBuilder
     {
         public const string SimulatorMark = "[SIM]";
+
+        // El nombre del dispositivo en <Creator> (AC-D15-15).
+        public const string CreatorName = "RowMate";
+
+        private const int MaxVersionPart = 65535;
 
         private const string Header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
@@ -73,7 +80,7 @@ namespace RowMate.Core.Export
                 TcxTime.Append(buf, start.AddSeconds(first.ElapsedSeconds), zone);
                 Line(buf, "\">");
                 Element(buf, "        <TotalTimeSeconds>", last.ElapsedSeconds - first.ElapsedSeconds, "</TotalTimeSeconds>");
-                Element(buf, "        <DistanceMeters>", last.DistanceMeters - first.DistanceMeters, "</DistanceMeters>");
+                Element(buf, "        <DistanceMeters>", Math.Max(0, last.DistanceMeters - first.DistanceMeters), "</DistanceMeters>");
                 Element(buf, "        <Calories>", TcxExportRules.LapCalories(basis.TotalCalories, lap.Count, basis.TotalSeconds), "</Calories>");
                 Line(buf, "        <Intensity>Active</Intensity>");
                 Line(buf, "        <TriggerMethod>Manual</TriggerMethod>");
@@ -95,6 +102,8 @@ namespace RowMate.Core.Export
                 Line(buf, "</Notes>");
             }
 
+            AppendCreator(buf, options.AppVersion);
+
             // tcx:75-77
             Line(buf, "    </Activity>");
             Line(buf, "  </Activities>");
@@ -113,6 +122,44 @@ namespace RowMate.Core.Export
             }
 
             return hasName ? routineName : null;
+        }
+
+        // <Creator> (esquema TCX v2: después de Notes), con la sangría del golden.
+        private static void AppendCreator(StringBuilder buf, string? appVersion)
+        {
+            var version = VersionParts(appVersion);
+            Line(buf, "      <Creator xsi:type=\"Device_t\">");
+            Line(buf, "        <Name>" + CreatorName + "</Name>");
+            Line(buf, "        <UnitId>0</UnitId>");
+            Line(buf, "        <ProductID>0</ProductID>");
+            Line(buf, "        <Version>");
+            Element(buf, "          <VersionMajor>", version[0], "</VersionMajor>");
+            Element(buf, "          <VersionMinor>", version[1], "</VersionMinor>");
+            Element(buf, "          <BuildMajor>", version[2], "</BuildMajor>");
+            Element(buf, "          <BuildMinor>", version[3], "</BuildMinor>");
+            Line(buf, "        </Version>");
+            Line(buf, "      </Creator>");
+        }
+
+        // Los 4 números de la versión ("1.0.0" → 1, 0, 0, 0; "2.3" → 2, 3, 0, 0). Cada parte toma sus cifras del principio
+        // ("1-beta" → 1); lo que falta o no tiene cifras, 0. Nunca negativos ni más de 65 535 (UInt16 en el esquema).
+        public static int[] VersionParts(string? appVersion)
+        {
+            var result = new int[4];
+            var parts = (appVersion ?? "").Trim().Split('.');
+            for (var i = 0; i < result.Length && i < parts.Length; i++)
+            {
+                var value = 0;
+                var text = parts[i];
+                for (var c = 0; c < text.Length && text[c] >= '0' && text[c] <= '9'; c++)
+                {
+                    value = Math.Min(MaxVersionPart, value * 10 + (text[c] - '0'));
+                }
+
+                result[i] = value;
+            }
+
+            return result;
         }
 
         // tcx:44-69

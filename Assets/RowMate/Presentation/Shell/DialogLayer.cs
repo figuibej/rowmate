@@ -127,6 +127,9 @@ namespace RowMate.Presentation.Shell
 
         internal double KeyboardDp => _keyboardDp;
 
+        // Un diálogo está por abrirse (todavía no es Top).
+        public event Action<ModalDialog>? Opening;
+
         public void Open(ModalDialog dialog)
         {
             Open(dialog, false);
@@ -148,6 +151,8 @@ namespace RowMate.Presentation.Shell
 
             HookPanelRoot();
             var focused = panel?.focusController?.focusedElement;
+            // It. 15 (#80, AC-D15-29): antes de abrir (el lector recuerda quién lo abrió).
+            Opening?.Invoke(dialog);
             _dialogs.Add(dialog);
             Add(dialog.Host);
             dialog.Open(this, focused, instantly);

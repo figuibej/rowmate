@@ -15,7 +15,10 @@ namespace RowMate.EditorTools
     // por cada lugar del hilo principal que asigna, cuántas asignaciones hubo, cuántos bytes, los marcadores de arriba y la pila de C#
     // (la grabó el player con Profiler.enableAllocationCallstacks). Es lo que en la ventana del Profiler sería "GC.Alloc" con su pila.
     //   Unity -batchmode -quit -projectPath . -executeMethod RowMate.EditorTools.ProfileAllocations.Dump
-    //         -rowmate-profile <archivo.raw> -rowmate-profile-out <resumen.txt>
+    //         -rowmate-profile <archivo.raw o carpeta> -rowmate-profile-out <resumen.txt> [-rowmate-profile-filter <marcador>]
+    // It. 15 (QA-V15-01, QA-V15-05): con una carpeta, un resumen por cada .raw (los que graba Tests/UiSupport/AllocationProfile en el
+    // Editor); con -rowmate-profile-filter, solo las asignaciones que tienen ese marcador arriba (RowMate.Diag.Measured: lo que midió
+    // FrameAllocations), con los marcadores de debajo de él.
     public static class ProfileAllocations
     {
         private const int MarkerDepth = 8;
@@ -26,20 +29,35 @@ namespace RowMate.EditorTools
         {
             var raw = Argument("-rowmate-profile");
             var output = Argument("-rowmate-profile-out");
-            if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(output) || !File.Exists(raw))
+            var filter = Argument("-rowmate-profile-filter");
+            if (string.IsNullOrEmpty(raw) || string.IsNullOrEmpty(output) || (!File.Exists(raw) && !Directory.Exists(raw)))
             {
-                UnityEngine.Debug.LogError("[PROFILE] hacen falta -rowmate-profile <archivo.raw existente> y -rowmate-profile-out <archivo>");
+                UnityEngine.Debug.LogError("[PROFILE] hacen falta -rowmate-profile <archivo.raw o carpeta existente> y -rowmate-profile-out <archivo>");
                 EditorApplication.Exit(1);
                 return;
             }
 
-            if (!ProfilerDriver.LoadProfile(raw, false))
+            var files = Directory.Exists(raw) ? Directory.GetFiles(raw, "*.raw").OrderBy(f => f, StringComparer.Ordinal).ToArray() : new[] { raw };
+            var all = new StringBuilder();
+            foreach (var file in files)
             {
-                UnityEngine.Debug.LogError("[PROFILE] no se pudo cargar el registro");
-                EditorApplication.Exit(1);
-                return;
+                if (!ProfilerDriver.LoadProfile(file, false))
+                {
+                    UnityEngine.Debug.LogError("[PROFILE] no se pudo cargar " + Path.GetFileName(file));
+                    EditorApplication.Exit(1);
+                    return;
+                }
+
+                all.Append("=== ").Append(Path.GetFileName(file)).Append(" ===\n").Append(Summarize(filter)).Append('\n');
             }
 
+            File.WriteAllText(output, all.ToString(), new UTF8Encoding(false));
+            UnityEngine.Debug.Log("[PROFILE] " + files.Length + " registros resumidos");
+            EditorApplication.Exit(0);
+        }
+
+        private static string Summarize(string? filter)
+        {
             var first = ProfilerDriver.firstFrameIndex;
             var last = ProfilerDriver.lastFrameIndex;
             var places = new Dictionary<string, Place>();
@@ -88,12 +106,26 @@ namespace RowMate.EditorTools
                                 remaining[remaining.Count - 1]--;
                             }
 
-                            if (view.GetSampleMarkerId(i) == gc)
+                            var under = -1;
+                            if (filter != null && view.GetSampleMarkerId(i) == gc)
+                            {
+                                for (var a = ancestors.Count - 1; a >= 0; a--)
+                                {
+                                    if (view.GetSampleName(ancestors[a]) == filter)
+                                    {
+                                        under = a;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (view.GetSampleMarkerId(i) == gc && (filter == null || under >= 0))
                             {
                                 inFrame++;
                                 var key = new StringBuilder();
                                 key.Append('[').Append(view.threadName).Append("] ");
-                                for (var a = Math.Max(0, ancestors.Count - MarkerDepth); a < ancestors.Count; a++)
+                                var from = filter != null ? Math.Max(under, ancestors.Count - 2 * MarkerDepth) : Math.Max(0, ancestors.Count - MarkerDepth);
+                                for (var a = from; a < ancestors.Count; a++)
                                 {
                                     key.Append(view.GetSampleName(ancestors[a])).Append(" > ");
                                 }
@@ -151,6 +183,11 @@ namespace RowMate.EditorTools
             }
 
             var report = new StringBuilder();
+            if (filter != null)
+            {
+                report.Append("[PROFILE] solo bajo ").Append(filter).Append('\n');
+            }
+
             report.Append("[PROFILE] ").Append(frames).Append(" cuadros del hilo principal, ").Append(framesWithAllocations)
                 .Append(" con asignaciones, ").Append(total).Append(" asignaciones en ").Append(places.Count).Append(" lugares; en los otros hilos, ")
                 .Append(otherThreads).Append("\n\n");
@@ -159,9 +196,8 @@ namespace RowMate.EditorTools
                 report.Append(pair.Value.Count).Append(" asignaciones, ").Append(pair.Value.Bytes).Append(" B:\n  ").Append(pair.Key).Append('\n');
             }
 
-            File.WriteAllText(output, report.ToString(), new UTF8Encoding(false));
             UnityEngine.Debug.Log("[PROFILE] " + frames + " cuadros, " + framesWithAllocations + " con asignaciones, " + total + " asignaciones");
-            EditorApplication.Exit(0);
+            return report.ToString();
         }
 
         private sealed class Place

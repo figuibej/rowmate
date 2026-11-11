@@ -588,9 +588,10 @@ namespace RowMate.Tests.PlayMode.It14
             H.Advance(0.1);
             yield return null;
             Assert.That(SpmOpacity, Is.GreaterThan(0.05f).And.LessThan(0.999f), "a mitad de los 200 ms");
-            H.Advance(0.12);
+            // It. 15 (AC-D15-32): en cascada, las tarjetas (grupo 1) terminan a los 240 ms y todo a los 280.
+            H.Advance(0.2);
             yield return Frames();
-            Assert.That(SpmOpacity, Is.EqualTo(1f).Within(0.001f), "entraron a los 200 ms");
+            Assert.That(SpmOpacity, Is.EqualTo(1f).Within(0.001f), "entraron a los 280 ms");
 
             // La regla de los 400 ms: ida y vuelta rápida, en el acto.
             H.Resize(DeviceProfile.TV);

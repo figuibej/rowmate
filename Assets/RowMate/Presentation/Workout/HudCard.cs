@@ -232,6 +232,8 @@ namespace RowMate.Presentation.Workout
             {
                 _labelText = text;
                 Label.text = text;
+                // It. 15 (#76, AC-D15-24, DT15-10): un rótulo con minúsculas lleva 0,04 em (la clase); todo en mayúsculas sigue en 0,08.
+                Label.EnableInClassList(RowMate.Core.Text.LabelTracking.MixedClass, RowMate.Core.Text.LabelTracking.HasLowercase(text));
             }
         }
 

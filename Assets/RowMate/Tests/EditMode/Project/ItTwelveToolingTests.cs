@@ -11,7 +11,7 @@ namespace RowMate.Tests.EditMode.Project
     // golden del TCX con LF, sin datos personales; nada de credenciales ni red en lo que se distribuye; las claves de Strava sin uso
     // en las pantallas; la cadena ROWMATE_DATA_DIR fuera del código puro; y, desde que existen (WP-B1, WP-B2), el manifiesto de
     // Android sin permisos, la purga de la caché de compartir, las agujas del inspector del build y el set it12 de las capturas.
-    // Lo de WP-B queda ignorado con el motivo mientras su archivo no existe.
+    // It. 15 (#71, AC-D15-16 a): esos 4 ya no se ignoran: los archivos existen y las afirmaciones son duras.
     [TestFixture]
     public sealed class ItTwelveToolingTests
     {
@@ -51,10 +51,16 @@ namespace RowMate.Tests.EditMode.Project
         {
             // Repo público: el golden es de datos inventados (spec §6), sin rutas, usuarios ni equipos.
             var text = Read(Golden);
-            foreach (var forbidden in new[] { ":\\", "Users", "AppData", "/home/", "<Creator>", "<Author>", "Strava" })
+            foreach (var forbidden in new[] { ":\\", "Users", "AppData", "/home/", "<Author>", "Strava" })
             {
                 Assert.That(text, Does.Not.Contain(forbidden), forbidden);
             }
+
+            // It. 15 (AC-D15-15): <Creator> entra, pero solo con el nombre de la app, UnitId y ProductID en 0 y la versión: nada del
+            // equipo (antes la aguja era "<Creator>").
+            Assert.That(text, Does.Contain("      <Creator xsi:type=\"Device_t\">\n        <Name>RowMate</Name>\n        <UnitId>0</UnitId>\n"
+                + "        <ProductID>0</ProductID>\n        <Version>\n"));
+            Assert.That(text.Split(new[] { "<Creator" }, StringSplitOptions.None).Length, Is.EqualTo(2), "uno solo");
         }
 
         [Test, Category("AC-STR-09-28")]
@@ -148,15 +154,11 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
         }
 
-        [Test, Category("AC-STR-09-28")]
+        [Test, Category("AC-STR-09-28"), Category("AC-D15-16")]
         public void InspectorListsCredentialNeedles()
         {
             var inspector = Read(Inspector);
-            if (!inspector.Contains("CredentialNeedles"))
-            {
-                Assert.Ignore("pendiente WP-B1: BuildOutputInspector todavía no tiene CredentialNeedles");
-            }
-
+            Assert.That(inspector, Does.Contain("CredentialNeedles"));
             foreach (var needle in CredentialNeedles)
             {
                 Assert.That(inspector, Does.Contain("\"" + needle + "\","), needle);
@@ -165,14 +167,10 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(Read(BuildCli), Does.Contain("FindCredentialTraces"), "también sobre el build del simulador");
         }
 
-        [Test, Category("AC-STR-09-24")]
+        [Test, Category("AC-STR-09-24"), Category("AC-D15-16")]
         public void ExportManifestNoPermissionsProviderNotExported()
         {
-            if (!File.Exists(RepoPaths.Combine(ExportManifest)))
-            {
-                Assert.Ignore("pendiente WP-B1: todavía no existe " + ExportManifest);
-            }
-
+            Assert.That(File.Exists(RepoPaths.Combine(ExportManifest)), Is.True, ExportManifest);
             var manifest = Read(ExportManifest);
             Assert.That(manifest, Does.Not.Contain("uses-permission"), "sin permisos nuevos (F-APP-13)");
             Assert.That(manifest, Does.Contain("<provider"));
@@ -182,14 +180,10 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(manifest, Does.Not.Contain("INTERNET").And.Not.Contain("WRITE_EXTERNAL_STORAGE"));
         }
 
-        [Test, Category("AC-STR-09-24")]
+        [Test, Category("AC-STR-09-24"), Category("AC-D15-16")]
         public void AndroidExporterPurgesWithShareCacheMaxAge()
         {
-            if (!File.Exists(RepoPaths.Combine(AndroidExporter)))
-            {
-                Assert.Ignore("pendiente WP-B1: todavía no existe " + AndroidExporter);
-            }
-
+            Assert.That(File.Exists(RepoPaths.Combine(AndroidExporter)), Is.True, AndroidExporter);
             var code = SourceScan.StripComments(Read(AndroidExporter));
             Assert.That(code, Does.Contain("FolderExportWriter.DeleteOlderThan("));
             Assert.That(code, Does.Contain("FolderExportWriter.ShareCacheMaxAge"));
@@ -197,15 +191,11 @@ namespace RowMate.Tests.EditMode.Project
             Assert.That(code, Does.Contain("ExportDelivery.Share"));
         }
 
-        [Test, Category("AC-STR-09-19")]
+        [Test, Category("AC-STR-09-19"), Category("AC-D15-16")]
         public void CaptureSetIt12WritesToItsFolder()
         {
             var script = Read(Captures);
-            if (!script.Contains("'it12'"))
-            {
-                Assert.Ignore("pendiente WP-B2: capture-snapshots.ps1 todavía no tiene el set it12");
-            }
-
+            Assert.That(script, Does.Contain("'it12'"), "el set it12");
             Assert.That(script, Does.Contain("12-exportar-tcx"), "la carpeta de la 12 (y no la de la 11)");
         }
     }

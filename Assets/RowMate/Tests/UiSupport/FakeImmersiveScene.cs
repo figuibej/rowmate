@@ -100,9 +100,13 @@ namespace RowMate.Tests.UiSupport
             CatchUps++;
         }
 
+        // It. 15 (AC-D15-30, ItFourteenGapTests.SceneLoading*): desde cuándo corre el vuelo pedido (NaN sin vuelo).
+        public double LastFlightStart { get; private set; } = double.NaN;
+
         public void BeginFlight(double now)
         {
             Flights++;
+            LastFlightStart = now;
         }
 
         public void ShowInPlace(double now)

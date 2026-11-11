@@ -56,6 +56,9 @@ namespace RowMate.Presentation.History
             Add(Scroll);
             _ui.Pages.Settled += OnPagesSettled;
             Content.RegisterCallback<GeometryChangedEvent>(_ => FixAnchor());
+            // It. 15 (#82, AC-D15-33, DT15-12): el ancla de desplazamiento SOLO ante un cambio de ancho (ScrollAnchor no repone con el ancho
+            // fijo): el ancla de recarga (FixAnchor) sigue mandando y no compiten.
+            Anchor = ScrollAnchor.Attach(Scroll);
             Scroll.RegisterCallback<WheelEvent>(_ => _anchor = null, TrickleDown.TrickleDown);
             Scroll.RegisterCallback<PointerDownEvent>(_ => _anchor = null, TrickleDown.TrickleDown);
         }
@@ -65,6 +68,8 @@ namespace RowMate.Presentation.History
         public VisualElement Content { get; }
 
         public FocusScroller Scroller { get; }
+
+        public ScrollAnchor Anchor { get; }
 
         public int Count => _order.Count;
 
@@ -348,7 +353,7 @@ namespace RowMate.Presentation.History
             slot.AddToClassList("rm-history__slot");
             slot.pickingMode = PickingMode.Ignore;
             slot.RegisterCallback<GeometryChangedEvent>(_ => FixAnchor());
-            var card = new HistoryCardView(_open);
+            var card = new HistoryCardView(_open, _ui);
             slot.Add(card);
             CreatedCount++;
             var item = new Item(key, slot, card, new GrowMotion(_ui.Motion, slot, card), new EnterMotion(_ui.Motion));

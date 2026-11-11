@@ -24,6 +24,8 @@ namespace RowMate.Presentation.Device
         {
             name = "ble-debug-panel";
             AddToClassList("rm-ble-debug");
+            // It. 15 (#79, AC-D15-26, DV-147): diagnóstico Bluetooth (en inglés, Q-04), fuera de la auditoría de textos del catálogo.
+            AddToClassList("rm-audit-exempt");
             pickingMode = PickingMode.Ignore;
 
             var header = Row("rm-ble-debug__header");

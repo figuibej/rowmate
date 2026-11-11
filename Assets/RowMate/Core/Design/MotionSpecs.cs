@@ -534,5 +534,18 @@ namespace RowMate.Core.Design
         // sin cerrar la vuelta. El lado del óvalo de sombra cambia en 1,5 s ease.move (DA7-10). ──
         public const double BuoySpringSeconds = 0.6, BuoyMaxCorrectionMps = 0.5, BuoyFadeSeconds = 0.6;
         public const double ShadowSideFadeSeconds = 1.5;
+
+        // ════ It. 15 — Deuda resoluble en la PC (15-deuda-pc/02-tech-design DT15-02, DT15-11) ════
+
+        // ── La fila marcada de "Rendimiento por paso" (AC-D15-02): sus franjas suben del 10 al 22 % en 160 ms (ease.enter); la que
+        // se desmarca baja en el mismo tiempo. Con reducir movimiento, al instante. ──
+        public const double StepHighlightMs = 160;
+
+        // ── La cascada del HUD al cambiar de clase de ventana (AC-D15-32, arte A14-05): 3 grupos (0 barra de pasos y barra superior,
+        // 1 tarjetas, 2 banda, fila de abajo y controles) con retrasos de 0 / 40 / 80 ms; cada uno, HudReflowMs (200) con
+        // ease.enter, opacidad 0 → 1 y traslado de 8 dp × la escala del HUD → 0. ──
+        public const int HudReflowGroups = 3;
+        public const double HudReflowGroupDelayMs = 40;
+        public const double HudReflowShiftDp = 8;
     }
 }

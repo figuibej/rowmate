@@ -179,6 +179,17 @@ namespace RowMate.Presentation.Shell
             Present(text, TimeSpan.FromMilliseconds(UiTimings.ToastVisibleMs), null);
         }
 
+        // It. 15 (#70, AC-D15-13): un aviso común sin acción con su propia duración ("No se pudo abrir la carpeta", 4 s).
+        public void Show(string text, TimeSpan duration)
+        {
+            if (_disposed || text == null)
+            {
+                return;
+            }
+
+            Present(text, duration, null);
+        }
+
         // It. 10a (§6.3): el aviso del enlace (null = Cleared: se quita el fijo).
         public void ShowLink(LinkToast? toast)
         {

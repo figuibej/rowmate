@@ -1,9 +1,9 @@
 namespace RowMate.Core.Localization
 {
-    // Las 202 claves del catálogo (F-APP-10): las 159 del legacy en su orden (lib/l10n/app_es.arb), las 15 nuevas de la
-    // It. 1 (01-po-spec §4.17.2), las 16 de la It. 3 (03-rutinas/01-po-spec §11.2) y las 12 de la It. 4a
-    // (04a-motor-hud-funcional/01-po-spec §11.2) al final. Nombre de la constante = la clave en PascalCase. Se mantiene a mano (D-05): L10nKeysTests falla si una constante no existe en los dos catálogos o si
-    // una clave del catálogo no tiene constante.
+    // Las 258 claves del catálogo (F-APP-10): las 159 del legacy en su orden (lib/l10n/app_es.arb) y, al final, las nuevas de
+    // cada iteración con su bloque (It. 1, 3, 4a y siguientes, hasta las 2 de la It. 15). Nombre de la constante = la clave en
+    // PascalCase. Se mantiene a mano (D-05): L10nKeysTests falla si una constante no existe en los dos catálogos, si una clave del
+    // catálogo no tiene constante o si el número de esta cabecera no es el del catálogo (It. 15, AC-D15-27).
     public static class L10nKeys
     {
         // ── Legacy (159) ──
@@ -314,5 +314,11 @@ namespace RowMate.Core.Localization
         public const string A11yLabelValue = "a11yLabelValue";
         public const string A11yStepProgress = "a11yStepProgress";
         public const string A11yChartSummary = "a11yChartSummary";
+
+        // ── Nuevas de la It. 15 (15-deuda-pc/01-po-spec §3.5): 256 → 258 ──
+        // El nombre accesible del botón de exportar de la tarjeta del Historial (AC-D15-09; {session} = el nombre y la fecha de la
+        // tarjeta) y el aviso de "Abrir carpeta" fallido (AC-D15-13). Cambian hudWatts, hudSplit e historyStatPower (DV-140).
+        public const string ExportTcxFor = "exportTcxFor";
+        public const string ExportTcxOpenFolderFailed = "exportTcxOpenFolderFailed";
     }
 }

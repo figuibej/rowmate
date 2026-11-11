@@ -60,6 +60,11 @@ namespace RowMate.Presentation.Shell
             if (source == BackSource.Escape)
             {
                 // It. 9: el detalle de sesión sí se cierra con Escape (AC-HIS-09-01); el resto no (P-08).
+                if (top is IHandlesEscape handles && handles.TryHandleEscape())
+                {
+                    return;
+                }
+
                 if (top is IClosesOnEscape)
                 {
                     top.OnBackRequested();

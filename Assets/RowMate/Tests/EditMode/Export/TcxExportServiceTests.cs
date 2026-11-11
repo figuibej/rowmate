@@ -200,6 +200,49 @@ namespace RowMate.Tests.EditMode.Export
             Assert.That(exporter.Reveals[0], Is.SameAs(notices[0].File));
         }
 
+        [Test, Category("AC-D15-13")]
+        public void RevealFailureNotifies()
+        {
+            // It. 15 (#70): el Explorador y el respaldo fallan → aviso OpenFolderFailed con la sesión y el archivo del Saved, y el
+            // detalle técnico en el registro con la ruta abreviada. Reveal no lanza.
+            var exporter = Exporter(label: null);
+            var folder = exporter.Location.Directory;
+            var service = Service(exporter);
+            var notices = Record(service);
+            service.ExportAsync(Session(1));
+            Settle();
+            Assert.That(notices.Single().Kind, Is.EqualTo(TcxExportNoticeKind.Saved));
+            service.Reveal(notices[0].File!);
+            Assert.That(notices.Count, Is.EqualTo(1), "si abre, no avisa nada");
+            exporter.FailReveals();
+            Assert.DoesNotThrow(() => service.Reveal(notices[0].File!));
+            Assert.That(notices.Count, Is.EqualTo(2));
+            Assert.That(notices[1].Kind, Is.EqualTo(TcxExportNoticeKind.OpenFolderFailed));
+            Assert.That(notices[1].Session.Id, Is.EqualTo(_seed.Session(1)));
+            Assert.That(notices[1].File, Is.SameAs(notices[0].File));
+            var line = _logger.Lines.Last(l => l.StartsWith("[EXPORT] Warning", StringComparison.Ordinal));
+            Assert.That(line, Does.Contain("RevealFailedException"));
+            Assert.That(line, Does.Not.Contain(folder), "la ruta abreviada (AC-STR-09-19)");
+            Assert.That(ExportMotionSpecs.OpenFolderFailedMs, Is.EqualTo(4000));
+            service.Dispose();
+            service.Reveal(notices[0].File!);
+            Assert.That(notices.Count, Is.EqualTo(2), "después de Dispose, nada");
+        }
+
+        [Test, Category("AC-D15-15")]
+        public void AppVersionReachesTheCreator()
+        {
+            var exporter = Exporter();
+            var service = new TcxExportService(_sessions, exporter, _scheduler, () => _zone, new ReadOnlyObservable<Localizer>(_texts), false,
+                _logger, "2.3.4");
+            _services.Add(service);
+            service.ExportAsync(Session(1));
+            Settle();
+            var text = Encoding.UTF8.GetString(File.ReadAllBytes(exporter.Files.Single().FullPath));
+            Assert.That(text, Does.Contain("          <VersionMajor>2</VersionMajor>\n          <VersionMinor>3</VersionMinor>\n"
+                + "          <BuildMajor>4</BuildMajor>\n          <BuildMinor>0</BuildMinor>\n"));
+        }
+
         [Test, Category("AC-STR-09-21")]
         public void FailureNoticeAndScrubbedLog()
         {

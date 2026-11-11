@@ -64,18 +64,53 @@ namespace RowMate.Snapshots
                     .Append("[manifest.json](manifest.json). CAP-27 (ventana del build normal) no es del arnés: `tools/unity/capture-cap27.ps1`, a pedido.\n\n");
             }
             md.Append("| ID | Archivo | Perfil | Backend | Estado | Sondas | Auditoría | Comprobaciones |\n|---|---|---|---|---|---|---|---|\n");
+            AppendRows(md, false);
+            // It. 15 (DT15-17): las tomas auxiliares de diagnóstico (AUX-15-*) van aparte, fuera de la tabla de arte.
+            if (HasAuxiliary())
+            {
+                md.Append("\n## Tomas auxiliares (diagnóstico, fuera del índice de arte)\n\n");
+                md.Append("| ID | Archivo | Perfil | Backend | Estado | Sondas | Auditoría | Comprobaciones |\n|---|---|---|---|---|---|---|---|\n");
+                AppendRows(md, true);
+            }
+
+            return md.ToString();
+        }
+
+        public static bool IsAuxiliary(string id)
+        {
+            return id.StartsWith("AUX-15-", StringComparison.Ordinal);
+        }
+
+        private bool HasAuxiliary()
+        {
             foreach (var shot in _shots)
             {
+                if (IsAuxiliary(shot.Id))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void AppendRows(StringBuilder md, bool auxiliary)
+        {
+            foreach (var shot in _shots)
+            {
+                if (IsAuxiliary(shot.Id) != auxiliary)
+                {
+                    continue;
+                }
+
                 md.Append("| ").Append(shot.Id).Append(" | [").Append(shot.File).Append("](").Append(shot.File).Append(") | ")
                     .Append(shot.Profile).Append(" | ").Append(shot.Backend).Append(" | ").Append(Escape(shot.State)).Append(" | ")
                     .Append(Escape(ProbeCell(shot))).Append(" | ")
                     .Append(shot.Overflows.Count == 0 && shot.ClippedTexts.Count == 0 ? "sin desbordes" : Escape(string.Join("; ", shot.Overflows) + " " + string.Join("; ", shot.ClippedTexts)))
-                    .Append(" | ").Append(shot.Superseded != null ? "reemplazada por " + shot.Superseded + " (" + Escape(shot.SupersededIds ?? "") + ")"
+                    .Append(" | ").Append(shot.Superseded != null ? (shot.Superseded.StartsWith("tools/", StringComparison.Ordinal) ? "origen " : "reemplazada por ") + shot.Superseded + " (" + Escape(shot.SupersededIds ?? "") + ")"
                         : shot.Problems.Count == 0 ? (shot.Error == null ? "ok" : "") : Escape(string.Join("; ", shot.Problems)))
                     .Append(shot.Error == null ? "" : " ERROR: " + Escape(shot.Error)).Append(" |\n");
             }
-
-            return md.ToString();
         }
 
         public static string Q(string? value)
@@ -212,9 +247,10 @@ namespace RowMate.Snapshots
                     return false;
                 }
 
+                // It. 15 (#35, AC-D15-05): una sonda de aspecto que falla también hace fallar la toma (antes solo avisaba).
                 foreach (var probe in Probes)
                 {
-                    if (!probe.Pass && !probe.Aspect)
+                    if (!probe.Pass)
                     {
                         return false;
                     }

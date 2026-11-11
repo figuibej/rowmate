@@ -4,7 +4,7 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 03-rutinas/02-tech
 
 | ID | Archivo | Perfil | Backend | Estado | Sondas | Auditoría | Comprobaciones |
 |---|---|---|---|---|---|---|---|
-| CAP-01 | [CAP-01-lista-tv.png](CAP-01-lista-tv.png) | TV | Prueba | F-9, Historial | 0/2 ⚠ aspecto: metric.watts #000000 vs #FFD60A; metric.hr #000000 vs #EF476F | sin desbordes | ok |
+| CAP-01 | [CAP-01-lista-tv.png](CAP-01-lista-tv.png) | TV | Prueba | F-9, Historial | 2/2 | sin desbordes | ok |
 | CAP-02 | [CAP-02-lista-th.png](CAP-02-lista-th.png) | TH | Prueba | F-9, Historial en el teléfono horizontal | 0/0 | sin desbordes | ok |
 | CAP-03 | [CAP-03-lista-p360-en-130.png](CAP-03-lista-p360-en-130.png) | P360 | Prueba | F-9, Historial en inglés con letra 1,3× | 0/0 | sin desbordes | ok |
 | CAP-04 | [CAP-04-lista-w1280.png](CAP-04-lista-w1280.png) | W1280 | Prueba | F-9, Historial en el escritorio | 0/0 | sin desbordes | ok |

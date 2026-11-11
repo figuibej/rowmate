@@ -409,6 +409,9 @@ namespace RowMate.Tests.PlayMode
             var column = Hud.Series!;
             Assert.That(column.Laps.Motion.IsRunning || column.Reps.Motion.IsRunning, Is.False, "rotar no anima");
             Assert.That(column.Column.Rule, Is.EqualTo(RowMate.Core.Design.SeriesFitRule.FitAll));
+            // It. 15 (AC-D15-32): las tarjetas entran con 8 dp de traslado durante la cascada (280 ms); se mide al terminar.
+            H.Advance(0.3);
+            yield return Frames(2);
             problems.AddRange(PanelProblems("rotado a TV"));
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
         }

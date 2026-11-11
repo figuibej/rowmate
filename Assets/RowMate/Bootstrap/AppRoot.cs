@@ -105,6 +105,10 @@ namespace RowMate.Bootstrap
         // arrancó el proceso hasta "shell listo") y sale con 0 un segundo después. Los dos solo en desarrollo (build.ps1 -BootSmoke).
         public const string BootSplashArgument = "-rowmate-boot-splash";
         public const string PerfBootArgument = "-rowmate-perf-boot";
+
+        // It. 15 (15-deuda-pc/02-tech-design §2.1, DT15-19; AC-D15-03): -rowmate-perf-history: con F-9P sembrada en ROWMATE_DATA_DIR, abre
+        // el Historial, recarga 5 veces, abre el Detalle n.º 1 y desplaza la lista 10 s; escribe "[PERF] history: …" y sale con 0.
+        public const string PerfHistoryArgument = "-rowmate-perf-history";
 #endif
 
         [SerializeField] private UiAssets? _assets;
@@ -133,6 +137,9 @@ namespace RowMate.Bootstrap
         // It. 14 (DT14-13 a DT14-16): la ventana de Windows (mínimo, Alt+Enter sin pitido) y F11 / Alt+Enter; null fuera del player de Windows.
         private RowMate.Platform.Display.WindowsWindowFrame? _windowFrame;
         private RowMate.Platform.Display.WindowModeController? _windowMode;
+        // It. 15 (#74, AC-D15-19): la ventana del player para guardarla al cerrar y restaurarla al abrir.
+        private RowMate.Platform.Display.PlayerWindowFrame? _playerFrame;
+        private bool _windowSaved;
         // It. 14 (DT14-17 a DT14-22): el puente del lector de pantalla (solo trabaja con el lector encendido).
         private RowMate.Presentation.Accessibility.ScreenReaderBridge? _screenReader;
 
@@ -203,6 +210,7 @@ namespace RowMate.Bootstrap
             //    It. 11 (02-tech-design §5; R-07): las preferencias (paso 4c) se leen ANTES, porque el pulsómetro real recuerda su sensor en
             //    ellas (hrm.deviceId / hrm.deviceName) y AppContext.Start lo reconecta al abrir. Ninguna ruta va al registro.
             _preferences = new RowMate.Infrastructure.Preferences.JsonFilePreferences(DataLocation.PreferencesFile(_platform), logger);
+            PlaceWindow(logger);
             _mainThread = new RowMate.Core.Common.MainThreadQueue(logger);
             _backend = DeviceBackendFactory.Create(_scheduler, _lifecycle, logger, _mainThread, _preferences, out _blePump);
 
@@ -229,7 +237,7 @@ namespace RowMate.Bootstrap
                 _platform.Accessibility, new ShellOptions(false))
             {
                 Lifecycle = _lifecycle, SystemUi = _platform.SystemUi, Preferences = _preferences, Haptics = RowMate.Platform.Haptics.HapticsFactory.Create(logger),
-                Exporter = exporter, ExportZone = ExportZoneNow, SimulatorBuild = BuildFlags.IsSimulator,
+                Exporter = exporter, ExportZone = ExportZoneNow, SimulatorBuild = BuildFlags.IsSimulator, AppVersion = Application.version,
             });
 
             // 6. Superficie: copia del panel con sus respaldos de fuente (RuntimePanelFactory: el asset no se toca, R2-05;
@@ -362,6 +370,10 @@ namespace RowMate.Bootstrap
             {
                 _ = RunPerfLongSeries(ArgumentValue(PerfLongSeriesArgument)!);
             }
+            else if (HasArgument(PerfHistoryArgument) && perfEntries == null && perfSeries == null)
+            {
+                _ = RunPerfHistory();
+            }
 #endif
             if (warmUp)
             {
@@ -384,6 +396,9 @@ namespace RowMate.Bootstrap
             }
 
             _shell.Tick();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            PerfHistoryFrame();
+#endif
             _screenReader?.Tick(_scheduler!.MonotonicSeconds);
             _windowMode?.Update();
             if (_warmup != null && _warmup.Tick())
@@ -665,10 +680,10 @@ namespace RowMate.Bootstrap
                 }
 
                 var frame = new RowMate.Platform.Display.PlayerWindowFrame(api, window);
-                if (WindowGeometry.ShouldPlaceInitial(Environment.GetCommandLineArgs()))
-                {
-                    frame.PlaceInitial();
-                }
+                // It. 15 (#74): la ubicación (la guardada o la inicial) va en PlaceWindow, cuando ya se leyó prefs.json.
+                _playerFrame = frame;
+                installed.Closing += SaveWindow;
+                Application.quitting += SaveWindow;
 
                 // QA-V14-03: el área de contenido en bg.app hasta el primer cuadro (otra vez después de ubicarla: el área creció).
                 RowMate.Platform.Display.WindowsBootBackground.Paint(window);
@@ -694,6 +709,70 @@ namespace RowMate.Bootstrap
             }
 #else
             _ = logger;
+#endif
+        }
+
+        // It. 15 (#74, AC-D15-19, DV-145, DV-130; DT15-08): al abrir, la ventana guardada en prefs.json si se ve al menos en un 50 % en
+        // algún monitor; si no (o si falta), centrada en 1280 × 720 como en la It. 14. Con -screen-* o -popupwindow, nada.
+        private void PlaceWindow(IAppLogger logger)
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            var frame = _playerFrame;
+            if (frame == null || !WindowGeometry.ShouldPlaceInitial(Environment.GetCommandLineArgs()))
+            {
+                return;
+            }
+
+            try
+            {
+                var saved = _preferences != null ? WindowPrefs.Read(_preferences) : null;
+                if (frame.RestoreSaved(saved))
+                {
+                    logger.Log(LogLevel.Info, "PLATFORM", "ventana restaurada de prefs.json" + (saved != null && saved.Maximized ? " (maximizada)" : ""));
+                }
+                else
+                {
+                    frame.PlaceInitial();
+                    logger.Log(LogLevel.Info, "PLATFORM", saved == null ? "ventana inicial (sin ventana guardada)" : "ventana inicial (la guardada no se ve en ningún monitor)");
+                }
+
+                var window = RowMate.Platform.Display.WindowsWndProcApi.FindPlayerWindow();
+                if (window != IntPtr.Zero)
+                {
+                    RowMate.Platform.Display.WindowsBootBackground.Paint(window);
+                }
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Warning, "PLATFORM", "ventana sin ubicar: " + error.GetType().Name);
+            }
+#else
+            _ = logger;
+#endif
+        }
+
+        // Al cerrar (WM_CLOSE y Application.quitting; lo primero que llegue): la ventana en prefs.json (dp lógicos; la pantalla completa
+        // no se recuerda, DV-129). La escritura la espera OnDestroy (FlushAsync).
+        private void SaveWindow()
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            if (_windowSaved || _playerFrame == null || _preferences == null)
+            {
+                return;
+            }
+
+            _windowSaved = true;
+            try
+            {
+                var saved = _playerFrame.Capture(_windowMode?.State ?? new WindowModeState());
+                WindowPrefs.Write(_preferences, saved);
+                _logger?.Log(LogLevel.Info, "PLATFORM", "ventana guardada: " + saved.Width.ToString(CultureInfo.InvariantCulture) + " x "
+                    + saved.Height.ToString(CultureInfo.InvariantCulture) + " dp" + (saved.Maximized ? " (maximizada)" : ""));
+            }
+            catch (Exception error)
+            {
+                _logger?.Log(LogLevel.Warning, "PLATFORM", "ventana sin guardar: " + error.GetType().Name);
+            }
 #endif
         }
 
@@ -1062,6 +1141,130 @@ namespace RowMate.Bootstrap
             catch (Exception error)
             {
                 logger.Log(LogLevel.Error, "PERF", "medición de la escena: falla", error);
+                Application.Quit(1);
+            }
+        }
+
+        // ── -rowmate-perf-history (It. 15, AC-D15-03, DT15-19) ──
+        // Los cuadros (ms) mientras se mide y, durante la rueda, la lista que se desplaza un poco por cuadro (como una rueda continua: se
+        // mueve el desplazamiento de la ScrollView, el mismo trabajo de layout y repintado que la rueda real).
+        private System.Collections.Generic.List<double>? _perfFrames;
+        private ScrollView? _perfWheel;
+        private float _perfWheelStep = 24f;
+
+        private void PerfHistoryFrame()
+        {
+            _perfFrames?.Add(Time.unscaledDeltaTime * 1000.0);
+            var scroll = _perfWheel;
+            if (scroll == null)
+            {
+                return;
+            }
+
+            var max = Math.Max(0f, scroll.contentContainer.layout.height - scroll.contentViewport.layout.height);
+            var y = scroll.scrollOffset.y + _perfWheelStep;
+            if (y >= max || y <= 0)
+            {
+                _perfWheelStep = -_perfWheelStep;
+                y = Mathf.Clamp(y, 0, max);
+            }
+
+            scroll.scrollOffset = new Vector2(scroll.scrollOffset.x, y);
+        }
+
+        private System.Collections.Generic.List<double> TakeFrames()
+        {
+            var frames = _perfFrames ?? new System.Collections.Generic.List<double>();
+            _perfFrames = null;
+            return frames;
+        }
+
+        private static double MaxOf(System.Collections.Generic.List<double> values)
+        {
+            var max = 0.0;
+            for (var i = 0; i < values.Count; i++)
+            {
+                max = Math.Max(max, values[i]);
+            }
+
+            return max;
+        }
+
+        private async System.Threading.Tasks.Task RunPerfHistory()
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            var screen = _shell?.Shell.HistoryScreen;
+            if (!DataLocation.IsOverridden || screen == null)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición del Historial: hace falta ROWMATE_DATA_DIR y la pestaña Historial");
+                Application.Quit(1);
+                return;
+            }
+
+            try
+            {
+                await scheduler.Delay(TimeSpan.FromSeconds(2));
+                app.Shell.Select(screen.TabIndex);
+                await scheduler.Delay(TimeSpan.FromSeconds(2));
+                screen.List.FinishBatches();
+                await scheduler.Delay(TimeSpan.FromSeconds(1));
+                var count = screen.List.Count;
+                // 1. Cinco recargas: el peor cuadro desde el pedido hasta 0,5 s después; base = lo que tardó la carga (la lectura en el
+                //    ejecutor y la vuelta al hilo principal); gc = recolecciones de la generación 0 en las 5.
+                var worstReload = 0.0;
+                var worstBase = 0.0;
+                var gcBefore = GC.CollectionCount(0);
+                for (var k = 0; k < 5; k++)
+                {
+                    _perfFrames = new System.Collections.Generic.List<double>(256);
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    await app.History.LoadAsync();
+                    worstBase = Math.Max(worstBase, watch.Elapsed.TotalMilliseconds);
+                    await scheduler.Delay(TimeSpan.FromMilliseconds(500));
+                    worstReload = Math.Max(worstReload, MaxOf(TakeFrames()));
+                }
+
+                var gc = GC.CollectionCount(0) - gcBefore;
+                // 2. El Detalle n.º 1: el peor cuadro desde el toque hasta 3 s después (la entrada de la página y la del gráfico).
+                _perfFrames = new System.Collections.Generic.List<double>(512);
+                var opened = screen.OpenAt(0);
+                await scheduler.Delay(TimeSpan.FromSeconds(3));
+                var worstDetail = MaxOf(TakeFrames());
+                var data = screen.Detail?.Chart.Data;
+                var minutes = data != null && data.Count > 0 ? data.X[data.Count - 1] / 60.0 : 0;
+                screen.Detail?.Close();
+                await scheduler.Delay(TimeSpan.FromSeconds(1.5));
+                // 3. La lista desplazándose 10 s.
+                _perfWheel = screen.List.Scroll;
+                await scheduler.Delay(TimeSpan.FromMilliseconds(300));
+                _perfFrames = new System.Collections.Generic.List<double>(2048);
+                await scheduler.Delay(TimeSpan.FromSeconds(10));
+                var wheel = TakeFrames();
+                _perfWheel = null;
+                wheel.Sort();
+                var p95 = wheel.Count > 0 ? wheel[Math.Max(0, Math.Min(wheel.Count - 1, (int)Math.Ceiling(wheel.Count * 0.95) - 1))] : 0;
+                var slow = 0;
+                for (var i = 0; i < wheel.Count; i++)
+                {
+                    if (wheel[i] > 33)
+                    {
+                        slow++;
+                    }
+                }
+
+                var pct = wheel.Count > 0 ? 100.0 * slow / wheel.Count : 0;
+                var c = CultureInfo.InvariantCulture;
+                logger.Log(LogLevel.Info, "PERF", "history: recarga " + worstReload.ToString("0.0", c) + " ms · base " + worstBase.ToString("0.0", c)
+                    + " ms · gc " + gc.ToString(c) + " · detalle " + worstDetail.ToString("0.0", c) + " ms · rueda p95 " + p95.ToString("0.0", c)
+                    + " ms · >33 ms " + pct.ToString("0.0", c) + " % (" + count.ToString(c) + " sesiones, " + wheel.Count.ToString(c) + " cuadros, detalle "
+                    + (opened ? minutes.ToString("0", c) + " min" : "sin abrir") + ")");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "medición del Historial: falla", error);
                 Application.Quit(1);
             }
         }

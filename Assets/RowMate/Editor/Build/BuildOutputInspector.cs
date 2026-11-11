@@ -64,6 +64,8 @@ namespace RowMate.EditorTools
             // It. 14 (14-pulido-plataformas/02-tech-design DT14-12): la medición del arranque, solo en desarrollo.
             "-rowmate-boot-splash",
             "-rowmate-perf-boot",
+            // It. 15 (15-deuda-pc/02-tech-design §2.1, AC-D15-03): la medición del Historial con F-9P, solo en desarrollo.
+            "-rowmate-perf-history",
         };
 
         // It. 12 (QA-G12-01): lo que delataría una integración viva con Strava: endpoints de la API y del OAuth, credenciales y tokens, y

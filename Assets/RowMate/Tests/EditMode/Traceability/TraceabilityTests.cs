@@ -23,7 +23,8 @@ namespace RowMate.Tests.EditMode.Traceability
         private static readonly Regex SetCategory = new Regex(@"\.SetCategory\s*\(\s*""((?:[^""\\\n]|\\.)*)""\s*\)");
         private static readonly Regex TestNameProperty = new Regex(@"\bTestName\s*=\s*""((?:[^""\\\n]|\\.)*)""");
         private static readonly Regex SetName = new Regex(@"\.SetName\s*\(\s*""((?:[^""\\\n]|\\.)*)""\s*\)");
-        private static readonly Regex AcPattern = new Regex(@"^AC-[A-Z]+-\d\d(-\d\d)?$");
+        // It. 15: también AC-D15-nn (letras y cifras en el prefijo).
+        private static readonly Regex AcPattern = new Regex(@"^AC-[A-Z]+[0-9]*-\d\d(-\d\d)?$");
         private static readonly Regex LtPattern = new Regex(@"^LT-\d\d$");
 
         [Test, Category("AC-BASE-09")]
@@ -191,6 +192,11 @@ namespace RowMate.Tests.EditMode.Traceability
             }
 
             foreach (var ac in It14Ids.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
+            foreach (var ac in It15Ids.Acceptance)
             {
                 known.Add(ac.Id);
             }
@@ -2318,6 +2324,89 @@ namespace RowMate.Tests.EditMode.Traceability
             }
 
             Assert.That(offenders, Is.Empty, string.Join("\n", offenders));
+        }
+
+        [Test, Category("AC-BASE-09")]
+        public void It15IdsAreComplete()
+        {
+            // 40 AC de deuda (15 §3), todos nuevos. UnityOnlyIds sale de la columna de verificación (sin d y con p, u o cap); sin
+            // WorkPackageBIds (los de dotnet son todos de WP-A); DeviceOnlyIds = los de equipo de 02-tech-design §6 (03, 19 y 37) y el
+            // que solo verifica QA leyendo (08).
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance, It06aIds.Acceptance, It07Ids.Acceptance, It08Ids.Acceptance, It09Ids.Acceptance, It10aIds.Acceptance, It11Ids.Acceptance, It12Ids.Acceptance, It14Ids.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var unityOnly = new List<string>();
+            var withoutAutomatic = new List<string>();
+            for (var i = 0; i < It15Ids.Acceptance.Length; i++)
+            {
+                var ac = It15Ids.Acceptance[i];
+                Assert.That(ac.Id, Is.EqualTo("AC-D15-" + (i + 1).ToString("00", System.Globalization.CultureInfo.InvariantCulture)), "en orden");
+                Assert.That(AcPattern.IsMatch(ac.Id), Is.True, ac.Id);
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It15Ids: " + ac.Id);
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior");
+                CheckKinds(ac.Id, ac.Checks);
+                if (HasKind(ac.Checks, "d") || HasKind(ac.Checks, "dB"))
+                {
+                    continue;
+                }
+
+                if (HasKind(ac.Checks, "p") || HasKind(ac.Checks, "u") || HasKind(ac.Checks, "cap"))
+                {
+                    unityOnly.Add(ac.Id);
+                }
+                else
+                {
+                    withoutAutomatic.Add(ac.Id);
+                }
+            }
+
+            Assert.That(It15Ids.Acceptance.Length, Is.EqualTo(40));
+            Assert.That(It15Ids.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It15Ids.WorkPackageBIds, Is.Empty);
+            var deviceOnly = new List<string>(withoutAutomatic) { "AC-D15-03", "AC-D15-19" };
+            Assert.That(It15Ids.DeviceOnlyIds, Is.EquivalentTo(deviceOnly));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It15DotnetIdsHaveTests()
+        {
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It15Ids.Acceptance)
+            {
+                if (HasKind(ac.Checks, "d") && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d] de la It. 15 sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It15UnityOnlyIdsHaveNoDotnetResult()
+        {
+            var scan = Scan();
+            var offenders = new List<string>();
+            foreach (var id in It15Ids.UnityOnlyIds)
+            {
+                if (scan.Categories.TryGetValue(id, out var files))
+                {
+                    foreach (var file in files)
+                    {
+                        offenders.Add(id + " en " + file);
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join(", ", offenders));
         }
 
         [Test, Category("AC-BASE-09")]

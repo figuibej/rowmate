@@ -52,10 +52,11 @@ namespace RowMate.Tests.PlayMode.History
             CreateHistory(HistorySeeds.F9);
             yield return GoToHistory();
             var card = Card(0);
-            Assert.That(Texts(card.Stats), Is.EqualTo(new[] { "11:00", "2253m", "150", "24.1", "03:00", "139/150" }));
+            // It. 15 (AC-D15-22, -23): "Vatios" y el split en m:ss.
+            Assert.That(Texts(card.Stats), Is.EqualTo(new[] { "11:00", "2253m", "150", "24.1", "3:00", "139/150" }));
             Assert.That(card.Stats.LabelAt(0).text, Is.EqualTo("Tiempo"));
             Assert.That(card.Stats.LabelAt(1).text, Is.EqualTo("Distancia"));
-            Assert.That(card.Stats.LabelAt(2).text, Is.EqualTo("Watts"));
+            Assert.That(card.Stats.LabelAt(2).text, Is.EqualTo("Vatios"));
             Assert.That(card.Stats.LabelAt(3).text, Is.EqualTo("SPM"));
             Assert.That(card.Stats.LabelAt(4).text, Is.EqualTo("Split"));
             Assert.That(card.Stats.LabelAt(5).text, Is.EqualTo("Pulso"));
@@ -65,11 +66,11 @@ namespace RowMate.Tests.PlayMode.History
             AssertColor(card.Stats.ValueAt(3), Tokens.MetricSpm, "SPM");
             AssertColor(card.Stats.ValueAt(4), Tokens.MetricSplit, "Split");
             AssertColor(card.Stats.ValueAt(5), Tokens.MetricHr, "Pulso");
-            Assert.That(Texts(Card(1).Stats), Is.EqualTo(new[] { "33:44", "7923m", "160", "22.0", "02:10", "145/145" }));
-            Assert.That(Texts(Card(2).Stats), Is.EqualTo(new[] { "03:00", "651m", "150", "24.1", "02:30", "140/150" }), "la cortada, con sus puntos");
+            Assert.That(Texts(Card(1).Stats), Is.EqualTo(new[] { "33:44", "7923m", "160", "22.0", "2:10", "145/145" }));
+            Assert.That(Texts(Card(2).Stats), Is.EqualTo(new[] { "03:00", "651m", "150", "24.1", "2:30", "140/150" }), "la cortada, con sus puntos");
             Assert.That(Texts(Card(3).Stats), Is.EqualTo(new[] { "00:00", "0m", "0", "0.0", "--:--" }), "sin puntos: 5 columnas");
-            Assert.That(Texts(Card(4).Stats), Is.EqualTo(new[] { "1:02:05", "13796m", "140", "20.0", "02:15" }), "sin pulso: 5 columnas");
-            Assert.That(Texts(Card(5).Stats), Is.EqualTo(new[] { "04:00", "851m", "150", "24.1", "02:30", "136/150" }));
+            Assert.That(Texts(Card(4).Stats), Is.EqualTo(new[] { "1:02:05", "13796m", "140", "20.0", "2:15" }), "sin pulso: 5 columnas");
+            Assert.That(Texts(Card(5).Stats), Is.EqualTo(new[] { "04:00", "851m", "150", "24.1", "2:30", "136/150" }));
             Assert.That(card.Q(className: "rm-history-card__icon").resolvedStyle.color, Is.EqualTo(TokenColors(Tokens.AccentPrimary)).Using(ColorTolerance.Instance));
             Assert.That(card.Q(className: "rm-history-card__chevron").resolvedStyle.opacity, Is.EqualTo(0.24f).Within(0.001f));
             Assert.That(card.NameLabel.resolvedStyle.fontSize, Is.EqualTo(15).Within(0.01f), "nombre 15/600");
@@ -169,6 +170,14 @@ namespace RowMate.Tests.PlayMode.History
             yield return Frames();
             H.PressTab();
             yield return Frames();
+            // It. 15 (AC-D15-09): una tarjeta exportable tiene su botón de exportar, que se alcanza con Tab después de la tarjeta.
+            if (Card(0).Export != null && Card(0).Export!.IsShown)
+            {
+                Assert.That(H.Focused, Is.SameAs(Card(0).Export!.Button), "Tab pasa al botón de exportar de la tarjeta");
+                H.PressTab();
+                yield return Frames();
+            }
+
             Assert.That(H.Focused, Is.SameAs(Card(1)), "Tab pasa a la tarjeta siguiente");
             Assert.That(Card(0).focusable && Card(1).focusable, Is.True);
         }

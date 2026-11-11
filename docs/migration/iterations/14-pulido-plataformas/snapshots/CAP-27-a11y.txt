@@ -4,19 +4,19 @@
 4. Header · Resumen
 5. StaticText · Tiempo: 11:00
 6. StaticText · Distancia: 2253m
-7. StaticText · Watts: 150
+7. StaticText · Vatios: 150
 8. StaticText · SPM: 24.1
-9. StaticText · Split: 03:00
+9. StaticText · Split: 3:00
 10. StaticText · Pulso: 139/150
 11. Header · Rendimiento por paso
-12. StaticText · 1, 1:00  ·  183m, 100W, 20.0 spm, 2:30/500m
-13. StaticText · 2, 2:00  ·  432m, 150W, 24.1 spm, 2:13/500m
-14. StaticText · 3, 1:00  ·  153m, 60W, 18.0 spm, 3:00/500m
-15. StaticText · 4, 2:00  ·  432m, 150W, 24.1 spm, 2:13/500m
-16. StaticText · 5, 1:00  ·  153m, 60W, 18.0 spm, 3:00/500m
-17. StaticText · 6, 2:00  ·  433m, 138W, 22.1 spm, 2:02/500m
-18. StaticText · 7, 1:00  ·  152m, 60W, 18.0 spm, 3:00/500m
-19. StaticText · 8, 1:05  ·  183m, 100W, 20.0 spm, 2:30/500m
+12. Button · 1, 1:00  ·  183m, 100W, 20.0 spm, 2:30/500m
+13. Button · 2, 2:00  ·  432m, 150W, 24.1 spm, 2:13/500m
+14. Button · 3, 1:00  ·  153m, 60W, 18.0 spm, 3:00/500m
+15. Button · 4, 2:00  ·  432m, 150W, 24.1 spm, 2:13/500m
+16. Button · 5, 1:00  ·  153m, 60W, 18.0 spm, 3:00/500m
+17. Button · 6, 2:00  ·  433m, 138W, 22.1 spm, 2:02/500m
+18. Button · 7, 1:00  ·  152m, 60W, 18.0 spm, 3:00/500m
+19. Button · 8, 1:05  ·  183m, 100W, 20.0 spm, 2:30/500m
 20. TabButton · Vatios · [Selected]
 21. TabButton · SPM
 22. TabButton · Split 500m

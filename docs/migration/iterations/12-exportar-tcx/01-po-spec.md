@@ -82,7 +82,7 @@
 - **AC-STR-09-19 · Aviso de éxito en Windows.** *Entonces* aparece el aviso de la app (el de AC-APP-03-05) por **6 s** con dos líneas: `exportTcxSaved` con `{folder}` = carpeta **abreviada** (`Guardado en Documentos\RowMate\TCX`, con `exportTcxDocuments` en el idioma de la app; con `ROWMATE_DATA_DIR`, `Guardado en ROWMATE_DATA_DIR\exports`) y el nombre del archivo en texto secundario; a la derecha, la acción `exportTcxOpenFolder` (`Abrir carpeta`). **Nunca** muestra la ruta completa ni el nombre de usuario de Windows. El texto se ajusta en varias líneas, nunca con `…` en el nombre. [Editor] · [Captura] CAP-05, -06, -10, -11
 - **AC-STR-09-20 · Abrir carpeta.** *Cuando* se toca `Abrir carpeta`, *entonces* se abre el Explorador en la carpeta con el archivo **seleccionado**; si el archivo ya no está, se abre la carpeta; el aviso se cierra. En el workflow lo registra el destino falso y nunca abre el Explorador. [Editor] · [Device-Win] (demo del usuario)
 - **AC-STR-09-21 · Error al escribir.** *Dado* que no se puede escribir (carpeta de solo lectura, disco lleno, sin acceso; el destino falso lo simula), *entonces* el botón vuelve a su ícono y aparece el aviso `exportTcxFailed` (`No se pudo exportar la sesión`) por 6 s con la acción `retry` (`Reintentar`), que vuelve a exportar. No queda ningún archivo a medias (AC-STR-09-14). El detalle técnico va al registro con la ruta abreviada como en AC-STR-09-19. [Editor] · [Captura] CAP-07, -08
-- **AC-STR-09-22 · Avisos y otras pantallas.** *Entonces* el aviso de exportación usa la misma cápsula que los demás (los del remo y del pulsómetro tienen prioridad como en la It. 11) y, si llega otro aviso común, lo reemplaza. Con "reducir movimiento" entra y sale sin animar; con letra 1,3× y en L640 se lee entero sin tapar la barra de pestañas. [Editor] · [Captura] CAP-10, -11
+- **AC-STR-09-22 · Avisos y otras pantallas.** *Entonces* el aviso de exportación usa la misma cápsula que los demás (los del remo y del pulsómetro tienen prioridad como en la It. 11) y, si llega otro aviso común, lo reemplaza. Con "reducir movimiento" entra y sale sin animar; con letra 1,3× y en L640 se lee entero; en el Detalle (página completa, sin barra de pestañas) va al pie de la pantalla, sin tapar la barra superior (*Corregido en la It. 15*, #72, QA-V12-03: decía "sin tapar la barra de pestañas"). [Editor] · [Captura] CAP-10, -11
 - **AC-STR-09-23 · Textos.** *Entonces* las 7 claves de §4 existen en es y en con el texto exacto (252 por idioma) y la exportación no muestra ningún texto fuera del catálogo. Las claves de Strava (`profile*`, `navProfile`) siguen en el catálogo pero no se muestran en ninguna pantalla. [dotnet]
 
 ### Plataformas y demo
@@ -136,6 +136,7 @@ Zona UTC−03:00 salvo que se diga. Todos los datos son inventados.
 - **T-2**: libre, inicio `2026-11-05T22:02:00Z`, un punto en 0 s con 10 m. **T-2M**: libre, inicio `2026-10-25T00:59:50Z`, puntos en 5 s (10 m) y 15 s (30 m), Europe/Madrid.
 - **T-3**: rutina `Corta`, **sin fin**, totales 0; puntos `5, 20`, `10, 41`, `15, 62` con calorías 1, 2 y 3, todos del paso 0.
 - **T-5**: libre, un punto en 0 s con 0 m. **T-6**: libre, un punto en 0 s con 10 m, totales 0.
+- No hay sesión **T-4**: el número quedó libre al definir las sesiones y no se usa (*Corregido en la It. 15*, #72).
 
 **Golden de `T-1`** (cada línea termina en `\n`):
 
@@ -251,7 +252,7 @@ Calorías: 100 × 3 ÷ 120 = 2,5 → `3`; 100 × 2 ÷ 120 = 1,67 → `2`; 100 ×
 | **CAP-08** | TH | Igual que CAP-07 | Error en horizontal |
 | **CAP-09** | TV | Detalle n.º 4 (sin puntos) | `No hay datos de telemetría` y **sin** botón |
 | **CAP-10** | W1280, inglés, letra 1,3× | Exportado | `Saved to Documents\RowMate\TCX` y `Open folder`, sin cortes |
-| **CAP-11** | L640 | Exportado | Aviso entero sobre la barra de pestañas |
+| **CAP-11** | L640 | Exportado | Aviso entero al pie de la pantalla, sin tapar la barra superior (*Corregido en la It. 15*, QA-V12-03: el Detalle no tiene barra de pestañas) |
 | **CAP-12** | W1280 | Cursor sobre el botón | Ayuda `Exportar TCX` |
 
 ---

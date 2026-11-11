@@ -262,7 +262,7 @@ Versión fijada: commit [`10ecc14`](https://github.com/google/material-design-ic
    - [`MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf) (15 MB, fuente variable)
    - [`MaterialSymbolsRounded[FILL,GRAD,opsz,wght].codepoints`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.codepoints)
    - [`LICENSE`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE) (Apache 2.0)
-3. Generá dos instancias **estáticas** con Weight 500, Grade 0 y Optical size 24: una sin relleno y otra con relleno. El *Font Asset* de Unity no elige ejes de una fuente variable: toma la instancia por defecto, que es de Weight 400.
+3. Generá dos instancias **estáticas** con Weight 500, Grade 0 y Optical size 24: una sin relleno y otra con relleno. El *Font Asset* de Unity no elige ejes de una fuente variable: toma la instancia por defecto, que es de Weight 400. **Desde la It. 15**, con `SOURCE_DATE_EPOCH=1792440351` en el entorno (la fecha de `head.modified` de la fuente variable fijada): fontTools la usa como fecha de la instancia y dos corridas dan los mismos bytes. Sin esa variable, la única diferencia es la fecha de `head` y su suma de control (verificado: con la fecha de la It. 3, la receta reproduce byte a byte el recorte de la It. 3).
 
    ```
    fonttools varLib.instancer "MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf" FILL=0 GRAD=0 opsz=24 wght=500 -o msr-outline.ttf
@@ -272,11 +272,11 @@ Versión fijada: commit [`10ecc14`](https://github.com/google/material-design-ic
 4. Recortá cada una a sus glifos (§4.3). Sin ligaduras: la app usa los codepoints.
 
    ```
-   pyftsubset msr-outline.ttf --unicodes="U+E921,U+EB43,U+E80E,U+E1A2,U+EB3B,U+E040,U+E425,U+E41C,U+EA0B,U+E9E4,U+EF55,U+EFD6,U+E8B3,U+E8E5,U+E1A7,U+E1A8,U+E1A9,U+E60F,U+E868,U+E87E,U+EAC2,U+E5D5,U+F0D3,U+E2C3,U+E2C0,U+E16C,U+E250,U+E16F,U+F083,U+F8B6,U+E5CC,U+E5CF,U+E5CE,U+E145,U+E15B,U+E5CD,U+F097,U+E92E,U+F8CD,U+E564,U+E5C7,U+E5C5,U+E5C4,U+E5D4" --layout-features="" --no-hinting --output-file=RowMateIcons-Outline.ttf
-   pyftsubset msr-filled.ttf --unicodes="U+E87E,U+E037,U+E034,U+F0BE,U+E2BF,U+E425,U+F0D3" --layout-features="" --no-hinting --output-file=RowMateIcons-Filled.ttf
+   pyftsubset msr-outline.ttf --unicodes="U+E921,U+EB43,U+E80E,U+E1A2,U+EB3B,U+E040,U+E425,U+E41C,U+EA0B,U+E9E4,U+EF55,U+EFD6,U+E8B3,U+E8E5,U+E1A7,U+E1A8,U+E1A9,U+E60F,U+E868,U+E87E,U+EAC2,U+E5D5,U+F0D3,U+E16C,U+E16F,U+F083,U+F8B6,U+E5CC,U+E5CF,U+E5CE,U+E145,U+E15B,U+E5CD,U+F097,U+E92E,U+F8CD,U+E564,U+E5C7,U+E5C5,U+E5C4,U+E5D4,U+F090,U+E6B8" --layout-features="" --no-hinting --output-file=RowMateIcons-Outline.ttf
+   pyftsubset msr-filled.ttf --unicodes="U+E87E,U+E037,U+E034,U+F0BE,U+E425,U+F0D3" --layout-features="" --no-hinting --output-file=RowMateIcons-Filled.ttf
    ```
 
-   Resultado esperado (verificado): `RowMateIcons-Outline.ttf` ≈ 9 KB con 45 glifos (44 + `.notdef`; 9 304 B desde la It. 3, que sumó `arrow_back` y `more_vert` con los 42 de antes idénticos) y `RowMateIcons-Filled.ttf` ≈ 3 KB con 8 (7 + `.notdef`), los dos con Weight 500, 960 unidades por em y avance de 960 en todos los glifos. Si un codepoint no aparece en el resultado, la versión descargada no es la fijada.
+   Resultado esperado (verificado en la It. 15, con `SOURCE_DATE_EPOCH`): `RowMateIcons-Outline.ttf` de 9 008 B con 44 glifos (43 + `.notdef`) y `RowMateIcons-Filled.ttf` de 2 464 B con 7 (6 + `.notdef`), los dos con Weight 500, 960 unidades por em y avance de 960 en todos los glifos; SHA-256 `fd75c721…` y `b45808f4…`. Los glifos que ya estaban quedan idénticos (contornos y avances: `IconsTests.ExistingGlyphsUnchanged`). Si un codepoint no aparece en el resultado, la versión descargada no es la fijada. (It. 3: 45 glifos y 9 304 B; It. 15: + `download` e `ios_share`, − `cloud_upload`, `cloud_download`, `link` y el `cloud_done` relleno.)
 
 5. Copiá a `Assets/RowMate/UI/Icons/` (se versionan): `RowMateIcons-Outline.ttf`, `RowMateIcons-Filled.ttf`, el `LICENSE`, el `.codepoints` original y un `NOTICE.md` que diga: *"Derivado de Material Symbols Rounded (Google, Apache License 2.0), commit 10ecc14. Modificaciones: instancias estáticas FILL 0 y 1, wght 500, GRAD 0, opsz 24, y recorte a los glifos de RowMate."* Apache 2.0 §4 pide avisar qué se cambió. La fuente variable de 15 MB **no** se versiona.
 
@@ -318,12 +318,8 @@ Nombres del catálogo de Material Symbols; codepoints del `.codepoints` del comm
 | `favorite` | `E87E` | contorno y relleno | pulso. Relleno: encabezado del pulsómetro y tablero, `@40 %` sin conexión (como el legacy, `heart_rate_card.dart:39`). Contorno: filas de pulsómetros encontrados (`:138`) | `favorite` / `favorite_border` |
 | `heart_broken` | `EAC2` | contorno | panel del simulador: caída del pulsómetro | `heart_broken` |
 | `refresh` | `E5D5` | contorno | reintentar (pulsómetro) | `refresh` |
-| `person` | `F0D3` | contorno y relleno | pestaña Perfil (relleno = seleccionada; la pestaña aparece en la It. 12-13, con Strava configurado) | `person_outline` / `person` |
-| `cloud_upload` | `E2C3` | contorno | subir a Strava | `cloud_upload` / `cloud_upload_outlined` |
-| `cloud_done` | `E2BF` | relleno | sesión sincronizada con Strava | `cloud_done` |
-| `cloud_download` | `E2C0` | contorno | importar de Strava | `cloud_download` |
-| `delete_sweep` | `E16C` | contorno | limpiar sesiones de Strava | `delete_sweep` |
-| `link` | `E250` | contorno | conectar Strava | `link` |
+| `person` | `F0D3` | contorno y relleno | pestaña Perfil (relleno = seleccionada; `ShellStore`, detrás de `ProfileTabEnabled`) | `person_outline` / `person` |
+| `delete_sweep` | `E16C` | contorno | reservado sin uso (era limpiar sesiones de Strava; lista cerrada de `IconsTests`) | `delete_sweep` |
 | `link_off` | `E16F` | contorno | panel del simulador: simular desconexión | `link_off` |
 | `warning` | `F083` | contorno | remo no conectado | `warning_amber` |
 | `error` | `F8B6` | contorno | errores en línea y de pantalla (ART_BIBLE §3.10) | — |
@@ -340,8 +336,10 @@ Nombres del catálogo de Material Symbols; codepoints del `.codepoints` del comm
 | `arrow_drop_up` / `arrow_drop_down` | `E5C7` / `E5C5` | contorno | flecha de fuera de objetivo (D-ART-01) | — |
 | `arrow_back` | `E5C4` | contorno | volver del editor de rutinas (It. 3; a 4 dp del borde, 24 `text.primary`) | `arrow_back` (del `AppBar`) |
 | `more_vert` | `E5D4` | contorno | menú `⋮` de la tarjeta de rutina (It. 3; 24 `text.secondary`) | `more_vert` |
+| `download` | `F090` | contorno | exportar TCX en Windows y escritorio: AppBar del Detalle (24, el tamaño de la flecha de volver) y tarjeta del Historial (18 `text.secondary`, área de 40) (It. 15, #66, #67) | `download` |
+| `ios_share` | `E6B8` | contorno | exportar TCX en Android (hoja de compartir), mismos tamaños (It. 15) | `ios_share` |
 
-Total: **44** glifos en la fuente de contorno (42 de la It. 2 + `arrow_back` y `more_vert` de la It. 3, verificados contra el mismo `.codepoints`: `e5c4`, `e5d4`) y 7 en la rellena. Agregar un ícono = sumarlo a esta tabla, repetir el §4.1 paso 4, regenerar las constantes y sumar su receta provisoria (§4.4). Los 42 + 7 codepoints se verificaron contra el `.codepoints` del commit `10ecc14` al iniciar la It. 2: coinciden todos. Los que usa la It. 2, con tamaño, color y lugar: [00-deuda-diseno §3.5](../iterations/02-dispositivo-simulador/00-deuda-diseno.md).
+Total: **43** glifos en la fuente de contorno y **6** en la rellena desde la It. 15 (+ `download` `f090` e `ios_share` `e6b8`, verificados contra el mismo `.codepoints`; − `cloud_upload`, `cloud_download`, `link` y `cloud_done`, de Strava sin uso; quedan `person` y `link_off`, que se usan). Antes: 44 + 7 (42 de la It. 2 + `arrow_back` y `more_vert` de la It. 3: `e5c4`, `e5d4`). Agregar un ícono = sumarlo a esta tabla, repetir el §4.1 paso 4, regenerar las constantes y sumar su receta provisoria (§4.4). Los 42 + 7 codepoints se verificaron contra el `.codepoints` del commit `10ecc14` al iniciar la It. 2: coinciden todos. Los que usa la It. 2, con tamaño, color y lugar: [00-deuda-diseno §3.5](../iterations/02-dispositivo-simulador/00-deuda-diseno.md).
 
 ### 4.4 Íconos provisorios (sin la fuente o sin un codepoint)
 
@@ -529,3 +527,13 @@ La escena del lago con todo procedural (WP-D2). Fuente: [06a-escena-lago/04-desi
 |---|---|
 | §1.6 | `brand.appIcon` / `brand.splash` pasan a **`app.icon` / `app.splash`, generados (procedural)**: ninguna herramienta externa, ningún SVG ni archivo de terceros (A14-12). El ícono sale de Core y `tools/icon`; el arranque es la capa `BootSplashView` con `boot-mark.png` |
 | §1.6 | `ui.font.numeric`: además del HUD y el tablero, la fecha de las tarjetas del Historial y las filas por paso del Detalle (TY-01, TY-02). "RowMate Numeric" de Inter sigue sin hacer (no hay Python) |
+
+## Cambios de la It. 15
+
+Fuente: [15-deuda-pc/04-design-notes](../iterations/15-deuda-pc/04-design-notes.md) (WP-D) y [02-tech-design DT15-14](../iterations/15-deuda-pc/02-tech-design.md), 2026-11-10.
+
+| Dónde | Qué cambió |
+|---|---|
+| §4.1 | Recorte nuevo con `uvx --from fonttools==4.67.0` y `SOURCE_DATE_EPOCH` fijo (reproducible byte a byte): contorno 43 glifos / 9 008 B, relleno 6 / 2 464 B. Los 41 + 6 glifos que quedan, idénticos a los de la It. 3 |
+| §4.3 | + `download` (`F090`) e `ios_share` (`E6B8`) para el botón de exportar (sale el glifo dibujado `ExportGlyph`, #66); − `cloud_upload`, `cloud_download`, `link` y `cloud_done` (Strava descartada). `person` y `link_off` se quedan porque se usan. `delete_sweep` y otros 5 sin uso quedan reservados (lista cerrada de `IconsTests`, a issues) |
+| §1.6 | `ui.font.numeric`: también las cifras de los ejes del gráfico del Detalle (`.rm-chart-axis__num`, AC-D15-25). "RowMate Numeric" de Inter se cierra sin hacer (gate QA-G15-02): se queda la SC |

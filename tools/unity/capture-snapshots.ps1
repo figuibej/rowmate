@@ -4,10 +4,11 @@
 # Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 # Compatible con Windows PowerShell 5.1 y pwsh 7 (sin los operadores null-conditional, null-coalescing ni pipeline chain de PS 7).
 #
-#   tools/unity/capture-snapshots.ps1 [-Set it12|it11|it10a|it9|it8|it7|it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
+#   tools/unity/capture-snapshots.ps1 [-Set it15|it14|it12|it11|it10a|it9|it8|it7|it6a|it5|it4b|it4a|it3|it2] [-Filter "CAP-01,CAP-1*,VID-*"] [-Pipeline GammaRt|Overlay] [-Out <carpeta>]
 #                                     [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>] [-NoSimulator] [-RestoreOnly]
 #
-# -Set: el catalogo (it12 por defecto desde la It. 12: "Exportar TCX" con el destino falso (FakeFileExporter: muestra DocumentosRowMateTCX,
+# -Set: el catalogo (it15 por defecto desde la It. 15: la deuda resoluble en la PC, CAP-01..10 y AUX-15-01 en
+# docs/migration/iterations/15-deuda-pc/snapshots; it14, el de la It. 14; it12, el de la It. 12: "Exportar TCX" con el destino falso (FakeFileExporter: muestra DocumentosRowMateTCX,
 # escribe en una carpeta temporal y nunca abre el Explorador), CAP-01..12 en docs/migration/iterations/12-exportar-tcx/snapshots; it11, el de
 # la It. 11: el pulsometro real sobre el adaptador falso K-11, CAP-01..16 en docs/migration/iterations/11-ble-pulsometro/snapshots, con ROWMATE_BLE=off; it10a, el de la It. 10a: Dispositivo con el remo real sobre el adaptador falso K-10, CAP-01..20 y
 # AUX-10a-01..02 en docs/migration/iterations/10a-ble-android-windows/snapshots, con ROWMATE_BLE=off; it9, el de la It. 9: el historial, el detalle y el grafico, CAP-01..17, VID-01..02 y DEMO-01..05 en
@@ -39,8 +40,8 @@
 # Codigos propios: 10 el proyecto esta abierto en otro Editor (Temp/UnityLockfile tomado; no toca nada), 11 el define no quedo
 # como antes (correr -RestoreOnly), 12 no encuentra Unity.exe. Si no, el codigo del arnes (o el del paso 1 o 3 si fallaron).
 param(
-    [ValidateSet('it14', 'it12', 'it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
-    [string]$Set = 'it14',
+    [ValidateSet('it15', 'it14', 'it12', 'it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]
+    [string]$Set = 'it15',
     [string]$Filter = '',
     [ValidateSet('GammaRt', 'Overlay')]
     [string]$Pipeline = 'GammaRt',
@@ -172,6 +173,7 @@ function Get-SetFolder {
     if ($Set -eq 'it11') { return 'docs/migration/iterations/11-ble-pulsometro/snapshots' }
     if ($Set -eq 'it12') { return 'docs/migration/iterations/12-exportar-tcx/snapshots' }
     if ($Set -eq 'it14') { return 'docs/migration/iterations/14-pulido-plataformas/snapshots' }
+    if ($Set -eq 'it15') { return 'docs/migration/iterations/15-deuda-pc/snapshots' }
     return 'docs/migration/iterations/09-historial/snapshots'
 }
 

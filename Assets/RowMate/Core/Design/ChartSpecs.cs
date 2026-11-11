@@ -55,6 +55,10 @@ namespace RowMate.Core.Design
         public const double TargetAreaAlpha = 0.07;
         public const double SeriesAreaTopAlpha = 0.24;
 
+        // It. 15 (#33, AC-D15-02, DV-146): las franjas del paso marcado en "Rendimiento por paso" suben del 10 al 22 %, en 160 ms
+        // con ease.enter (MotionSpecs.StepHighlightMs; al instante con reducir movimiento).
+        public const double BandSelectedAlpha = 0.22;
+
         // ── Reducción y suavizado (DT9-10; arte §7.2) ──
         // Mínimo y máximo por columna de 1 dp, hasta MaxColumns columnas (con más ancho, las columnas se ensanchan: así el
         // fundido cruzado de dos curvas entra en la capacidad fija también en W1280; desvío anotado en WP-A).
@@ -100,5 +104,16 @@ namespace RowMate.Core.Design
         public const double TooltipInMs = 90;
         public const double TooltipOutMs = 160;
         public const double TooltipInScale = 0.96;
+
+        // ── Cifras de los ejes (It. 15, #37/#76, AC-D15-25, DT15-22; arte D15-01) ──
+        // RowMate Numeric SC 600 a 11 dp (caption). Avances en em medidos en el hmtx de UI/Fonts/RowMateNumericSC/
+        // RowMateNumericSC-SemiBold.ttf (1 000 unidades por em): las 10 cifras miden 507 (tabulares), ":" 304, "." 242, "-" 364
+        // y el espacio 200. AxisCrowding.LabelWidthDp arma con esto el ancho de una etiqueta sin medir el Label.
+        public const double AxisFontSizeDp = 11;
+        public const double AxisDigitAdvanceEm = 0.507;
+        public const double AxisColonAdvanceEm = 0.304;
+        public const double AxisPeriodAdvanceEm = 0.242;
+        public const double AxisMinusAdvanceEm = 0.364;
+        public const double AxisSpaceAdvanceEm = 0.200;
     }
 }

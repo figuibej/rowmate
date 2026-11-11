@@ -9,6 +9,8 @@ namespace RowMate.Core.History
     // control2 = actual − temp(i). Un tramo se subdivide solo si mide 3 dp o más en x, en ⌈dx / 3⌉ partes hasta 8; más denso,
     // va recto (el suavizado no se ve). La cúbica es afín: se calcula en (x en dp, valor) y la escala Y se aplica después, así
     // un yMax animado no obliga a rehacerla. La y nunca baja de yFloor (la base del área). Sin asignar.
+    // It. 15 (#32): las y de los controles se recortan al rango del tramo (sin preventCurveOverShooting de fl_chart, que mueve
+    // también las x): la curva no sale de [mín, máx] de sus dos puntos, también con el split invertido (la escala es afín).
     public static class ChartSmoothing
     {
         // Lugar que alcanza siempre en outX/outY: cada punto, las partes de los tramos largos y un margen.
@@ -76,6 +78,15 @@ namespace RowMate.Core.History
                 var c2x = curX - tempX;
                 var c2y = curY - tempY;
 
+                // It. 15 (#32, DT15-01, DV-142): las y de control se recortan al rango de los extremos del tramo. La cúbica queda
+                // dentro de la envolvente convexa de sus 4 controles, así que no sobrepasa en un escalón; si los controles ya
+                // caían adentro (tramo monótono suave), el tramo sale igual que antes. temp no se recorta: sigue la regla de
+                // fl_chart para el tramo siguiente.
+                var low = Math.Min(prevY, curY);
+                var high = Math.Max(prevY, curY);
+                c1y = Clamp(c1y, low, high);
+                c2y = Clamp(c2y, low, high);
+
                 var dx = curX - prevX;
                 if (minSpacing > 0 && dx >= minSpacing)
                 {
@@ -98,6 +109,11 @@ namespace RowMate.Core.History
             }
 
             return written;
+        }
+
+        private static float Clamp(float value, float low, float high)
+        {
+            return value < low ? low : value > high ? high : value;
         }
 
         private static int Put(float[] outX, float[] outY, int at, float x, float y)

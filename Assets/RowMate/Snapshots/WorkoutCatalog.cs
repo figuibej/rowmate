@@ -474,7 +474,7 @@ namespace RowMate.Snapshots
                 s => Steps(s.StartFree(), s.AtSecond(10)), "en-US");
             cap27a.Checks = h => Expect(
                 ("Free Workout", () => h.TextOf("hud-free-title-text") == "Free Workout"),
-                ("SPM, Split /500m, Watts, kcal", () => h.TextOf("hud-spm-label") == "SPM" && h.TextOf("hud-split-label") == "Split /500m"
+                ("SPM, Split 500m, Watts, kcal", () => h.TextOf("hud-spm-label") == "SPM" && h.TextOf("hud-split-label") == "Split 500m"
                                                         && h.TextOf("hud-watts-label") == "Watts" && h.TextOf("hud-kcal-label") == "kcal"),
                 ("Finish y Pause", () => h.TextOf("hud-finish") == "Finish" && h.TextOf("hud-pause") == "Pause"));
             all.Add(cap27a);

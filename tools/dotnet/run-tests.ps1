@@ -18,7 +18,8 @@
 #          (con detailed salia dos veces).
 # -Matrix  la lista de IDs sale de TODOS los Assets/RowMate/Tests/EditMode/Traceability/It*Ids.cs (It. 2, QA-G2-16). Los IDs
 #          del bloque UnityOnlyIds (solo PlayMode, Unity EditMode, captura o equipo) figuran como PENDIENTE UNITY y los de
-#          WorkPackageBIds como PENDIENTE WP-B mientras no tengan resultado, en vez de SIN TEST.
+#          WorkPackageBIds como PENDIENTE WP-B mientras no tengan resultado, en vez de SIN TEST. Los del bloque DeviceOnlyIds
+#          (equipo, demo, QA o CI real) sin un test que pase figuran como EN EQUIPO y se listan en su seccion (It. 15, AC-D15-38).
 # -UnityResults  carpeta con los XML de NUnit que escribe Unity (run-unity-tests.ps1, -testResults): se suman a la matriz
 #          (mismo formato que los de dotnet) y los UnityOnlyIds sin resultado pasan a SIN TEST. Implica -Matrix.
 # -ArtifactsPath  por defecto tools/dotnet/.artifacts (el del CI y la documentacion). Otra carpeta sirve para correr
@@ -89,10 +90,10 @@ function Add-NUnitResults([string]$Path, [hashtable]$ById, [string]$Origin) {
     }
 }
 
-# IDs entre comillas de un texto (AC-XXX-nn-nn, AC-BASE-nn, LT-nn), sin repetir, en orden de aparicion.
+# IDs entre comillas de un texto (AC-XXX-nn-nn, AC-BASE-nn, AC-D15-nn desde la It. 15, LT-nn), sin repetir, en orden de aparicion.
 function Get-QuotedIds([string]$Text) {
     $ids = New-Object System.Collections.Generic.List[string]
-    foreach ($m in [regex]::Matches($Text, '"((?:AC-[A-Z]+(?:-[A-Z]+)?-\d\d(?:-\d\d)?)|(?:LT-\d\d))"')) {
+    foreach ($m in [regex]::Matches($Text, '"((?:AC-[A-Z]+[0-9]*(?:-[A-Z]+)?-\d\d(?:-\d\d)?)|(?:LT-\d\d))"')) {
         if (-not $ids.Contains($m.Groups[1].Value)) { $ids.Add($m.Groups[1].Value) }
     }
     return ,$ids
@@ -128,12 +129,14 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
     $expected = New-Object System.Collections.Generic.List[string]
     $unityOnly = New-Object System.Collections.Generic.List[string]
     $pendingB = New-Object System.Collections.Generic.List[string]
+    $deviceOnly = New-Object System.Collections.Generic.List[string]
     $idsFiles = @(Get-ChildItem -Path $traceDir -Filter 'It*Ids.cs' -File -ErrorAction SilentlyContinue | Sort-Object Name)
     foreach ($f in $idsFiles) {
         $text = [System.IO.File]::ReadAllText($f.FullName)
         foreach ($id in (Get-QuotedIds $text)) { if (-not $expected.Contains($id)) { $expected.Add($id) } }
         foreach ($id in (Get-BlockIds $text 'UnityOnlyIds')) { if (-not $unityOnly.Contains($id)) { $unityOnly.Add($id) } }
         foreach ($id in (Get-BlockIds $text 'WorkPackageBIds')) { if (-not $pendingB.Contains($id)) { $pendingB.Add($id) } }
+        foreach ($id in (Get-BlockIds $text 'DeviceOnlyIds')) { if (-not $deviceOnly.Contains($id)) { $deviceOnly.Add($id) } }
     }
     foreach ($k in $byId.Keys) { if (-not $expected.Contains($k)) { $expected.Add($k) } }
     $sorted = $expected | Sort-Object
@@ -146,11 +149,13 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
     $lines.Add($source + ' (' + (Get-Date -Format 'yyyy-MM-dd HH:mm') + '), con los IDs de ' + $idsFiles.Count + ' archivo(s) It*Ids.cs.')
     $lines.Add('PASA = al menos un test paso y ninguno fallo; IGNORADO = solo tests [Ignore] (NO VERIFICABLE); PENDIENTE UNITY = se')
     $lines.Add('verifica solo en Unity (PlayMode, EditMode con UnityEditor, captura) y no se pasaron sus resultados (-UnityResults);')
-    $lines.Add('PENDIENTE WP-B = su test de dotnet es de un archivo de WP-B que todavia no existe.')
+    $lines.Add('PENDIENTE WP-B = su test de dotnet es de un archivo de WP-B que todavia no existe; EN EQUIPO = del bloque DeviceOnlyIds')
+    $lines.Add('(equipo, demo, QA o CI real) sin un test que pase: se verifica fuera de las suites (seccion "EN EQUIPO" al final).')
     $lines.Add('')
     $lines.Add('| ID | Resultado | Pasan | Fallan | Ignorados | Origen | Tests |')
     $lines.Add('|---|---|---|---|---|---|---|')
-    $summary = @{ PASA = 0; FALLA = 0; IGNORADO = 0; 'PENDIENTE UNITY' = 0; 'PENDIENTE WP-B' = 0; 'SIN TEST' = 0 }
+    $summary = @{ PASA = 0; FALLA = 0; IGNORADO = 0; 'PENDIENTE UNITY' = 0; 'PENDIENTE WP-B' = 0; 'EN EQUIPO' = 0; 'SIN TEST' = 0 }
+    $deviceRows = New-Object System.Collections.Generic.List[string]
     foreach ($id in $sorted) {
         $passed = 0; $failed = 0; $skipped = 0; $names = @(); $origins = @()
         if ($byId.ContainsKey($id)) {
@@ -166,10 +171,12 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
         if ($failed -gt 0) { $state = 'FALLA' }
         elseif ($passed -gt 0) { $state = 'PASA' }
         elseif ($isUnityOnly) { $state = 'PENDIENTE UNITY' }
+        elseif ($deviceOnly.Contains($id)) { $state = 'EN EQUIPO' }
         elseif ($skipped -gt 0) { $state = 'IGNORADO' }
         elseif ($pendingB.Contains($id)) { $state = 'PENDIENTE WP-B' }
         else { $state = 'SIN TEST' }
         $summary[$state]++
+        if ($deviceOnly.Contains($id)) { $deviceRows.Add('- ' + $id + ': ' + $state) }
         $total = $passed + $failed + $skipped
         $more = ''
         if ($total -gt $names.Count) { $more = ' (+' + ($total - $names.Count) + ')' }
@@ -178,8 +185,14 @@ function Write-AcMatrix([string]$ResultsDir, [string]$NUnitDir, [datetime]$Since
         $lines.Add('| ' + $id + ' | ' + $state + ' | ' + $passed + ' | ' + $failed + ' | ' + $skipped + ' | ' + $origin + ' | ' + ($names -join '; ') + $more + ' |')
     }
     $lines.Add('')
-    $totals = 'PASA ' + $summary['PASA'] + ', FALLA ' + $summary['FALLA'] + ', IGNORADO ' + $summary['IGNORADO'] + ', PENDIENTE UNITY ' + $summary['PENDIENTE UNITY'] + ', PENDIENTE WP-B ' + $summary['PENDIENTE WP-B'] + ', SIN TEST ' + $summary['SIN TEST']
+    $totals = 'PASA ' + $summary['PASA'] + ', FALLA ' + $summary['FALLA'] + ', IGNORADO ' + $summary['IGNORADO'] + ', PENDIENTE UNITY ' + $summary['PENDIENTE UNITY'] + ', PENDIENTE WP-B ' + $summary['PENDIENTE WP-B'] + ', EN EQUIPO ' + $summary['EN EQUIPO'] + ', SIN TEST ' + $summary['SIN TEST']
     $lines.Add('Resumen: ' + $totals + ' (de ' + $sorted.Count + ' IDs).')
+    # It. 15 (AC-D15-38, #78): los DeviceOnlyIds de todos los It*Ids.cs, aparte, con su estado (no como SIN TEST).
+    $lines.Add('')
+    $lines.Add('## EN EQUIPO')
+    $lines.Add('')
+    $lines.Add('IDs del bloque DeviceOnlyIds (' + $deviceOnly.Count + '): se verifican en el equipo, la demo, QA o el CI real.')
+    foreach ($row in $deviceRows) { $lines.Add($row) }
     New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
     [System.IO.File]::WriteAllLines($matrixPath, $lines, (New-Object System.Text.UTF8Encoding($false)))
     Write-Host ('[run-tests] matriz: ' + $matrixPath + ' (' + $totals + ')')

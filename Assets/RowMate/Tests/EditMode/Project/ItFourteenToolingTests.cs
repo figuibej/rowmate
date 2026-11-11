@@ -44,7 +44,9 @@ namespace RowMate.Tests.EditMode.Project
         public void SnapshotSetIt14ByDefaultInItsFolder()
         {
             var script = Read("tools/unity/capture-snapshots.ps1");
-            Assert.That(script, Does.Contain("[string]$Set = 'it14',"));
+            // It. 15 (WP-A-14): desde la 15 el defecto es it15 (ItFifteenToolingTests.CaptureSetIt15WritesToItsFolder); it14 sigue con su carpeta.
+            Assert.That(script, Does.Contain("'it14'"));
+            Assert.That(script, Does.Not.Contain("[string]$Set = 'it14',"));
             Assert.That(script, Does.Contain("if ($Set -eq 'it14') { return 'docs/migration/iterations/14-pulido-plataformas/snapshots' }"));
             var cli = Read("Assets/RowMate/Snapshots/SnapshotCli.cs");
             Assert.That(cli, Does.Contain("public const string It14Output = \"docs/migration/iterations/14-pulido-plataformas/snapshots\";"));

@@ -118,6 +118,22 @@ namespace RowMate.Presentation.History
         // El detalle abierto desde esta pantalla (el último; null después de salir).
         public SessionDetailPage? Detail { get; private set; }
 
+        // La pestaña de esta pantalla (It. 15: -rowmate-perf-history la elige).
+        public int TabIndex => _tabIndex;
+
+        // Abre el Detalle de la tarjeta n (pruebas, tomas y -rowmate-perf-history). false si no hay tarjeta o hay otra página.
+        public bool OpenAt(int index)
+        {
+            var card = List.CardAt(index);
+            if (card == null || card.Entry == null || _ui.Pages.HasPages)
+            {
+                return false;
+            }
+
+            Open(card);
+            return Detail != null;
+        }
+
         // Historial a la vista: es la pestaña elegida y ninguna página la tapa.
         public bool IsOnScreen => IsSelected && !_ui.Pages.CoversShell;
 

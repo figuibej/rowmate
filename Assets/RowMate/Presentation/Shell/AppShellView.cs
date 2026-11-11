@@ -39,6 +39,36 @@ namespace RowMate.Presentation.Shell
         private string _textScaleClass = "";
         private bool _disposed;
 
+        // Submits cortados por Alt+Enter (pruebas).
+        public int AltSubmitsBlocked { get; private set; }
+
+        public static bool IsAltSubmit(NavigationSubmitEvent evt)
+        {
+            if (evt == null)
+            {
+                return false;
+            }
+
+            if (evt.altKey || (evt.modifiers & UnityEngine.EventModifiers.Alt) != 0)
+            {
+                return true;
+            }
+
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            return keyboard != null && (keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed);
+        }
+
+        private void OnSubmitTrickle(NavigationSubmitEvent evt)
+        {
+            if (!IsAltSubmit(evt))
+            {
+                return;
+            }
+
+            AltSubmitsBlocked++;
+            evt.StopImmediatePropagation();
+        }
+
         public AppShellView(UiContext ui, TopLayerFactory? topLayer)
         {
             Ui = ui ?? throw new ArgumentNullException(nameof(ui));
@@ -58,6 +88,9 @@ namespace RowMate.Presentation.Shell
             Popups = new PopupLayer(ui);
             ui.AttachLayers(Layout, Pages, Dialogs, Toasts, Popups);
             Keyboard = new KeyboardAvoider(ui);
+            // It. 15 (#74, AC-D15-21, DT15-09): Alt+Enter es solo pantalla completa (WindowModeController): el submit que UI Toolkit arma
+            // con la misma tecla se corta en la raíz, antes de llegar al botón enfocado. Enter solo sigue activándolo.
+            RegisterCallback<NavigationSubmitEvent>(OnSubmitTrickle, TrickleDown.TrickleDown);
 
             Tabs = new TabHost(ui, shell);
             for (var i = 0; i < shell.Destinations.Count; i++)

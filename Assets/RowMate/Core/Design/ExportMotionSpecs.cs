@@ -10,6 +10,9 @@ namespace RowMate.Core.Design
         // El aviso de éxito o de error dura 6 s (AC-STR-09-19, -21).
         public const int NoticeMs = 6000;
 
+        // It. 15 (#70, AC-D15-13): "No se pudo abrir la carpeta" dura 4 s, sin acción.
+        public const int OpenFolderFailedMs = 4000;
+
         // El indicador circular del legacy al subir (session_detail_screen.dart:95-106): 18 dp con trazo de 2.
         public const double SpinnerDp = 18;
         public const double StrokeDp = 2;

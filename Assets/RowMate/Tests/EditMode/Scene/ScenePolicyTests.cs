@@ -334,6 +334,29 @@ namespace RowMate.Tests.EditMode.Scene
             Assert.That(MotionSpecs.HudReflowMs, Is.EqualTo(200));
         }
 
+        [Test, Category("AC-D15-32")]
+        public void TheHudReflowCascadeInThreeGroups()
+        {
+            // It. 15 (#82, DT15-11): grupos a 0, 40 y 80 ms, 200 cada uno con ease.enter; traslado de 8 dp × la escala del HUD → 0.
+            Assert.That(MotionSpecs.HudReflowGroups, Is.EqualTo(3));
+            Assert.That(MotionSpecs.HudReflowGroupDelayMs, Is.EqualTo(40));
+            Assert.That(MotionSpecs.HudReflowShiftDp, Is.EqualTo(8));
+            Assert.That(SceneTimelines.HudReflowGroup(0, 0, false), Is.EqualTo(0));
+            Assert.That(SceneTimelines.HudReflowGroup(1, 40, false), Is.EqualTo(0), "el grupo 1 arranca a los 40");
+            Assert.That(SceneTimelines.HudReflowGroup(2, 80, false), Is.EqualTo(0), "el grupo 2 arranca a los 80");
+            Assert.That(SceneTimelines.HudReflowGroup(0, 120, false), Is.InRange(0.0, 1.0).And.GreaterThan(SceneTimelines.HudReflowGroup(1, 120, false)));
+            Assert.That(SceneTimelines.HudReflowGroup(1, 120, false), Is.GreaterThan(SceneTimelines.HudReflowGroup(2, 120, false)));
+            Assert.That(SceneTimelines.HudReflowGroup(0, 200, false), Is.EqualTo(1));
+            Assert.That(SceneTimelines.HudReflowGroup(1, 240, false), Is.EqualTo(1));
+            Assert.That(SceneTimelines.HudReflowGroup(2, 279, false), Is.LessThan(1));
+            Assert.That(SceneTimelines.HudReflowGroup(2, 280, false), Is.EqualTo(1), "todo quieto a los 280 (antes de la regla de los 400)");
+            Assert.That(SceneTimelines.HudReflowGroup(2, 0, true), Is.EqualTo(1), "reducir movimiento: en el acto");
+            Assert.That(SceneTimelines.HudReflowGroup(1, 140, false), Is.EqualTo(SceneTimelines.HudReflow(100, false)), "la misma curva, corrida");
+            Assert.That(SceneTimelines.HudReflowShift(0, 1.3), Is.EqualTo(8 * 1.3).Within(1e-12));
+            Assert.That(SceneTimelines.HudReflowShift(1, 1.3), Is.EqualTo(0));
+            Assert.That(SceneTimelines.HudReflowShift(0.5, 1), Is.EqualTo(4));
+        }
+
         [Test, Category("AC-SCN-02-07")]
         public void TheAerialShotStartsWithTheDialogAndSettlesInSixSeconds()
         {

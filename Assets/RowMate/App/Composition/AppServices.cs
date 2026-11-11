@@ -45,5 +45,8 @@ namespace RowMate.App.Composition
 
         // It. 12 (DT12-16): el build del simulador marca los archivos con _SIM y [SIM]. AppRoot pasa BuildFlags.IsSimulator.
         public bool SimulatorBuild { get; init; }
+
+        // It. 15 (#73, AC-D15-15, DT15-07): la versión de la app para el <Creator> del TCX. AppRoot pasa Application.version; null = 1.0.0.
+        public string? AppVersion { get; init; }
     }
 }

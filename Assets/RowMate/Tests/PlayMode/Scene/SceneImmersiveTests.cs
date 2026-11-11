@@ -162,13 +162,14 @@ namespace RowMate.Tests.PlayMode.Scene
 
             var at50 = MaxPieceOpacity();
             Assert.That(at50, Is.GreaterThan(0).And.LessThan(1), "a los 50 ms, entrando");
-            for (var i = 0; i < 10; i++)
+            // It. 15 (AC-D15-32): la cascada de 3 grupos termina a los 280 ms.
+            for (var i = 0; i < 16; i++)
             {
                 H.Step();
                 yield return null;
             }
 
-            Assert.That(MinPieceOpacity(), Is.EqualTo(1).Within(1e-4), "a los 216 ms, a pleno");
+            Assert.That(MinPieceOpacity(), Is.EqualTo(1).Within(1e-4), "a los 316 ms, a pleno");
             Assert.That(SceneHost.Session, Is.SameAs(session), "la misma sesión de la escena");
 
             // Con reducir movimiento, en el acto.

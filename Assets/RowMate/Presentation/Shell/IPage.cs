@@ -28,4 +28,10 @@ namespace RowMate.Presentation.Shell
     public interface IClosesOnEscape
     {
     }
+
+    // It. 15 (#33, DT15-03): una página que usa Escape antes de cerrarse (el Detalle desmarca la fila de un paso). true = lo usó.
+    public interface IHandlesEscape
+    {
+        bool TryHandleEscape();
+    }
 }

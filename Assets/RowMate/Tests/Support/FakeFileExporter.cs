@@ -12,12 +12,15 @@ namespace RowMate.Tests.Support
     // - Hold(): la próxima exportación queda pendiente hasta Release() (CAP-04: el indicador a la vista).
     // - FailNext(error): la próxima exportación falla con ese error, sin escribir (CAP-07, AC-STR-09-21).
     // - Requests: cada pedido recibido (QA-G12-02); Reveals: cada "abrir carpeta"; Files: lo que escribió.
+    // - FailReveals(): desde ahí, "abrir carpeta" se registra y lanza RevealFailedException, como el exportador real cuando el
+    //   Explorador y su respaldo fallan (It. 15, AC-D15-13, CAP-06).
     public sealed class FakeFileExporter : IFileExporter
     {
         private readonly List<ExportRequest> _requests = new List<ExportRequest>();
         private readonly List<ExportedFile> _reveals = new List<ExportedFile>();
         private readonly List<ExportedFile> _files = new List<ExportedFile>();
         private bool _holdNext;
+        private bool _failReveals;
         private Exception? _failNext;
         private ExportRequest? _heldRequest;
         private TaskCompletionSource<ExportedFile>? _held;
@@ -50,6 +53,11 @@ namespace RowMate.Tests.Support
         public void Hold()
         {
             _holdNext = true;
+        }
+
+        public void FailReveals()
+        {
+            _failReveals = true;
         }
 
         public void FailNext(Exception error)
@@ -115,6 +123,10 @@ namespace RowMate.Tests.Support
         public void Reveal(ExportedFile file)
         {
             _reveals.Add(file);
+            if (_failReveals)
+            {
+                throw new RevealFailedException("no se pudo abrir el Explorador ni el respaldo: " + file.FullPath);
+            }
         }
 
         private ExportedFile Write(ExportRequest request)

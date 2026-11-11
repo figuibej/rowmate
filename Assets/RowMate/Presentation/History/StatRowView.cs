@@ -17,7 +17,9 @@ namespace RowMate.Presentation.History
         public const string UssClass = "rm-stat-row";
 
         private readonly List<Column> _columns = new List<Column>();
-        private readonly string _namePrefix;
+        // It. 15 (#35, AC-D15-05): el prefijo vigente (SetNamePrefix lo cambia y CreateColumn lo usa: antes las columnas creadas después
+        // de renumerar la tarjeta quedaban con el del constructor y se repetían entre tarjetas).
+        private string _namePrefix;
 
         // namePrefix: el prefijo de los nombres de contrato de las columnas ("history-card-0-stat", "session-summary-stat").
         public StatRowView(string namePrefix)
@@ -46,9 +48,10 @@ namespace RowMate.Presentation.History
 
         public void SetNamePrefix(string prefix)
         {
+            _namePrefix = prefix;
             for (var i = 0; i < _columns.Count; i++)
             {
-                var name = prefix + "-" + i;
+                var name = prefix.Length > 0 ? prefix + "-" + i : "";
                 if (_columns[i].Root.name != name)
                 {
                     _columns[i].Root.name = name;
@@ -119,7 +122,7 @@ namespace RowMate.Presentation.History
             // It. 14 (#36, AC-DEBT-06): la columna ENTERA (valor y etiqueta juntos) en un solo FitBox: si no entra, se achica todo junto
             // (el FittedBox sobre la Column del legacy) y la etiqueta nunca queda más chica que su valor. El aire entre columnas es de 4 dp
             // (.rm-stat, 2 + 2). La caja toma el alto natural del contenido y lo centra (sin MotionDriver: en el acto).
-            var root = new VisualElement { name = _namePrefix + "-" + index };
+            var root = new VisualElement { name = _namePrefix.Length > 0 ? _namePrefix + "-" + index : "" };
             root.AddToClassList("rm-stat");
             root.pickingMode = PickingMode.Ignore;
             var value = new Label();

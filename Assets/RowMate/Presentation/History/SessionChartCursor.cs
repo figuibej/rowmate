@@ -21,6 +21,8 @@ namespace RowMate.Presentation.History
     //   Al levantar el dedo, se va con la salida de 160 (gate m-06).
     // - La guía y el punto siguen al punto elegido (el más cercano en x sobre los puntos ORIGINALES, ChartHitTest) con
     //   spring.snappy ω 22; con reducir movimiento, en el acto. El tooltip entra en 90 (escala 0,96 → 1) y sale en 160.
+    // It. 15 (#37, AC-D15-06): #chart-tooltip-shadow, un hermano 9-slice DETRÁS del tooltip (ShadowTexture: negro al 35 %, 8 dp de
+    // desenfoque, +2 dp en y) que copia su opacidad, su escala y su posición; el tooltip no cambia de tamaño ni de lugar.
     public sealed class SessionChartCursor : VisualElement, IMotion
     {
         private static readonly ushort[] GuideIndices = { 0, 1, 2, 0, 2, 3 };
@@ -31,6 +33,7 @@ namespace RowMate.Presentation.History
         private readonly ChartMeshBuffer _buffer = new ChartMeshBuffer(2 * ChartGeometry.DiskVertices + 8, 2 * ChartGeometry.DiskIndices + 30);
         private readonly char[] _text = new char[HistoryFormats.TooltipMaxChars];
         private readonly VisualElement _tooltip;
+        private readonly VisualElement _shadow;
         private readonly DrawnFont _valueFont;
         private readonly DrawnFont _unitFont;
         private CriticalSpring _x;
@@ -68,6 +71,24 @@ namespace RowMate.Presentation.History
             pickingMode = PickingMode.Position;
             generateVisualContent += DrawCursor;
 
+            _shadow = new VisualElement { name = "chart-tooltip-shadow" };
+            _shadow.AddToClassList("rm-chart__tooltip-shadow");
+            _shadow.pickingMode = PickingMode.Ignore;
+            _shadow.style.position = Position.Absolute;
+            _shadow.style.left = 0;
+            _shadow.style.top = 0;
+            _shadow.style.opacity = 0;
+            _shadow.style.backgroundImage = new StyleBackground(ShadowTexture.Shared);
+            _shadow.style.unityBackgroundImageTintColor = TokenColors.WithAlpha(Tokens.OverlayScrim, ShadowTexture.Alpha);
+            var slice = ShadowTexture.SlicePx;
+            _shadow.style.unitySliceLeft = slice;
+            _shadow.style.unitySliceRight = slice;
+            _shadow.style.unitySliceTop = slice;
+            _shadow.style.unitySliceBottom = slice;
+            _shadow.style.unitySliceScale = 1f / ShadowTexture.Scale;
+            _shadow.usageHints = UsageHints.DynamicColor | UsageHints.DynamicTransform;
+            Add(_shadow);
+
             _tooltip = new VisualElement { name = "chart-tooltip" };
             _tooltip.AddToClassList("rm-chart__tooltip");
             _tooltip.pickingMode = PickingMode.Ignore;
@@ -101,6 +122,9 @@ namespace RowMate.Presentation.History
         public double DotY => _y.Position;
 
         public VisualElement Tooltip => _tooltip;
+
+        // It. 15: la sombra del tooltip (hermano anterior).
+        public VisualElement TooltipShadow => _shadow;
 
         public float TooltipOpacity => _tooltip.resolvedStyle.opacity;
 
@@ -169,8 +193,8 @@ namespace RowMate.Presentation.History
             _motion.Remove(this);
             _x.SnapTo(_targetX);
             _y.SnapTo(_targetY);
-            _tooltip.style.opacity = 1;
-            _tooltip.style.scale = new Scale(Vector3.one);
+            SetTooltipOpacity(1);
+            SetTooltipScale(new Scale(Vector3.one));
             Place();
         }
 
@@ -187,7 +211,7 @@ namespace RowMate.Presentation.History
             if (_leaving)
             {
                 var visual = ChartTimeline.TooltipOut((nowSeconds - _fadeStart) * 1000, _fadeFrom);
-                _tooltip.style.opacity = (float)visual.Opacity;
+                SetTooltipOpacity((float)visual.Opacity);
                 if (visual.Finished)
                 {
                     Clear();
@@ -210,9 +234,9 @@ namespace RowMate.Presentation.History
             }
 
             var tip = ChartTimeline.TooltipIn((nowSeconds - _fadeStart) * 1000, _motion.Settings.ReduceMotion);
-            _tooltip.style.opacity = (float)tip.Opacity;
+            SetTooltipOpacity((float)tip.Opacity);
             var s = (float)tip.Scale;
-            _tooltip.style.scale = new Scale(new Vector3(s, s, 1));
+            SetTooltipScale(new Scale(new Vector3(s, s, 1)));
             Place();
             return moving || !tip.Finished;
         }
@@ -385,7 +409,7 @@ namespace RowMate.Presentation.History
             _last = _motion.Now;
             if (!_motion.Armed)
             {
-                _tooltip.style.opacity = 1;
+                SetTooltipOpacity(1);
                 Place();
                 return;
             }
@@ -427,6 +451,28 @@ namespace RowMate.Presentation.History
 
             _tooltip.style.translate = new Translate(x, y);
             _tooltip.style.transformOrigin = new TransformOrigin(Length.Percent(50), Length.Percent(100));
+            // La sombra: la caja del tooltip agrandada por el desenfoque y corrida +2 dp; escala desde el mismo punto que el tooltip.
+            var blur = ShadowTexture.BlurDp;
+            if (Math.Abs(_shadow.style.width.value.value - (w + 2 * blur)) > 0.01f || Math.Abs(_shadow.style.height.value.value - (h + 2 * blur)) > 0.01f)
+            {
+                _shadow.style.width = w + 2 * blur;
+                _shadow.style.height = h + 2 * blur;
+            }
+
+            _shadow.style.translate = new Translate(x - blur, y - blur + ShadowTexture.OffsetYDp);
+            _shadow.style.transformOrigin = new TransformOrigin(blur + w / 2f, blur + h - ShadowTexture.OffsetYDp);
+        }
+
+        private void SetTooltipOpacity(float opacity)
+        {
+            _tooltip.style.opacity = opacity;
+            _shadow.style.opacity = opacity;
+        }
+
+        private void SetTooltipScale(Scale scale)
+        {
+            _tooltip.style.scale = scale;
+            _shadow.style.scale = scale;
         }
 
         private void Clear()
@@ -435,7 +481,7 @@ namespace RowMate.Presentation.History
             _visible = false;
             _leaving = false;
             _index = -1;
-            _tooltip.style.opacity = 0;
+            SetTooltipOpacity(0);
             MarkDirtyRepaint();
         }
 

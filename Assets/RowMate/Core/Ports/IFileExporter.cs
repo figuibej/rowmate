@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace RowMate.Core.Ports
@@ -17,6 +18,18 @@ namespace RowMate.Core.Ports
         Task<ExportedFile> ExportAsync(ExportRequest request);
 
         // Explorador con el archivo seleccionado; si ya no está, la carpeta (AC-STR-09-20). Sin efecto si no es SaveToFolder.
+        // It. 15 (#70, AC-D15-13, DT15-06): si el Explorador no abre, el exportador prueba su respaldo del sistema; si también
+        // falla, lanza RevealFailedException (cualquier otra excepción cuenta igual) y TcxExportService publica OpenFolderFailed.
         void Reveal(ExportedFile file);
+    }
+
+    // "Abrir carpeta" no pudo abrir el Explorador ni con el respaldo (It. 15, AC-D15-13). El mensaje es técnico (va al registro,
+    // con la ruta abreviada por ExportLog); el aviso usa exportTcxOpenFolderFailed.
+    public sealed class RevealFailedException : Exception
+    {
+        public RevealFailedException(string message, Exception? inner = null)
+            : base(message, inner)
+        {
+        }
     }
 }

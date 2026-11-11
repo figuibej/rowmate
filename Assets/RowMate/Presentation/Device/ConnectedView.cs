@@ -38,6 +38,8 @@ namespace RowMate.Presentation.Device
             ScrollPolicy.Apply(Scroll, ui.IsDesktop);
             Scroll.contentContainer.AddToClassList("rm-device-connected__content");
             layout.RegisterBottomPadding(Scroll.contentContainer, ContentPaddingBottom);
+            // It. 15 (#82, AC-D15-33): el primer elemento visible queda en su lugar al cambiar el ancho (como en Rutinas, DD14-10).
+            Anchor = ScrollAnchor.Attach(Scroll);
             Add(Scroll);
             Header = new DeviceHeaderView();
             // WP-D (00-arte §5.1): la capa de la cabecera es el progreso de "mantener presionado" (0 → 8 % lineal en 0-500 ms; soltar antes la
@@ -72,6 +74,8 @@ namespace RowMate.Presentation.Device
         }
 
         public ScrollView Scroll { get; }
+
+        public ScrollAnchor Anchor { get; }
 
         public DeviceHeaderView Header { get; }
 
@@ -129,6 +133,8 @@ namespace RowMate.Presentation.Device
             {
                 DebugToggle = new RmButton("ble-debug-toggle", "text", Icons.BugReport, BleDebugSpec.ShowButton, OpenDebug, 14, "rm-type-body-xs");
                 DebugToggle.AddToClassList("rm-ble-debug-toggle");
+                // It. 15 (AC-D15-26c, DV-147): "Show BLE debug" sigue en inglés y exento como diagnóstico (Q-04).
+                DebugToggle.AddToClassList("rm-audit-exempt");
                 Scroll.Add(DebugToggle);
             }
 

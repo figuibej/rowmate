@@ -12,7 +12,7 @@ namespace RowMate.Core.History
     public sealed record StatColumn(MetricKind Metric, string LabelKey, string Value, ColorToken Color);
 
     // La fila de la tarjeta del historial y del resumen del detalle, que es la misma (hs:109-123; sd:160-176): Tiempo,
-    // Distancia "{n}m", Watts, SPM con 1 decimal, Split (MM:SS o "--:--") y, solo con pulso (máximo > 0), Pulso
+    // Distancia "{n}m", Vatios, SPM con 1 decimal, Split (m:ss desde la It. 15, AC-D15-23; o "--:--") y, solo con pulso (máximo > 0), Pulso
     // "{prom}/{máx}". Sin calorías (Q-28). Los colores son los base de la paleta (§10.2); el tiempo va en blanco
     // (`color ?? Colors.white`, hs:146; text.primary), no en metric.time.
     public static class StatColumns
@@ -31,7 +31,7 @@ namespace RowMate.Core.History
                     MetricPalette.For(MetricKind.Distance)),
                 new StatColumn(MetricKind.Watts, L10nKeys.HistoryStatPower, Fmt.Integer(stats.P99Watts), MetricPalette.For(MetricKind.Watts)),
                 new StatColumn(MetricKind.Spm, L10nKeys.HistoryStatSpm, Fmt.Fixed(stats.P99Spm, 1), MetricPalette.For(MetricKind.Spm)),
-                new StatColumn(MetricKind.Split, L10nKeys.HistoryStatSplit, stats.SplitFormatted, MetricPalette.For(MetricKind.Split)),
+                new StatColumn(MetricKind.Split, L10nKeys.HistoryStatSplit, HistoryFormats.SummarySplit(stats.P99SplitSeconds), MetricPalette.For(MetricKind.Split)),
             };
             if (stats.HasHeartRate)
             {

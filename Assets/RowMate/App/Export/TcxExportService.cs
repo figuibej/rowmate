@@ -21,6 +21,9 @@ namespace RowMate.App.Export
     // 4. El indicador dura al menos 300 ms (ExportMotionSpecs.MinBusyMs, con IScheduler.Delay del resto).
     // 5. Busy saca el id, registra ([EXPORT], sin rutas del equipo: ExportLog) y avisa: Saved solo con SaveToFolder, Failed
     //    siempre. ExportAsync nunca lanza. Dispose corta los avisos pendientes (la tarea del exportador termina sola).
+    // 6. It. 15 (#70, AC-D15-13): si "Abrir carpeta" falla (el exportador ya probó su respaldo), registra con la ruta abreviada y
+    //    avisa OpenFolderFailed con la sesión del aviso Saved de ese archivo. Reveal nunca lanza.
+    // 7. It. 15 (#73, AC-D15-15): el TCX lleva la versión de la app (appVersion, Application.version desde el composition root).
     public sealed class TcxExportService : IDisposable
     {
         private static readonly long[] NoIds = new long[0];
@@ -36,10 +39,13 @@ namespace RowMate.App.Export
         private readonly ObservableValue<IReadOnlyCollection<long>> _busy;
         private readonly EventStream<TcxExportNotice> _notices;
         private readonly Dictionary<long, Task> _running = new Dictionary<long, Task>();
+        private readonly Dictionary<string, WorkoutSession> _savedSessions = new Dictionary<string, WorkoutSession>(StringComparer.Ordinal);
+        private readonly string _appVersion;
         private bool _disposed;
 
         public TcxExportService(ISessionRepository sessions, IFileExporter exporter, IScheduler scheduler, Func<TimeZoneInfo> zone,
-                                IReadOnlyObservable<Localizer> texts, bool simulator, IAppLogger logger)
+                                IReadOnlyObservable<Localizer> texts, bool simulator, IAppLogger logger,
+                                string appVersion = TcxOptions.DefaultAppVersion)
         {
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
             _exporter = exporter ?? throw new ArgumentNullException(nameof(exporter));
@@ -48,6 +54,7 @@ namespace RowMate.App.Export
             _texts = texts ?? throw new ArgumentNullException(nameof(texts));
             _simulator = simulator;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _appVersion = string.IsNullOrWhiteSpace(appVersion) ? TcxOptions.DefaultAppVersion : appVersion;
             // La carpeta del usuario se cambia por %USERPROFILE% en el registro (DT12-19).
             _userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) ?? "";
             _busy = new ObservableValue<IReadOnlyCollection<long>>(NoIds, logger);
@@ -119,8 +126,12 @@ namespace RowMate.App.Export
             }
             catch (Exception error)
             {
-                // Una falla de "Abrir carpeta" solo queda en el registro (spec §10.4).
+                // El detalle técnico va al registro con la ruta abreviada (spec §10.4); desde la It. 15 también avisa (AC-D15-13).
                 _logger.Log(LogLevel.Warning, ExportLog.Tag, ExportLog.Failed(error, Replacements()));
+                if (_savedSessions.TryGetValue(file.FullPath ?? "", out var session))
+                {
+                    Notify(new TcxExportNotice(TcxExportNoticeKind.OpenFolderFailed, session, file));
+                }
             }
         }
 
@@ -145,7 +156,7 @@ namespace RowMate.App.Export
 
                 var zone = _zone();
                 var texts = _texts.Value;
-                var options = new TcxOptions(zone, _simulator);
+                var options = new TcxOptions(zone, _simulator, _appVersion);
                 var baseName = TcxFileName.Base(session.StartedAt, zone, session.RoutineName, texts.Get(L10nKeys.HistoryFree), _simulator);
                 var request = new ExportRequest(baseName, TcxDocument.Extension, TcxDocument.MimeType, texts.Get(L10nKeys.ExportTcxShareTitle),
                     () => TcxDocument.Encode(TcxBuilder.Build(session, points, options)));
@@ -186,6 +197,7 @@ namespace RowMate.App.Export
             _logger.Log(LogLevel.Info, ExportLog.Tag, ExportLog.Saved(file.FileName, FolderLabel(file.Location)));
             if (_exporter.Delivery == ExportDelivery.SaveToFolder)
             {
+                _savedSessions[file.FullPath ?? ""] = session;
                 Notify(new TcxExportNotice(TcxExportNoticeKind.Saved, session, file));
             }
         }

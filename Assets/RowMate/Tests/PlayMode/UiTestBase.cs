@@ -43,18 +43,19 @@ namespace RowMate.Tests.PlayMode
             yield return Frames();
         }
 
-        // = pumpAndSettle con cuadros reales cuando una animación espera el layout (lo nuevo que crece). Tope: 2 s de reloj.
-        protected IEnumerator Settle()
+        // = pumpAndSettle con cuadros reales cuando una animación espera el layout (lo nuevo que crece). Tope: 2 s de reloj, o
+        // maxSeconds cuando la prueba necesita que el reloj no llegue a un temporizador (BleAllocationTests, #78).
+        protected IEnumerator Settle(double maxSeconds = 2)
         {
             yield return Frames();
             var spent = 0.0;
             var stalled = 0;
             for (var i = 0; i < 60; i++)
             {
-                var advanced = H.Settle(TimeSpan.FromSeconds(Math.Max(0, 2 - spent)));
+                var advanced = H.Settle(TimeSpan.FromSeconds(Math.Max(0, maxSeconds - spent)));
                 spent += advanced;
                 yield return Frames();
-                if (!H.HasFiniteMotions || spent >= 2)
+                if (!H.HasFiniteMotions || spent >= maxSeconds)
                 {
                     break;
                 }

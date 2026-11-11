@@ -64,7 +64,8 @@ namespace RowMate.App.Composition
             var history = new HistoryStore(services.Sessions, shell, workout.State, logger);
             // It. 12 (§4, DT12-11): "Exportar TCX", uno por app (salir del Detalle no cancela). Solo lee la base.
             var export = new TcxExportService(services.Sessions, services.Exporter ?? NoFileExporter.Instance, services.Scheduler,
-                services.ExportZone ?? LocalZone, texts, services.SimulatorBuild, logger);
+                services.ExportZone ?? LocalZone, texts, services.SimulatorBuild, logger,
+                string.IsNullOrEmpty(services.AppVersion) ? RowMate.Core.Export.TcxOptions.DefaultAppVersion : services.AppVersion!);
             // It. 14 (AC-POL-03): pausa, reanudar, cambio de paso y rutina completada; sin puerto, ninguna.
             var workoutHaptics = haptics == null ? null : new WorkoutHaptics(workout, haptics);
             return new AppContext(services.Devices, device, heartRate, shell, scene, routines, workout, workoutRest, language, texts,

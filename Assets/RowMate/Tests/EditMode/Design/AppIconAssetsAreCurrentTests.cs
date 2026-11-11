@@ -64,17 +64,20 @@ namespace RowMate.Tests.EditMode.Design
             }
 
             var stray = new List<string>();
-            foreach (var file in RepoPaths.Files(AppIconOutputs.IdentityFolder, "*.png"))
+            foreach (var pattern in new[] { "*.png", "*.ico" })
             {
-                var relative = RepoPaths.Relative(file);
-                if (!expected.Contains(relative))
+                foreach (var file in RepoPaths.Files(AppIconOutputs.IdentityFolder, pattern))
                 {
-                    stray.Add(relative);
+                    var relative = RepoPaths.Relative(file);
+                    if (!expected.Contains(relative))
+                    {
+                        stray.Add(relative);
+                    }
                 }
             }
 
             Assert.That(stray, Is.Empty);
-            Assert.That(Outputs.Count, Is.EqualTo(48), "9 Windows + 24 Android + 2 arranque + 1 iOS + 3 launch + 7 macOS + 2 hojas");
+            Assert.That(Outputs.Count, Is.EqualTo(49), "9 Windows + 24 Android + 2 arranque + 1 iOS + 3 launch + 7 macOS + 2 hojas + el .ico (It. 15)");
         }
 
         [Test, Category("AC-APP-16-08")]

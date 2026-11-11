@@ -31,12 +31,22 @@ namespace RowMate.Tests.UiSupport
             LayoutChanges++;
         }
 
+        // It. 15 (#80): las páginas desplazadas por el lector.
+        public readonly List<string> PagesScrolled = new List<string>();
+
+        public void PageScrolled(string text, AccessibilityNode? node)
+        {
+            PagesScrolled.Add(text);
+            All.Add("página: " + text);
+        }
+
         public void Clear()
         {
             Announcements.Clear();
             Screens.Clear();
             All.Clear();
             LayoutChanges = 0;
+            PagesScrolled.Clear();
         }
     }
 }
