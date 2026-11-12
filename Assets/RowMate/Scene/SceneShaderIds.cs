@@ -241,6 +241,55 @@ namespace RowMate.Scene
         public static readonly int GlowBeacon = Shader.PropertyToID("_RmGlowBeacon");
         public static readonly int GlowBeam = Shader.PropertyToID("_RmGlowBeam");
 
+        // ── It. 6b (06b-agua-avanzada/02-tech-design §3.4, §4; ShaderArt.WaterShaders, WaterGlobals): el agua avanzada (3 variantes por
+        // palabra clave del material), sus globales, la estela y las columnas como tipos de WaterMarks, y el vidrio desenfocado. ──
+        public const string WaterAdvanced = "RowMate/Scene/WaterAdvanced";
+        public const string HudBlur = "RowMate/UI/HudBlur";
+        public const string WaterHighKeyword = "RM_WATER_HIGH";
+        public const string WaterLiteKeyword = "RM_WATER_LITE";
+        public const string WaterTag = "RmWater";
+        public const string WaterTagValue = "Advanced";
+
+        // En la colección de variantes, aparte de los de la 6a, la 7 y la 8: las tres variantes del agua (el vidrio no es de la cámara de la
+        // escena: lo lleva su material en SceneWorld.asset).
+        public static readonly string[] WaterShaderNames = { WaterAdvanced };
+
+        public static readonly int WaterNormal = Shader.PropertyToID("_RmWaterNormal");
+        public static readonly int HorizonProfileTex = Shader.PropertyToID("_RmHorizonProfile");
+        public static readonly int HullFootprint = Shader.PropertyToID("_RmHullFootprint");
+        public static readonly int ReflectionMix = Shader.PropertyToID("_RmReflectionMix");
+        public static readonly int WaterBands = Shader.PropertyToID("_RmWaterBands");
+        public static readonly int WaterLook = Shader.PropertyToID("_RmWaterLook");
+        public static readonly int HorizonReflectTone = Shader.PropertyToID("_RmHorizonTone");
+        public static readonly int HorizonReflectTan = Shader.PropertyToID("_RmHorizonTan");
+
+        // WP-D (It. 6b): la banda de orilla reflejada (00-arte-agua §4.2; PA6b-06) y el carácter del escenario (calma y turbidez).
+        public static readonly int ShoreGeometry = Shader.PropertyToID("_RmShoreGeo");
+        public static readonly int ShoreLowGeometry = Shader.PropertyToID("_RmShoreLowGeo");
+        public static readonly int ShoreLeftTone = Shader.PropertyToID("_RmShoreLeft");
+        public static readonly int ShoreRightTone = Shader.PropertyToID("_RmShoreRight");
+        public static readonly int ShoreLowLeftTone = Shader.PropertyToID("_RmShoreLowLeft");
+        public static readonly int ShoreLowRightTone = Shader.PropertyToID("_RmShoreLowRight");
+        public static readonly int WaterCharacter = Shader.PropertyToID("_RmWaterCharacter");
+
+        public static readonly int WaterPhases = Shader.PropertyToID("_RmWaterPhases");
+        public static readonly int WaterOffsets = Shader.PropertyToID("_RmWaterOffsets");
+        public static readonly int WaterOffsets2 = Shader.PropertyToID("_RmWaterOffsets2");
+        public static readonly int WaterLift = Shader.PropertyToID("_RmWaterLift");
+        public static readonly int WaterReflectionTex = Shader.PropertyToID("_RmWaterReflectionTex");
+        public static readonly int DegradedBlend = Shader.PropertyToID("_RmDegradedBlend");
+        public static readonly int Wake = Shader.PropertyToID("_RmWake");
+        public static readonly int WakeFade = Shader.PropertyToID("_RmWakeFade");
+
+        // WaterMarks tipo 4 (la columna de luz): su color por instancia.
+        public static readonly int MarkTint = Shader.PropertyToID("_RmMarkTint");
+
+        // HudBlur.
+        public static readonly int MainTex = Shader.PropertyToID("_MainTex");
+        public static readonly int BlurOffset = Shader.PropertyToID("_RmBlurOffset");
+        public static readonly int GlassAlpha = Shader.PropertyToID("_RmGlassAlpha");
+        public static readonly int GlassTint = Shader.PropertyToID("_RmGlassTint");
+
         // La capa de la escena (la cámara de la UI no la ve): la crea UrpProvisioner.
         public const string LayerName = "RowMateScene";
     }

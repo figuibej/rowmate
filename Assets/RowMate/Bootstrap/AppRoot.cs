@@ -109,6 +109,15 @@ namespace RowMate.Bootstrap
         // It. 15 (15-deuda-pc/02-tech-design §2.1, DT15-19; AC-D15-03): -rowmate-perf-history: con F-9P sembrada en ROWMATE_DATA_DIR, abre
         // el Historial, recarga 5 veces, abre el Detalle n.º 1 y desplaza la lista 10 s; escribe "[PERF] history: …" y sale con 0.
         public const string PerfHistoryArgument = "-rowmate-perf-history";
+
+        // It. 6b (06b-agua-avanzada/02-tech-design §2.1 (5), §5, §6; DT6b-14): -rowmate-water auto|advanced|degraded (el agua forzada),
+        // -rowmate-water-fail <s> (una falla del agua a los s segundos de abierta la sesión: VID-02), -rowmate-perf-early <s> (un arranque en
+        // frío entra a Entrenamiento libre a los s segundos de que aparece Workout, sin esperar Ready) y -rowmate-perf-gpu-load <ms> (carga de
+        // GPU de prueba para ver los pasos de la adaptación). Solo en desarrollo: el build normal ni los lee (BuildOutputInspector).
+        public const string WaterArgument = "-rowmate-water";
+        public const string WaterFailArgument = "-rowmate-water-fail";
+        public const string PerfEarlyArgument = "-rowmate-perf-early";
+        public const string PerfGpuLoadArgument = "-rowmate-perf-gpu-load";
 #endif
 
         [SerializeField] private UiAssets? _assets;
@@ -374,6 +383,10 @@ namespace RowMate.Bootstrap
             {
                 _ = RunPerfHistory();
             }
+            else if (ArgumentValue(PerfEarlyArgument) != null && perfEntries == null && perfSeries == null)
+            {
+                _ = RunPerfEarly(ArgumentValue(PerfEarlyArgument)!);
+            }
 #endif
             if (warmUp)
             {
@@ -386,16 +399,28 @@ namespace RowMate.Bootstrap
         {
             // It. 10a (§5.2, QA-G10a-17): primero lo que llegó de otros hilos, después los eventos del plugin BLE (sin asignar si no hay) y
             // recién ahí el programador.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _earlyPartWatch.Restart();
+#endif
             _mainThread?.Drain();
             _blePump?.Drain(false);
             _scheduler?.Tick();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _earlySchedulerMs = EarlyLap();
+#endif
             _surface?.Update();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _earlySurfaceMs = EarlyLap();
+#endif
             if (_shell == null)
             {
                 return;
             }
 
             _shell.Tick();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _earlyShellMs = EarlyLap();
+#endif
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             PerfHistoryFrame();
 #endif
@@ -419,6 +444,9 @@ namespace RowMate.Bootstrap
             {
                 _shell.HandleBack(_backSource);
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _earlyRestMs = EarlyLap();
+#endif
         }
 
         // It. 6a (06a-escena-lago/02-tech-design §3.2, §4.2, §4.4): la escena se avanza y se dibuja una vez por cuadro, DESPUÉS de los
@@ -436,7 +464,15 @@ namespace RowMate.Bootstrap
             host.SetViewport(Screen.width, Screen.height, _platform.Display.DpScale);
             var before = host.Draws;
             var now = _scheduler.MonotonicSeconds;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var phaseBeforeTick = host.BuildPhase;
+            _earlyPartWatch.Restart();
+#endif
             bridge.Tick(now, _shell.Motion, _app.Workout.State.Value.Phase);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            _earlyTickMs = EarlyLap();
+            PerfEarlyFrame(host, phaseBeforeTick);
+#endif
             if (_thermal != null)
             {
                 ApplyQuality(_thermal.Sample(now, host.Draws != before));
@@ -465,12 +501,16 @@ namespace RowMate.Bootstrap
                 ? (RowMate.Core.Scene.IRenderAssetQuality)new RowMate.Platform.Display.EditorRenderAssetQuality()
                 : new RowMate.Platform.Display.PlayerUrpAssetQuality();
             _assetQuality.ApplyTier(tier);
-            var host = new RowMate.Scene.SceneHost(world, _app, new RowMate.Scene.SceneHostOptions
+            var hostOptions = new RowMate.Scene.SceneHostOptions
             {
                 Tier = tier,
                 AssetQuality = _assetQuality,
                 RegionCode = RegionOf(_platform.Locale.PreferredLanguageTags),
-            });
+            };
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            ConfigureWater(hostOptions);
+#endif
+            var host = new RowMate.Scene.SceneHost(world, _app, hostOptions);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             var delay = ArgumentValue(SceneDelayArgument);
             if (delay != null && double.TryParse(delay, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) && seconds > 0)
@@ -510,6 +550,14 @@ namespace RowMate.Bootstrap
                     // QA-V6a-REN-09: el nivel entero (el perfil de la escena y, por el IRenderAssetQuality de sus opciones, el asset de URP).
                     host.LowerTier();
                     break;
+                // It. 6b (AC-6B-31; 02-tech-design §3.2, §5): el reflejo baja a 0 en 0,6 s; el último paso deja el agua degradada hasta
+                // reiniciar (con su línea en el registro).
+                case RowMate.Core.Scene.QualityActionKind.LowerReflection:
+                    host.LowerReflection();
+                    break;
+                case RowMate.Core.Scene.QualityActionKind.DegradeWater:
+                    host.DegradeWater();
+                    break;
             }
 
             if (action.Kind != RowMate.Core.Scene.QualityActionKind.None)
@@ -517,6 +565,44 @@ namespace RowMate.Bootstrap
                 _logger?.Log(LogLevel.Info, RowMate.Scene.SceneHost.Tag, "adaptación: " + action.Kind + " (resolución " + host.Resolution.ToString("0.00", CultureInfo.InvariantCulture) + ")");
             }
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // It. 6b (DT6b-14): el agua forzada, la falla de prueba y la carga de GPU (desarrollo). "advanced" en un equipo sin soporte da la
+        // degradada con su línea.
+        private static void ConfigureWater(RowMate.Scene.SceneHostOptions options)
+        {
+            var water = ArgumentValue(WaterArgument);
+            if (water != null)
+            {
+                switch (water.Trim().ToLowerInvariant())
+                {
+                    case "advanced":
+                        options.Water = RowMate.Core.Scene.Water.WaterForce.Advanced;
+                        options.WaterForceAllowed = true;
+                        break;
+                    case "degraded":
+                        options.Water = RowMate.Core.Scene.Water.WaterForce.Degraded;
+                        options.WaterForceAllowed = true;
+                        break;
+                    default:
+                        options.Water = RowMate.Core.Scene.Water.WaterForce.Auto;
+                        break;
+                }
+            }
+
+            var fail = ArgumentValue(WaterFailArgument);
+            if (fail != null && double.TryParse(fail, NumberStyles.Float, CultureInfo.InvariantCulture, out var failSeconds) && failSeconds >= 0)
+            {
+                options.WaterFailAfterSeconds = failSeconds;
+            }
+
+            var load = ArgumentValue(PerfGpuLoadArgument);
+            if (load != null && double.TryParse(load, NumberStyles.Float, CultureInfo.InvariantCulture, out var loadMs) && loadMs > 0)
+            {
+                options.GpuLoadMs = loadMs;
+            }
+        }
+#endif
 
         // La región del sistema para el hemisferio de la luna (DV-57): "es-AR" → "AR"; sin región, null (el norte).
         private static string? RegionOf(System.Collections.Generic.IReadOnlyList<string> tags)
@@ -1042,6 +1128,12 @@ namespace RowMate.Bootstrap
                 + host.InViewShoreRebuilds.ToString(CultureInfo.InvariantCulture) + "; orilla terminada en el negro: "
                 + host.CatchUps.ToString(CultureInfo.InvariantCulture) + "; CPU de la escena del último cuadro "
                 + host.LastCpuMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+            // It. 6b (§5, §6): el agua (la elegida, la que se ve, la peor unidad de la fase del agua y las líneas del registro) y el vidrio.
+            logger.Log(LogLevel.Info, "PERF", "agua (n.º " + entry.ToString(CultureInfo.InvariantCulture) + "): " + host.WaterChoice
+                + ", avanzada lista " + host.AdvancedWaterReady + ", se dibuja la avanzada " + host.ShowingAdvancedWater + ", reflejo planar " + host.ReflectionDrawn
+                + ", peor unidad del agua " + host.WorstWaterUnitMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms, líneas del agua en el registro "
+                + host.WaterLogLines.ToString(CultureInfo.InvariantCulture) + "; vidrio: " + host.BlurRuns.ToString(CultureInfo.InvariantCulture) + " corridas, peso "
+                + host.GlassWeight.ToString("0.00", CultureInfo.InvariantCulture));
             // It. 7 (07-remero-palada/02-tech-design §4, §7.2 B2): el remero que se dibujó (el maniquí o el del slot) y sus triángulos.
             var rower = host.World?.Rower;
             if (rower != null)
@@ -1141,6 +1233,202 @@ namespace RowMate.Bootstrap
             catch (Exception error)
             {
                 logger.Log(LogLevel.Error, "PERF", "medición de la escena: falla", error);
+                Application.Quit(1);
+            }
+        }
+
+        // ── -rowmate-perf-early (It. 6b, #1, AC-6B-01, -02; 02-tech-design §2.1 (5)) ──
+        // Un arranque en frío: apenas Workout puede empezar, espera s segundos y entra a Entrenamiento libre SIN esperar Ready (Fuerte). Mide
+        // los 3 s que siguen al toque cuadro a cuadro: el del toque, el peor con movimiento (desde el armado del HUD) y lo que corrió en el
+        // negro de la entrada. La carga externa la mide build.ps1 (Get-Counter) y la pone al lado. Solo con ROWMATE_DATA_DIR. Sale con 0.
+        // QA-V6b-01: cada medida va al cuadro que la produjo (EarlyEntryFrames, por la marca de inicio del cuadro). FrameTimingManager la
+        // entrega con 1 a 4 cuadros de atraso; antes se le ponía la hora y la fase del cuadro en que se leía, y el cuadro negro de la entrada
+        // salía como "con movimiento" a los ≈ 540 ms del toque.
+        private RowMate.Core.Scene.EarlyEntryFrames? _earlyFrames;
+        private long _earlyBlackRuns;
+
+        // El tiempo de CPU del hilo principal (FrameTimingManager, como FrameTimeProbe): el intervalo entre cuadros (unscaledDeltaTime) mide
+        // también la espera del FramePacer en reposo (≈ 80 ms a 12,5 cuadros por segundo) y no es un tirón. Se leen las 4 últimas.
+        private readonly FrameTiming[] _earlyTiming = new FrameTiming[4];
+
+        // Lo que el hilo principal espera a la GPU o al hilo de render y la espera del ritmo de cuadros (cuenta en cpuMainThreadFrameTime y
+        // no es trabajo de la app: con la pantalla en el modo de respaldo la GPU tarda ≈ 80 ms por cuadro).
+        private static readonly string[] EarlyWaitMarkers = { "Gfx.WaitForPresentOnGfxThread", "Gfx.WaitForRenderThread", "WaitForTargetFPS" };
+        private readonly System.Collections.Generic.List<Unity.Profiling.ProfilerRecorder> _earlyWaits = new System.Collections.Generic.List<Unity.Profiling.ProfilerRecorder>();
+
+        private void StartEarlyWaits()
+        {
+            var handles = new System.Collections.Generic.List<Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle>();
+            Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle.GetAvailable(handles);
+            foreach (var handle in handles)
+            {
+                if (Array.IndexOf(EarlyWaitMarkers, Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle.GetDescription(handle).Name) >= 0)
+                {
+                    var recorder = new Unity.Profiling.ProfilerRecorder(handle, 1, Unity.Profiling.ProfilerRecorderOptions.Default);
+                    recorder.Start();
+                    _earlyWaits.Add(recorder);
+                }
+            }
+        }
+
+        private void StopEarlyWaits()
+        {
+            foreach (var recorder in _earlyWaits)
+            {
+                recorder.Dispose();
+            }
+
+            _earlyWaits.Clear();
+        }
+
+        // El desglose del cuadro del toque ([PERF]): lo que tardaron en ese cuadro el programador (la continuación que llama a StartFree),
+        // la superficie, el Tick del shell y el de la escena (ms, Stopwatch); el resto del cuadro es de Unity (el panel y el dibujo).
+        private int _earlyAfterTap = -1;
+        private string _earlyTapParts = "";
+        private readonly System.Diagnostics.Stopwatch _earlyPartWatch = new System.Diagnostics.Stopwatch();
+        private double _earlySchedulerMs, _earlySurfaceMs, _earlyShellMs, _earlyRestMs, _earlyTickMs;
+
+        private double EarlyLap()
+        {
+            var ms = _earlyPartWatch.Elapsed.TotalMilliseconds;
+            _earlyPartWatch.Restart();
+            return ms;
+        }
+
+        // La marca de este LateUpdate en el reloj de FrameTimingManager. En Windows es QueryPerformanceCounter crudo (desde el arranque del
+        // equipo); el Stopwatch de Mono cuenta desde el arranque del proceso (medido: 4,7·10⁷ contra 1,2·10¹² con la misma frecuencia), así
+        // que se lee QueryPerformanceCounter directo. En otras plataformas, el Stopwatch escalado (la atribución puede no encontrar cuadros:
+        // la línea lo dice con "sin atribuir").
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern bool QueryPerformanceCounter(out long count);
+
+        private static long EarlyNowTicks()
+        {
+            if ((Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor) && QueryPerformanceCounter(out var qpc))
+            {
+                return qpc;
+            }
+
+            var timer = FrameTimingManager.GetCpuTimerFrequency();
+            var now = System.Diagnostics.Stopwatch.GetTimestamp();
+            return timer == 0 || timer == (ulong)System.Diagnostics.Stopwatch.Frequency ? now : (long)(now * ((double)timer / System.Diagnostics.Stopwatch.Frequency));
+        }
+
+        private void PerfEarlyFrame(RowMate.Scene.SceneHost host, int phaseBeforeTick)
+        {
+            var frames = _earlyFrames;
+            if (frames == null)
+            {
+                return;
+            }
+
+            var black = host.BlackFrameHeavyRuns != _earlyBlackRuns;
+            _earlyBlackRuns = host.BlackFrameHeavyRuns;
+            frames.AddFrame(EarlyNowTicks(), phaseBeforeTick, black);
+            var waitNs = 0L;
+            foreach (var recorder in _earlyWaits)
+            {
+                waitNs += recorder.Valid ? recorder.LastValue : 0;
+            }
+
+            frames.SetPreviousFrameWait(waitNs / 1e6);
+            if (_earlyAfterTap >= 0 && ++_earlyAfterTap == 1)
+            {
+                _earlyTapParts = "programador " + _earlySchedulerMs.ToString("0.0", CultureInfo.InvariantCulture) + ", superficie " + _earlySurfaceMs.ToString("0.0", CultureInfo.InvariantCulture)
+                    + ", shell " + _earlyShellMs.ToString("0.0", CultureInfo.InvariantCulture) + ", resto del Update " + _earlyRestMs.ToString("0.0", CultureInfo.InvariantCulture)
+                    + ", Tick de la escena " + _earlyTickMs.ToString("0.0", CultureInfo.InvariantCulture) + " ms";
+            }
+            FrameTimingManager.CaptureFrameTimings();
+            var count = FrameTimingManager.GetLatestTimings((uint)_earlyTiming.Length, _earlyTiming);
+            for (var i = 0; i < count; i++)
+            {
+                frames.AddTiming((long)_earlyTiming[i].frameStartTimestamp, _earlyTiming[i].cpuMainThreadFrameTime);
+            }
+        }
+
+        private async System.Threading.Tasks.Task RunPerfEarly(string secondsText)
+        {
+            var app = _app!;
+            var scheduler = _scheduler!;
+            var logger = _logger!;
+            if (!DataLocation.IsOverridden || !double.TryParse(secondsText, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) || seconds < 0)
+            {
+                logger.Log(LogLevel.Error, "PERF", "entrada temprana: hace falta ROWMATE_DATA_DIR y los segundos (0 o más)");
+                Application.Quit(1);
+                return;
+            }
+
+            try
+            {
+                // Workout a la vista desde el arranque: la precarga empieza ahí (P-14).
+                app.Shell.Select(1);
+                for (var i = 0; i < 600 && !app.WorkoutRest.State.Value.CanStart; i++)
+                {
+                    await scheduler.Delay(TimeSpan.FromMilliseconds(50));
+                }
+
+                if (!app.WorkoutRest.State.Value.CanStart)
+                {
+                    logger.Log(LogLevel.Error, "PERF", "entrada temprana: el remo no se conectó");
+                    Application.Quit(1);
+                    return;
+                }
+
+                DeviceBackendFactory.SetPerfPreset(_backend!, 280, 30);
+                var envText = ArgumentValue(PerfEnvArgument);
+                if (envText != null && RowMate.Core.Scene.EnvironmentKeys.TryParse(envText, out var environment))
+                {
+                    app.SceneEnvironment.Select(environment);
+                }
+
+                // Se anota desde antes del toque: el primer cuadro anotado es solo la cota del siguiente (EarlyEntryFrames.FrameOf).
+                _earlyBlackRuns = _sceneBridge?.Host.BlackFrameHeavyRuns ?? 0;
+                StartEarlyWaits();
+                _earlyAfterTap = -1;
+                _earlyTapParts = "";
+                _earlyFrames = new RowMate.Core.Scene.EarlyEntryFrames(4096);
+                await scheduler.Delay(TimeSpan.FromSeconds(seconds));
+                var host = _sceneBridge?.Host;
+                var phaseAtTap = host != null ? (host.Readiness.Value == RowMate.Scene.SceneReadiness.Ready ? "Ready" : RowMate.Scene.SceneHost.PhaseName(host.BuildPhase)) : "sin escena";
+                var heavyBefore = host?.BlackFrameHeavyRuns ?? 0;
+                var tapTicks = EarlyNowTicks();
+                _earlyAfterTap = 0;
+                var tapWatch = System.Diagnostics.Stopwatch.StartNew();
+                app.WorkoutRest.StartFree();
+                var startFreeMs = tapWatch.Elapsed.TotalMilliseconds;
+                await scheduler.Delay(TimeSpan.FromSeconds(3));
+                var frames = _earlyFrames;
+                _earlyFrames = null;
+                var waitMarkers = _earlyWaits.Count;
+                StopEarlyWaits();
+                var timer = FrameTimingManager.GetCpuTimerFrequency();
+                var ticksPerMs = (timer == 0 ? System.Diagnostics.Stopwatch.Frequency : (double)timer) / 1000.0;
+                var result = frames.Summarize(tapTicks, ticksPerMs);
+                var heavy = host != null && host.BlackFrameHeavyRuns > heavyBefore ? host.LastBlackFrameHeavyMs : 0;
+                var display = Screen.currentResolution;
+                logger.Log(LogLevel.Info, "PERF", "pantalla " + display.width.ToString(CultureInfo.InvariantCulture) + "×" + display.height.ToString(CultureInfo.InvariantCulture)
+                    + " @ " + display.refreshRateRatio.value.ToString("0.##", CultureInfo.InvariantCulture) + " Hz (ventana " + Screen.width.ToString(CultureInfo.InvariantCulture)
+                    + "×" + Screen.height.ToString(CultureInfo.InvariantCulture) + "); entrada temprana: precarga en " + phaseAtTap
+                    // Sin el cuadro del toque o sin medidas atribuidas, "sin medida": perf-log-check.ps1 no la acepta (nunca un 0 que pasa).
+                    + ", toque " + (result.TapFrameFound && result.TapMs > 0 ? result.TapMs.ToString("0.00", CultureInfo.InvariantCulture) : "sin medida")
+                    + " ms (espera " + result.TapWaitMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms), peor con movimiento " + (result.Matched > 1 ? result.WorstMovingMs.ToString("0.00", CultureInfo.InvariantCulture) : "sin medida")
+                    + " ms (a los " + result.WorstMovingAtMs.ToString("0", CultureInfo.InvariantCulture) + " ms, fase " + RowMate.Scene.SceneHost.PhaseName(result.WorstMovingPhase)
+                    + ", espera " + result.WorstMovingWaitMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms), negro quieto " + result.BlackFrameMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms (espera " + result.BlackWaitMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms, trabajo pesado " + heavy.ToString("0.00", CultureInfo.InvariantCulture)
+                    + " ms, " + result.BlackFrames.ToString(CultureInfo.InvariantCulture) + " cuadro), escenario " + RowMate.Core.Scene.EnvironmentKeys.ToKey(app.SceneEnvironment.Selected.Value)
+                    + ", cuadros medidos " + result.Matched.ToString(CultureInfo.InvariantCulture) + " (sin atribuir " + result.Unmatched.ToString(CultureInfo.InvariantCulture)
+                    + (result.TapFrameFound ? "" : ", sin el cuadro del toque") + "), carga externa: la mide build.ps1");
+                logger.Log(LogLevel.Info, "PERF", "entrada temprana: cuadros desde el toque (ms:CPU, (e…) = espera a la GPU, al hilo de render o al ritmo, n = negro; " + waitMarkers.ToString(CultureInfo.InvariantCulture) + " marcadores de espera) " + frames.Timeline(tapTicks, ticksPerMs, 40)
+                    + "; en el toque: StartFree " + startFreeMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms (Open de la escena "
+                    + (host?.LastOpenMs ?? 0).ToString("0.00", CultureInfo.InvariantCulture) + " ms); desglose del cuadro del toque: " + _earlyTapParts);
+                LogSceneWarmup(logger, 1);
+                await app.Workout.FinishAsync();
+                await scheduler.Delay(TimeSpan.FromSeconds(2));
+                logger.Log(LogLevel.Info, "PERF", "entrada temprana: terminada");
+                Application.Quit(0);
+            }
+            catch (Exception error)
+            {
+                logger.Log(LogLevel.Error, "PERF", "entrada temprana: falla", error);
                 Application.Quit(1);
             }
         }

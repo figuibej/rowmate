@@ -48,6 +48,14 @@ namespace RowMate.Core.Scene.Art
         public const double BackdropExponent = 2;     // 1 − (1 − q)²
         public const double MistBandDeg = 1.5;
         public const double GlowStrength = 0.35, GlowFalloffDeg = 14, GlowTopDeg = 20;
+        // It. 6b (#3, QA-V6a-12; 00-arte-agua §10): el brillo alrededor del sol sube a 0,45 con la hora dorada (g de 0,5 a 1), sin saltos:
+        // fuerza(g) = 0,35 + 0,10·clamp((g − 0,5)/0,5; 0; 1). Lo de las 12 h (g = 0) no cambia.
+        public const double GoldenGlowStrength = 0.45, GoldenGlowFrom = 0.5;
+
+        public static double GlowStrengthAt(double golden)
+        {
+            return GlowStrength + (GoldenGlowStrength - GlowStrength) * SceneMath.Clamp01((golden - GoldenGlowFrom) / (1 - GoldenGlowFrom));
+        }
         public const double GoldenLowDeg = 1.5, GoldenHighDeg = 9;    // g = (1 − S(1,5°; 9°; elevación del sol))·vis_sol
         public const double DitherAmplitude = 0.5 / 255;
 

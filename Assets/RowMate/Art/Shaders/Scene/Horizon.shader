@@ -55,12 +55,18 @@ Shader "RowMate/Scene/Horizon"
             float4 _RmFlagMast;
         CBUFFER_END
 
-        static const float kRmFlankToSun = 0.12;
-        static const float kRmFlankAway = -0.1;
+        static const float kRmFlankToSun = 0.18;
+        static const float kRmFlankAway = -0.16;
         static const float kRmFlankRampRad = 0.104719755;
-        static const float kRmHorizonBaseFog = 0.15;
+        static const float kRmHorizonBaseFog = 0.1;
         static const float kRmHorizonBaseFraction = 0.25;
         static const float kRmAlpenglow = 0.35;
+        // It. 6b · QA-V6b-05 (#3; AC-6B-04 a): el contraluz de la cordillera lejana con nieve (solo el lago: _RmSnowEnabled). Con el sol
+        // de día delante, la cara que se ve está en sombra donde el cielo de atrás tiene el resplandor del sol: tono y nieve ×
+        // (1 − 0,6·exp(−(Δacimut/12°)²)·S(sol alto)). A las 12 h la cordillera central quedaba a 1,01-1,07:1 del cielo y la bruma de
+        // atrás; hacia los costados, con el cielo azul más oscuro, la nieve clara ya contrasta (oscurecerla la igualaba al cielo).
+        static const float kRmBacklight = 0.6;
+        static const float kRmBacklightLobeRad = 0.20943951;
         static const float kRmSnowFog = 0.3;
         static const float kRmSnowNightBase = 0.55;
         static const float kRmSnowNightPerIllumination = 0.45;
@@ -138,6 +144,9 @@ Shader "RowMate/Scene/Horizon"
                 float3 tone = sqrt(max(baseTone, 0.0)) * (1.0 + flank);
                 float3 fogG = sqrt(max(_RmPaletteFog.rgb, 0.0));
                 float3 glowG = sqrt(max(_RmPaletteSunGlow.rgb, 0.0));
+                float lobe = (az - sunAz) / kRmBacklightLobeRad;
+                float backlit = 1.0 - kRmBacklight * _RmSnowEnabled * daySun * exp(-lobe * lobe) * saturate(_RmDiskDir.y * 4.0);
+                tone *= backlit;
                 o.tone = tone;
                 o.toFog = fogG - tone;
 
@@ -145,7 +154,7 @@ Shader "RowMate/Scene/Horizon"
                 float3 snowG = lerp(sqrt(max(_RmSnowTone.rgb, 0.0)), fogG, kRmSnowFog);
                 snowG = lerp(snowG, glowG, kRmAlpenglow * _RmGolden);
                 float night = lerp(1.0, kRmSnowNightBase + kRmSnowNightPerIllumination * _RmDiskParams.z * _RmDiskParams.x, _RmDiskParams.y);
-                o.snow = snowG * night;
+                o.snow = snowG * night * backlit;
 
                 // La línea de nieve local: (p + ruido − (umbral − borde))/(2·borde), con las lenguas: ± 0,04 de p con un ruido de valor
                 // cada 1,7° de acimut (el fragmento hace una sola rampa). p entra interpolado (es lineal en la columna).

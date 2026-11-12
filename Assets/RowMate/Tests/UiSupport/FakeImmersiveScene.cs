@@ -100,6 +100,35 @@ namespace RowMate.Tests.UiSupport
             CatchUps++;
         }
 
+        // It. 6b: el trabajo pesado del negro de la entrada (lo que "tarda" lo fija la prueba) y el vidrio.
+        public int HeavyRuns { get; private set; }
+
+        public double HeavyWorkMs { get; set; }
+
+        public double RunPendingHeavyWork()
+        {
+            HeavyRuns++;
+            return HeavyWorkMs;
+        }
+
+        public Texture? GlassTexture { get; set; }
+
+        public double GlassWeight { get; set; }
+
+        public event Action? GlassChanged;
+
+        public bool GlassInUse { get; private set; }
+
+        public void SetGlassInUse(bool inUse)
+        {
+            GlassInUse = inUse;
+        }
+
+        public void RaiseGlassChanged()
+        {
+            GlassChanged?.Invoke();
+        }
+
         // It. 15 (AC-D15-30, ItFourteenGapTests.SceneLoading*): desde cuándo corre el vuelo pedido (NaN sin vuelo).
         public double LastFlightStart { get; private set; } = double.NaN;
 

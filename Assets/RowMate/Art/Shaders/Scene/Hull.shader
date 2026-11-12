@@ -27,6 +27,8 @@ Shader "RowMate/Scene/Hull"
         // sin tonemapping la cubierta del mediodía se recortaba en una silueta blanca plana.
         static const float kRmHullExposure = 0.78;
         static const float kRmHullAmbientChroma = 0.5;
+        // It. 6b (#85): el brillo del gelcoat en la cubierta, recortado (MaterialArt.HullDeckGloss).
+        static const float kRmHullDeckGloss = 0.15;
 
         struct Attributes
         {
@@ -75,11 +77,14 @@ Shader "RowMate/Scene/Hull"
                 ambientG = lerp(float3(ambientMean, ambientMean, ambientMean), ambientG, kRmHullAmbientChroma);
                 float3 view = normalize(_WorldSpaceCameraPos - positionWS);
                 float fresnel = pow(1.0 - saturate(dot(normalWS, view)), 5.0) * _RmGelcoat.z;
+                // #85: en la cubierta (N.y > 0,8) el Fresnel y el especular se recortan a 0,15 (00-arte-agua §9).
+                float deck = RmSmoothStep(0.7, 0.9, normalWS.y);
+                fresnel = lerp(fresnel, min(fresnel, kRmHullDeckGloss), deck);
                 o.ambientG = lerp(ambientG * albedoG, sqrt(max(_RmPaletteSkyHorizon.rgb, 0.0)), fresnel);
                 o.keyG = keyG * albedoG;
                 o.fog = RmVertexFog(positionWS.z, positionWS.y);
                 float3 key = RmKeyLegacy();
-                o.specular = key * key * (_RmGelcoat.x * _RmDiskParams.x);
+                o.specular = key * key * (lerp(_RmGelcoat.x, min(_RmGelcoat.x, kRmHullDeckGloss), deck) * _RmDiskParams.x);
                 // It. 8: bajo el puente (DT8-07), por vértice (el casco tiene secciones cada pocos cm; la rampa es de 1,5 m).
                 float underBridge = RmUnderBridgeGamma2(positionWS, normalWS);
                 o.ambientG *= underBridge;

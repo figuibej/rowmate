@@ -82,9 +82,13 @@ namespace RowMate.Snapshots
             };
             all.Add(cap03);
 
-            var cap04 = Scene("CAP-04", "CAP-04-charcos-tv", DeviceProfile.TV, "Charcos: R-4, 12:00, 1 s después de la primera salida de pala desde los 59,2 s",
-                s => Steps(Free(s, 59.2), UntilEvent(s, StrokeEvents.BladeExit), StepFor(s, 1), Act(s, h => LiveAlone(h, 12))));
+            // It. 6b (QA-V6b-03; AC-6B-17): la toma en la salida de pala (antes, 1 s después): el par de charcos de la palada anterior queda a
+            // ≈ 4,9 m de la cámara y a la vista en TV (1 s después estaba a 1,1 m, debajo del cuadro, y la sonda no lo encontraba).
+            var cap04 = Scene("CAP-04", "CAP-04-charcos-tv", DeviceProfile.TV, "Charcos: R-4, 12:00, en la primera salida de pala desde los 59,2 s",
+                s => Steps(Free(s, 59.2), UntilEvent(s, StrokeEvents.BladeExit), Act(s, h => LiveAlone(h, 12))));
             cap04.MotionMayRun = true;
+            // It. 6b (AC-6B-17; DT6b-24): la CAP-04 con el agua avanzada y el charco proyectado (lo demás de it7, con la degradada fija).
+            cap04.Water = RowMate.Core.Scene.Water.WaterForce.Auto;
             cap04.Inspect = (h, frame, values) =>
             {
                 var f = h.Scene!.Frame;
@@ -97,6 +101,8 @@ namespace RowMate.Snapshots
 
                 return Expect(("un par de charcos a la vista", () => h.Scene!.World!.Director!.WaterMarks!.Puddles >= 2));
             };
+            // QA-V6b-03 (AC-6B-17): el charco proyectado a la pantalla, su contraste y el ángulo del par de remolinos.
+            cap04.SceneProbes = WaterSpecProbes.PuddlesOnly();
             all.Add(cap04);
         }
 

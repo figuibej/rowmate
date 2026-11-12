@@ -63,4 +63,6 @@ MonoBehaviour:
     Buoy: {fileID: 2100000, guid: 3d63544b74ab84441a4362374c6a2ff1, type: 2}
     Glow: {fileID: 2100000, guid: 38e8923a9e879a34d82e939fa42ccab6, type: 2}
     Foam: {fileID: 2100000, guid: 8a1a81f8fc75e224186062c01f254aa2, type: 2}
+    WaterAdvanced: {fileID: 2100000, guid: 9952d703f8fbb9a44bd01c2e22edf6ca, type: 2}
+    HudBlur: {fileID: 2100000, guid: a685b13fb69e4cd4d9d1b95aae1936e3, type: 2}
   _variants: {fileID: 20000000, guid: 5be0a8baf2ba2e347944bbd13d788f18, type: 2}

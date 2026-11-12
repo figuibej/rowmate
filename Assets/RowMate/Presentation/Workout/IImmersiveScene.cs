@@ -48,6 +48,24 @@ namespace RowMate.Presentation.Workout
         // con la escena a la vista (QA-V6a-REN-04).
         void CatchUp();
 
+        // It. 6b (#1, AC-6B-01; 06b-agua-avanzada/02-tech-design §2.1 (3)): en el mismo cuadro negro y quieto, las unidades pesadas de la
+        // precarga que quedaron pendientes (el preámbulo de primera vez si el toque llegó antes, y el post al tamaño de la sesión). Devuelve
+        // lo que tardó en ms: la entrada corre su reloj eso mismo (el negro dura un poco más, sin saltos).
+        double RunPendingHeavyWork();
+
+        // It. 6b (F-WKT-17; AC-6B-23 a -27; DT6b-08 a -10): el vidrio desenfocado. GlassTexture es el compuesto opaco _RmHudGlass (la
+        // escena desenfocada con el tinte por píxel), del tamaño de scene-surface; GlassWeight (0-1) es cuánto se ve sobre el respaldo
+        // plano (la escena a la vista × el nivel con desenfoque, con su fundido de 200 ms). GlassChanged avisa cuando cambia la textura o
+        // el peso (nunca por cuadro: el panel muestrea la RT viva).
+        Texture? GlassTexture { get; }
+
+        double GlassWeight { get; }
+
+        event Action? GlassChanged;
+
+        // Hay piezas de vidrio a la vista (el HUD lo dice al armarse y al irse): sin piezas, el desenfoque no corre.
+        void SetGlassInUse(bool inUse);
+
         void BeginFlight(double now);
 
         void ShowInPlace(double now);

@@ -123,7 +123,8 @@ namespace RowMate.Core.Scene.Art
             new SceneShaderSpec("Rower", 2000, 30, 0, false, new[] { "_RmRowerColors", "_RmRimFill" }, None),
             new SceneShaderSpec("Oar", 2000, 20, 0, false, new[] { "_RmOarColors", "_RmOarLoad", "_RmMinWidthDp", "_RmPixelSize" }, None),
             new SceneShaderSpec("Spray", 3100, 16, 0, true, new[] { "_RmMinDropDp" }, new[] { "_RmSpray" }),
-            new SceneShaderSpec("WaterMarks", 3050, 20, 0, true, new[] { "_RmEffort" }, new[] { "_RmMarks" }, maxBranchAlu: 32),
+            // It. 6b (DT6b-23): + las ramas por tipo de la calma del charco, la columna de luz (4) y la estela (5); el salto más caro ≤ 40.
+            new SceneShaderSpec("WaterMarks", 3050, 20, 0, true, new[] { "_RmEffort" }, new[] { "_RmMarks" }, maxBranchAlu: 40),
             new SceneShaderSpec("Buoy", 2000, 25, 0, false, new[] { "_RmBuoyColor", "_RmFade" }, None),
         };
 
@@ -134,10 +135,107 @@ namespace RowMate.Core.Scene.Art
         public static readonly SceneShaderSpec[] Environment =
         {
             new SceneShaderSpec("Glow", 3010, 14, 0, true, new[] { "_RmGlowLamp", "_RmGlowBeacon", "_RmGlowBeam" }, new[] { "_RmGlow" }),
-            // Foam: 62 ALU medidos por SceneShaderTests (D3D11, Medio) en la reconciliación; el 30 del worktree era una estimación. Solo en la
-            // costa y en una tira de 1,6 m (≤ 16 instancias): optimizarlo es para issues.
-            new SceneShaderSpec("Foam", 3020, 64, 1, true, new[] { "_RmNoiseTex", "_RmFoamPulse", "_RmFoamColor" }, new[] { "_RmFoam" }),
+            // Foam: 62 ALU medidos por SceneShaderTests (D3D11, Medio) en la reconciliación de la It. 8. It. 6b (#22; AC-6B-29): el tope vuelve a
+            // 30 (el latido y los extremos de la franja pasan al vértice, WP-D).
+            new SceneShaderSpec("Foam", 3020, FoamMaxAlu, 1, true, new[] { "_RmNoiseTex", "_RmFoamPulse", "_RmFoamColor" }, new[] { "_RmFoam" }),
         };
+
+        public const int FoamMaxAlu = 30;
+
+        // ── It. 6b (06b-agua-avanzada/02-tech-design §3.4, §4.1; 00-arte-agua §2, §11) ──
+        // WaterAdvanced: un shader con tres variantes por palabra clave del material (RM_WATER_HIGH, la de Medio sin palabra y RM_WATER_LITE),
+        // cola 2450 opaca, un solo pase UniversalForward, SIN Fallback y con el tag RmWater = Advanced en cada SubShader (DT6b-22). El
+        // presupuesto de cada variante va en WaterTiers; el de la spec es el de Medio, con MaxBranchAlu para el salto degradado (el fundido,
+        // DT6b-12) y la espuma de las crestas de la costa. La estela y las columnas de luz son tipos de WaterMarks (DT6b-23): no hay
+        // WaterWake. El vidrio desenfocado es RowMate/UI/HudBlur (aparte de la escena).
+        public const string WaterHighKeyword = "RM_WATER_HIGH";
+        public const string WaterLiteKeyword = "RM_WATER_LITE";
+        public const string WaterTag = "RmWater";
+        public const string WaterTagValue = "Advanced";
+        public const string WaterInclude = "RowMateWater";
+        public const string HudBlurShader = "RowMate/UI/HudBlur";
+        public const string HudBlurFolder = "Art/Shaders/UI";
+
+        public static readonly string[] WaterKeywords = { WaterHighKeyword, WaterLiteKeyword };
+
+        public static readonly SceneShaderSpec[] WaterShaders =
+        {
+            new SceneShaderSpec("WaterAdvanced", 2450, 70, 5, false,
+                new[] { "_RmWaterNormal", "_RmHorizonProfile", "_RmHullFootprint", "_RmReflectionMix" }, None, maxBranchAlu: 40),
+        };
+
+        // El presupuesto de fragmento de cada variante (ALU y texturas, D3D11, sin las sombras de URP): Alto 110/6, Medio 70/5, Lite 35/2.
+        public static readonly WaterTierBudget[] WaterTiers =
+        {
+            new WaterTierBudget(QualityTier.High, WaterHighKeyword, 110, 6),
+            new WaterTierBudget(QualityTier.Medium, "", 70, 5),
+            new WaterTierBudget(QualityTier.Low, WaterLiteKeyword, 35, 2),
+        };
+
+        // Los globales del agua avanzada (los pone SceneHost por cuadro): las fases y los corrimientos de Core en double reducidos
+        // (WavePhases), la RT del reflejo planar (Alto), el fundido a la degradada, la estela empaquetada (WakeTrail) y su apagado.
+        public static readonly string[] WaterGlobals =
+        {
+            "_RmWaterPhases", "_RmWaterOffsets", "_RmWaterReflectionTex", "_RmDegradedBlend", "_RmWake", "_RmWakeFade",
+        };
+
+        public static SceneShaderSpec FindWater(string name)
+        {
+            foreach (var spec in WaterShaders)
+            {
+                if (spec.Name == name)
+                {
+                    return spec;
+                }
+            }
+
+            throw new ArgumentException("ShaderArt: no hay un shader de agua " + name, nameof(name));
+        }
+
+        // Las constantes kRm* del agua avanzada (RowMateWater.hlsl y WaterAdvanced.shader) con su fuente en Core: el contrato del legacy
+        // (WaterModel) y la tabla del arte (WaterLookArt). Las comprueba WaterShaderContractTests.
+        public static Dictionary<string, double> WaterConstants()
+        {
+            return new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["kRmWaterBaseNear"] = Water.WaterModel.BaseNear,
+                ["kRmWaterBaseFar"] = Water.WaterModel.BaseFar,
+                ["kRmWaterColorGain"] = Water.WaterModel.ColorGain,
+                ["kRmWaterFresnelGain"] = Water.WaterModel.FresnelGain,
+                ["kRmWaterFogNear"] = Water.WaterModel.FogNear,
+                ["kRmWaterFogFar"] = Water.WaterModel.FogFar,
+                ["kRmColumnBaseDp"] = Water.WaterModel.ColumnBaseDp,
+                ["kRmColumnPerMeterDp"] = Water.WaterModel.ColumnPerMeterDp,
+                ["kRmColumnPeak"] = Water.WaterModel.ColumnPeak,
+                ["kRmWakeFoamMax"] = Water.WaterModel.WakeFoamMax,
+                ["kRmCrestFoamMax"] = WaterLookArt.CrestFoamMax,
+                ["kRmContactDarken"] = WaterLookArt.ContactDarken,
+                ["kRmContactFalloff"] = WaterLookArt.ContactFalloff,
+                ["kRmDegradedLineMax"] = WaterArt.Lines - 1,
+                ["kRmWaterAbsorb"] = WaterLookArt.Absorb,
+                ["kRmWaterAbsorbNear"] = WaterLookArt.AbsorbNear,
+                ["kRmWaterAbsorbFar"] = WaterLookArt.AbsorbFar,
+                ["kRmFacetShade"] = WaterLookArt.FacetShade,
+                ["kRmRiverTurbidity"] = WaterLookArt.RiverTurbidity,
+                ["kRmShoreSoft"] = WaterLookArt.ShoreSoftMeters,
+                ["kRmShoreLowSoft"] = WaterLookArt.ShoreLowSoftMeters,
+                ["kRmGlintGain"] = WaterLookArt.GlintGain,
+                ["kRmSheenGain"] = WaterLookArt.SheenGain,
+                ["kRmSheenExponentScale"] = WaterLookArt.SheenExponentScale,
+                ["kRmSeamDp"] = WaterLookArt.SeamDp,
+                ["kRmCalmWavesA"] = WaterLookArt.CalmWavesA,
+                ["kRmCalmWavesB"] = WaterLookArt.CalmWavesB,
+                ["kRmBandKeep"] = Water.WaterVertexField.BandKeep,
+                ["kRmBandDrop"] = Water.WaterVertexField.BandDrop,
+                ["kRmWave2K"] = Water.WaterVertexField.Wave2K,
+                ["kRmCalmKA"] = Water.WaterVertexField.CalmKA,
+                ["kRmCalmKB"] = Water.WaterVertexField.CalmKB,
+                ["kRmCrestMean"] = Water.WaterVertexField.CrestMean,
+                ["kRmFoamCrestMean"] = Water.WaterVertexField.FoamCrestMean,
+                ["kRmFoamOctave"] = Water.WaterVertexField.FoamOctave,
+                ["kRmRingMaxStep"] = Geometry.WaterRingMesh.MaxRingStep,
+            };
+        }
 
         // Las constantes kRm* de los cinco del remero con su valor en RowerArt (las comprueba RowerShaderContractTests).
         public static Dictionary<string, double> RowerConstants()
@@ -157,6 +255,17 @@ namespace RowMate.Core.Scene.Art
                 ["kRmSwirlEyeGrowth"] = RowerArt.SwirlEyeGrowth,
                 ["kRmMarkFoamGain"] = RowerArt.MarkFoamGain,
                 ["kRmMarkEyeAlpha"] = RowerArt.MarkEyeAlpha,
+                ["kRmWakeCameraFade"] = Water.WaterModel.SternRelZ,
+                ["kRmPuddleFlatAlpha"] = WaterLookArt.PuddleFlatAlpha,
+                ["kRmColumnNear"] = WaterLookArt.ColumnNear,
+                ["kRmColumnNearAlpha"] = WaterLookArt.ColumnNearAlpha,
+                ["kRmColumnStripeMeters"] = WaterLookArt.ColumnStripeMeters,
+                ["kRmPuddleEyeDarken"] = WaterLookArt.PuddleEyeDarken,
+                ["kRmPuddleEdgeGain"] = WaterLookArt.PuddleEdgeGain,
+                ["kRmPuddleFlatDarken"] = WaterLookArt.PuddleFlatDarken,
+                ["kRmWakeCenterGain"] = WaterLookArt.WakeCenterGain,
+                ["kRmWakeBreakWaves"] = WaterLookArt.WakeBreakWaves,
+                ["kRmWakeFoamWaves"] = WaterLookArt.WakeFoamWaves,
                 ["kRmBuoyGloss"] = RowerArt.BuoyGloss,
                 ["kRmBuoySpecular"] = RowerArt.BuoySpecular,
                 ["kRmBuoyWhite"] = RowerArt.BuoyWhite,
@@ -208,6 +317,7 @@ namespace RowMate.Core.Scene.Art
                 ["kRmMoonTerminator"] = SkyArt.MoonTerminator,
                 ["kRmMoonEarthshine"] = SkyArt.MoonEarthshine,
                 ["kRmDitherAmplitude"] = SkyArt.DitherAmplitude,
+                ["kRmGlowGoldenFrom"] = SkyArt.GoldenGlowFrom,
                 ["kRmStarFieldMinTan"] = Math.Tan(SceneMath.DegToRad(SkyArt.StarFieldCellDeg)),
                 ["kRmStarFieldRadiusMin"] = SkyArt.StarFieldRadiusMinDp,
                 ["kRmStarFieldRadiusMax"] = SkyArt.StarFieldRadiusMaxDp,
@@ -241,6 +351,8 @@ namespace RowMate.Core.Scene.Art
                 ["kRmHorizonBaseFog"] = LakeArt.BaseFog,
                 ["kRmHorizonBaseFraction"] = LakeArt.BaseFraction,
                 ["kRmAlpenglow"] = LakeArt.Alpenglow,
+                ["kRmBacklight"] = LakeArt.Backlight,
+                ["kRmBacklightLobeRad"] = SceneMath.DegToRad(LakeArt.BacklightLobeDeg),
                 ["kRmSnowFog"] = LakeArt.SnowFog,
                 ["kRmSnowNightBase"] = LakeArt.SnowNightBase,
                 ["kRmSnowNightPerIllumination"] = LakeArt.SnowNightPerIllumination,
@@ -280,6 +392,7 @@ namespace RowMate.Core.Scene.Art
 
                 // Hull (§9; WP-D2).
                 ["kRmHullExposure"] = MaterialArt.HullExposure,
+                ["kRmHullDeckGloss"] = MaterialArt.HullDeckGloss,
                 ["kRmHullAmbientChroma"] = MaterialArt.HullAmbientChroma,
 
                 // It. 8 · Prop: la vida de banderas, sombrillas y boyas marcada en el uv por KitSegmentMesh (00-arte-entornos §1.4).
@@ -344,7 +457,7 @@ namespace RowMate.Core.Scene.Art
         {
             return new Dictionary<string, double[]>(StringComparer.Ordinal)
             {
-                ["Sky._RmGlowParams"] = new[] { SkyArt.GlowStrength, SkyArt.GlowFalloffDeg, SkyArt.GlowTopDeg, 0 },
+                ["Sky._RmGlowParams"] = new[] { SkyArt.GlowStrength, SkyArt.GlowFalloffDeg, SkyArt.GlowTopDeg, SkyArt.GoldenGlowStrength - SkyArt.GlowStrength },
                 ["Sky._RmStarField"] = new[] { SkyArt.StarFieldCellDeg, SkyArt.StarFieldAlphaMin, SkyArt.StarFieldAlphaMax, 0 },
                 ["Sky._RmMistBandDeg"] = new[] { SkyArt.MistBandDeg },
                 ["Horizon._RmSnowParams"] = new[] { LakeArt.SnowThreshold, LakeArt.SnowEdge, LakeArt.SnowNoise, LakeArt.SnowNoisePeriodDeg },
@@ -415,5 +528,22 @@ namespace RowMate.Core.Scene.Art
             var c = SceneColor.FromArgb(argb);
             return new[] { c.R, c.G, c.B, 1 };
         }
+    }
+
+    // El presupuesto de una variante de WaterAdvanced (la palabra clave vacía es la de Medio).
+    public readonly struct WaterTierBudget
+    {
+        public WaterTierBudget(QualityTier tier, string keyword, int maxAlu, int maxTextures)
+        {
+            Tier = tier;
+            Keyword = keyword;
+            MaxAlu = maxAlu;
+            MaxTextures = maxTextures;
+        }
+
+        public QualityTier Tier { get; }
+        public string Keyword { get; }
+        public int MaxAlu { get; }
+        public int MaxTextures { get; }
     }
 }

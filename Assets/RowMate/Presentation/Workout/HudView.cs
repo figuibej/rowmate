@@ -182,7 +182,19 @@ namespace RowMate.Presentation.Workout
             Watch(Band.Time);
             Watch(Band.Distance);
             this.Bind(ui.App.Texts, RenderTexts);
+
+            // It. 6b (F-WKT-17; 02-tech-design §4.4, DT6b-10): el vidrio desenfocado en las piezas de vidrio que ya existen (las de la clase
+            // rm-hud-glass y la placa de pausa), sin elementos nuevos. Sin escena, el respaldo plano de siempre.
+            if (ui.Scene != null && SceneSurface != null)
+            {
+                Glass = new GlassSurface(ui.Scene, SceneSurface);
+                this.Query(className: "rm-hud-glass").ForEach(Glass.Attach);
+                Glass.Attach(Callouts.Paused);
+            }
         }
+
+        // It. 6b: el vidrio de las piezas (null sin escena).
+        public GlassSurface? Glass { get; }
 
         // Un ancho natural pudo cambiar (un número más largo, otro idioma, un obj. nuevo): HudZones decide si rehace la
         // disposición.
@@ -458,6 +470,7 @@ namespace RowMate.Presentation.Workout
             Controls.Dispose();
             _hourTint?.Dispose();
             _forcedHour?.Dispose();
+            Glass?.Dispose();
             SceneSurface?.Dispose();
             Backdrop.Dispose();
             if (Application.isPlaying)

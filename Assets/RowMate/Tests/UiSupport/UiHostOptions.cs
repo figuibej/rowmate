@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using RowMate.Core.Common;
 using RowMate.Core.Ports;
+using RowMate.Core.Scene.Water;
 using RowMate.Presentation.Controls;
 using RowMate.Presentation.Surface;
 
@@ -106,6 +107,10 @@ namespace RowMate.Tests.UiSupport
         // It. 7: el remero de la escena (por defecto el maniquí: las pruebas dan lo mismo en todas las máquinas; Slot = el binding de la
         // máquina, Y Bot si está).
         public RowMate.Scene.RowerCharacterKind SceneCharacter = RowMate.Scene.RowerCharacterKind.Mannequin;
+
+        // It. 6b (06b-agua-avanzada/02-tech-design §8; DT6b-24, G6b-03): el agua de la escena. Por defecto la degradada de la 6a (las pruebas
+        // de la 6a a la 15 no cambian de agua sin que nadie lo decida); las de la 6b piden Auto (la regla) o lo que prueban.
+        public WaterForce SceneWater = WaterForce.Degraded;
 
         // It. 6a (B6a-19): el armado de la escena con el tramo del player (SceneWarmupPolicy) en lugar de todo en el acto.
         public bool ScenePlayerWarmup;

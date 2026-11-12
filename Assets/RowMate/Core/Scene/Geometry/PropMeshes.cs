@@ -120,7 +120,8 @@ namespace RowMate.Core.Scene.Geometry
     // El casco provisorio (ART_BIBLE §7.8; 04-design-notes §9; AC-SCN-01-08): un loft de 24 secciones de z 5,3 (popa) a 13,5 (proa),
     // centrado en x 0, con la sección 11 exactamente en z 9,5 (el punto del remero, en la línea de crujía); manga de 0,29 m en la
     // flotación y 0,33 en la borda, francobordo de 0,10 m. Color de vértice: blanco arriba, gris en la obra viva, la línea de borda
-    // celeste y el cockpit oscuro de z 9,05 a 10,45 (It. 7, DA7-02). ≤ 6 000 triángulos.
+    // celeste y el cockpit oscuro de z 9,05 a 10,45 (It. 7, DA7-02). ≤ 6 000 triángulos. It. 6b (#85): la cubierta con el degradé hacia
+    // la popa y los últimos 0,6 m afinados y más bajos (SternBeamFactor, SternDrop, DeckColor).
     public static class HullMesh
     {
         private const int Profile = 12;
@@ -136,6 +137,46 @@ namespace RowMate.Core.Scene.Geometry
             return i <= mid
                 ? LakeArt.HullStern + i * (SceneCamera.BoatZ - LakeArt.HullStern) / mid
                 : SceneCamera.BoatZ + (i - mid) * (LakeArt.HullBow - SceneCamera.BoatZ) / (LakeArt.HullSections - 1 - mid);
+        }
+
+        // La manga natural del casco en la borda (m) a esa z (el afinado del loft, sin el de la popa).
+        public static double NaturalGunwaleBeam(double z)
+        {
+            return LakeArt.HullBeamGunwale * Taper(z);
+        }
+
+        // El factor de la manga en los últimos 0,6 m: la borda va lineal de la manga natural a 0,6 m de la punta a 0,06 m en la punta.
+        public static double SternBeamFactor(double z)
+        {
+            var end = LakeArt.HullStern + LakeArt.HullSternTaperLength;
+            if (z >= end)
+            {
+                return 1;
+            }
+
+            var t = SceneMath.Clamp01((z - LakeArt.HullStern) / LakeArt.HullSternTaperLength);
+            var target = SceneMath.Lerp(LakeArt.HullSternTipBeam, NaturalGunwaleBeam(end), t);
+            return Math.Min(1, target / NaturalGunwaleBeam(z));
+        }
+
+        // Cuánto baja la cubierta: 0,03 m en la punta, 0 a 0,6 m de ella.
+        public static double SternDrop(double z)
+        {
+            var t = SceneMath.Clamp01((z - LakeArt.HullStern) / LakeArt.HullSternTaperLength);
+            return LakeArt.HullSternDeckDrop * (1 - t);
+        }
+
+        // El color de la cubierta fuera del cockpit: #F5F5F5 hasta 2,5 m de la popa y lineal a #C9D1D6 en la punta.
+        public static SceneColor DeckColor(double z)
+        {
+            var t = SceneMath.Clamp01((LakeArt.HullStern + LakeArt.HullDeckGradientLength - z) / LakeArt.HullDeckGradientLength);
+            return SceneColor.Lerp(SceneColor.FromArgb(LakeArt.HullWhite), SceneColor.FromArgb(LakeArt.HullDeckStern), t);
+        }
+
+        private static double Taper(double z)
+        {
+            var s = (z - LakeArt.HullStern) / (LakeArt.HullBow - LakeArt.HullStern);
+            return Math.Pow(Math.Sin(Math.PI * Math.Min(1, s * 0.85 + 0.075)), 0.55);
         }
 
         public static void Build(MeshData mesh)
@@ -155,11 +196,12 @@ namespace RowMate.Core.Scene.Geometry
             {
                 var z = SectionZ(i);
                 var s = (z - LakeArt.HullStern) / (LakeArt.HullBow - LakeArt.HullStern);
-                // Afinado en las puntas: más fino en la proa que en la popa.
-                var taper = Math.Pow(Math.Sin(Math.PI * Math.Min(1, s * 0.85 + 0.075)), 0.55);
-                var wl = LakeArt.HullBeamWaterline / 2 * taper;
-                var gw = LakeArt.HullBeamGunwale / 2 * taper;
-                var deckRise = 0.02 * taper;
+                // Afinado en las puntas: más fino en la proa que en la popa; en los últimos 0,6 m, además, el de la popa (It. 6b).
+                var taper = Taper(z);
+                var stern = SternBeamFactor(z);
+                var wl = LakeArt.HullBeamWaterline / 2 * taper * stern;
+                var gw = LakeArt.HullBeamGunwale / 2 * taper * stern;
+                var freeboard = LakeArt.HullFreeboard - SternDrop(z);
                 for (var j = 0; j <= Profile; j++)
                 {
                     // De la borda izquierda, por la quilla, a la borda derecha: un perfil en U.
@@ -167,7 +209,7 @@ namespace RowMate.Core.Scene.Geometry
                     var side = -Math.Cos(a);
                     var down = Math.Sin(a);
                     var x = side * (wl + (gw - wl) * (1 - down));
-                    var y = LakeArt.HullFreeboard - (LakeArt.HullFreeboard + LakeArt.HullDraft) * down * taper;
+                    var y = freeboard - (freeboard + LakeArt.HullDraft) * down * taper;
                     var isCockpit = LakeArt.IsCockpit(z) && (j == 0 || j == Profile);
                     var below = y < 0.0;
                     var c = isCockpit ? cockpit : (j == 0 || j == Profile ? stripe : (below ? bottom : white));
@@ -193,15 +235,15 @@ namespace RowMate.Core.Scene.Geometry
             for (var i = 0; i < sections; i++)
             {
                 var z = SectionZ(i);
-                var c = LakeArt.IsCockpit(z) ? cockpit : white;
-                mesh.AddVertex(0, LakeArt.HullFreeboard + 0.02, z, 0, 1, 0, c.R, c.G, c.B, 0, 0.5, i / (double)(sections - 1));
+                var c = LakeArt.IsCockpit(z) ? cockpit : DeckColor(z);
+                mesh.AddVertex(0, LakeArt.HullFreeboard + 0.02 - SternDrop(z), z, 0, 1, 0, c.R, c.G, c.B, 0, 0.5, i / (double)(sections - 1));
             }
 
             var edgeFirst = mesh.VertexCount;
             for (var i = 0; i < sections; i++)
             {
                 var z = SectionZ(i);
-                var c = LakeArt.IsCockpit(z) ? cockpit : white;
+                var c = LakeArt.IsCockpit(z) ? cockpit : DeckColor(z);
                 var left = i * (Profile + 1);
                 var right = left + Profile;
                 var s = (z - LakeArt.HullStern) / (LakeArt.HullBow - LakeArt.HullStern);

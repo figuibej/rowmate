@@ -41,7 +41,9 @@ namespace RowMate.Scene
             var t = frame.SceneTime;
             var relZ = buoy!.WorldZ - frame.Distance;
             var sway = SwayRad * Math.Sin(SwayRate * t + Seed);
-            var heave = HeaveM * Math.Sin(HeaveRate * t + 2 * Seed);
+            // It. 6b (DT6b-15, AC-6B-19): en la costa, además, sube y baja con el mar de fondo, como el casco (CoastBuoySwell: 0,15·h(4,5;
+            // relZ), con las fases de Core; 0 fuera de la costa).
+            var heave = HeaveM * Math.Sin(HeaveRate * t + 2 * Seed) + frame.Water.BuoyHeave;
             Renderer.transform.localPosition = new Vector3((float)BuoyTracker.X, (float)heave, (float)relZ);
             Renderer.transform.localRotation = Quaternion.Euler((float)(0.5 * sway * 180 / Math.PI), 0, (float)(sway * 180 / Math.PI));
             _material.SetFloat(SceneShaderIds.Fade, (float)buoy.Alpha);

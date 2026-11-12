@@ -35,8 +35,28 @@ param(
     [string]$Category = '',
     [string]$Unity = '',
     [string]$ArtifactsPath = 'tools/unity/.artifacts',
-    [switch]$RestoreOnly
+    [switch]$RestoreOnly,
+    [switch]$LogLoad
 )
+
+# It. 6b (06b-agua-avanzada/02-tech-design Sec. 6): con -LogLoad, la carga de los OTROS procesos (el total del procesador menos el de
+# Unity, por WMI: no depende del idioma de Windows) antes de la corrida y cada 15 s durante; queda en load.txt de -ArtifactsPath, solo
+# porcentajes (sin nombres de procesos, del equipo ni del usuario). Un tope de CPU que falla con carga externa anotada es "no concluyente
+# por carga": no se relaja. Nunca toca, pausa ni mata otros procesos.
+$script:loadSamples = New-Object System.Collections.Generic.List[double]
+function Get-OtherLoad([System.Diagnostics.Process]$Own) {
+    try {
+        $total = [double](Get-CimInstance -ClassName Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction Stop).PercentProcessorTime
+        $mine = 0.0
+        if ($null -ne $Own) {
+            foreach ($p in @(Get-CimInstance -ClassName Win32_PerfFormattedData_PerfProc_Process -Filter "IDProcess=$($Own.Id)" -ErrorAction SilentlyContinue)) {
+                $mine += [double]$p.PercentProcessorTime / [Environment]::ProcessorCount
+            }
+        }
+        return [math]::Round([math]::Max(0, $total - $mine), 1)
+    }
+    catch { return -1 }
+}
 
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -94,6 +114,9 @@ function Invoke-Unity([string[]]$UnityArgs) {
     $info.Arguments = $line
     $info.UseShellExecute = $false
     $process = [System.Diagnostics.Process]::Start($info)
+    if ($LogLoad) {
+        while (-not $process.WaitForExit(15000)) { $script:loadSamples.Add((Get-OtherLoad $process)) }
+    }
     $process.WaitForExit()
     # It. 6a (06a-escena-lago/00-deuda-5 Sec. 3): 198 = Unity no encontro una licencia valida. Cuando la licencia Personal la guarda el
     # cliente de licencias de Unity Hub en su propia carpeta, despues de reiniciar el equipo y con la Hub cerrada Unity no la encuentra.
@@ -209,6 +232,8 @@ $log = Join-Path $script:artifacts ($name + '.log')
 if (Test-Path $xml) { Remove-Item $xml -Force }
 
 $testArgs = @('-batchmode', '-projectPath', $repo, '-runTests', '-testPlatform', $Platform, '-testResults', $xml, '-logFile', $log)
+$script:loadBefore = -1
+if ($LogLoad) { $script:loadBefore = Get-OtherLoad $null }
 if ($Filter -ne '') { $testArgs += @('-testFilter', $Filter) }
 if ($Category -ne '') { $testArgs += @('-testCategory', $Category) }
 
@@ -255,6 +280,15 @@ finally {
 }
 
 Write-Host ('[unity-tests] -runTests -> ' + $exitCode + ' (log: ' + $log + ')')
+if ($LogLoad) {
+    $samples = @($script:loadSamples | Where-Object { $_ -ge 0 })
+    $loadLine = '[unity-tests] carga de los otros procesos: antes ' + $script:loadBefore + ' %'
+    if ($samples.Count -gt 0) {
+        $loadLine += ', durante media ' + [math]::Round(($samples | Measure-Object -Average).Average, 1) + ' %, max ' + ($samples | Measure-Object -Maximum).Maximum + ' % (' + $samples.Count + ' muestras)'
+    }
+    Write-Host $loadLine
+    Add-Content -Path (Join-Path $script:artifacts 'load.txt') -Value ($name + ': ' + $loadLine) -Encoding ASCII
+}
 $guardCode = Write-ProjectSettingsGuardResult '[unity-tests]' (Compare-ProjectSettingsSnapshot $repo $settingsBefore)
 if ($exitCode -eq 0 -and $guardCode -ne 0) { $exitCode = $guardCode }
 if ($Platform -eq 'PlayMode') { Remove-EditorTestResults $runStarted }

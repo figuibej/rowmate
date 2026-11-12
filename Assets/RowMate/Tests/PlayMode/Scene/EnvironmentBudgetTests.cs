@@ -51,6 +51,8 @@ namespace RowMate.Tests.PlayMode.Scene
             {
                 o.Preferences = preferences;
                 o.SceneTier = tier;
+                // It. 6b (AC-6B-29): los presupuestos con el agua avanzada.
+                o.SceneWater = RowMate.Core.Scene.Water.WaterForce.Auto;
             });
         }
 
@@ -64,6 +66,10 @@ namespace RowMate.Tests.PlayMode.Scene
                 CreateIn(id, tier, DeviceProfile.TV);
                 yield return EnterFree();
                 Assert.That(SceneHost.KitEnvironment, Is.EqualTo(id), "el kit armado");
+                // It. 6b (AC-6B-29; G6b-16): con el agua avanzada (Auto), lista y a la vista antes de medir; el vidrio no corre (se mide aparte).
+                yield return AdvancedWaterTests.UntilAdvanced(this, SceneHost, H);
+                Assert.That(SceneHost.ShowingAdvancedWater, Is.True, "se mide la avanzada");
+
                 Assert.That(SceneHost.Tier, Is.EqualTo(tier));
                 // Como en SceneBudgetTests: el panel de la prueba no dibuja mientras se mide (la UI se mide aparte).
                 H.Root.style.display = DisplayStyle.None;

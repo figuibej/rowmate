@@ -55,6 +55,10 @@ namespace RowMate.Snapshots
 
         public VideoSpec? Video { get; set; }
 
+        // It. 6b (DT6b-24): el agua de la toma; null = la del set (SnapshotCli.WaterFor). Con Auto, la toma espera la avanzada y el manifiesto
+        // anota la que se ve; una toma que no tiene el agua pedida falla.
+        public RowMate.Core.Scene.Water.WaterForce? Water { get; set; }
+
         // Comprobaciones propias del escenario (textos, columnas…): devuelven los problemas encontrados.
         public Func<UiTestHost, IEnumerable<string>>? Checks { get; set; }
 

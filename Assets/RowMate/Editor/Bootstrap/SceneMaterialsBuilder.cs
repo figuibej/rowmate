@@ -47,6 +47,10 @@ namespace RowMate.EditorTools
             // It. 8 (08-entornos-selector/02-tech-design §8.4; WP-D1): los halos y el haz de la noche, y la espuma de la costa.
             ("Glow", SceneShaderIds.Glow, true),
             ("Foam", SceneShaderIds.Foam, true),
+            // It. 6b (06b-agua-avanzada/02-tech-design §7): el agua avanzada (la palabra clave del nivel la pone el mundo en su copia) y el
+            // vidrio desenfocado.
+            ("WaterAdvanced", SceneShaderIds.WaterAdvanced, false),
+            ("HudBlur", SceneShaderIds.HudBlur, false),
         };
 
         public static string MaterialPath(string file)
@@ -116,6 +120,8 @@ namespace RowMate.EditorTools
                 Buoy = materials["Buoy"],
                 Glow = materials["Glow"],
                 Foam = materials["Foam"],
+                WaterAdvanced = materials["WaterAdvanced"],
+                HudBlur = materials["HudBlur"],
             };
 
             var variants = AssetDatabase.LoadAssetAtPath<ShaderVariantCollection>(VariantsPath);
@@ -156,6 +162,17 @@ namespace RowMate.EditorTools
                 case "WaterDegraded":
                     material.EnableKeyword(SceneShaderIds.WaterExtrasKeyword);
                     break;
+                case "WaterAdvanced":
+                    // El salto degradado con los agregados de la degradada; el mapa de normales horneado (el procedural del slot, AC-6B-37).
+                    var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(WaterNormalBaker.PngPath);
+                    if (normal != null)
+                    {
+                        material.SetTexture(SceneShaderIds.WaterNormal, normal);
+                    }
+
+                    material.DisableKeyword(SceneShaderIds.WaterHighKeyword);
+                    material.DisableKeyword(SceneShaderIds.WaterLiteKeyword);
+                    break;
                 case "Prop":
                     material.SetFloat(SceneShaderIds.WindowMode, 0f);
                     break;
@@ -194,6 +211,7 @@ namespace RowMate.EditorTools
             var names = new List<string>(SceneShaderIds.ShaderNames);
             names.AddRange(SceneShaderIds.RowerShaderNames);
             names.AddRange(SceneShaderIds.EnvironmentShaderNames);
+            names.AddRange(SceneShaderIds.WaterShaderNames);
             foreach (var name in names)
             {
                 var shader = Shader.Find(name);
@@ -235,6 +253,12 @@ namespace RowMate.EditorTools
             if (shader == SceneShaderIds.WaterDegraded)
             {
                 return new[] { new[] { SceneShaderIds.WaterExtrasKeyword } };
+            }
+
+            if (shader == SceneShaderIds.WaterAdvanced)
+            {
+                // Las tres variantes por nivel (Alto, Medio sin palabra y Lite): todas en la colección, así LowerTier no compila.
+                return new[] { new string[0], new[] { SceneShaderIds.WaterHighKeyword }, new[] { SceneShaderIds.WaterLiteKeyword } };
             }
 
             if (shader == SceneShaderIds.Sky)

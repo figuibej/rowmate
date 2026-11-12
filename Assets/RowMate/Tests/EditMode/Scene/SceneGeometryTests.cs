@@ -208,7 +208,8 @@ namespace RowMate.Tests.EditMode.Scene
                 var onDeck = false;
                 foreach (var v in corners)
                 {
-                    onDeck |= Math.Abs(mesh.X(v)) < 1e-6 && mesh.Y(v) > LakeArt.HullFreeboard;
+                    // It. 6b (#85): la cubierta baja 0,03 m en la punta de la popa; se la reconoce por la normal hacia arriba en la crujía.
+                    onDeck |= Math.Abs(mesh.X(v)) < 1e-6 && mesh.Normals[3 * v + 1] > 0.99f;
                 }
 
                 if (!onDeck)
@@ -219,8 +220,10 @@ namespace RowMate.Tests.EditMode.Scene
                 deckTriangles++;
                 foreach (var v in corners)
                 {
+                    // Blanca (con el degradé hacia la popa de la It. 6b, #85) o el cockpit; nunca la franja celeste.
                     double r = mesh.Colors[4 * v], b = mesh.Colors[4 * v + 2];
-                    var isWhite = Math.Abs(r - white.R) < 1e-6 && Math.Abs(b - white.B) < 1e-6;
+                    var deck = HullMesh.DeckColor(mesh.Z(v));
+                    var isWhite = Math.Abs(r - deck.R) < 1e-6 && Math.Abs(b - deck.B) < 1e-6;
                     var isCockpit = Math.Abs(r - cockpit.R) < 1e-6 && Math.Abs(b - cockpit.B) < 1e-6;
                     Assert.That(isWhite || isCockpit, Is.True, "un vértice de la cubierta con el color de la franja en z " + mesh.Z(v));
                 }

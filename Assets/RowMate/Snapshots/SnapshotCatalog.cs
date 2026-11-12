@@ -25,6 +25,12 @@ namespace RowMate.Snapshots
         // it3 = RoutinesCatalog, it4a (por defecto desde la 4a) = WorkoutCatalog. It. 6a: it6a (por defecto desde la 6a) = SceneCatalog.
         public static IReadOnlyList<SnapshotScenario> For(string set)
         {
+            // It. 6b: it6b (por defecto desde la 6b) = WaterCatalog (el agua avanzada, el vidrio y la deuda de la 6a).
+            if (string.Equals(set, "it6b", StringComparison.OrdinalIgnoreCase))
+            {
+                return WaterCatalog.All;
+            }
+
             // It. 15: it15 (por defecto desde la 15) = DebtCatalog (la deuda resoluble en la PC).
             if (string.Equals(set, "it15", StringComparison.OrdinalIgnoreCase))
             {
@@ -109,6 +115,11 @@ namespace RowMate.Snapshots
 
         public static string TitleFor(string set)
         {
+            if (string.Equals(set, "it6b", StringComparison.OrdinalIgnoreCase))
+            {
+                return "It. 6b (Agua avanzada, reflejos, estela, niebla y vidrio)";
+            }
+
             // It. 15 (AC-D15-31): el INDEX de la 14 se titulaba "It. 9 (…)" (caía en el valor por defecto).
             if (string.Equals(set, "it15", StringComparison.OrdinalIgnoreCase))
             {

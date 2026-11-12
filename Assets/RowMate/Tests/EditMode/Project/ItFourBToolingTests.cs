@@ -32,8 +32,8 @@ namespace RowMate.Tests.EditMode.Project
         {
             var script = File.ReadAllText(RepoPaths.Combine(CaptureScript));
             // It. 5: it5 se suma adelante; It. 6a: it6a adelante (el por defecto desde la 6a); it4a, it3 e it2 siguen.
-            Assert.That(script, Does.Contain("[ValidateSet('it15', 'it14', 'it12', 'it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]"));
-            Assert.That(script, Does.Contain("[string]$Set = 'it15',"), "it4b fue el por defecto en la 4b, it5 en la 5; desde la 6a, it6a");
+            Assert.That(script, Does.Contain("[ValidateSet('it6b', 'it15', 'it14', 'it12', 'it11', 'it10a', 'it9', 'it8', 'thumbs', 'it7', 'it6a', 'it5', 'it4b', 'it4a', 'it3', 'it2')]"));
+            Assert.That(script, Does.Contain("[string]$Set = 'it6b',"), "it4b fue el por defecto en la 4b, it5 en la 5; desde la 6a, it6a");
             Assert.That(script, Does.Contain("return '" + It4b + "'"), "su carpeta de salida");
             var bytes = File.ReadAllBytes(RepoPaths.Combine(CaptureScript));
             for (var i = 0; i < bytes.Length; i++)
@@ -47,7 +47,7 @@ namespace RowMate.Tests.EditMode.Project
         {
             var cli = File.ReadAllText(RepoPaths.Combine(Cli));
             Assert.That(cli, Does.Contain("public const string It4bOutput = \"" + It4b + "\";"));
-            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it15\";"), "desde la 6a, it6a por defecto (it4b sigue: It4bOutput)");
+            Assert.That(cli, Does.Contain("public const string DefaultSet = \"it6b\";"), "desde la 6a, it6a por defecto (it4b sigue: It4bOutput)");
             Assert.That(File.Exists(RepoPaths.Combine(Catalog)), Is.True, "HudExrCatalog");
         }
 

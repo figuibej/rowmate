@@ -119,9 +119,17 @@ namespace RowMate.Tests.PlayMode.Scene
             AssumeGpu();
             using (new TierScope(tier))
             {
-                CreateScene(DeviceProfile.TV, o => o.SceneTier = tier);
+                CreateScene(DeviceProfile.TV, o =>
+                {
+                    o.SceneTier = tier;
+                    o.SceneWater = RowMate.Core.Scene.Water.WaterForce.Auto;
+                });
                 yield return EnterFree();
                 Assert.That(SceneHost.Tier, Is.EqualTo(tier));
+                // It. 6b (AC-6B-29; G6b-16): con el agua avanzada (Auto), lista y a la vista antes de medir; el vidrio no corre (se mide aparte).
+                yield return AdvancedWaterTests.UntilAdvanced(this, SceneHost, H);
+                Assert.That(SceneHost.ShowingAdvancedWater, Is.True, "se mide la avanzada");
+
                 // Los contadores de URP son de todo el cuadro y la UI suma lo suyo, que depende de lo que corrió antes en la misma sesión del
                 // Editor (en la corrida completa el mismo HUD da 730 dibujos y solo, 2; probablemente el atlas dinámico de UI Toolkit, ya lleno). Para medir la
                 // escena sola, el panel de la prueba no dibuja mientras se mide (la escena se dibuja igual: su cámara, a pedido). La UI
@@ -609,8 +617,13 @@ namespace RowMate.Tests.PlayMode.Scene
                 {
                     o.SceneTier = QualityTier.Medium;
                     o.SceneCharacter = kind;
+                    o.SceneWater = RowMate.Core.Scene.Water.WaterForce.Auto;
                 });
                 yield return EnterFree();
+                // It. 6b (AC-6B-29; G6b-16): con el agua avanzada (Auto), lista y a la vista antes de medir; el vidrio no corre (se mide aparte).
+                yield return AdvancedWaterTests.UntilAdvanced(this, SceneHost, H);
+                Assert.That(SceneHost.ShowingAdvancedWater, Is.True, "se mide la avanzada");
+
                 if (kind == RowMate.Scene.RowerCharacterKind.Slot && !SceneHost.World!.Rower!.FromSlot)
                 {
                     Assert.Ignore("NO VERIFICABLE: esta máquina no tiene el FBX de Mixamo (sin binding)");

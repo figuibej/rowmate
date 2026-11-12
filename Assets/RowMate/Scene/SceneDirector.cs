@@ -112,6 +112,7 @@ namespace RowMate.Scene
             Sky.Apply(frame);
             Horizon.Apply(frame);
             Water.Apply(frame);
+            WaterSurfaces?.Apply(frame);
             Terrain.Apply(frame.Distance);
             Shore.Apply(frame);
             Fill.Apply(frame.Distance, frame.Pose.Z);
@@ -128,6 +129,7 @@ namespace RowMate.Scene
             CastShadows(frame.Rower.ShadowMode == RowMate.Core.Scene.Stroke.BoatShadowMode.Map);
             Oars?.Apply(frame.Rower.Pose);
             Rower?.Driver.Apply(frame.Rower.Pose);
+            Wake?.Apply(frame);
             WaterMarks?.Apply(frame);
             Spray?.Apply(frame);
             Buoy?.Apply(frame);
@@ -136,6 +138,62 @@ namespace RowMate.Scene
                 Buoy.Renderer.enabled = false;
             }
         }
+
+        // It. 6b (#1; 06b-agua-avanzada/02-tech-design §2.1 (4)): el grupo de un renderer en los sub-dibujos del calentamiento: 0 cielo,
+        // horizonte y degradés; 1 terreno y orilla (lo que no es de otro grupo); 2 objetos e instancias (solo dibujos instanciados); 3 bote,
+        // remero, remos y boya; 4 agua; 5 la orilla y el relleno instanciados (partidos del terreno: en el Editor el grupo junto pasaba de 4 ms).
+        public const int WarmupSky = 0, WarmupTerrain = 1, WarmupObjects = 2, WarmupBoat = 3, WarmupWater = 4, WarmupShore = 5;
+
+        public int WarmupGroupOf(Renderer renderer)
+        {
+            if (ReferenceEquals(renderer, Sky.SkyObject) || ReferenceEquals(renderer, Horizon.Far) || ReferenceEquals(renderer, Horizon.Near)
+                || ReferenceEquals(renderer, Overlay.Renderer))
+            {
+                return WarmupSky;
+            }
+
+            if (ReferenceEquals(renderer, Water.Renderer) || WaterSurfaces != null && WaterSurfaces.Owns(renderer))
+            {
+                return WarmupWater;
+            }
+
+            if (Buoy != null && ReferenceEquals(renderer, Buoy.Renderer) || renderer.transform.IsChildOf(Boat.Root))
+            {
+                return WarmupBoat;
+            }
+
+            return WarmupTerrain;
+        }
+
+        // Los dibujos instanciados de un grupo del calentamiento (QueueInstancedDraws los pide todos).
+        public void QueueInstancedDraws(int group)
+        {
+            switch (group)
+            {
+                case WarmupSky:
+                    Sky.Draw();
+                    break;
+                case WarmupShore:
+                    Shore.Draw();
+                    Fill.Draw();
+                    break;
+                case WarmupObjects:
+                    Kit?.Draw();
+                    Glow?.Draw();
+                    Foam?.Draw();
+                    Seagulls?.Draw();
+                    break;
+                case WarmupBoat:
+                    WaterMarks?.Draw();
+                    Spray?.Draw();
+                    break;
+            }
+        }
+
+        // It. 6b: las dos aguas (la degradada de la 6a y la avanzada) y la estela (null en un mundo de antes de la 6b: las pruebas viejas).
+        public WaterSurfaceController? WaterSurfaces { get; set; }
+
+        public WakeRenderer? Wake { get; set; }
 
         // Los dibujos instanciados de este cuadro (justo antes del pedido de render).
         public void QueueInstancedDraws()

@@ -452,3 +452,12 @@ ShaderVariantCollection:
         passType: 13
       - keywords: INSTANCING_ON
         passType: 13
+  - first: {fileID: 4800000, guid: 54255211d7ef90a46a3bb8a977074172, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+      - keywords: RM_WATER_HIGH
+        passType: 13
+      - keywords: RM_WATER_LITE
+        passType: 13

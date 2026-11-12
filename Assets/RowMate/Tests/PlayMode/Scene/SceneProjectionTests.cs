@@ -191,6 +191,14 @@ namespace RowMate.Tests.PlayMode.Scene
             H.App.Workout.Pause();
             H.Advance(20);
             host.ForceDistanceForTest(42195);
+            // It. 6b (F-WKT-17): la placa de pausa es de vidrio y su desenfoque entra con un fundido de 200 ms (un movimiento finito): se
+            // espera a que termine antes de comparar dos cuadros quietos.
+            for (var i = 0; i < 20; i++)
+            {
+                H.Step();
+                yield return null;
+            }
+
             H.Step();
             yield return Frames(2);
             var a = Read();

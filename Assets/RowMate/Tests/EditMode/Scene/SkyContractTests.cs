@@ -9,7 +9,7 @@ namespace RowMate.Tests.EditMode.Scene
     // SKA · Las proporciones del disco y del halo que son contrato (QA-6a-PAR-10; AC-SCN-11-05, AC-SCN-10-07; DV-63): halo = 4 × el
     // disco de cada astro; disco de la luna = 0,8 × el del sol (y su halo, 0,8 × el del sol); los alfas del halo 0,7 / 0,25 / 0.
     [TestFixture]
-    public sealed class SkyArtTests
+    public sealed partial class SkyArtTests
     {
         [Test, Category("AC-SCN-11-05")]
         public void HaloIsFourTimesTheDisk()

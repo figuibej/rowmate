@@ -537,3 +537,13 @@ Fuente: [15-deuda-pc/04-design-notes](../iterations/15-deuda-pc/04-design-notes.
 | §4.1 | Recorte nuevo con `uvx --from fonttools==4.67.0` y `SOURCE_DATE_EPOCH` fijo (reproducible byte a byte): contorno 43 glifos / 9 008 B, relleno 6 / 2 464 B. Los 41 + 6 glifos que quedan, idénticos a los de la It. 3 |
 | §4.3 | + `download` (`F090`) e `ios_share` (`E6B8`) para el botón de exportar (sale el glifo dibujado `ExportGlyph`, #66); − `cloud_upload`, `cloud_download`, `link` y `cloud_done` (Strava descartada). `person` y `link_off` se quedan porque se usan. `delete_sweep` y otros 5 sin uso quedan reservados (lista cerrada de `IconsTests`, a issues) |
 | §1.6 | `ui.font.numeric`: también las cifras de los ejes del gráfico del Detalle (`.rm-chart-axis__num`, AC-D15-25). "RowMate Numeric" de Inter se cierra sin hacer (gate QA-G15-02): se queda la SC |
+
+## Cambios de la It. 6b
+
+Fuente: [06b-agua-avanzada/04-design-notes](../iterations/06b-agua-avanzada/04-design-notes.md) (WP-D) y [02-tech-design](../iterations/06b-agua-avanzada/02-tech-design.md) (DT6b-17, IB6b-08), 2026-11-11.
+
+| Dónde | Qué cambió |
+|---|---|
+| `water.normalDetail` | Un solo mapa 512² RGBA (RG chop, BA rizo), procedural (`WaterNormalMap` de Core, semilla fija, huella en `Art/Textures/Water/water.json`), horneado por `WaterNormalBaker` y puesto en el material `WaterAdvanced`; el slot sigue en Procedural (un asset asignado gana) |
+| `water.profile.*` | Los parámetros por escenario son `WaterLookArt` + `WaterProfiles` (Core): bandas, calma, α, distorsión y bandas de orilla. Río y costa con la fuerza y la α ajustadas en la ronda de WP-D |
+| `water.foam` | Sin textura propia: la espuma de la orilla usa el ruido de la escena (`Foam`, ≤ 30 ALU) y la de las crestas de la costa, el canal A del mapa de normales |

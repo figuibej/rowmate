@@ -12,7 +12,8 @@ namespace RowMate.Core.Scene.Art
         public const int Lines = 10;
         public const double PlaneWidth = 1600, PlaneLength = 1500;
         // It. 8: 24 de la 6a + las dos comparaciones de los saltos de la ola y del puente y su producto (27; 08-entornos-selector/04-design-notes §6).
-        public const int MaxAlu = 27;
+        // It. 6b (#2, QA-V6a-PAR-01): + 1 por el tope de la línea n = clamp(round(...); 0; 9) (28; 00-arte-agua §10).
+        public const int MaxAlu = 28;
         // It. 8: la ola de la costa y la luz bajo el puente, en saltos por uniformes (el lago no los paga; 08-entornos-selector/04-design-notes §6).
         public const int MaxBranchAlu = 40;
 

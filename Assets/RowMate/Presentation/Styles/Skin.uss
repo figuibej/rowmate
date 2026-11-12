@@ -402,6 +402,15 @@
     padding-bottom: 0;
 }
 
+/* It. 6b (P-19; AC-6B-27; 00-arte-agua §8): el diálogo de completado de vidrio. GlassSurface le pone el compuesto desenfocado como
+   background-image y el reflejo interior (#FFFFFF @6 % en los 8 dp de arriba, debajo de los hijos); acá, el respaldo plano
+   glass.fallback (lo que se ve en Bajo o sin la RT, como hoy) y el borde de 1 px del vidrio en border.default. Sin elementos nuevos ni
+   cambios de tamaño (el borde de 1 px ya es el de .rm-dialog). */
+.rm-dialog--glass {
+    background-color: var(--rm-glass-fallback);
+    border-color: var(--rm-border-default);
+}
+
 .rm-dialog--completion .rm-dialog__actions,
 .rm-dialog--compact.rm-dialog--completion .rm-dialog__actions {
     padding-top: 20px;

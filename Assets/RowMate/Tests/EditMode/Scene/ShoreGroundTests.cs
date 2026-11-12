@@ -70,12 +70,13 @@ namespace RowMate.Tests.EditMode.Scene
         [Test, Category("AC-SCN-15-07")]
         public void Envelopes()
         {
-            Assert.That(TerrainProfile.Envelope(-18), Is.EqualTo(2.2 + 0.20 * 18).Within(1e-12));
-            Assert.That(TerrainProfile.Envelope(-100), Is.EqualTo(22.2).Within(1e-12));
+            // It. 6b (#3, QA-V6a-12): la pendiente de la envolvente izquierda baja de 0,20 a 0,14 (00-arte-agua §10).
+            Assert.That(TerrainProfile.Envelope(-18), Is.EqualTo(2.2 + 0.14 * 18).Within(1e-12));
+            Assert.That(TerrainProfile.Envelope(-100), Is.EqualTo(16.2).Within(1e-12));
             Assert.That(double.IsNaN(TerrainProfile.Envelope(-17.9)), Is.True, "más adentro, solo lo bajo");
             Assert.That(TerrainProfile.Envelope(30), Is.EqualTo(2.2 + 0.06 * 30).Within(1e-12));
             Assert.That(double.IsNaN(TerrainProfile.Envelope(29)), Is.True);
-            Assert.That(LakeArt.LeftEnvelopeSlope, Is.EqualTo(0.20), "DN6a-14: 0,20, no 0,25");
+            Assert.That(LakeArt.LeftEnvelopeSlope, Is.EqualTo(0.14), "It. 6b (#3): 0,14 (era 0,20, DN6a-14)");
             Assert.That(TerrainProfile.CanopyHeight(-60, 100), Is.InRange(TerrainProfile.Envelope(-60) - 3, TerrainProfile.Envelope(-60) - 1));
             Assert.That(double.IsNaN(TerrainProfile.CanopyHeight(60, 100)), Is.True);
         }

@@ -266,6 +266,124 @@ namespace RowMate.Tests.UnityEditMode
             Assert.That(stats.Textures, Is.LessThanOrEqualTo(spec.MaxTextures + 1));
         }
 
+        // ── It. 6b (06b-agua-avanzada/02-tech-design §4.1, §6; DT6b-22; AC-6B-06, -29) ──
+
+        private static Shader LoadWaterAdvanced()
+        {
+            var path = "Assets/RowMate/" + ShaderArt.ShaderFolder + "/WaterAdvanced.shader";
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(path);
+            Assert.That(shader, Is.Not.Null, "falta " + path);
+            return shader;
+        }
+
+        private static string[] WaterKeywords(WaterTierBudget budget)
+        {
+            return budget.Keyword.Length == 0 ? new string[0] : new[] { budget.Keyword };
+        }
+
+        // Las tres variantes (Alto 110/6, Medio 70/5, Lite 35/2) con su salto degradado ≤ MaxBranchAlu (D3D11).
+        [TestCase(RowMate.Core.Scene.QualityTier.High), TestCase(RowMate.Core.Scene.QualityTier.Medium), TestCase(RowMate.Core.Scene.QualityTier.Low)]
+        [Category("AC-6B-29")]
+        public void WaterAdvancedFitsItsBudget(RowMate.Core.Scene.QualityTier tier)
+        {
+            Assume.That(Application.platform, Is.EqualTo(RuntimePlatform.WindowsEditor), "la medida es la del código de Direct3D 11");
+            var budget = Array.Find(ShaderArt.WaterTiers, t => t.Tier == tier);
+            var spec = ShaderArt.FindWater("WaterAdvanced");
+            var pass = FindForward(ShaderUtil.GetShaderData(LoadWaterAdvanced()));
+            Assert.That(pass, Is.Not.Null, "sin pasada UniversalForward");
+            var info = pass!.CompileVariant(ShaderType.Fragment, WaterKeywords(budget), ShaderCompilerPlatform.D3D, BuildTarget.StandaloneWindows64, true);
+            Assert.That(info.Success, Is.True, "no compila");
+            Assert.That(DxbcStats.TryRead(info.ShaderData, out var stats, out var why), Is.True, why);
+            Debug.Log("[SHADER] WaterAdvanced " + tier + ": " + stats.Math + " ALU (tope " + budget.MaxAlu + ") + " + stats.Branch
+                + " en bloques condicionales (tope " + spec.MaxBranchAlu + "), " + stats.Textures + " texturas (tope " + budget.MaxTextures + ")");
+            if (stats.Math > budget.MaxAlu || stats.Branch > spec.MaxBranchAlu || stats.Textures > budget.MaxTextures)
+            {
+                Debug.Log("[SHADER] WaterAdvanced " + tier + " (D3D11), el desensamblado:\n" + stats.Disassembly);
+            }
+
+            Assert.That(stats.Math, Is.LessThanOrEqualTo(budget.MaxAlu), tier + ": ALU");
+            Assert.That(stats.Branch, Is.LessThanOrEqualTo(spec.MaxBranchAlu), tier + ": el salto degradado");
+            Assert.That(stats.Textures, Is.LessThanOrEqualTo(budget.MaxTextures), tier + ": texturas");
+        }
+
+        // DT6b-22 (G6b-01): sin Fallback y con el tag RmWater = Advanced en el SubShader activo de las tres variantes, en la cola 2450.
+        [Test, Category("AC-6B-06")]
+        public void WaterAdvancedHasNoFallbackAndIsTagged()
+        {
+            var shader = LoadWaterAdvanced();
+            Assert.That(ShaderUtil.ShaderHasError(shader), Is.False, "con errores");
+            Assert.That(shader.isSupported, Is.True);
+            Assert.That(shader.renderQueue, Is.EqualTo(ShaderArt.FindWater("WaterAdvanced").Queue));
+            foreach (var budget in ShaderArt.WaterTiers)
+            {
+                var material = new Material(shader);
+                try
+                {
+                    foreach (var keyword in WaterKeywords(budget))
+                    {
+                        material.EnableKeyword(keyword);
+                    }
+
+                    Assert.That(material.GetTag(ShaderArt.WaterTag, false), Is.EqualTo(ShaderArt.WaterTagValue), budget.Tier.ToString());
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(material);
+                }
+            }
+        }
+
+        [TestCase(ShaderCompilerPlatform.D3D)]
+        [TestCase(ShaderCompilerPlatform.OpenGLCore)]
+        [TestCase(ShaderCompilerPlatform.Vulkan)]
+        [TestCase(ShaderCompilerPlatform.GLES3x)]
+        public void TheWaterAndGlassShadersCompileFor(ShaderCompilerPlatform platform)
+        {
+            if (platform == ShaderCompilerPlatform.D3D)
+            {
+                Assume.That(Application.platform, Is.EqualTo(RuntimePlatform.WindowsEditor), "el compilador de Direct3D es de Windows");
+            }
+
+            var target = platform == ShaderCompilerPlatform.GLES3x ? BuildTarget.Android : BuildTarget.StandaloneWindows64;
+            var failures = new StringBuilder();
+            var water = ShaderUtil.GetShaderData(LoadWaterAdvanced()).GetSubshader(0).GetPass(0);
+            foreach (var budget in ShaderArt.WaterTiers)
+            {
+                foreach (var type in new[] { ShaderType.Vertex, ShaderType.Fragment })
+                {
+                    var info = water.CompileVariant(type, WaterKeywords(budget), platform, target);
+                    if (!info.Success)
+                    {
+                        failures.Append("WaterAdvanced ").Append(budget.Tier).Append(' ').Append(type).Append(": ");
+                        foreach (var message in info.Messages)
+                        {
+                            failures.Append(message.message).Append(' ');
+                        }
+
+                        failures.AppendLine();
+                    }
+                }
+            }
+
+            var blur = AssetDatabase.LoadAssetAtPath<Shader>("Assets/RowMate/" + ShaderArt.HudBlurFolder + "/HudBlur.shader");
+            Assert.That(blur, Is.Not.Null, "falta HudBlur");
+            var data = ShaderUtil.GetShaderData(blur).GetSubshader(0);
+            Assert.That(data.PassCount, Is.EqualTo(3), "bajada, Kawase y composición: 3 SetPass");
+            for (var p = 0; p < data.PassCount; p++)
+            {
+                foreach (var type in new[] { ShaderType.Vertex, ShaderType.Fragment })
+                {
+                    var info = data.GetPass(p).CompileVariant(type, new string[0], platform, target);
+                    if (!info.Success)
+                    {
+                        failures.Append("HudBlur ").Append(p).Append(' ').Append(type).AppendLine();
+                    }
+                }
+            }
+
+            Assert.That(failures.ToString(), Is.Empty, "no compilan para " + platform);
+        }
+
         private static ShaderData.Pass? FindForward(ShaderData data)
         {
             var subshader = data.GetSubshader(0);

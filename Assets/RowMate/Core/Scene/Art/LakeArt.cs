@@ -14,10 +14,14 @@ namespace RowMate.Core.Scene.Art
         public const double SnowThreshold = 0.58, SnowEdge = 0.03, SnowNoise = 0.04, SnowNoisePeriodDeg = 1.7;
         // La semilla del ruido de las lenguas de nieve: con ella la cobertura es la del Designer (45 % en TV y 33 % en TH, DN6a-02).
         public const long SnowNoiseSeed = 37;
-        public const double FlankToSun = 0.12, FlankAway = -0.10, BaseFog = 0.15, Alpenglow = 0.35;
+        // It. 6b (#3, QA-V6a-12; 00-arte-agua §10): más contraste en los flancos y menos bruma en la base (eran 0,12, −0,10 y 0,15).
+        public const double FlankToSun = 0.18, FlankAway = -0.16, BaseFog = 0.10, Alpenglow = 0.35;
         // Los flancos cambian de lado en ± 6° alrededor del acimut del sol (WP-D2): con el signo seco, a las 12 h (el sol en 0°, delante del
         // pico central) quedaba una costura vertical de 4 niveles en la cordillera, justo debajo del disco.
         public const double FlankRampDeg = 6;
+        // QA-V6b-05 (#3, AC-6B-04 a): el contraluz de la cordillera lejana con el sol de día delante, en un lóbulo de 12° alrededor del
+        // acimut del sol (Horizon.shader, kRmBacklight y kRmBacklightLobeRad).
+        public const double Backlight = 0.6, BacklightLobeDeg = 12;
         public const double BaseFraction = 0.25;          // la base (el 25 % de abajo de cada cordón) va 0,15 más hacia fog
         public const double SnowNightBase = 0.55, SnowNightPerIllumination = 0.45;   // de noche × (0,55 + 0,45·il·vis de la luna)
         // El borde encendido de la cresta (P2, DN6a-12): los últimos 0,35° en ± 8° del sol, sunGlow·0,6·g·exp(−(Δacimut/6°)²).
@@ -37,7 +41,8 @@ namespace RowMate.Core.Scene.Art
         public const double FarShoreLift = 0.4;                         // el trozo lejano: la orilla a +0,4 m (DT6a-18)
 
         // ── Las envolventes (DN6a-14): lo agregado no las pasa nunca ──
-        public const double LeftEnvelopeBase = 2.2, LeftEnvelopeSlope = 0.20, LeftEnvelopeFrom = 18;
+        // It. 6b (#3): la envolvente izquierda baja de 0,20 a 0,14 (en TH el bosque cercano deja ver el cordón lejano).
+        public const double LeftEnvelopeBase = 2.2, LeftEnvelopeSlope = 0.14, LeftEnvelopeFrom = 18;
         public const double RightEnvelopeBase = 2.2, RightEnvelopeSlope = 0.06, RightEnvelopeFrom = 30;
         public const double LegacyStripHalfWidth = 18;   // en |x| < 18, solo lo bajo (P-09)
         public const double LowVegetationMax = 1.2;
@@ -96,6 +101,11 @@ namespace RowMate.Core.Scene.Art
         public const double HullStern = 5.3, HullBow = 13.5, HullBeamWaterline = 0.29, HullBeamGunwale = 0.33, HullFreeboard = 0.10;
         public const double HullDraft = 0.05, HullBowBall = 0.04;
         public const int HullSections = 24;
+
+        // It. 6b (#85; AC-6B-21; 00-arte-agua §9): la cubierta va de #F5F5F5 a #C9D1D6 en los últimos 2,5 m hacia la popa y los últimos
+        // 0,6 m se afinan hasta 0,06 m de manga con la cubierta 0,03 m más baja (la aleta). Casco, borda y cockpit sin cambios.
+        public const uint HullDeckStern = 0xFFC9D1D6;
+        public const double HullDeckGradientLength = 2.5, HullSternTaperLength = 0.6, HullSternTipBeam = 0.06, HullSternDeckDrop = 0.03;
 
         // El cockpit agrandado y corrido (It. 7, DA7-02): de z 9,05 a 10,45 (−0,45 / +0,95 del perno).
         public const double CockpitStartZ = 9.05, CockpitEndZ = 10.45;

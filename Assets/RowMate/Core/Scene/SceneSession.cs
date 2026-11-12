@@ -1,5 +1,6 @@
 using System;
 using RowMate.Core.Scene.Art;
+using RowMate.Core.Scene.Water;
 
 namespace RowMate.Core.Scene
 {
@@ -119,6 +120,15 @@ namespace RowMate.Core.Scene
         private BoatCameraFilter _boatCamera;
         private bool _strokeFrozenForTest;
 
+        // It. 6b (06b-agua-avanzada/02-tech-design §3.3): el perfil del agua, la estela con historia, los micro-anillos y las columnas
+        // de luz; la velocidad del casco con el surge y su desfase (lo que mueve la popa que se dibuja).
+        private readonly WaterProfile _water;
+        private readonly WakeTrail _wake = new WakeTrail();
+        private readonly MicroRingField _rings = new MicroRingField();
+        private readonly LightColumns _columns = new LightColumns();
+        private double _hullSpeed;
+        private double _surge;
+
         public SceneSession(ShoreEnvironment environment, SceneSessionOptions options)
         {
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -129,6 +139,7 @@ namespace RowMate.Core.Scene
             // El lago usa la silueta de las opciones (las pruebas de la 6a la cambian); los otros, la de su perfil.
             _horizon = environment.Id == EnvironmentId.Lake ? options.Horizon : _profile.Horizon;
             _swell = EnvironmentCatalog.HasSwell(environment);
+            _water = WaterProfiles.For(environment.Id);
             Camera = new ChaseCameraDirector(options.Breathing.Scaled(_profile.BreathingGain), options.Flight, options.Aerial);
             for (var i = 0; i < LightSlots; i++)
             {
@@ -197,6 +208,11 @@ namespace RowMate.Core.Scene
             _shadowSide = default;
             _boatCamera = default;
             _swellFilter = default;
+            _wake.Clear();
+            _rings.Clear();
+            _columns.Clear();
+            _hullSpeed = 0;
+            _surge = 0;
             for (var i = 0; i < LightSlots; i++)
             {
                 _lightKeys[i] = long.MinValue;
@@ -409,6 +425,7 @@ namespace RowMate.Core.Scene
             frame.Distance = distance;
             frame.Speed = State.Speed;
             frame.SceneTime = sceneTime;
+            TickWater(sceneTime, distance, palette, celestial, centerX, ref frame);
             frame.Draw = true;
         }
 
@@ -477,6 +494,11 @@ namespace RowMate.Core.Scene
             _puddles.InjectForTest(x, worldZ, age);
         }
 
+        internal void InjectRingForTest(double x, double worldZ, double age, int kind)
+        {
+            _rings.InjectForTest(x, worldZ, age, kind);
+        }
+
         // La palada de un cuadro (02-tech-design §2.12), después de State.Update: el reloj visual, el esfuerzo, el reposo, la pose, el
         // bote, los eventos (charcos, salpicadura, gotas), los efectos, la boya y los hervideros. Sin asignar. La distancia de escena
         // no cambia (el surge es un desfase de dibujo).
@@ -521,6 +543,8 @@ namespace RowMate.Core.Scene
                 swellPitch = _swellFilter.PitchRad;
             }
 
+            _surge = surge;
+            _hullSpeed = State.Speed * (1 + amplitude * Stroke.BoatSurge.SpeedFactor(phi, _clock.LatchedRatio));
             rower.Boat = new Stroke.BoatMotionSample(Stroke.BoatMotion.Pitch(phi, sceneTime) + swellPitch, Stroke.BoatMotion.Heave(phi) + swellHeave,
                 Stroke.BoatMotion.Roll(sceneTime, _profile.RollK), surge);
             rower.SwellHeaveM = swellHeave;
@@ -547,6 +571,7 @@ namespace RowMate.Core.Scene
             }
 
             _puddles.Step(step, effort);
+            _rings.Step(step, _spray, _strokeFrozenForTest ? Stroke.StrokeEvents.None : events);
             _spray.Step(step);
             _buoy.Step(step, w.Buoy, State.Distance, State.Speed, sceneTime);
 
@@ -565,6 +590,53 @@ namespace RowMate.Core.Scene
             var boil = _tier.Boils && c >= 0.02 && c <= 0.36;
             rower.BoilLeft = boil;
             rower.BoilRight = boil;
+        }
+
+        // It. 6b: el agua avanzada del cuadro (06b-agua-avanzada/02-tech-design §3.3), sin asignar: el perfil, las fases en double, el
+        // astro de la columna, las bandas con la luz de la hora, la huella del casco, la estela (la popa que se dibuja, con el surge),
+        // los anillos, las columnas de luz y la boya de la costa. Choice y DegradedBlend los pone SceneHost.
+        private void TickWater(double sceneTime, double distance, in ScenePalette palette, in CelestialState celestial, double centerX,
+                               ref SceneFrame frame)
+        {
+            ref var water = ref frame.Water;
+            water.Profile = _water;
+            WavePhases.Compute(distance, sceneTime, _water, ref water.Phases);
+            water.ColumnCenterX = centerX;
+            water.ColumnStrength = celestial.LegacyStrength * (frame.WarmUpAll ? 1 : celestial.DiskVisibility);
+            var ambient = palette.Ambient;
+            water.LeftBand = Lit(_water.Left.Color, ambient);
+            water.RightBand = Lit(_water.Right.Color, ambient);
+            water.LeftLowBand = _water.Left.HasLow ? Lit(SceneColor.FromArgb(_water.Left.LowTone), ambient) : SceneColor.Black;
+            water.RightLowBand = _water.Right.HasLow ? Lit(SceneColor.FromArgb(_water.Right.LowTone), ambient) : SceneColor.Black;
+            water.HullStartRelZ = _boat.HullStern + _surge;
+            water.HullEndRelZ = _boat.HullBow + _surge;
+            water.HullHalfWidth = _boat.BeamGunwale / 2 + WaterLookArt.ContactFalloff;
+
+            _wake.Step(sceneTime, distance, _hullSpeed, _surge);
+            water.WakeIntensity = _wake.HeadIntensity;
+            _wake.CopyTo(water.WakePacked);
+            water.WakeCount = _wake.Count;
+            water.BuoyHeave = _buoy.Visible ? CoastBuoySwell.Heave(Stroke.BuoyTracker.X, _buoy.WorldZ - distance, water.Phases, _water) : 0;
+            water.Rings = _rings;
+            _columns.Fill(frame, TierOf(_tier));
+            water.Columns = _columns;
+        }
+
+        private static SceneColor Lit(in SceneColor c, double k)
+        {
+            return new SceneColor(c.R * k, c.G * k, c.B * k);
+        }
+
+        // El nivel de la escena desde el del remero (Alto: sombras y alto; Medio: sombras; Bajo: sin sombras).
+        private static QualityTier TierOf(in Stroke.RowerRenderTier tier)
+        {
+            return tier.HighTier ? QualityTier.High : (tier.HasShadows ? QualityTier.Medium : QualityTier.Low);
+        }
+
+        // Las tomas con la distancia forzada (G6b-15): la estela de 12 s a la velocidad estable.
+        internal void PrimeWakeForTest(double steadySpeedMps)
+        {
+            _wake.Prime(_frozenTimeForTest ?? State.Time, State.Distance, steadySpeedMps);
         }
 
         // El tramo de las gotas de la recuperación (ANIMATION_BIBLE §4.2): de la salida de la pala visible a c = 0,55.
@@ -711,7 +783,8 @@ namespace RowMate.Core.Scene
         private void EnsureFrame(ref SceneFrame frame)
         {
             if (frame.Stars == null || frame.Clouds == null || frame.Lines == null || frame.VisibleProps == null || frame.PropLight == null
-                || frame.Rower.Pose.Joints == null || frame.TrailingProps == null || frame.TrailingLight == null || frame.Seagulls == null)
+                || frame.Rower.Pose.Joints == null || frame.TrailingProps == null || frame.TrailingLight == null || frame.Seagulls == null
+                || frame.Water.WakePacked == null)
             {
                 throw new ArgumentException("SceneSession: el cuadro se arma con SceneFrame.Create (los arreglos se reservan una vez).", nameof(frame));
             }

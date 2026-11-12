@@ -94,6 +94,9 @@ namespace RowMate.Presentation.Device
             this.Bind(ui.App.Device.State, OnDevice);
             this.Bind(ui.App.HeartRate.State, OnHeartRate);
             this.Bind(ui.App.Texts, _ => Render());
+            // It. 6b (AC-6B-05; 02-tech-design §2.4): con el inmersivo tapando, cada lectura solo marca sucio; al destaparse, si quedó
+            // sucia, se dibuja en ese mismo cuadro (antes de que se vea).
+            this.Bind(ui.ImmersiveCover, OnCover);
             RegisterCallback<DetachFromPanelEvent>(_ => CancelHold());
         }
 
@@ -156,6 +159,21 @@ namespace RowMate.Presentation.Device
             Render();
         }
 
+        // Las veces que dibujó (DeviceCoverTests) y si quedó algo sin dibujar debajo del inmersivo.
+        public long Renders { get; private set; }
+
+        public bool Dirty => _dirty;
+
+        private bool _dirty;
+
+        private void OnCover(bool covered)
+        {
+            if (!covered && _dirty)
+            {
+                Render();
+            }
+        }
+
         private void Render()
         {
             var state = _device;
@@ -163,6 +181,15 @@ namespace RowMate.Presentation.Device
             {
                 return;
             }
+
+            if (_ui.ImmersiveCover.Value)
+            {
+                _dirty = true;
+                return;
+            }
+
+            _dirty = false;
+            Renders++;
 
             var texts = _ui.Texts;
             _appBar.SetTitle(texts.Get(L10nKeys.DeviceTitle));

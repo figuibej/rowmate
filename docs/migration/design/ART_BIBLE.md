@@ -1095,3 +1095,15 @@ Deuda visual resoluble en la PC (WP-D). Fuente: [15-deuda-pc/04-design-notes](..
 | Historial | La tarjeta suma el botón de exportar (`download` de la fuente, 18 `text.secondary`, área de 40 que sobresale del renglón sin cambiar su alto) a la izquierda del *chevron*. La fila marcada de `Rendimiento por paso` lleva un borde de 1 dp en el color de su tipo (relleno 7/9, el contenido no se mueve) y sus franjas suben al 22 % en 160 ms `ease.enter`. El *tooltip* del cursor tiene sombra negra al 35 %, 8 dp de desenfoque y +2 dp en y (hermano 9-slice generado) |
 | §3.11 | Con el simulador, la AppBar suma 28 dp a la izquierda (`.rm-has-sim-ribbon`): el título arranca en 44 y el glifo de la flecha de volver en 44-68, fuera de la cinta. El build normal no cambia |
 | Escena | La "estela" rectangular de V14-12 es la **popa del casco** (toma AUX-15-01 con el casco oculto): no se agrega estela (AC-SCN-13-04 sigue). La popa va a issues |
+
+## Cambios de la It. 6b
+
+Agua avanzada, reflejos, estela, popa y vidrio (WP-D). Fuente: [06b-agua-avanzada/04-design-notes](../iterations/06b-agua-avanzada/04-design-notes.md) sobre [00-arte-agua](../iterations/06b-agua-avanzada/00-arte-agua.md), con lo que mandaron la spec y el diseño técnico (DT6b-03 a -05: el peso de Fresnel del legacy, la columna del legacy como piso y Medio sin el planar del bote), 2026-11-11. Cero tokens, colores ni fuentes nuevas.
+
+| Dónde | Qué cambió |
+|---|---|
+| §7.7 | El agua avanzada (`RowMate/Scene/WaterAdvanced`, Alto/Medio/Lite) reemplaza al "shader URP propio" de esta sección: color del contrato + absorción bajo la cámara (0,18) + turbidez del río (`#3E5A3A` al 20 %) + parches de calma (lago 0,35, río 0,7, regata 0,5); normal B2/B3/B4 del mapa procedural (B3 girado 37°); reflejo por nivel (Alto planar ½ con la banda de orilla encima; Medio silueta + banda; Bajo solo cielo) con el peso del legacy `0,6·(1 − cos)³`; el astro sobre la normal con exponente `1/α²` y destellos × (1 + 2·máscara); niebla `S(80; 400)` y costura de 3 dp hacia `skyHorizon`. Fragmento: Alto 81, Medio 68, Lite 32 ALU (D3D11) |
+| §7.7 | Por escenario (`WaterLookArt`): río B2/B3 0,38/0,26 y α 0,09; costa B2/B3 0,42/0,28 y α 0,11 (los del arte daban una alfombra de destellos); lago y regata, los del arte |
+| §7.7 | La estela: la V del legacy (semiancho 0,3 + 0,35·retroceso, espuma ≤ 0,35) con historia de 12 s, apagada hacia la cámara como el legacy (`S(0; 5,3; z)`), la cabeza en 0,5 s, la espuma cortada cada ≈ 2,6 m y batida cada ≈ 1,5 m en la z de mundo, el centro × 0,6 y la luz de la hora (≈ 0,25 de luminancia de noche) |
+| §7.8 | La popa: en la cubierta (`N.y` > 0,8) el Fresnel y el especular del gelcoat se recortan a 0,15 (#85), con el degradé `#F5F5F5` → `#C9D1D6` y el afinado de los últimos 0,6 m. La línea de contacto (× 0,75, 0,06 m) sigue el huso del casco |
+| §3.2 | El vidrio desenfocado (Alto y Medio): la composición con `α(L)` por píxel en sRGB y tramado Bayer 4 × 4 de ± 0,5/255; el diálogo de completado del inmersivo con `.rm-dialog--glass` (respaldo `glass.fallback`, borde `border.default`). Bajo sigue con el respaldo plano |

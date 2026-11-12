@@ -509,6 +509,8 @@ namespace RowMate.Snapshots
                 record.Problems.Add("el registro tiene errores: " + string.Join(" | ", host.Logger.Lines));
             }
 
+            // It. 6b (DT6b-24, G6b-03): el agua que se ve en la toma; una toma que no tiene el agua pedida falla.
+            record.Problems.AddRange(WaterCatalog.CheckWater(scenario, host, record.Values ??= new List<string>()));
             record.CaptureElements(host.Root);
         }
 

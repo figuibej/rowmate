@@ -85,6 +85,8 @@ namespace RowMate.Presentation.Workout
         private IDisposable? _sceneReadiness;
         private IDisposable? _pacingRelease;
         private bool _flightPending;
+        // It. 6b: lo que se corrió el reloj de la entrada por el trabajo pesado del negro (s).
+        private double _entryShift;
         private bool _sceneShown;
         private bool _sceneClosed;
         private bool? _landscape;
@@ -202,6 +204,7 @@ namespace RowMate.Presentation.Workout
             }
 
             _popped = true;
+            _ui.SetImmersiveCover(false);
             _cascade.Stop();
             _exit.Stop();
             _sceneFade?.Stop();
@@ -368,6 +371,7 @@ namespace RowMate.Presentation.Workout
                 var dialog = factory != null ? factory(state.Completion) : new CompletionDialog(_ui, state.Completion, () => Hud.AcknowledgeCompletionAsync());
                 _completion = dialog;
                 dialog.Box.RegisterCallback<GeometryChangedEvent>(_ => RepublishSurface());
+                AttachCompletionGlass(dialog);
                 _ui.Dialogs.Open(dialog, instantly);
                 RepublishSurface();
                 OnCompletionOpened();
@@ -421,8 +425,23 @@ namespace RowMate.Presentation.Workout
             var dialog = new CompletionDialog(_ui, completion, () => Hud.AcknowledgeCompletionAsync());
             _completion = dialog;
             dialog.Box.RegisterCallback<GeometryChangedEvent>(_ => RepublishSurface());
+            AttachCompletionGlass(dialog);
             _ui.Dialogs.Open(dialog, false);
             return dialog;
+        }
+
+        // It. 6b (AC-6B-27; P-19; 02-tech-design §4.4): el diálogo de completado también de vidrio (.rm-dialog--glass, el mismo compuesto
+        // que el HUD); el velo del modal no cambia.
+        private void AttachCompletionGlass(ModalDialog dialog)
+        {
+            var glass = _view?.Glass;
+            if (glass == null)
+            {
+                return;
+            }
+
+            dialog.Box.AddToClassList("rm-dialog--glass");
+            glass.Attach(dialog.Box);
         }
 
         private void CancelCompletionTimer()
@@ -571,7 +590,7 @@ namespace RowMate.Presentation.Workout
             }
             else
             {
-                scene.BeginFlight(SceneTimelines.FlightStartSeconds(_openedAt));
+                scene.BeginFlight(SceneTimelines.FlightStartSeconds(_openedAt + _entryShift));
             }
 
             _sceneShown = true;
@@ -738,9 +757,20 @@ namespace RowMate.Presentation.Workout
             // It. 6a (§3.9): la escena NO se dibuja en el cuadro del armado del HUD; entra en el siguiente con el vuelo. Con reducir
             // movimiento, en su lugar desde el cuadro 0 (sin respiración). Este cuadro es negro y quieto: lo que la escena tenga pendiente
             // para su primer cuadro a la vista (la orilla de 0 m después de una sesión larga) se termina acá (QA-V6a-REN-04).
+            // It. 6b (AC-6B-05): desde acá el negro tapa todo lo de abajo (Dispositivo deja de dibujar con cada lectura).
+            _ui.SetImmersiveCover(true);
             if (_scene != null)
             {
                 _scene.CatchUp();
+                // It. 6b (#1, AC-6B-01; 02-tech-design §2.1 (3)): las unidades pesadas de la precarga que quedaron pendientes corren en este
+                // cuadro negro y quieto; el reloj de la entrada (el fondo y la cascada, y el vuelo anclado a los 220 del toque) se corre lo que
+                // tardaron: el negro dura un poco más, sin saltos.
+                var heavyMs = _scene.RunPendingHeavyWork();
+                if (heavyMs > 0)
+                {
+                    _entryShift += heavyMs / 1000.0;
+                    _cascade.Delay(heavyMs / 1000.0);
+                }
                 if (_ui.App.Accessibility.Value.ReduceMotion)
                 {
                     StartScene(true);
@@ -824,6 +854,8 @@ namespace RowMate.Presentation.Workout
             }
 
             _revealed = true;
+            // It. 6b (AC-6B-05): Workout empieza a verse: Dispositivo vuelve a dibujar (si quedó sucio, en este mismo cuadro).
+            _ui.SetImmersiveCover(false);
             // It. 6a (§3.9): a los 400 de la salida el negro cubre la escena: se cierra (deja de integrar y de dibujar).
             CloseScene();
             // Desde acá vale el toque en Workout (ROB-01, AC-WKT-01-09; QA-V4b-MOT-02): la raíz que sale deja de absorber.

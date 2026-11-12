@@ -95,7 +95,8 @@ namespace RowMate.Tests.EditMode.Project
                 Assert.Ignore("pendiente WP-B: capture-snapshots.ps1 todavía no tiene el set it15");
             }
 
-            Assert.That(script, Does.Contain("[string]$Set = 'it15',"), "el set de la 15, por defecto");
+            // Por defecto, el de la 15 hasta que la 6b suma el suyo (it6b, ItSixBToolingTests).
+            Assert.That(script, Does.Match(@"\[string\]\$Set = 'it(15|6b)',"), "el set de la 15 (o el de la 6b), por defecto");
             Assert.That(script, Does.Contain("if ($Set -eq 'it15') { return '" + It15Folder + "' }"), "su carpeta, y no la de la 14");
             Assert.That(Read(SnapshotCli), Does.Contain("public const string It15Output = \"" + It15Folder + "\";"));
         }

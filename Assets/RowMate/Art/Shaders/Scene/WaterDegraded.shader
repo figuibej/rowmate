@@ -39,6 +39,7 @@ Shader "RowMate/Scene/WaterDegraded"
         #include "../Include/RowMateScene.hlsl"
         #include "../Include/RowMateFog.hlsl"
         #include "../Include/RowMateLighting.hlsl"
+        #include "../Include/RowMateWater.hlsl"
 
         CBUFFER_START(UnityPerMaterial)
             float4 _RmWaterBandTop;
@@ -200,8 +201,8 @@ Shader "RowMate/Scene/WaterDegraded"
                     c *= 1.0 + swell * (_RmSwell.x * kRmSwellColorGain * (1.0 - RmSmoothStep(kRmSwellFadeNear, kRmSwellFadeFar, pw.z)));
                 }
 
-                // 2: la línea más cercana.
-                float n = max(round(sqrt(abs(tp)) / kRmLineSpacing + i.line0.x), 0.0);
+                // 2: la línea más cercana. It. 6b (#2): con tope, n ∈ [0; 9] (RowMateWater.hlsl): la fila de abajo no dibuja una 11.ª.
+                float n = RmDegradedLineIndex(sqrt(abs(tp)) / kRmLineSpacing + i.line0.x);
                 float t = n * kRmLineSpacing + i.line0.y;
                 float coverY = saturate((kRmLineHalfThicknessDp + 0.5 * kRmLineSoftDp) / kRmLineSoftDp - abs(tp - t * t) * i.line0.z);
                 float coverX = saturate(t * i.line1.x + i.line1.y - abs(s.y) / (2.0 * kRmLineSoftDp));

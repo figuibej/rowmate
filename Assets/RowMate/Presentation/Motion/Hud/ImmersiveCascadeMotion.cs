@@ -102,6 +102,16 @@ namespace RowMate.Presentation.Motion.Hud
             Notify(false);
         }
 
+        // It. 6b (#1, 02-tech-design §2.1 (3)): corre la línea de tiempo (el trabajo pesado del negro de la entrada tardó eso): el fondo y la
+        // cascada siguen desde donde estaban, sin saltos.
+        public void Delay(double seconds)
+        {
+            if (IsRunning && seconds > 0)
+            {
+                _start += seconds;
+            }
+        }
+
         // Salta al final: todo en su lugar, los avisos que faltaban y done.
         public void Finish()
         {

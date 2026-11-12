@@ -129,7 +129,7 @@ namespace RowMate.Tests.EditMode.Scene.Environments
             Assert.That(ShaderArt.MaterialDefaults()["Horizon._RmSkylineWindows"][0], Is.EqualTo(0));
             // Los presupuestos: lo de la 6a queda igual salvo las comparaciones de los saltos (agua + 3, horizonte + 1) y lo nuevo va en
             // bloques condicionales.
-            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(27));
+            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(28), "It. 6b: + 1 por el tope de la línea (#2)");
             Assert.That(ShaderArt.Find("Terrain").MaxAlu, Is.EqualTo(35));
             Assert.That(ShaderArt.Find("Prop").MaxAlu, Is.EqualTo(30));
             Assert.That(ShaderArt.Find("Horizon").MaxAlu, Is.EqualTo(16));

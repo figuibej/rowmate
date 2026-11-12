@@ -23,8 +23,8 @@ namespace RowMate.Tests.EditMode.Traceability
         private static readonly Regex SetCategory = new Regex(@"\.SetCategory\s*\(\s*""((?:[^""\\\n]|\\.)*)""\s*\)");
         private static readonly Regex TestNameProperty = new Regex(@"\bTestName\s*=\s*""((?:[^""\\\n]|\\.)*)""");
         private static readonly Regex SetName = new Regex(@"\.SetName\s*\(\s*""((?:[^""\\\n]|\\.)*)""\s*\)");
-        // It. 15: también AC-D15-nn (letras y cifras en el prefijo).
-        private static readonly Regex AcPattern = new Regex(@"^AC-[A-Z]+[0-9]*-\d\d(-\d\d)?$");
+        // It. 15: también AC-D15-nn (letras y cifras en el prefijo). It. 6b: también AC-6B-nn (cifras y letras).
+        private static readonly Regex AcPattern = new Regex(@"^AC-(?:[A-Z]+[0-9]*|[0-9]+[A-Z]+)-\d\d(-\d\d)?$");
         private static readonly Regex LtPattern = new Regex(@"^LT-\d\d$");
 
         [Test, Category("AC-BASE-09")]
@@ -197,6 +197,11 @@ namespace RowMate.Tests.EditMode.Traceability
             }
 
             foreach (var ac in It15Ids.Acceptance)
+            {
+                known.Add(ac.Id);
+            }
+
+            foreach (var ac in It06bIds.Acceptance)
             {
                 known.Add(ac.Id);
             }
@@ -2396,6 +2401,101 @@ namespace RowMate.Tests.EditMode.Traceability
             var scan = Scan();
             var offenders = new List<string>();
             foreach (var id in It15Ids.UnityOnlyIds)
+            {
+                if (scan.Categories.TryGetValue(id, out var files))
+                {
+                    foreach (var file in files)
+                    {
+                        offenders.Add(id + " en " + file);
+                    }
+                }
+            }
+
+            Assert.That(offenders, Is.Empty, string.Join(", ", offenders));
+        }
+
+        [Test, Category("AC-BASE-09")]
+        public void It06bIdsAreComplete()
+        {
+            // 38 AC (06b §3), todos nuevos, en orden. UnityOnlyIds sale de la columna de verificación (sin d y con p, u o cap); sin
+            // WorkPackageBIds; DeviceOnlyIds = los que no tienen ninguna automática (el Android, NO VERIFICABLE, y el repo limpio de QA).
+            var before = new HashSet<string>(It01Ids.AcceptanceIds, StringComparer.Ordinal);
+            foreach (var list in new[] { It02Ids.Acceptance, It03Ids.Acceptance, It04aIds.Acceptance, It04bIds.Acceptance, It05Ids.Acceptance, It06aIds.Acceptance, It07Ids.Acceptance, It08Ids.Acceptance, It09Ids.Acceptance, It10aIds.Acceptance, It11Ids.Acceptance, It12Ids.Acceptance, It14Ids.Acceptance, It15Ids.Acceptance })
+            {
+                foreach (var ac in list)
+                {
+                    before.Add(ac.Id);
+                }
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var unityOnly = new List<string>();
+            var withoutAutomatic = new List<string>();
+            for (var i = 0; i < It06bIds.Acceptance.Length; i++)
+            {
+                var ac = It06bIds.Acceptance[i];
+                Assert.That(ac.Id, Is.EqualTo("AC-6B-" + (i + 1).ToString("00", System.Globalization.CultureInfo.InvariantCulture)), "en orden");
+                Assert.That(AcPattern.IsMatch(ac.Id), Is.True, ac.Id);
+                Assert.That(ids.Add(ac.Id), Is.True, "repetido en It06bIds: " + ac.Id);
+                Assert.That(before.Contains(ac.Id), Is.False, ac.Id + " ya es de una iteración anterior");
+                CheckKinds(ac.Id, ac.Checks);
+                if (HasKind(ac.Checks, "d") || HasKind(ac.Checks, "dB"))
+                {
+                    continue;
+                }
+
+                if (HasKind(ac.Checks, "p") || HasKind(ac.Checks, "u") || HasKind(ac.Checks, "cap"))
+                {
+                    unityOnly.Add(ac.Id);
+                }
+                else
+                {
+                    withoutAutomatic.Add(ac.Id);
+                }
+            }
+
+            Assert.That(It06bIds.Acceptance.Length, Is.EqualTo(38));
+            Assert.That(It06bIds.UnityOnlyIds, Is.EquivalentTo(unityOnly));
+            Assert.That(It06bIds.WorkPackageBIds, Is.Empty);
+            Assert.That(It06bIds.DeviceOnlyIds, Is.EquivalentTo(withoutAutomatic));
+
+            // La matriz de run-tests.ps1 reconoce AC-6B-nn (la misma expresión de Get-QuotedIds).
+            var script = File.ReadAllText(RepoPaths.Combine("tools/dotnet/run-tests.ps1"));
+            var quoted = Regex.Match(script, @"\[regex\]::Matches\(\$Text, '([^']+)'\)");
+            Assert.That(quoted.Success, Is.True, "Get-QuotedIds");
+            var found = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match m in new Regex(quoted.Groups[1].Value).Matches(File.ReadAllText(RepoPaths.Combine("Assets/RowMate/Tests/EditMode/Traceability/It06bIds.cs"))))
+            {
+                found.Add(m.Groups[1].Value);
+            }
+
+            Assert.That(found.Count, Is.EqualTo(38), "los 38 AC de la 6b entran en la matriz");
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It06bDotnetIdsHaveTests()
+        {
+            var categories = Scan().Categories;
+            var missing = new List<string>();
+            foreach (var ac in It06bIds.Acceptance)
+            {
+                if (HasKind(ac.Checks, "d") && !categories.ContainsKey(ac.Id))
+                {
+                    missing.Add(ac.Id);
+                }
+            }
+
+            Assert.That(missing, Is.Empty, missing.Count + " IDs [d] de la It. 6b sin test: " + string.Join(", ", missing));
+        }
+
+        [Test, Category("AC-BASE-09"), Category("Integration")]
+        public void It06bUnityOnlyIdsHaveNoDotnetResult()
+        {
+            var scan = Scan();
+            var offenders = new List<string>();
+            var ids = new List<string>(It06bIds.UnityOnlyIds);
+            ids.AddRange(It06bIds.DeviceOnlyIds);
+            foreach (var id in ids)
             {
                 if (scan.Categories.TryGetValue(id, out var files))
                 {

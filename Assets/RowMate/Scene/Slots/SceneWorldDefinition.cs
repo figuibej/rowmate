@@ -40,6 +40,12 @@ namespace RowMate.Scene.Slots
         public Material? Glow;
         public Material? Foam;
 
+        // It. 6b (06b-agua-avanzada/02-tech-design §7; WP-B): el agua avanzada (una copia por mundo con la palabra clave del nivel) y el
+        // vidrio desenfocado. Sin ellos (un SceneWorld.asset de antes de la 6b) el mundo copia el shader por nombre; sin shader, sigue con
+        // la degradada y el respaldo plano. No entran en All(): un asset de antes sigue completo.
+        public Material? WaterAdvanced;
+        public Material? HudBlur;
+
         public Material?[] All()
         {
             return new[]

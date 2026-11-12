@@ -174,7 +174,8 @@ namespace RowMate.Tests.UnityEditMode
             Assert.That(AssetDatabase.GetAssetPath(variants), Is.EqualTo(SceneMaterialsBuilder.VariantsPath));
             // It. 7: más los 5 del remero (Rower, Oar, Spray, WaterMarks, Buoy; SceneShaderIds.RowerShaderNames); It. 8: Glow.
             Assert.That(variants!.shaderCount, Is.EqualTo(ShaderArt.Scene.Length + RowMate.Scene.SceneShaderIds.RowerShaderNames.Length
-                + RowMate.Scene.SceneShaderIds.EnvironmentShaderNames.Length), "los 13, los 5 de la 7 y los de la 8");
+                + RowMate.Scene.SceneShaderIds.EnvironmentShaderNames.Length + RowMate.Scene.SceneShaderIds.WaterShaderNames.Length),
+                "los 13, los 5 de la 7, los de la 8 y los de la 6b");
             Assert.That(variants.variantCount, Is.GreaterThanOrEqualTo(ShaderArt.Scene.Length * 2));
         }
     }

@@ -15,7 +15,7 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 03-rutinas/02-tech
 | CAP-09 | [CAP-09-luna-saliendo-th.png](CAP-09-luna-saliendo-th.png) | TH | R-4 | 20:00, E-920 | 0/0 | sin desbordes | ok |
 | CAP-10 | [CAP-10-medianoche-tv.png](CAP-10-medianoche-tv.png) | TV | R-4 | 00:00, E-920 | 0/0 | sin desbordes | ok |
 | CAP-11 | [CAP-11-tarde-tv.png](CAP-11-tarde-tv.png) | TV | R-4 | 15:00, E-920 | 0/0 | sin desbordes | ok |
-| CAP-12 | [CAP-12-maraton-w1280.png](CAP-12-maraton-w1280.png) | W1280 | R-4 | 12:00, E-42K (42 195 m); sin temblor | 0/0 | sin desbordes | ok |
+| CAP-12 | [CAP-12-maraton-w1280.png](CAP-12-maraton-w1280.png) | W1280 | R-4 | 12:00, E-42K (42 195 m); sin temblor | 0/0 | sin desbordes | temblor: 10 píxeles distintos entre dos dibujos con el bote quieto |
 | CAP-13 | [CAP-13-hud-lago-tv.png](CAP-13-hud-lago-tv.png) | TV | R-4 | Libre a los 60,2 s, 10:00, con el contorno | 0/0 | sin desbordes | ok |
 | CAP-14 | [CAP-14-hud-lago-th.png](CAP-14-hud-lago-th.png) | TH | R-4 | Libre a los 60,2 s, 10:00, con el contorno | 0/0 | sin desbordes | ok |
 | CAP-15 | [CAP-15-hud-lago-l640.png](CAP-15-hud-lago-l640.png) | L640 | R-4 | Libre a los 60,2 s, 10:00, con el contorno | 0/0 | sin desbordes | ok |
@@ -48,4 +48,4 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 03-rutinas/02-tech
 | VID-10 | [VID-10-respiracion-tv.mp4](VID-10-respiracion-tv.mp4) | TV | R-4 | Escena sola, libre con R-4 sin tocar nada, con la línea del contrato (20 s) | 0/0 | sin desbordes | ok |
 | VID-11 | [VID-11-escena-demorada-tv.mp4](VID-11-escena-demorada-tv.mp4) | TV | R-4 | Libre con la escena demorada 1,5 s (3 s) | 0/0 | sin desbordes | ok |
 | it6a-brillo | [it6a-brillo-tv.png](it6a-brillo-tv.png) | TV | R-4 | 12:00, E-920; la sonda del brillo (DN6a-21) | 0/0 | sin desbordes | ok |
-| it6a-low | [it6a-low-w1280.png](it6a-low-w1280.png) | W1280 | R-4 | Nivel Bajo (perfil y asset de URP), 12:00, E-920; sin temblor (QA-G6aT-21; en Direct3D 11, con Z invertida: la profundidad de GLES queda NO VERIFICABLE hasta el teléfono, It. 14) | 0/0 | sin desbordes | ok |
+| it6a-low | [it6a-low-w1280.png](it6a-low-w1280.png) | W1280 | R-4 | Nivel Bajo (perfil y asset de URP), 12:00, E-920; sin temblor (QA-G6aT-21; en Direct3D 11, con Z invertida: la profundidad de GLES queda NO VERIFICABLE hasta el teléfono, It. 14) | 0/0 | sin desbordes | temblor: 4 píxeles distintos entre dos dibujos con el bote quieto |

@@ -9,6 +9,9 @@
 // El ruido es el de la escena (_RmNoiseTex, A = fBm, 256² sin costura) a 2,5 m, que se corre despacio con el tiempo de escena: la
 // espuma se rompe en jirones. Color #F4F6F2 × la luz de la hora (RmVertexLight con la normal hacia arriba) y la niebla del contrato.
 // Sin el reloj de Unity.
+// It. 6b (#22; AC-6B-29; PROVISORIO de WP-B hasta la ronda de WP-D): ≤ 30 ALU. Lo que no depende del ancho de la tira va en el vértice (la
+// tira tiene un vértice por metro a lo largo): el latido, el apagado de las puntas, el color con la niebla y las coordenadas del ruido. En
+// el fragmento, las rampas del ancho son lineales (antes smoothstep) y la playa y el acantilado se eligen sin rama.
 Shader "RowMate/Scene/Foam"
 {
     Properties
@@ -68,10 +71,9 @@ Shader "RowMate/Scene/Foam"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float4 local : TEXCOORD0;      // (v de 0 a 1; z de mundo mod 256; x en m; código)
-                float4 shade : TEXCOORD1;      // (la espuma iluminada en gamma 2; alfa: fundido × lo que deja la niebla)
-                float4 fog : TEXCOORD2;
-                float2 ends : TEXCOORD3;       // (z del segmento en m; 1 / el largo del apagado)
+                float4 local : TEXCOORD0;      // (v de 0 a 1; el borde de la línea de la playa; la ganancia del acantilado; 1 = playa)
+                float4 shade : TEXCOORD1;      // (la espuma iluminada con la niebla, en gamma 2; alfa: fundido × niebla × puntas)
+                float2 uv : TEXCOORD2;         // el ruido, quieto en el mundo
             };
 
             Varyings FoamVertex(Attributes v)
@@ -84,47 +86,34 @@ Shader "RowMate/Scene/Foam"
                 float3 ambientG, keyG;
                 RmVertexLight(float3(0.0, 1.0, 0.0), 0.0, ambientG, keyG);
                 float3 lit = sqrt(max(_RmFoamColor.rgb, 0.0)) * (ambientG + keyG);
-                o.fog = RmVertexFog(positionWS.z, positionWS.y);
-                o.shade = float4(lit, foam.w * (1.0 - 0.6 * o.fog.w));
-                o.local = float4(v.uv.y, foam.y + v.positionOS.z, v.positionOS.x * foam.z, foam.x);
-                o.ends = float2(v.positionOS.z, 1.0 / kRmFoamTaperM);
+                float4 fog = RmVertexFog(positionWS.z, positionWS.y);
+                float t = _RmSceneTime;
+                float zw = foam.y + v.positionOS.z;
+                float code = foam.x;
+                float taperStart = step(1.5, fmod(code, 4.0));
+                float taperEnd = step(3.5, code);
+                // El latido, un poco corrido a lo largo de la orilla (la ola no llega a todas partes a la vez).
+                float pulse = 0.5 + 0.5 * sin(6.2831853 * t / max(_RmFoamPulse, 0.1) + zw * 0.045);
+                float ends = lerp(1.0, saturate(v.positionOS.z / kRmFoamTaperM), taperStart)
+                           * lerp(1.0, saturate((50.0 - v.positionOS.z) / kRmFoamTaperM), taperEnd);
+                o.shade = float4(lerp(lit, fog.rgb, fog.w), foam.w * (1.0 - 0.6 * fog.w) * ends);
+                o.local = float4(v.uv.y, lerp(0.35, 0.9, pulse), lerp(0.5, 0.9, pulse), fmod(code, 2.0));
+                o.uv = float2(v.positionOS.x * foam.z, zw) / kRmFoamNoiseM + float2(0.013 * t, -0.021 * t);
                 return o;
             }
 
             half4 FoamFragment(Varyings i) : SV_Target
             {
-                float t = _RmSceneTime;
                 float v = i.local.x;
-                float zw = i.local.y;
-                float code = i.local.w;
-                float beach = fmod(code, 2.0);
-                float taperStart = step(1.5, fmod(code, 4.0));
-                float taperEnd = step(3.5, code);
-                // El latido, un poco corrido a lo largo de la orilla (la ola no llega a todas partes a la vez).
-                float pulse = 0.5 + 0.5 * sin(6.2831853 * t / max(_RmFoamPulse, 0.1) + zw * 0.045);
-
-                float density;
-                if (beach > 0.5)
-                {
-                    // La línea que sube y baja: del medio de la tira hasta el borde de la arena, con la estela detrás.
-                    float edge = lerp(0.35, 0.9, pulse);
-                    density = RmSmoothStep(edge - 0.35, edge, v) * (1.0 - RmSmoothStep(edge, edge + 0.08, v));
-                    density = max(density, 0.35 * RmSmoothStep(0.5, 1.0, v));
-                }
-                else
-                {
-                    density = RmSmoothStep(0.0, 0.75, v) * lerp(0.5, 0.9, pulse);
-                }
-
-                float2 uv = float2(i.local.z, zw) / kRmFoamNoiseM + float2(0.013 * t, -0.021 * t);
-                float n = SAMPLE_TEXTURE2D(_RmNoiseTex, sampler_RmNoiseTex, uv).a;
+                float edge = i.local.y;
+                // Playa: la línea que sube y baja (del medio de la tira al borde de la arena) con la estela detrás; acantilado: densa
+                // contra las rocas, con el latido. Sin rama: las dos, y se elige con el código.
+                float beach = max(saturate((v - edge) / 0.35 + 1.0) * saturate((edge + 0.08 - v) / 0.08), 0.35 * saturate(2.0 * v - 1.0));
+                float cliff = saturate(v / 0.75) * i.local.z;
+                float density = lerp(cliff, beach, i.local.w);
+                float n = SAMPLE_TEXTURE2D(_RmNoiseTex, sampler_RmNoiseTex, i.uv).a;
                 float breakUp = RmSmoothStep(0.25, 0.65, n + 0.45 * density);
-                float ends = 1.0;
-                ends *= lerp(1.0, saturate(i.ends.x * i.ends.y), taperStart);
-                ends *= lerp(1.0, saturate((50.0 - i.ends.x) * i.ends.y), taperEnd);
-                float alpha = density * breakUp * ends * i.shade.w;
-                float3 c = lerp(i.shade.rgb, i.fog.rgb, i.fog.w);
-                return half4(c * c, alpha);
+                return half4(i.shade.rgb * i.shade.rgb, density * breakUp * i.shade.w);
             }
             ENDHLSL
         }

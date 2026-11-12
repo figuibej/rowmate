@@ -137,7 +137,8 @@ namespace RowMate.Tests.EditMode.Scene.Stroke
         public void TheWaterMarksKeepTheArtContract()
         {
             // It. 8: 24 + 3 por los saltos de la ola de la costa y de la luz bajo el puente (08-entornos-selector/04-design-notes §6).
-            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(27));
+            // It. 6b (#2): + 1 por el tope de la línea (n ≤ 9).
+            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(28));
             Assert.That(Array.Find(ShaderArt.Rower, s => s.Name == "WaterMarks").MaxAlu, Is.LessThanOrEqualTo(20));
             Assert.That(RowerArt.SwirlSeparation, Is.EqualTo(0.45));
             Assert.That(RowerArt.BuoyGloss, Is.EqualTo(Math.Pow(2, 5.9)).Within(1e-9));

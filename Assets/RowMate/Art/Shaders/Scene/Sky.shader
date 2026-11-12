@@ -15,7 +15,7 @@ Shader "RowMate/Scene/Sky"
     Properties
     {
         _RmMoonTex ("Luna (sky.moon: el albedo en R)", 2D) = "white" {}
-        _RmGlowParams ("Resplandor (fuerza; caída en grados; tope en grados; -)", Vector) = (0.35, 14, 20, 0)
+        _RmGlowParams ("Resplandor (fuerza; caída en grados; tope en grados; extra con la hora dorada)", Vector) = (0.35, 14, 20, 0.1)
         _RmStarField ("Fondo de estrellas, solo Alto (celda en grados; alfa mín.; alfa máx.; -)", Vector) = (3, 0.12, 0.3, 0)
         _RmMistBandDeg ("Bruma del horizonte (grados)", Float) = 1.5
     }
@@ -45,6 +45,7 @@ Shader "RowMate/Scene/Sky"
         static const float kRmMoonTerminator = 0.06;
         static const float kRmMoonEarthshine = 0.06;
         static const float kRmDitherAmplitude = 0.0019607843;
+        static const float kRmGlowGoldenFrom = 0.5;
         static const float kRmStarFieldMinTan = 0.052407779;
         static const float kRmStarFieldRadiusMin = 0.5;
         static const float kRmStarFieldRadiusMax = 0.9;
@@ -97,7 +98,9 @@ Shader "RowMate/Scene/Sky"
                 o.frame.w = -1.0 / tan(radians(_RmGlowParams.z));
                 o.delta = _RmSkyTopSrgb.rgb - _RmSkyHorizonSrgb.rgb;
                 o.fromHaze = _RmSkyHorizonSrgb.rgb - _RmHazeSrgb.rgb;
-                o.glow = float4(_RmPaletteSunGlow.rgb * (_RmGlowParams.x * _RmGolden), _RmDiskShape.y);
+                // It. 6b (#3): la fuerza sube de 0,35 a 0,45 con la hora dorada (g de 0,5 a 1), sin saltos (SkyArt.GlowStrengthAt).
+                float glowStrength = _RmGlowParams.x + _RmGlowParams.w * saturate((_RmGolden - kRmGlowGoldenFrom) / (1.0 - kRmGlowGoldenFrom));
+                o.glow = float4(_RmPaletteSunGlow.rgb * (glowStrength * _RmGolden), _RmDiskShape.y);
                 o.haloG = sqrt(max(_RmPaletteSunGlow.rgb, 0.0));
 
                 float vis = _RmDiskParams.x;

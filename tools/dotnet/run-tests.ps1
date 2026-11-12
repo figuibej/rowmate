@@ -90,10 +90,10 @@ function Add-NUnitResults([string]$Path, [hashtable]$ById, [string]$Origin) {
     }
 }
 
-# IDs entre comillas de un texto (AC-XXX-nn-nn, AC-BASE-nn, AC-D15-nn desde la It. 15, LT-nn), sin repetir, en orden de aparicion.
+# IDs entre comillas de un texto (AC-XXX-nn-nn, AC-BASE-nn, AC-D15-nn desde la It. 15, AC-6B-nn desde la It. 6b, LT-nn), sin repetir, en orden de aparicion.
 function Get-QuotedIds([string]$Text) {
     $ids = New-Object System.Collections.Generic.List[string]
-    foreach ($m in [regex]::Matches($Text, '"((?:AC-[A-Z]+[0-9]*(?:-[A-Z]+)?-\d\d(?:-\d\d)?)|(?:LT-\d\d))"')) {
+    foreach ($m in [regex]::Matches($Text, '"((?:AC-(?:[A-Z]+[0-9]*|[0-9]+[A-Z]+)(?:-[A-Z]+)?-\d\d(?:-\d\d)?)|(?:LT-\d\d))"')) {
         if (-not $ids.Contains($m.Groups[1].Value)) { $ids.Add($m.Groups[1].Value) }
     }
     return ,$ids

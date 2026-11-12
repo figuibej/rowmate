@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using RowMate.Core.Scene.Water;
 using RowMate.Presentation.Surface;
 using RowMate.Tests.Support;
 using UnityEditor;
@@ -52,11 +53,35 @@ namespace RowMate.Snapshots
         public const string It14Output = "docs/migration/iterations/14-pulido-plataformas/snapshots";
         // It. 15 (15-deuda-pc/02-tech-design §4): it15 (por defecto desde la 15) = DebtCatalog, la deuda resoluble en la PC.
         public const string It15Output = "docs/migration/iterations/15-deuda-pc/snapshots";
-        public const string DefaultSet = "it15";
+        // It. 6b (06b-agua-avanzada/02-tech-design §8): it6b (por defecto desde la 6b) = WaterCatalog, el agua avanzada, el vidrio y la deuda.
+        public const string It6bOutput = "docs/migration/iterations/06b-agua-avanzada/snapshots";
+        public const string DefaultSet = "it6b";
+
+        // DT6b-24 (G6b-03): el agua de cada set. Los sets viejos (it2 a it15 y thumbs) con la degradada fija: su evidencia no cambia de agua sin
+        // que nadie lo decida (AC-6B-35); solo it6b elige con la regla (Auto). Lo explícito de una toma (SnapshotScenario.Water) gana: CAP-21 a
+        // -24 de it6b con la degradada y la CAP-04 de it7 con Auto (AC-6B-17).
+        public static WaterForce WaterFor(string set)
+        {
+            return string.Equals(set, "it6b", StringComparison.OrdinalIgnoreCase) ? WaterForce.Auto : WaterForce.Degraded;
+        }
+
+        // El agua de cada toma del set (antes de armar los anfitriones).
+        public static void ApplyWater(string set, IReadOnlyList<SnapshotScenario> scenarios)
+        {
+            foreach (var scenario in scenarios)
+            {
+                scenario.Host.SceneWater = scenario.Water ?? WaterFor(set);
+            }
+        }
         public const string FilterPrefKey = "RowMate.Snapshots.Filter";
 
         public static string OutputFor(string set)
         {
+            if (string.Equals(set, "it6b", StringComparison.OrdinalIgnoreCase))
+            {
+                return It6bOutput;
+            }
+
             if (string.Equals(set, "it15", StringComparison.OrdinalIgnoreCase))
             {
                 return It15Output;
@@ -275,6 +300,7 @@ namespace RowMate.Snapshots
             Debug.LogWarning("[SNAPSHOT] sin ROWMATE_SIMULATOR: el catálogo queda casi vacío (usar tools/unity/capture-snapshots.ps1).");
 #endif
             var scenarios = Select(set, filter);
+            ApplyWater(set, scenarios);
             var folder = Path.GetFullPath(output);
             // It. 6a (§5.1; QA-G6aT-12): la compilación de shaders sincrónica durante TODA la corrida (el primer dibujo de cada toma sale
             // con los shaders de verdad y no con el de "compilando"). ShaderUtil.allowAsyncCompilation no se guarda en ProjectSettings

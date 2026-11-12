@@ -33,6 +33,21 @@ namespace RowMate.Presentation
             IsDesktop = isDesktop;
             Clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
             Keyboard = keyboard ?? throw new ArgumentNullException(nameof(keyboard));
+            _immersiveCover = new ObservableValue<bool>(false, app.Logger);
+        }
+
+        // It. 6b (AC-6B-05; 06b-agua-avanzada/02-tech-design §2.4): el negro del inmersivo tapa todo lo de abajo (desde el cuadro del armado
+        // del HUD hasta que en la salida empieza a verse Workout). Lo que está debajo no dibuja con cada lectura mientras tanto.
+        private readonly ObservableValue<bool> _immersiveCover;
+
+        public IReadOnlyObservable<bool> ImmersiveCover => _immersiveCover;
+
+        public void SetImmersiveCover(bool covered)
+        {
+            if (_immersiveCover.Value != covered)
+            {
+                _immersiveCover.Value = covered;
+            }
         }
 
         public AppContext App { get; }

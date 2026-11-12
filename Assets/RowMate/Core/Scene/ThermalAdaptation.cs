@@ -10,6 +10,11 @@ namespace RowMate.Core.Scene
         LowerShadowDistance,
         LowerVegetationDensity,
         LowerTier,
+
+        // It. 6b (AC-6B-31): el reflejo baja después de la resolución (Alto: el planar → el de Medio; Medio: la banda y el perfil) y el
+        // agua degradada es el último paso (DV-152), pegado hasta reiniciar la app.
+        LowerReflection,
+        DegradeWater,
     }
 
     // Lo que hay que aplicar después de un cuadro: la acción y la resolución nueva de la RT (si es de resolución).
@@ -61,8 +66,8 @@ namespace RowMate.Core.Scene
 
     // La adaptación del detalle (06a-escena-lago/02-tech-design §2.16; AC-SCN-01-13): con los TIEMPOS DE TRABAJO de cada cuadro
     // (GPU de FrameTimingManager; de respaldo, CPU del hilo principal más el render thread, sin la espera de presentación), nunca
-    // con el intervalo entre cuadros (un cuadro de 33 ms con 8 ms de trabajo es holgado). Orden: resolución → (reflejo: no hay en
-    // la 6a) → distancia de sombras → densidad de vegetación → nivel. Nunca baja la tasa de cuadros. Solo mide los cuadros en que
+    // con el intervalo entre cuadros (un cuadro de 33 ms con 8 ms de trabajo es holgado). Orden: resolución → reflejo (It. 6b) →
+    // distancia de sombras → densidad de vegetación → nivel → agua degradada (It. 6b, AC-6B-31, el último). Nunca baja la tasa de cuadros. Solo mide los cuadros en que
     // la escena se dibujó: suspendida (renderFrameInterval 2, fuera del inmersivo, la escena oculta) no suma muestras y al volver
     // la ventana arranca de cero (QA-G6aT-10).
     public sealed class ThermalAdaptation
@@ -74,6 +79,8 @@ namespace RowMate.Core.Scene
         private bool _shadowsLowered;
         private bool _vegetationLowered;
         private bool _tierLowered;
+        private bool _reflectionLowered;
+        private bool _waterDegraded;
 
         public ThermalAdaptation(ThermalSpec spec, double initialResolution)
         {
@@ -93,6 +100,10 @@ namespace RowMate.Core.Scene
         public bool VegetationLowered => _vegetationLowered;
 
         public bool TierLowered => _tierLowered;
+
+        public bool ReflectionLowered => _reflectionLowered;
+
+        public bool WaterDegraded => _waterDegraded;
 
         // Un cuadro: now (s, monótono), su tiempo de trabajo (ms), si es de GPU, si la escena se dibujó y si la medida está
         // suspendida. Devuelve la acción a aplicar (None casi siempre).
@@ -167,6 +178,12 @@ namespace RowMate.Core.Scene
                 return new QualityAction(QualityActionKind.LowerResolution, Resolution);
             }
 
+            if (!_reflectionLowered)
+            {
+                _reflectionLowered = true;
+                return new QualityAction(QualityActionKind.LowerReflection, Resolution);
+            }
+
             if (!_shadowsLowered)
             {
                 _shadowsLowered = true;
@@ -183,6 +200,12 @@ namespace RowMate.Core.Scene
             {
                 _tierLowered = true;
                 return new QualityAction(QualityActionKind.LowerTier, Resolution);
+            }
+
+            if (!_waterDegraded)
+            {
+                _waterDegraded = true;
+                return new QualityAction(QualityActionKind.DegradeWater, Resolution);
             }
 
             return QualityAction.None;

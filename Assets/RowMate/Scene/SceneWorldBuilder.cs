@@ -98,6 +98,18 @@ namespace RowMate.Scene
         public RowerCharacter? Rower { get; internal set; }
         public BoatVisual? Boat { get; internal set; }
 
+        // It. 6b (06b-agua-avanzada/02-tech-design §4, §5): el agua avanzada (su material, la malla en anillos del nivel y el mapa de
+        // normales), las dos aguas, la estela, el reflejo planar (solo con un mundo armado en Alto) y el vidrio desenfocado.
+        public Material? WaterAdvancedMaterial { get; internal set; }
+        public Material? HudBlurMaterial { get; internal set; }
+        public Mesh? WaterRing { get; internal set; }
+        public Mesh? WakeRibbon { get; internal set; }
+        public Texture2D? WaterNormal { get; internal set; }
+        public AdvancedWaterSurface? AdvancedWater { get; internal set; }
+        public PlanarReflection? Reflection { get; internal set; }
+        public HudBlurPass? Blur { get; internal set; }
+        public QualityTier WaterRingTier { get; internal set; }
+
         // It. 8 (02-tech-design §3.1, DT8-01): el escenario del kit armado (uno en memoria: el almacén de la orilla, sus mallas por
         // segmento y la silueta lejana) y la tira de la silueta de río, costa o regata (null en el lago).
         public RowMate.Core.Scene.EnvironmentId Environment { get; private set; } = RowMate.Core.Scene.EnvironmentId.Lake;
@@ -153,6 +165,12 @@ namespace RowMate.Scene
 
         public void Dispose()
         {
+            Reflection?.Dispose();
+            Reflection = null;
+            Blur?.Dispose();
+            Blur = null;
+            AdvancedWater?.Destroy();
+            AdvancedWater = null;
             Store?.Dispose();
             MeshUpload.Destroy(HorizonStrip);
             HorizonStrip = null;
@@ -529,6 +547,9 @@ namespace RowMate.Scene
             world.GlowMaterial.enableInstancing = true;
             world.FoamMaterial = Copy(world, m.Foam, "Foam");
             world.FoamMaterial.enableInstancing = true;
+            // It. 6b: el agua avanzada (sin el asset, el shader por nombre) y el vidrio. Si el shader no está, el mundo sigue con la degradada.
+            world.WaterAdvancedMaterial = CopyOptional(world, m.WaterAdvanced, SceneShaderIds.WaterAdvanced, "WaterAdvanced");
+            world.HudBlurMaterial = CopyOptional(world, m.HudBlur, SceneShaderIds.HudBlur, "HudBlur");
             ConfigureRowerMaterials(world);
             Units++;
             yield return false;
@@ -558,12 +579,46 @@ namespace RowMate.Scene
             yield return false;
 
             // 6. Las piezas (en varias unidades: QA-V6a-REN-06).
+            // It. 6b: la malla en anillos del nivel (WaterRingMesh, ≤ 20 k triángulos) y el mapa de normales (el slot water.normalDetail,
+            // horneado por WaterNormalBaker; sin él, uno procedural chico).
+            Step = "la malla del agua avanzada";
+            if (world.WaterAdvancedMaterial != null)
+            {
+                world.WaterRing = world.Own(MeshUpload.NewMesh("scene-water-rings"));
+                world.WaterRingTier = _profile.Tier;
+                using (var upload = new MeshUpload())
+                {
+                    upload.Upload(ForwardOnly(WaterRingMesh.Create(WaterMeshTier(_profile.Tier))), world.WaterRing, false, SceneObjects.Everywhere);
+                }
+
+                // El slot sigue en Procedural (AC-6B-37): el procedural es el PNG horneado por WaterNormalBaker, que el material ya trae.
+                // Un asset asignado al slot gana; sin ninguno de los dos, uno procedural chico.
+                world.WaterNormal = Resolved(SlotIds.WaterNormalDetail) ? Resolve(SlotIds.WaterNormalDetail).As<Texture2D>() : null;
+                if (world.WaterNormal == null)
+                {
+                    world.WaterNormal = world.WaterAdvancedMaterial.GetTexture(SceneShaderIds.WaterNormal) as Texture2D;
+                }
+
+                if (world.WaterNormal == null)
+                {
+                    world.WaterNormal = world.Own(ProceduralWaterNormal(FallbackNormalSize));
+                }
+            }
+
+            world.WakeRibbon = world.Own(WakeRenderer.BuildCombined());
+            Units++;
+            yield return false;
+
             Step = "el cielo, las cordilleras, el agua, el bote y los degradés";
             var root2 = root.transform;
             var lighting = world.Lighting!;
             var sky = new SkyRenderer(root2, layer, world.Rig.Camera, world.Quad, world.Sky, world.Stars, world.Clouds);
             var horizon = new HorizonRenderer(root2, layer, world.HorizonFar!, world.HorizonNear!, world.HorizonFarMaterial, world.HorizonNearMaterial);
             var water = new WaterSurface(root2, layer, world.WaterGrid, world.Water);
+            if (world.WaterAdvancedMaterial != null && world.WaterRing != null)
+            {
+                world.AdvancedWater = new AdvancedWaterSurface(root2, layer, world.WaterRing, world.WaterAdvancedMaterial, world.WaterNormal, _profile.Tier);
+            }
             world.Fittings = world.Own(MeshUpload.NewMesh("scene-boat-fittings"));
             var boat = new BoatVisual(root2, layer, world.Hull!, world.HullMaterial, world.Quad, world.BoatShadow, world.Fittings, world.Seat!);
             world.Boat = boat;
@@ -590,9 +645,12 @@ namespace RowMate.Scene
             BuildFittings(world.Fittings, world.Rower.Spec);
             var rightOar = world.OarMaterialRight!;
             var oars = new OarRig(boat.Pitch, layer, world.OarShaft!, world.OarBlade!, world.OarMaterial!, rightOar, RowMate.Core.Scene.Stroke.BoatSpec.Real);
-            var marks = new WaterInteractionRenderer(world.Quad, world.WaterMarksMaterial!, world.Rig.Camera, layer);
+            // It. 6b: el lote de marcas dibuja la malla que junta el quad y la cinta de la estela (la estela es una instancia más).
+            var marks = new WaterInteractionRenderer(world.WakeRibbon ?? world.Quad, world.WaterMarksMaterial!, world.Rig.Camera, layer);
             var vfx = new StrokeVfx(world.Quad, world.SprayMaterial!, world.Rig.Camera, layer);
             var buoy = new MarkerBuoy(root2, layer, world.Buoy!, world.BuoyMaterial!);
+            var wake = new WakeRenderer();
+            marks.Wake = wake;
             Units++;
             yield return false;
 
@@ -629,6 +687,14 @@ namespace RowMate.Scene
                 Buoy = buoy,
             };
             world.Director.Kit = kit;
+            world.Director.WaterSurfaces = new WaterSurfaceController(water, world.AdvancedWater);
+            world.Director.Wake = wake;
+            if (world.HudBlurMaterial != null)
+            {
+                world.Blur = new HudBlurPass(world.HudBlurMaterial);
+            }
+
+
             world.Director.Glow = glow;
             world.Director.Foam = new FoamRenderer(world.Store, world.Own(FoamRenderer.BuildStrip()), world.FoamMaterial!, world.Rig.Camera, layer);
             var seagulls = new SeagullRenderer(world.Prop, world.Rig.Camera, layer);
@@ -805,6 +871,92 @@ namespace RowMate.Scene
                 MeshUpload.Destroy(albedoArray);
                 MeshUpload.Destroy(normalArray);
             }
+        }
+
+        // La malla en anillos sin los triángulos que quedan enteros detrás de la cámara (z < −10 m): la cámara del contrato mira siempre hacia
+        // adelante (el vuelo arranca a z −8,5 mirando al remero y la toma aérea retrocede 1,7 m), así esa mitad nunca se ve y solo sumaba
+        // triángulos al presupuesto (SceneAdaptationTests). La malla se corre con el ancla de la grilla hacia atrás (z del mundo ≤ z de la
+        // malla), así un triángulo con z de malla < −10 está siempre detrás.
+        public const double WaterCullBehindZ = -10;
+
+        // Medio usa la malla de 1 m de Bajo (IB6b-14): con la de 0,5 m el presupuesto de triángulos de Medio con el maniquí (170 k,
+        // SceneAdaptationTests) no entraba. El detalle de cerca lo pone el fragmento (el mapa de normales); el vértice lleva lo suave.
+        public static QualityTier WaterMeshTier(QualityTier tier)
+        {
+            return tier == QualityTier.High ? QualityTier.High : QualityTier.Low;
+        }
+
+        internal static MeshData ForwardOnly(MeshData source)
+        {
+            var kept = new MeshData(source.VertexCount, source.IndexCount);
+            var p = source.Positions;
+            var n = source.Normals;
+            var c = source.Colors;
+            var uv = source.Uv;
+            for (var i = 0; i < source.VertexCount; i++)
+            {
+                kept.AddVertex(p[i * 3], p[i * 3 + 1], p[i * 3 + 2], n[i * 3], n[i * 3 + 1], n[i * 3 + 2], c[i * 4], c[i * 4 + 1], c[i * 4 + 2], c[i * 4 + 3],
+                    uv[i * 2], uv[i * 2 + 1]);
+            }
+
+            var idx = source.Indices;
+            for (var t = 0; t + 2 < source.IndexCount; t += 3)
+            {
+                var a = idx[t];
+                var b = idx[t + 1];
+                var d = idx[t + 2];
+                if (p[a * 3 + 2] < WaterCullBehindZ && p[b * 3 + 2] < WaterCullBehindZ && p[d * 3 + 2] < WaterCullBehindZ)
+                {
+                    continue;
+                }
+
+                kept.AddTriangle(a, b, d);
+            }
+
+            return kept;
+        }
+
+        // El mapa de normales procedural de respaldo (sin el slot horneado): chico, para que la unidad sea liviana.
+        public const int FallbackNormalSize = 64;
+
+        internal static Texture2D ProceduralWaterNormal(int size)
+        {
+            var bytes = new byte[WaterNormalMap.ByteCount(size)];
+            WaterNormalMap.Fill(size, WaterNormalMap.DefaultSeed, bytes);
+            var texture = new Texture2D(size, size, GraphicsFormat.R8G8B8A8_UNorm, TextureCreationFlags.MipChain)
+            {
+                name = "scene-water-normal",
+                hideFlags = HideFlags.HideAndDontSave,
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Bilinear,
+            };
+            texture.SetPixelData(bytes, 0);
+            texture.Apply(true, false);
+            return texture;
+        }
+
+        // Una copia de un material que puede faltar (un SceneWorld.asset de antes de la 6b: el shader por nombre; sin shader, null).
+        private static Material? CopyOptional(SceneWorld world, Material? source, string shaderName, string name)
+        {
+            Material copy;
+            if (source != null)
+            {
+                copy = new Material(source);
+            }
+            else
+            {
+                var shader = Shader.Find(shaderName);
+                if (shader == null)
+                {
+                    return null;
+                }
+
+                copy = new Material(shader);
+            }
+
+            copy.name = "scene-" + name;
+            copy.hideFlags = HideFlags.HideAndDontSave;
+            return world.Own(copy);
         }
 
         private static Material Copy(SceneWorld world, Material? source, string name)

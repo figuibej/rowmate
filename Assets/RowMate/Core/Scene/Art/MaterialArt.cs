@@ -151,6 +151,9 @@ namespace RowMate.Core.Scene.Art
         // 12 h la cubierta queda en 0,80-0,95 (con 0,84 el post todavía la recortaba: #F1FEFE en CAP-02) y los costados, a la sombra,
         // más grises; el especular sigue encima. La prueba es MaterialArtTests.TheHullDeckStaysWhiteBelowClippingAtNoon.
         public const double HullExposure = 0.78, HullAmbientChroma = 0.5;
+        // It. 6b (#85; 00-arte-agua §9): en la cubierta (N.y > 0,8, con rampa de 0,7 a 0,9) el Fresnel y el especular del gelcoat se recortan
+        // a 0,15: a 22° desde la cámara el sol bajo de enfrente se reflejaba entero y la popa se leía como una tabla blanca.
+        public const double HullDeckGloss = 0.15;
 
         // ── La sombra del bote (§8.3): óvalo de 8,6 × 0,9 m, corrido 0,35 m al lado opuesto del astro, alfa 0,08·ambiente en el centro
         // y exp(−r²·4) hacia el borde ──

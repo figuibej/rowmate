@@ -387,7 +387,8 @@ namespace RowMate.Tests.EditMode.Scene
             // 02-tech-design §7.5 con 04-design-notes §14.2 corregida por el gate: el agua ≤ 24 y 0 texturas (DT6a-07); las estrellas
             // ≤ 8 con la máscara del astro (DT6a-17).
             // It. 8: + 3 por los saltos de la ola de la costa y de la luz bajo el puente (08-entornos-selector/04-design-notes §6).
-            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(WaterArt.MaxAlu).And.EqualTo(27));
+            // It. 6b (#2, QA-V6a-PAR-01): + 1 por el tope n = clamp(round(...); 0; 9) de la línea.
+            Assert.That(ShaderArt.Find("WaterDegraded").MaxAlu, Is.EqualTo(WaterArt.MaxAlu).And.EqualTo(28));
             Assert.That(ShaderArt.Find("WaterDegraded").MaxTextures, Is.EqualTo(0));
             Assert.That(ShaderArt.Find("Stars").MaxAlu, Is.EqualTo(8));
             Assert.That(ShaderArt.Find("ScreenOverlay").Queue, Is.EqualTo(3500));

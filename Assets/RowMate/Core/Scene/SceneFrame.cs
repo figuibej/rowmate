@@ -1,3 +1,5 @@
+using RowMate.Core.Scene.Water;
+
 namespace RowMate.Core.Scene
 {
     // Una estrella lista para dibujar: la dirección del mundo (unitaria), el radio angular y el alfa (ya con el fundido).
@@ -153,6 +155,9 @@ namespace RowMate.Core.Scene
         // It. 7: el remero, el bote y el agua (02-tech-design §2.12).
         public Stroke.RowerFrame Rower;
 
+        // It. 6b (06b-agua-avanzada/02-tech-design §3.3): lo del agua avanzada (fases, estela, anillos, columnas, bandas y casco).
+        public WaterFrame Water;
+
         public double Distance;
         public double Speed;
         public double SceneTime;
@@ -174,6 +179,7 @@ namespace RowMate.Core.Scene
                 PropLight = new double[maxVisibleProps],
                 Projection = SceneMatrix4.Identity,
                 Rower = Stroke.RowerFrame.Create(),
+                Water = WaterFrame.Create(),
             };
         }
     }

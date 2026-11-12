@@ -4,6 +4,7 @@ using System.Diagnostics;
 using RowMate.Core.Common;
 using RowMate.Core.Scene;
 using RowMate.Core.Scene.Art;
+using RowMate.Core.Scene.Water;
 using RowMate.Core.Workout;
 using RowMate.Scene.Quality;
 using RowMate.Scene.Slots;
@@ -48,6 +49,17 @@ namespace RowMate.Scene
         public RowerCharacterKind Character { get; set; } = RowerCharacterKind.Auto;
 
         public RowMate.Scene.Slots.RowerCharacterBinding? CharacterBinding { get; set; }
+
+        // It. 6b (06b-agua-avanzada/02-tech-design §3.2, §5; DT6b-14, DT6b-24): el agua forzada (Auto = la regla de AC-6B-06) y si se permite
+        // forzar (solo desarrollo, el Editor y las pruebas: el build normal nunca la fuerza); la falla de prueba a los N s de una sesión
+        // (-rowmate-water-fail) y la carga de GPU de prueba (-rowmate-perf-gpu-load, ms aproximados por cuadro).
+        public RowMate.Core.Scene.Water.WaterForce Water { get; set; } = RowMate.Core.Scene.Water.WaterForce.Auto;
+
+        public bool WaterForceAllowed { get; set; }
+
+        public double WaterFailAfterSeconds { get; set; } = double.NaN;
+
+        public double GpuLoadMs { get; set; }
     }
 
     // El ciclo de vida de la escena 3D (06a-escena-lago/02-tech-design §3.1 a §3.4, §3.9, §4; ADR 022): Preload (Workout en reposo,
@@ -112,11 +124,23 @@ namespace RowMate.Scene
         private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker(UpdateMarkerName);
 
         // Las fases del armado (RunUnit), con su nombre para [PERF] y las pruebas (QA-V6a-REN-06: el costo de cada unidad, medido).
+        // It. 6b (#1; 06b-agua-avanzada/02-tech-design §2.1): primero el preámbulo de primera vez del proceso (0-2, pesadas: la cámara y la
+        // luz, el primer pedido de URP a 64² y la sesión de usar y tirar de Core), después la sesión preparada (3), el mundo (4-11, como en
+        // la 6a, con el post al tamaño de la sesión pesado y el dibujo de calentamiento partido) y, después de Ready, el agua avanzada (13).
+        internal const int PhaseCamera = 0, PhaseFirstUrp = 1, PhaseCoreJit = 2, PhaseNextSession = 3, PhaseWorld = 4, PhaseVariants = 5,
+            PhaseShore920 = 6, PhaseSynthetic = 7, PhaseTarget = 8, PhasePost = 9, PhaseWarmupDraw = 10, PhaseSessionShore = 11, PhaseReady = 12,
+            PhaseWater = 13;
+
         private static readonly string[] PhaseNames =
         {
-            "mundo", "variantes", "orilla de 920 m", "Tick sintético", "RT de la sesión", "post de URP (RT chica)", "post de URP",
-            "dibujo de calentamiento", "orilla de la sesión", "Ready",
+            "preámbulo: cámara y luz", "preámbulo: primer pedido de URP", "preámbulo: JIT de Core", "sesión preparada", "mundo", "variantes",
+            "orilla de 920 m", "Tick sintético", "RT de la sesión", "post de URP", "dibujo de calentamiento", "orilla de la sesión", "Ready",
+            "agua avanzada",
         };
+
+        // Los sub-dibujos del calentamiento (cada uno liviano, ≤ 4 ms): cielo y horizonte; terreno; la orilla y el relleno instanciados;
+        // objetos del kit e instancias; bote, remero y remos; agua.
+        internal const int SubDrawGroups = 6;
 
         public SceneHost(SceneWorldDefinition definition, AppContext app, SceneHostOptions? options = null)
         {
@@ -191,7 +215,7 @@ namespace RowMate.Scene
         public string WorstUnitStep { get; private set; } = "";
 
         // La unidad más cara de cada fase (ms; PhaseNames), desde el último armado: el desglose de [PERF].
-        private readonly double[] _worstByPhase = new double[10];
+        private readonly double[] _worstByPhase = new double[PhaseNames.Length];
 
         public double WorstUnitMsOf(int phase) => phase >= 0 && phase < _worstByPhase.Length ? _worstByPhase[phase] : 0;
 
@@ -250,7 +274,7 @@ namespace RowMate.Scene
             if (_readiness.Value != SceneReadiness.NotLoaded)
             {
                 // It. 8 (§3.2): el escenario elegido cambió en reposo: el kit nuevo por tramos (la base común no se rehace).
-                if (_session == null && _world?.Director != null && _phase >= 1 && _world.Environment != SelectedEnvironment)
+                if (_session == null && _world?.Director != null && _phase > PhaseWorld && _world.Environment != SelectedEnvironment)
                 {
                     SwitchKit(SelectedEnvironment);
                 }
@@ -287,13 +311,18 @@ namespace RowMate.Scene
             _nextFrame = default;
             _warmupFrame = default;
             _warmupFrameReady = false;
+            _subDraw = 0;
+            _postDone = false;
             _lastStreamDistance = double.NaN;
             WorstUnitMs = 0;
             WorstUnitPhase = "";
             WorstUnitStep = "";
-            _phase = 2;
+            _phase = PhaseShore920;
             _readiness.Value = SceneReadiness.Loading;
         }
+
+        // Lo que tardó el último Open (ms; [PERF] de la entrada temprana: el cuadro del toque).
+        public double LastOpenMs { get; private set; }
 
         public void Open(double now)
         {
@@ -302,6 +331,13 @@ namespace RowMate.Scene
                 return;
             }
 
+            _partWatch.Restart();
+            OpenCore(now);
+            LastOpenMs = _partWatch.Elapsed.TotalMilliseconds;
+        }
+
+        private void OpenCore(double now)
+        {
             if (_delayReadiness > 0)
             {
                 // La escena demorada (AC-SCN-01-07): el mundo sin armar y Ready no antes de `seconds` desde el toque.
@@ -314,13 +350,52 @@ namespace RowMate.Scene
             {
                 StartBuild();
             }
-            else if (_world?.Director != null && _phase >= 1 && _world.Environment != SelectedEnvironment)
+            else if (_world?.Director != null && _phase > PhaseWorld && _world.Environment != SelectedEnvironment)
             {
                 // El escenario cambió y el kit no llegó a armarse en reposo: la escena demorada hasta que esté (AC-SCN-01-07).
                 SwitchKit(SelectedEnvironment);
             }
 
             WorstWarmupMs = 0;
+            _closing = false;
+            _paused = false;
+            _veil = 0;
+            if (_nextSession == null && _readiness.Value == SceneReadiness.Loading && _phase <= PhaseCoreJit)
+            {
+                // QA-V6b-01 (AC-6B-02): el toque llegó antes del preámbulo y no hay sesión preparada. Armar la sesión, su Open y su primer
+                // Tick (el JIT de Core por primera vez: 4,6 + 11,9 ms medidos en el build) iría en el cuadro del toque; va al negro de la
+                // entrada (RunPendingHeavyWork, después del preámbulo), con la hora del toque. Hasta ahí no hay nada que dibujar: la escena
+                // no está lista.
+                _pendingOpenAt = now;
+                _lastNow = now;
+                return;
+            }
+
+            OpenSession(now);
+        }
+
+        // El toque sin sesión preparada antes del preámbulo (NaN = ninguno).
+        private double _pendingOpenAt = double.NaN;
+
+        // ¿Hay un Open pendiente para el negro de la entrada? (las pruebas y [PERF]).
+        public bool OpenPending => !double.IsNaN(_pendingOpenAt);
+
+        // El Open pendiente: en el negro (RunPendingHeavyWork) o, si el armado ya pasó el preámbulo por otro camino (el arnés de pruebas,
+        // con el tramo sin tope), en el primer Tick.
+        private void OpenPendingSession()
+        {
+            if (double.IsNaN(_pendingOpenAt))
+            {
+                return;
+            }
+
+            var at = _pendingOpenAt;
+            _pendingOpenAt = double.NaN;
+            OpenSession(at);
+        }
+
+        private void OpenSession(double now)
+        {
             var region = _regionOverridden ? _regionForTest : _options.RegionCode;
             var environment = SelectedEnvironment;
             if (_nextSession != null && string.Equals(_nextRegion, region, StringComparison.Ordinal) && _nextEnvironment == environment)
@@ -340,9 +415,10 @@ namespace RowMate.Scene
             ConfigureRower(_session);
             _session.Open(now);
             _lastNow = now;
-            _closing = false;
-            _paused = false;
-            _veil = 0;
+            // It. 6b: el agua de la sesión arranca sin fundido (la primera vez que se dibuja, detrás del negro) y el reflejo sin bajar.
+            _waterFadeStarted = false;
+            _sessionOpenedAt = now;
+            _failInjected = false;
         }
 
         public void BeginFlight(double startTime)
@@ -372,6 +448,7 @@ namespace RowMate.Scene
 
         public void Close()
         {
+            _pendingOpenAt = double.NaN;
             if (_session == null)
             {
                 return;
@@ -424,6 +501,9 @@ namespace RowMate.Scene
                 ApplyProfile(_world);
             }
 
+            // It. 6b (§5): el agua avanzada cambia de variante (las tres están en la colección); la malla de Bajo, en la próxima sesión.
+            _world?.AdvancedWater?.SetTier(tier);
+
             if (ownedPrevious && !ReferenceEquals(previous, _builderProfile))
             {
                 MeshUpload.Destroy(previous);
@@ -465,11 +545,19 @@ namespace RowMate.Scene
         // double.PositiveInfinity = todo en el acto (las pruebas y el arnés).
         public void Tick(double now, double warmupSliceMs)
         {
+            Tick(now, warmupSliceMs, AnyFrame);
+        }
+
+        // It. 6b (DT6b-25): con el cuadro de la precarga (SceneBridge lo arma desde el Input System): una unidad pesada solo corre en un
+        // cuadro que lo permite. Sin cuadro (las pruebas y el arnés), cualquier unidad.
+        public void Tick(double now, double warmupSliceMs, in WarmupFrame frame)
+        {
             if (_disposed)
             {
                 return;
             }
 
+            _warmupFrameState = frame;
             TickObserver?.Invoke(true);
             try
             {
@@ -484,6 +572,9 @@ namespace RowMate.Scene
             }
         }
 
+        private static readonly WarmupFrame AnyFrame = new WarmupFrame(true, true, false);
+        private WarmupFrame _warmupFrameState = AnyFrame;
+
         private void TickCore(double now, double warmupSliceMs)
         {
             Ticks++;
@@ -495,6 +586,12 @@ namespace RowMate.Scene
             if (_readiness.Value == SceneReadiness.Loading)
             {
                 RunBuild(now, warmupSliceMs);
+            }
+
+            if (OpenPending && (_phase > PhaseCoreJit || _readiness.Value != SceneReadiness.Loading))
+            {
+                // El preámbulo terminó por otro camino que el negro (el arnés, con el tramo sin tope): el Open pendiente, acá.
+                OpenPendingSession();
             }
 
             var session = _session;
@@ -516,8 +613,13 @@ namespace RowMate.Scene
                     {
                         PrepareNextSession();
                     }
+                    else if (WaterWarmupPending)
+                    {
+                        WaterWarmupUnit(now);
+                    }
                 }
 
+                UpdateGlass(now, false);
                 LastCpuMs = 0;
                 return;
             }
@@ -540,10 +642,18 @@ namespace RowMate.Scene
             LastTickMs = _partWatch.Elapsed.TotalMilliseconds;
 
             _lastNow = now;
+            // It. 6b: las unidades del agua avanzada también con la sesión abierta (livianas, con tramo: la avanzada llega con su fundido).
+            if (warmupSliceMs > 0 && WaterWarmupPending)
+            {
+                WaterWarmupUnit(now);
+            }
+
+            InjectWaterFailure(now);
             var showing = IsShowing && _world?.Director != null;
             _frame.Draw = showing;
             if (!showing)
             {
+                UpdateGlass(now, false);
                 // Detrás del negro (0-220 ms de la entrada, o la escena demorada): la orilla sigue a la sesión por tramos, así el primer
                 // cuadro a la vista no la arma entera (QA-V6a-REN-04).
                 StreamHidden();
@@ -666,6 +776,7 @@ namespace RowMate.Scene
             director.Overlay.Enabled = _scrims;
             director.Sky.StarsEnabled = _stars;
             director.Lighting.EmissiveGain = withoutPost ? 1 : SkyArt.EmissiveGain;
+            UpdateWater(now);
             director.Apply(_frame);
             if (_sideCamera)
             {
@@ -688,6 +799,7 @@ namespace RowMate.Scene
 
             try
             {
+                RenderReflection(world);
                 world.Renderer!.Render(target ?? _target.Texture!);
             }
             finally
@@ -698,6 +810,8 @@ namespace RowMate.Scene
 
             if (target == null)
             {
+                UpdateGlass(now, true);
+                GpuLoad();
                 Draws++;
                 LastDrawNow = now;
                 if (_stampFrames)
@@ -755,12 +869,21 @@ namespace RowMate.Scene
             };
             _builderProfile = _profile;
             _units = _builder.Build();
-            _phase = 0;
+            _phase = PhaseCamera;
             WorstUnitMs = 0;
             WorstUnitPhase = "";
             WorstUnitStep = "";
+            WorstSubDrawMs = 0;
+            WorstLightUnitMs = 0;
+            WorstLightUnitPhase = "";
             Array.Clear(_worstByPhase, 0, _worstByPhase.Length);
             _syntheticStep = 0;
+            _coreJitStep = 0;
+            _subDraw = 0;
+            _postDone = false;
+            _jitScratch = null;
+            _jitFrame = default;
+            _groupRenderers = null;
             _warmup = new SceneShaderWarmup(_definition.Variants);
             _readiness.Value = SceneReadiness.Loading;
             HookLowMemory();
@@ -780,23 +903,15 @@ namespace RowMate.Scene
                 try
                 {
                     while (_readiness.Value == SceneReadiness.Loading
-                           && (double.IsPositiveInfinity(sliceMs) || SceneWarmupPolicy.RunAnother(sliceMs, _watch.Elapsed.TotalMilliseconds, units)))
+                           && (double.IsPositiveInfinity(sliceMs)
+                               || SceneWarmupPolicy.RunAnother(sliceMs, _watch.Elapsed.TotalMilliseconds, units, IsHeavyPhase(_phase), _warmupFrameState)))
                     {
                         // QA-V6a-REN-06: cada unidad se mide (la peor, con su fase, va a [PERF] y a SET).
-                        var phase = _phase;
-                        _unitWatch.Restart();
-                        var ran = RunUnit(now);
-                        var unitMs = _unitWatch.Elapsed.TotalMilliseconds;
-                        if (ran && phase < _worstByPhase.Length && unitMs > _worstByPhase[phase])
+                        var heavy = IsHeavyPhase(_phase);
+                        var ran = MeasuredUnit(now);
+                        if (ran && heavy)
                         {
-                            _worstByPhase[phase] = unitMs;
-                        }
-
-                        if (ran && unitMs > WorstUnitMs)
-                        {
-                            WorstUnitMs = unitMs;
-                            WorstUnitPhase = PhaseNames[Math.Min(phase, PhaseNames.Length - 1)];
-                            WorstUnitStep = phase == 0 && _builder != null ? _builder.Step : "";
+                            NoteHeavy(false);
                         }
 
                         if (!ran)
@@ -820,16 +935,209 @@ namespace RowMate.Scene
             }
         }
 
+        // Una unidad medida (QA-V6a-REN-06): la peor de cada fase y la peor del armado, con su paso del mundo.
+        private bool MeasuredUnit(double now)
+        {
+            var phase = _phase;
+            _unitWatch.Restart();
+            var ran = RunUnit(now);
+            NoteUnit(phase, ran, _unitWatch.Elapsed.TotalMilliseconds);
+            return ran;
+        }
+
+        private void NoteUnit(int phase, bool ran, double unitMs)
+        {
+            if (!ran)
+            {
+                return;
+            }
+
+            if (phase < _worstByPhase.Length && unitMs > _worstByPhase[phase])
+            {
+                _worstByPhase[phase] = unitMs;
+            }
+
+            if (unitMs > WorstUnitMs)
+            {
+                WorstUnitMs = unitMs;
+                WorstUnitPhase = PhaseNames[Math.Min(phase, PhaseNames.Length - 1)];
+                WorstUnitStep = (phase == PhaseCamera || phase == PhaseWorld) && _builder != null ? _builder.Step : "";
+            }
+
+            if (phase == PhaseWarmupDraw && unitMs > WorstSubDrawMs)
+            {
+                WorstSubDrawMs = unitMs;
+            }
+
+            if (!IsHeavyPhase(phase) && unitMs > WorstLightUnitMs && phase != PhaseCamera)
+            {
+                WorstLightUnitMs = unitMs;
+                WorstLightUnitPhase = PhaseNames[Math.Min(phase, PhaseNames.Length - 1)];
+            }
+        }
+
+        // It. 6b (#1; DT6b-25): el preámbulo (0-2) y el post al tamaño de la sesión son pesados: solo corren en un cuadro quieto, o en el
+        // negro de la entrada (RunPendingHeavyWork).
+        private bool IsHeavyPhase(int phase)
+        {
+            return phase <= PhaseCoreJit || phase == PhasePost && !_postDone;
+        }
+
+        private void NoteHeavy(bool blackFrame)
+        {
+            LastHeavyFrame = Time.frameCount;
+            HeavyUnits++;
+            if (_session != null && !blackFrame)
+            {
+                HeavyUnitsWhileOpen++;
+            }
+        }
+
+        // El cuadro (Time.frameCount) de la última unidad pesada, cuántas corrieron y cuántas con el inmersivo abierto fuera del negro de
+        // la entrada (EarlyEntryTests: 0 con el tramo del player).
+        public int LastHeavyFrame { get; private set; } = -1;
+
+        public long HeavyUnits { get; private set; }
+
+        public long HeavyUnitsWhileOpen { get; private set; }
+
+        // El sub-dibujo de calentamiento más caro y la unidad liviana más cara desde el último armado (ms; VisibleUnitMaxMs = 4).
+        public double WorstSubDrawMs { get; private set; }
+
+        public double WorstLightUnitMs { get; private set; }
+
+        public string WorstLightUnitPhase { get; private set; } = "";
+
+        // Lo que costó el último RunPendingHeavyWork (ms) y cuántas veces corrió algo.
+        public double LastBlackFrameHeavyMs { get; private set; }
+
+        public long BlackFrameHeavyRuns { get; private set; }
+
+        // La fase del armado (las pruebas y [PERF]).
+        public int BuildPhase => _phase;
+
+        // It. 6b (#1, AC-6B-01; 02-tech-design §2.1 (3)): el cuadro del armado del HUD es negro y quieto: ahí corren TODAS las unidades
+        // pesadas que quedaron pendientes (el preámbulo, si el toque llegó antes, y el post al tamaño de la sesión, fuera del orden de las
+        // fases: no depende del mundo, G6b-18). Devuelve lo que tardó (ms): la entrada corre su reloj eso mismo (el negro dura un poco más,
+        // sin saltos).
+        public double RunPendingHeavyWork(double now)
+        {
+            if (_disposed || _readiness.Value != SceneReadiness.Loading)
+            {
+                OpenPendingSession();
+                LastBlackFrameHeavyMs = 0;
+                return 0;
+            }
+
+            _watch.Restart();
+            var ran = false;
+            try
+            {
+                var guard = 0;
+                while (_readiness.Value == SceneReadiness.Loading && _phase <= PhaseCoreJit && guard++ < 64)
+                {
+                    if (!MeasuredUnit(now))
+                    {
+                        break;
+                    }
+
+                    ran = true;
+                    NoteHeavy(true);
+                }
+
+                // QA-V6b-01: el Open que llegó antes del preámbulo, ya con el JIT de Core hecho, y su primer Tick (al día con el toque).
+                if (OpenPending)
+                {
+                    OpenPendingSession();
+                    var opened = _session;
+                    if (opened != null)
+                    {
+                        // Como TickCore: con pasos fijos (el arnés), Advance desde el toque; si no, Tick con la hora de ahora.
+                        if (_options.FixedSteps)
+                        {
+                            opened.Advance(Inputs(now), Math.Max(0, now - _lastNow), ref _frame);
+                        }
+                        else
+                        {
+                            opened.Tick(Inputs(now), ref _frame);
+                        }
+
+                        _lastNow = now;
+                    }
+
+                    ran = true;
+                }
+
+                var partial = _world ?? _builder?.World;
+                if (_readiness.Value == SceneReadiness.Loading && !_postDone && _phase > PhaseCoreJit && partial?.Renderer != null
+                    && !SceneShaderWarmup.AnythingCompiling)
+                {
+                    _unitWatch.Restart();
+                    WarmupPostDraw(false);
+                    _postDone = true;
+                    NoteUnit(PhasePost, true, _unitWatch.Elapsed.TotalMilliseconds);
+                    ran = true;
+                    NoteHeavy(true);
+                }
+            }
+            catch (Exception error)
+            {
+                Fail("el armado de la escena falló", error);
+            }
+
+            LastBlackFrameHeavyMs = ran ? _watch.Elapsed.TotalMilliseconds : 0;
+            if (ran)
+            {
+                BlackFrameHeavyRuns++;
+            }
+
+            return LastBlackFrameHeavyMs;
+        }
+
         // Una unidad. false = no hay nada que hacer en este cuadro (esperando la compilación o la demora de prueba).
-        // Fases (PhaseNames; "Cambios por verificación (ronda 1)" de 02-tech-design): 0 el mundo (SceneWorldBuilder), 1 las variantes,
-        // 2 la orilla de 920 m, 3 los Tick sintéticos, 4 la RT de la sesión, 5 y 6 el post de URP (en una RT chica y en la de la sesión),
-        // 7 el dibujo de calentamiento (en dos unidades: su cuadro y el dibujo), 8 la orilla donde empieza a verse (la de la sesión abierta o
-        // la de 0 m), 9 Ready (no antes de la demora de prueba).
+        // Fases (PhaseNames; It. 6b, 02-tech-design §2.1): 0-2 el preámbulo (la cámara y la luz, que son las dos primeras unidades del
+        // mundo; el primer pedido de URP a 64²; la sesión de Core de usar y tirar en 5 unidades), 3 la sesión preparada, 4 el resto del mundo,
+        // 5 las variantes, 6 la orilla de 920 m, 7 los Tick sintéticos, 8 la RT de la sesión, 9 el post de URP del tamaño de la sesión
+        // (pesado; si ya corrió en el negro, se salta), 10 el dibujo de calentamiento (su cuadro y 5 sub-dibujos), 11 la orilla donde empieza
+        // a verse (la de la sesión abierta o la de 0 m), 12 Ready (no antes de la demora de prueba).
         private bool RunUnit(double now)
         {
             switch (_phase)
             {
-                case 0:
+                case PhaseCamera:
+                    if (_units!.MoveNext())
+                    {
+                        if (_builder!.World?.Lighting != null)
+                        {
+                            _phase = PhaseFirstUrp;
+                        }
+
+                        return true;
+                    }
+
+                    _phase = PhaseFirstUrp;
+                    return true;
+                case PhaseFirstUrp:
+                    FirstUrpRequest();
+                    _phase = PhaseCoreJit;
+                    return true;
+                case PhaseCoreJit:
+                    if (CoreJitStep(_coreJitStep++))
+                    {
+                        _coreJitStep = 0;
+                        _phase = PhaseNextSession;
+                    }
+
+                    return true;
+                case PhaseNextSession:
+                    if (_nextSession == null && _session == null)
+                    {
+                        PrepareNextSession(SelectedEnvironment);
+                    }
+
+                    _phase = PhaseWorld;
+                    return true;
+                case PhaseWorld:
                     if (_units!.MoveNext())
                     {
                         if (_units.Current)
@@ -845,7 +1153,7 @@ namespace RowMate.Scene
                             // It. 7: el remero que quedó armado (sus largos) y el nivel, a las sesiones que ya existen.
                             ConfigureRower(_session);
                             ConfigureRower(_nextSession);
-                            _phase = 1;
+                            _phase = PhaseVariants;
                             if (_world.Environment != SelectedEnvironment)
                             {
                                 // It. 8: el escenario cambió mientras se armaba el mundo: el kit nuevo antes de seguir (sin orilla armada).
@@ -867,58 +1175,55 @@ namespace RowMate.Scene
                         return true;
                     }
 
-                    _phase = 1;
+                    _phase = PhaseVariants;
                     return true;
-                case 1:
+                case PhaseVariants:
                     if (_warmup!.Step())
                     {
-                        _phase = 2;
+                        _phase = PhaseShore920;
                         return true;
                     }
 
                     // En el Editor, la espera de la compilación asíncrona: nada más en este cuadro. En el player, otra variante.
                     return !Application.isEditor;
-                case 2:
-                    return StreamUnit(SyntheticDistance, 3);
-                case 3:
+                case PhaseShore920:
+                    return StreamUnit(SyntheticDistance, PhaseSynthetic);
+                case PhaseSynthetic:
                     if (SyntheticTick(_syntheticStep++))
                     {
-                        _phase = 4;
+                        _phase = PhaseTarget;
                     }
 
                     return true;
-                case 4:
+                case PhaseTarget:
                     // QA-V6a-REN-05 (§3.1: "Ready: la RT existe"): la RT de la sesión, con la ventana y el formato del nivel, en su unidad.
                     if (EnsureTarget())
                     {
                         OutputChanged?.Invoke();
                     }
 
-                    _phase = 5;
+                    _phase = PhasePost;
                     return true;
-                case 5:
-                    if (SceneShaderWarmup.AnythingCompiling)
+                case PhasePost:
+                    if (_postDone)
                     {
-                        return false;
+                        // Ya corrió en el negro de la entrada (RunPendingHeavyWork).
+                        _phase = PhaseWarmupDraw;
+                        return true;
                     }
 
-                    // QA-V6a-REN-06: el primer pedido de render con la cámara de la escena en una RT chica (el código de URP corre por
-                    // primera vez: el JIT de Mono), separado de la RT del tamaño de la sesión (sus intermedios, la unidad siguiente).
-                    WarmupPostDraw(true);
-                    _phase = 6;
-                    return true;
-                case 6:
                     if (SceneShaderWarmup.AnythingCompiling)
                     {
                         return false;
                     }
 
                     // QA-V6a-REN-01 y -06: el post de URP (UberPost, Bloom, el LUT) y sus intermedios del tamaño y el formato de la sesión,
-                    // sin la escena (la máscara de la cámara en 0), en una unidad propia antes del dibujo de calentamiento.
+                    // sin la escena (la máscara de la cámara en 0), en una unidad propia antes del dibujo de calentamiento. It. 6b: pesada.
                     WarmupPostDraw(false);
-                    _phase = 7;
+                    _postDone = true;
+                    _phase = PhaseWarmupDraw;
                     return true;
-                case 7:
+                case PhaseWarmupDraw:
                     if (SceneShaderWarmup.AnythingCompiling)
                     {
                         return false;
@@ -927,16 +1232,23 @@ namespace RowMate.Scene
                     if (!_warmupFrameReady)
                     {
                         PrepareWarmupFrame();
+                        _subDraw = 0;
                         return true;
                     }
 
-                    WarmupDraw();
-                    _phase = 8;
+                    // It. 6b (#1): el dibujo de calentamiento partido en sub-dibujos por grupo de renderers, cada uno liviano.
+                    WarmupSubDraw(_subDraw++);
+                    if (_subDraw >= SubDrawGroups)
+                    {
+                        FinishWarmupDraw();
+                        _phase = PhaseSessionShore;
+                    }
+
                     return true;
-                case 8:
+                case PhaseSessionShore:
                     // QA-V6a-REN-04 (B): la orilla donde va a empezar a verse la escena: la de la sesión abierta (la escena demorada, con el
                     // bote ya lejos de 0 m) o la de 0 m (la próxima sesión).
-                    return StreamUnit(_session != null ? _frame.Distance : 0, 9);
+                    return StreamUnit(_session != null ? _frame.Distance : 0, PhaseReady);
                 default:
                     if (now < _readyNotBefore)
                     {
@@ -946,7 +1258,7 @@ namespace RowMate.Scene
                     if (_session != null && Math.Abs(_frame.Distance - _lastStreamDistance) > ShoreEnvironment.SegmentLength / 2)
                     {
                         // La sesión siguió avanzando mientras se esperaba: la orilla otra vez al día antes de Ready.
-                        _phase = 8;
+                        _phase = PhaseSessionShore;
                         return true;
                     }
 
@@ -956,12 +1268,82 @@ namespace RowMate.Scene
             }
         }
 
+        // (0b) El primer pedido de URP del proceso (02-tech-design §2.1): la cámara del mundo a medio armar, con la máscara en 0, a una RT de
+        // 64² del formato de la sesión (el código de URP, el post y sus estados por primera vez), descartada al terminar.
+        private void FirstUrpRequest()
+        {
+            var partial = _world ?? _builder?.World;
+            if (partial?.Renderer == null)
+            {
+                return;
+            }
+
+            RenderMaskZero(partial, true);
+        }
+
+        // (0c) La sesión de Core de usar y tirar SIN mundo (02-tech-design §2.1; G6b-18: en IL2CPP es la inicialización de metadatos y de
+        // estáticos): Open y Tick a las 12 h, a las 22 h con el velo, un paso del vuelo, uno de la salida y uno de la toma aérea, en 5
+        // unidades. true al terminar.
+        private bool CoreJitStep(int step)
+        {
+            var scratch = _jitScratch ??= new SceneSession(EnvironmentCatalog.Create(SelectedEnvironment), new SceneSessionOptions());
+            if (_jitFrame.Stars == null)
+            {
+                _jitFrame = SceneFrame.Create();
+            }
+
+            var now = 1000.0 + step;
+            if (step == 0)
+            {
+                scratch.Open(now);
+            }
+
+            int? hour = step == 1 ? 22 : 12;
+            var veil = step == 1 ? 1.0 : 0.0;
+            switch (step)
+            {
+                case 2:
+                    scratch.Camera.BeginFlight(now, false);
+                    break;
+                case 3:
+                    scratch.Camera.BeginExit(now - 0.5, false);
+                    break;
+                case 4:
+                    scratch.Camera.BeginAerial(now - 0.5, false);
+                    break;
+            }
+
+            var inputs = new SceneTickInputs(now + 0.4, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, new SceneInputs(120, 24, true), hour, false, 411, 914, veil);
+            scratch.Tick(inputs, ref _jitFrame);
+            scratch.Segments.VisibleProps(SyntheticDistance, _jitFrame.VisibleProps);
+            if (step < SceneWarmupPolicy.CoreJitPreambleUnits - 1)
+            {
+                return false;
+            }
+
+            _jitScratch = null;
+            _jitFrame = default;
+            return true;
+        }
+
+        private SceneSession? _jitScratch;
+        private SceneFrame _jitFrame;
+        private int _coreJitStep;
+        private int _subDraw;
+        private bool _postDone;
+
         // La sesión siguiente, armada en reposo (QA-V6a-REN-02): Open la toma en el cuadro del toque en lugar de armar la sesión y sus
-        // arreglos ahí. Con otra región (el control de prueba), Open arma una nueva.
+        // arreglos ahí. Con otra región (el control de prueba), Open arma una nueva. It. 6b (#1): también en la fase 3 del armado, con
+        // el escenario elegido, antes del mundo.
         private void PrepareNextSession()
         {
+            PrepareNextSession(KitEnvironment);
+        }
+
+        private void PrepareNextSession(EnvironmentId environment)
+        {
             var region = _regionOverridden ? _regionForTest : _options.RegionCode;
-            _nextEnvironment = KitEnvironment;
+            _nextEnvironment = environment;
             _nextSession = new SceneSession(EnvironmentCatalog.Create(_nextEnvironment), new SceneSessionOptions { RegionCode = region });
             _nextRegion = region;
             _nextFrame = SceneFrame.Create();
@@ -1078,7 +1460,11 @@ namespace RowMate.Scene
         // small: a una RT chica del mismo formato (el primer pedido: el código de URP por primera vez), descartada al terminar.
         private void WarmupPostDraw(bool small)
         {
-            var world = _world!;
+            RenderMaskZero((_world ?? _builder?.World)!, small);
+        }
+
+        private void RenderMaskZero(SceneWorld world, bool small)
+        {
             if (EnsureTarget())
             {
                 OutputChanged?.Invoke();
@@ -1121,7 +1507,11 @@ namespace RowMate.Scene
         // tamaño y su formato: QA-V6a-REN-05), con el cuadro de PrepareWarmupFrame, así toca todas las variantes de la sesión (las
         // palabras clave son constantes) y los estados de pipeline del destino de verdad (Vulkan, D3D12 y Metal los atan al formato y al
         // MSAA del destino).
-        private void WarmupDraw()
+        // It. 6b (#1; 02-tech-design §2.1 (4)): el dibujo partido en sub-dibujos por grupo de renderers (SceneDirector.WarmupGroupOf), cada
+        // uno en su unidad, liviana. El primero aplica el cuadro; cada uno deja a la vista solo los renderers y los dibujos instanciados de
+        // su grupo, dibuja en la RT de la sesión y vuelve a dejar los renderers como estaban. Entre todos tocan las mismas variantes y
+        // estados de pipeline que el dibujo entero de la 6a. WarmupDraws cuenta el dibujo entero (uno), SubDraws los sub-dibujos.
+        private void WarmupSubDraw(int group)
         {
             var world = _world!;
             if (EnsureTarget())
@@ -1130,15 +1520,57 @@ namespace RowMate.Scene
             }
 
             world.Root.SetActive(true);
-            world.Store!.Step(SyntheticDistance, double.PositiveInfinity);
-            world.Director!.Apply(_warmupFrame);
-            world.Director.QueueInstancedDraws();
-            world.Renderer!.Render(_target.Texture!);
+            var director = world.Director!;
+            if (group == 0)
+            {
+                world.Store!.Step(SyntheticDistance, double.PositiveInfinity);
+                director.Apply(_warmupFrame);
+            }
+
+            var renderers = _groupRenderers ??= world.Root.GetComponentsInChildren<Renderer>(true);
+            if (_groupEnabled == null || _groupEnabled.Length != renderers.Length)
+            {
+                _groupEnabled = new bool[renderers.Length];
+            }
+
+            for (var i = 0; i < renderers.Length; i++)
+            {
+                var r = renderers[i];
+                _groupEnabled[i] = r.enabled;
+                r.enabled = r.enabled && director.WarmupGroupOf(r) == group;
+            }
+
+            try
+            {
+                director.QueueInstancedDraws(group);
+                world.Renderer!.Render(_target.Texture!);
+                SubDraws++;
+            }
+            finally
+            {
+                for (var i = 0; i < renderers.Length; i++)
+                {
+                    renderers[i].enabled = _groupEnabled[i];
+                }
+
+                world.Root.SetActive(false);
+            }
+        }
+
+        private void FinishWarmupDraw()
+        {
             WarmupDraws++;
-            world.Root.SetActive(false);
             _warmupFrame = default;
             _warmupFrameReady = false;
+            _groupRenderers = null;
+            _subDraw = 0;
         }
+
+        private Renderer[]? _groupRenderers;
+        private bool[]? _groupEnabled;
+
+        // Los sub-dibujos de calentamiento (el dibujo de la 6a son SubDrawGroups).
+        public long SubDraws { get; private set; }
 
         private void Fail(string what, Exception? error)
         {
@@ -1157,6 +1589,8 @@ namespace RowMate.Scene
             units?.Dispose();
             _warmupFrame = default;
             _warmupFrameReady = false;
+            _groupRenderers = null;
+            _subDraw = 0;
         }
 
         private void DisposeWorld()
@@ -1178,6 +1612,7 @@ namespace RowMate.Scene
             _nextSession = null;
             _nextFrame = default;
             _lastStreamDistance = double.NaN;
+            ResetWaterWorld();
             if (_readiness.Value != SceneReadiness.Failed)
             {
                 _readiness.Value = SceneReadiness.NotLoaded;
@@ -1240,11 +1675,533 @@ namespace RowMate.Scene
             _world = null;
             _nextSession = null;
             _target.Dispose();
+            ReleaseWaterProbe();
             MeshUpload.Destroy(_stamp);
             if (_ownsProfile)
             {
                 MeshUpload.Destroy(_profile);
             }
+        }
+
+        // ── It. 6b: el agua avanzada, la caída a la degradada y el vidrio (06b-agua-avanzada/02-tech-design §5, §4.4) ──
+
+        // El agua de la sesión de la APP (DT6b-01): un equipo sin soporte, una falla o el último escalón térmico la dejan degradada hasta
+        // reiniciar, sin reintento; una sola línea del registro (DT6b-13). Vive más que el mundo y que las sesiones de escena.
+        private readonly WaterAvailability _waterAvailability = new WaterAvailability();
+        private WaterFade _waterFade;
+        private bool _waterFadeStarted;
+        private bool _advancedReady;
+        private bool _waterWarmupDone;
+        private int _waterStep;
+        private double _advancedNotBefore = double.NegativeInfinity;
+        private double _sessionOpenedAt;
+        private bool _failInjected;
+        private double _reflectionLoweredAt = double.NaN;
+        private double _glassWeight;
+        private double _glassFrom;
+        private double _glassStart = double.NegativeInfinity;
+        private bool _glassTarget;
+        private int _glassGeneration = -1;
+        private RenderTexture? _waterProbeTarget;
+        private bool _forceUnsupportedForTest;
+        private readonly Stopwatch _waterWatch = new Stopwatch();
+
+        public const double GlassFadeSeconds = 0.2;
+
+        public WaterAvailability WaterAvailability => _waterAvailability;
+
+        // La elección del último cuadro dibujado (Choice: la regla; Showing: la que se ve) y si la avanzada ya está lista.
+        public WaterChoice WaterChoice => _frame.Water.Choice;
+
+        public bool AdvancedWaterReady => _advancedReady;
+
+        public double DegradedBlend => _frame.Water.DegradedBlend;
+
+        // Lo que se dibujó de verdad en el último cuadro (el renderer avanzado prendido) y las líneas del registro del agua.
+        public bool ShowingAdvancedWater => _world?.Director?.WaterSurfaces?.ShowingAdvanced == true;
+
+        public int WaterLogLines { get; private set; }
+
+        public double WorstWaterUnitMs => _worstByPhase[PhaseWater];
+
+        // El reflejo planar se dibujó en el último cuadro (Alto) y su peso (LowerReflection lo baja a 0 en 0,6 s).
+        public bool ReflectionDrawn { get; private set; }
+
+        public double ReflectionMix { get; private set; } = 1;
+
+        // ¿Hay unidades del agua avanzada pendientes? (después de Ready, fase 13).
+        public bool WaterWarmupPending => _readiness.Value == SceneReadiness.Ready && !_waterWarmupDone && _world?.AdvancedWater != null;
+
+        // El vidrio (IImmersiveScene): el compuesto desenfocado, su peso con el fundido de 200 ms y el aviso de cambio.
+        public Texture? GlassTexture => _world?.Blur?.Output;
+
+        public double GlassWeight => _glassWeight;
+
+        public event Action? GlassChanged;
+
+        public bool GlassInUse { get; set; }
+
+        public long BlurRuns => _world?.Blur?.Runs ?? 0;
+
+        // DT6b-11: el vidrio corre en Alto y Medio; en Bajo, el respaldo plano.
+        public bool GlassTier => _profile.Tier != QualityTier.Low;
+
+        // La elección del cuadro y el fundido (antes de aplicar el cuadro): la regla (WaterModeSelector) con lo pegado de la app; la
+        // primera vez de cada sesión (detrás del negro) y en la miniatura, en el acto; después, con el fundido de 0,6 s (en el acto con
+        // reducir movimiento). Si el agua avanzada no pudo dibujar, el corte es en el acto (DT6b-12).
+        private void UpdateWater(double now)
+        {
+            var world = _world!;
+            var controller = world.Director!.WaterSurfaces;
+            if (controller == null)
+            {
+                return;
+            }
+
+            if (controller.Failed)
+            {
+                controller.Failed = false;
+                ReportWaterFailure(controller.FailureReason ?? WaterModeSelector.FailureReason);
+                _waterFade.Snap(false);
+            }
+
+            var hasAdvanced = world.AdvancedWater != null;
+            var ready = _advancedReady && hasAdvanced && now >= _advancedNotBefore && !_advancedHeld;
+            var choice = WaterModeSelector.Choose(_waterAvailability.Inputs(_profile.Tier, _options.Water, _options.WaterForceAllowed, _thumbnail, ready));
+            var wantAdvanced = choice.Showing == WaterKind.Advanced;
+            if (!_waterFadeStarted || _thumbnail)
+            {
+                _waterFade.Snap(wantAdvanced);
+                _waterFadeStarted = true;
+            }
+            else if (wantAdvanced != _waterFade.TowardAdvanced)
+            {
+                _waterFade.Start(now, wantAdvanced, ReduceMotion);
+            }
+
+            controller.AdvancedAvailable = hasAdvanced && _advancedReady;
+            _frame.Water.Choice = choice;
+            _frame.Water.DegradedBlend = _waterFade.DegradedBlend(now);
+            if (world.AdvancedWater != null)
+            {
+                ReflectionMix = double.IsNaN(_reflectionLoweredAt) ? 1 : Math.Max(0, 1 - (now - _reflectionLoweredAt) / WaterFade.Seconds);
+                world.AdvancedWater.SetReflectionMix(ReflectionMix);
+            }
+
+            var marks = world.Director.WaterMarks;
+            if (marks != null)
+            {
+                // Los micro-anillos y los charcos de #12 van con la avanzada (los anillos, en Alto y Medio: §4.1); con la degradada, los de la 7.
+                marks.RingsEnabled = _frame.Water.DegradedBlend < 0.5 && _profile.Tier != QualityTier.Low;
+            }
+        }
+
+        // Una falla en medio de la sesión (excepción del agua o del espejo, la RT del reflejo perdida, -rowmate-water-fail): pegada por la
+        // app, una sola línea y el fundido a la degradada (el reloj, el HUD, el guardado y la sesión de escena no se tocan).
+        public void ReportWaterFailure(string reason)
+        {
+            if (_waterAvailability.ReportFailure(reason))
+            {
+                LogWaterFallback(reason);
+            }
+        }
+
+        // DegradeWater de la adaptación térmica (DV-152): igual que una falla, con su motivo.
+        public void DegradeWater()
+        {
+            if (_waterAvailability.ReportThermal())
+            {
+                LogWaterFallback(WaterModeSelector.ThermalReason);
+            }
+        }
+
+        // LowerReflection de la adaptación (§5): el peso del planar (Alto) o de la silueta (Medio) baja a 0 en 0,6 s.
+        public void LowerReflection()
+        {
+            if (double.IsNaN(_reflectionLoweredAt))
+            {
+                _reflectionLoweredAt = _lastNow;
+            }
+        }
+
+        private void LogWaterFallback(string reason)
+        {
+            WaterLogLines++;
+            _logger.Log(LogLevel.Info, WaterFallbackLog.Tag, WaterFallbackLog.Line(reason));
+        }
+
+        // Las unidades del agua avanzada (fase 13, después de Ready; todas livianas, DT6b-02): (0) el soporte (DT6b-22: el shader corre Y su
+        // SubShader activo es el avanzado, con la palabra clave del nivel), (1) el perfil del horizonte (Medio), (2) la RT del reflejo
+        // (Alto), (3) el sub-dibujo del agua avanzada en una RT de 64² (sus estados de pipeline; las variantes ya están en la colección) y
+        // (4) lista. Con el agua forzada a la degradada (las pruebas y tomas viejas) no se prepara.
+        private void WaterWarmupUnit(double now)
+        {
+            if (_waterStep >= _waterStepLimitForTest)
+            {
+                // AC-6B-22 (QA-V6b-06): la prueba deja la avanzada a mitad de la preparación para cerrarla así.
+                return;
+            }
+
+            var world = _world!;
+            var advanced = world.AdvancedWater!;
+            _waterWatch.Restart();
+            try
+            {
+                switch (_waterStep)
+                {
+                    case 0:
+                        if (_options.WaterForceAllowed && _options.Water == WaterForce.Degraded)
+                        {
+                            _waterWarmupDone = true;
+                            return;
+                        }
+
+                        advanced.SetTier(_profile.Tier);
+                        if (_forceUnsupportedForTest || !AdvancedWaterSurface.IsSupported(advanced.Material))
+                        {
+                            if (_waterAvailability.ReportUnsupported(WaterModeSelector.UnsupportedReason))
+                            {
+                                LogWaterFallback(WaterModeSelector.UnsupportedReason);
+                            }
+
+                            _waterWarmupDone = true;
+                            return;
+                        }
+
+                        break;
+                    case 1:
+                        if (_profile.Tier == QualityTier.Medium)
+                        {
+                            advanced.RefreshProfile(KitEnvironment, 0);
+                        }
+
+                        break;
+                    case 2:
+                        // El espejo solo existe en Alto y con la avanzada en camino (con la degradada fija no hay segunda cámara).
+                        if (_profile.Tier == QualityTier.High && world.Reflection == null)
+                        {
+                            world.Reflection = new PlanarReflection(world.Root.transform, world.Layer);
+                        }
+
+                        if (world.Reflection != null && _target.Texture != null && !world.Reflection.Ensure(_target.Texture))
+                        {
+                            ReportWaterFailure("RT del reflejo");
+                        }
+
+                        break;
+                    case 3:
+                        WaterSubDraw(world);
+                        break;
+                    default:
+                        _advancedReady = true;
+                        _waterWarmupDone = true;
+                        break;
+                }
+
+                _waterStep++;
+            }
+            catch (Exception error)
+            {
+                _waterWarmupDone = true;
+                ReportWaterFailure("falla de carga: " + error.GetType().Name);
+            }
+            finally
+            {
+                var ms = _waterWatch.Elapsed.TotalMilliseconds;
+                if (ms > _worstByPhase[PhaseWater])
+                {
+                    _worstByPhase[PhaseWater] = ms;
+                }
+            }
+        }
+
+        // El agua avanzada sola en una RT de 64² del formato de la sesión, sin post: sus estados de pipeline antes del primer cuadro.
+        private void WaterSubDraw(SceneWorld world)
+        {
+            var advanced = world.AdvancedWater!;
+            var target = _target.Texture;
+            if (target == null)
+            {
+                return;
+            }
+
+            if (_waterProbeTarget == null || _waterProbeTarget.graphicsFormat != target.graphicsFormat)
+            {
+                ReleaseWaterProbe();
+                _waterProbeTarget = new RenderTexture(new RenderTextureDescriptor(64, 64, target.graphicsFormat, target.depthStencilFormat))
+                {
+                    name = "RowMate.WaterWarmup",
+                    hideFlags = HideFlags.HideAndDontSave,
+                };
+                _waterProbeTarget.Create();
+            }
+
+            var wasActive = world.Root.activeSelf;
+            world.Root.SetActive(true);
+            var renderers = world.Root.GetComponentsInChildren<Renderer>(false);
+            var enabled = new bool[renderers.Length];
+            for (var i = 0; i < renderers.Length; i++)
+            {
+                enabled[i] = renderers[i].enabled;
+                renderers[i].enabled = ReferenceEquals(renderers[i], advanced.Renderer);
+            }
+
+            advanced.Renderer.enabled = true;
+            var data = world.Rig!.Data;
+            var post = data.renderPostProcessing;
+            data.renderPostProcessing = false;
+            try
+            {
+                world.Renderer!.Render(_waterProbeTarget);
+            }
+            finally
+            {
+                data.renderPostProcessing = post;
+                for (var i = 0; i < renderers.Length; i++)
+                {
+                    renderers[i].enabled = enabled[i];
+                }
+
+                advanced.Renderer.enabled = false;
+                world.Root.SetActive(wasActive);
+            }
+        }
+
+        private void ReleaseWaterProbe()
+        {
+            if (_waterProbeTarget != null)
+            {
+                _waterProbeTarget.Release();
+                MeshUpload.Destroy(_waterProbeTarget);
+                _waterProbeTarget = null;
+            }
+        }
+
+        private void ResetWaterWorld()
+        {
+            _advancedReady = false;
+            _waterWarmupDone = false;
+            _waterStep = 0;
+            _glassGeneration = -1;
+        }
+
+        // El reflejo planar del cuadro (Alto, con la avanzada a la vista y el reflejo sin bajar del todo): el agua, los degradés y la sombra
+        // del bote no se ven en el espejo.
+        private void RenderReflection(SceneWorld world)
+        {
+            ReflectionDrawn = false;
+            var reflection = world.Reflection;
+            var surfaces = world.Director!.WaterSurfaces;
+            if (reflection == null || surfaces == null || !surfaces.ShowingAdvanced || _profile.Tier != QualityTier.High || ReflectionMix <= 0)
+            {
+                return;
+            }
+
+            if (reflection.Lost)
+            {
+                if (_target.Texture != null && !reflection.Ensure(_target.Texture))
+                {
+                    ReportWaterFailure("RT del reflejo perdida");
+                    return;
+                }
+            }
+            else if (_target.Texture != null)
+            {
+                reflection.Ensure(_target.Texture);
+            }
+
+            var overlay = world.Director.Overlay.Renderer;
+            var advanced = world.AdvancedWater!.Renderer;
+            var shadow = world.Boat!.Shadow;
+            var overlayOn = overlay.enabled;
+            var shadowOn = shadow.enabled;
+            overlay.enabled = false;
+            advanced.enabled = false;
+            shadow.enabled = false;
+            try
+            {
+                reflection.Render(world.Rig!.Camera);
+                Shader.SetGlobalTexture(SceneShaderIds.WaterReflectionTex, reflection.Texture);
+                ReflectionDrawn = true;
+            }
+            catch (Exception error)
+            {
+                ReportWaterFailure("el reflejo falló: " + error.GetType().Name);
+            }
+            finally
+            {
+                overlay.enabled = overlayOn;
+                advanced.enabled = true;
+                shadow.enabled = shadowOn;
+            }
+        }
+
+        // El vidrio después de dibujar la escena (DT6b-08): con piezas de vidrio a la vista y un nivel con desenfoque. El peso sigue con
+        // su fundido de 200 ms (GlassChanged en cada cuadro del fundido; fuera de él, solo cuando cambia la textura).
+        private void UpdateGlass(double now, bool showing)
+        {
+            var world = _world;
+            var blur = world?.Blur;
+            var on = showing && GlassInUse && GlassTier && blur != null && !_thumbnail && _target.Texture != null;
+            var changed = false;
+            if (on)
+            {
+                if (blur!.Ensure(_target.Texture!, _density) || blur.Generation != _glassGeneration)
+                {
+                    _glassGeneration = blur.Generation;
+                    changed = true;
+                }
+
+                blur.Execute();
+            }
+
+            if (on != _glassTarget)
+            {
+                _glassTarget = on;
+                _glassFrom = _glassWeight;
+                _glassStart = now;
+            }
+
+            var target = _glassTarget ? 1.0 : 0.0;
+            var weight = ReduceMotion ? target : _glassFrom + (target - _glassFrom) * Math.Min(1, Math.Max(0, (now - _glassStart) / GlassFadeSeconds));
+            if (Math.Abs(weight - _glassWeight) > 1e-6)
+            {
+                _glassWeight = weight;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                GlassChanged?.Invoke();
+            }
+        }
+
+        // -rowmate-perf-gpu-load (solo desarrollo, AC-6B-31): ms aproximados de GPU por cuadro con pasadas de Kawase a la RT de la escena
+        // (sin un shader propio: el del vidrio), para ver los pasos de la adaptación en el registro.
+        private void GpuLoad()
+        {
+            var blur = _world?.Blur;
+            if (!(_options.GpuLoadMs > 0) || blur == null || _target.Texture == null)
+            {
+                return;
+            }
+
+            blur.Ensure(_target.Texture, _density);
+            var passes = (int)Math.Ceiling(_options.GpuLoadMs * GpuLoadPassesPerMs);
+            for (var i = 0; i < passes; i++)
+            {
+                blur.Execute();
+            }
+        }
+
+        public const double GpuLoadPassesPerMs = 4;
+
+        // -rowmate-water-fail <s> (solo desarrollo; VID-02, AC-6B-08): una falla a los s segundos de abierta la sesión.
+        private void InjectWaterFailure(double now)
+        {
+            if (_failInjected || double.IsNaN(_options.WaterFailAfterSeconds) || now - _sessionOpenedAt < _options.WaterFailAfterSeconds)
+            {
+                return;
+            }
+
+            _failInjected = true;
+            ReportWaterFailure("falla forzada de prueba");
+        }
+
+        // Las tomas con la distancia forzada (G6b-15): la estela de 12 s a la velocidad estable.
+        internal void PrimeWakeForTest(double steadySpeedMps)
+        {
+            _session?.PrimeWakeForTest(steadySpeedMps);
+        }
+
+        // La sesión preparada (QA-V6a-REN-02; It. 6b: desde la fase 3 del armado): Open la toma en el cuadro del toque.
+        internal SceneSession? PreparedSessionForTest => _nextSession;
+
+        // ── Controles de prueba del agua (internal) ──
+
+        // La avanzada no se muestra mientras la prueba la retiene (AdvancedArrivesWithFadeKeepingTheScene: la que llega tarde, con su fundido).
+        internal void HoldAdvancedWaterForTest(bool hold)
+        {
+            _advancedHeld = hold;
+        }
+
+        private bool _advancedHeld;
+
+        // Las unidades del agua avanzada no pasan del paso `step` (0 el soporte, 1 el perfil, 2 la RT del reflejo, 3 el sub-dibujo, 4 lista):
+        // la avanzada queda a medio preparar (AC-6B-22, el cierre mientras se prepara). int.MaxValue = sin límite.
+        internal void StopWaterWarmupAtForTest(int step)
+        {
+            _waterStepLimitForTest = step;
+        }
+
+        private int _waterStepLimitForTest = int.MaxValue;
+
+        // El paso de la preparación del agua avanzada (las pruebas).
+        internal int WaterWarmupStepForTest => _waterStep;
+
+        // La avanzada no se pone lista antes de `seconds` desde ahora.
+        internal void DelayAdvancedWaterForTest(double seconds)
+        {
+            _advancedNotBefore = _lastNow + seconds;
+        }
+
+        // El próximo soporte se informa como "sin SubShader avanzado" (con el agua real; los shaders de prueba van por ForceWaterMaterialForTest).
+        internal void ForceUnsupportedWaterForTest(bool on)
+        {
+            _forceUnsupportedForTest = on;
+        }
+
+        // Cambia el material del agua avanzada por otro (los shaders de prueba sin el tag o sin soporte, G6b-01) y vuelve a preparar.
+        internal void ForceWaterMaterialForTest(Material material)
+        {
+            var advanced = _world?.AdvancedWater;
+            if (advanced == null)
+            {
+                return;
+            }
+
+            advanced.Renderer.sharedMaterial = material;
+            _world!.WaterAdvancedMaterial = material;
+            ResetWaterWorld();
+            _forceUnsupportedForTest = !AdvancedWaterSurface.IsSupported(material);
+        }
+
+        // Una excepción en el próximo dibujo del agua avanzada (el corte en el acto, DT6b-12).
+        internal void FailNextWaterDrawForTest()
+        {
+            var surfaces = _world?.Director?.WaterSurfaces;
+            if (surfaces != null)
+            {
+                surfaces.FailNextApplyForTest = true;
+            }
+        }
+
+        // El agua de la próxima elección (lo forzado de las pruebas y del arnés: Degraded por defecto en las de antes, DT6b-24).
+        internal void ForceWaterForTest(WaterForce force)
+        {
+            _options.Water = force;
+            _options.WaterForceAllowed = true;
+            if (force != WaterForce.Degraded && _waterWarmupDone && !_advancedReady)
+            {
+                // Estaba forzada a la degradada y no se preparó: ahora sí.
+                ResetWaterWorld();
+            }
+        }
+
+        // Las unidades del agua avanzada en el acto (las pruebas y el arnés esperan AdvancedReady; G6b-16).
+        internal void CompleteWaterForTest()
+        {
+            var guard = 0;
+            while (WaterWarmupPending && guard++ < 32)
+            {
+                WaterWarmupUnit(_lastNow);
+            }
+        }
+
+        // La sesión de app de vuelta a "todo disponible" (cada prueba arranca de cero: el host es de la prueba, esto es para el arnés).
+        internal void ResetWaterAvailabilityForTest()
+        {
+            ResetWaterWorld();
         }
 
         // ── It. 7: el remero ──
@@ -1304,6 +2261,11 @@ namespace RowMate.Scene
         internal void InjectPuddleForTest(double x, double worldZ, double age)
         {
             _session?.InjectPuddleForTest(x, worldZ, age);
+        }
+
+        internal void InjectRingForTest(double x, double worldZ, double age, int kind)
+        {
+            _session?.InjectRingForTest(x, worldZ, age, kind);
         }
 
         // El remero: el maniquí, el del slot (el binding o CharacterBinding) o uno inválido (cae al maniquí con un aviso). Rehace el remero

@@ -1303,3 +1303,16 @@ Detalle en [14-pulido-plataformas/02-tech-design](../iterations/14-pulido-plataf
 | §16 | Bootstrapper v7: pasos `identity.import`, `identity.standalone` (íconos por `SetIcons`) e `identity.mobile` (Android por `SerializedObject`; iOS con `LaunchScreen.storyboard` y multitarea en iPad); `player.window` pone `allowFullscreenSwitch` en 0. `Packages/manifest.json` suma `com.unity.modules.accessibility` |
 | §19 | `BuildCli` suma `-rowmateTarget iOS|macOS` (sin firmar; íconos de Mac en memoria) y la firma de Android por argumentos (`AndroidSigning`, en memoria). `ApplePostprocess` y `WindowsVersionInfoPostprocess` (VS_VERSIONINFO; `build.ps1` lo exige con el código 9). `build.ps1 -BootSmoke` (código 8). `ci-unity.yml` con el job `gate`, los builds de Windows y Android y el de Apple manual |
 | §20.2 | El lector de pantalla no suma elementos ni asigna con el lector apagado; el indicador de carga de la escena (#21) es un solo `Label` que dibuja su arco (+1 elemento solo en la primera entrada demorada) |
+
+## Cambios de la It. 6b (WP-B, implementación)
+
+Detalle en [06b-agua-avanzada/02-tech-design](../iterations/06b-agua-avanzada/02-tech-design.md) (§15 y §16, cambios por implementación) y ADR 027.
+
+| Sección | Qué cambió |
+|---|---|
+| §2 | `RowMate.Scene` suma `Water/{WaterSurfaceController, AdvancedWaterSurface, PlanarReflection, WakeRenderer}` y `HudBlurPass`; Presentation suma `Workout/GlassSurface` (sin elementos) y `UiContext.ImmersiveCover`; el arnés suma `WaterCatalog` (`it6b`, por defecto) |
+| §14.2 | R-04 se cumple con el par de *renderers*: la degradada sigue obligatoria, pero ya no es un SubShader del avanzado (`WaterAdvanced` sin `Fallback`, con el tag `RmWater`=`Advanced`) |
+| §14 | La precarga empieza con un preámbulo pesado (la cámara y la luz, el primer pedido de URP a 64² y la sesión de Core de usar y tirar), arma la sesión preparada antes del mundo y parte el dibujo de calentamiento en 5 sub-dibujos livianos. Las pesadas solo corren en cuadros quietos o en el negro de la entrada (`IImmersiveScene.RunPendingHeavyWork`), que corre el reloj de la entrada |
+| §16 | `WaterNormalBaker` hornea `Art/Textures/Water/water-normal.png` y `water.json`; `scene.materials` suma `WaterAdvanced` y `HudBlur` (y las tres variantes del agua en la colección) |
+| §20.1 | El desenfoque suma 3 SetPass aparte del tope de la escena. La estela y las columnas no suman pases (tipos de `WaterMarks`) |
+| §20.3 | La adaptación suma `LowerReflection` (después de la resolución) y `DegradeWater` (el último paso, pegado hasta reiniciar) |

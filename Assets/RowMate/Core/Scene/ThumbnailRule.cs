@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 using RowMate.Core.Scene.Art;
+using RowMate.Core.Scene.Water;
 
 namespace RowMate.Core.Scene
 {
@@ -19,6 +20,9 @@ namespace RowMate.Core.Scene
         public const double CardWidthDp = 152, CardHeightDp = 96;
         public const int RenderWidth = 1824, RenderHeight = 1152, Downsample = 4;
         public const int Width = RenderWidth / Downsample, Height = RenderHeight / Downsample;
+
+        // It. 6b (DT6b-19; F-SCN-22, paridad): las miniaturas siguen con el agua degradada (WaterModeSelector con Thumbnail).
+        public const WaterForce Water = WaterForce.Degraded;
 
         public static SceneCamera Camera => new SceneCamera(CardWidthDp, CardHeightDp);
 

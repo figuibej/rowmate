@@ -7,7 +7,7 @@ Generadas por el arnés (`tools/unity/capture-snapshots.ps1`, 03-rutinas/02-tech
 | CAP-01 | [CAP-01-drive-tv.png](CAP-01-drive-tv.png) | TV | R-4 | Drive: 12:00, c = 0,18 | 0/0 | sin desbordes | ok |
 | CAP-02 | [CAP-02-recuperacion-tv.png](CAP-02-recuperacion-tv.png) | TV | R-4 | Recuperación: 12:00, c = 0,60 | 0/0 | sin desbordes | ok |
 | CAP-03 | [CAP-03-ataque-tv.png](CAP-03-ataque-tv.png) | TV | R-4 | Ataque: R-4, 12:00, 0,1 s después de la primera entrada de pala desde los 30 s | 0/0 | sin desbordes | ok |
-| CAP-04 | [CAP-04-charcos-tv.png](CAP-04-charcos-tv.png) | TV | R-4 | Charcos: R-4, 12:00, 1 s después de la primera salida de pala desde los 59,2 s | 0/0 | sin desbordes | ok |
+| CAP-04 | [CAP-04-charcos-tv.png](CAP-04-charcos-tv.png) | TV | R-4 | Charcos: R-4, 12:00, en la primera salida de pala desde los 59,2 s | 6/6 | sin desbordes | ok |
 | CAP-05 | [CAP-05-sombra-09-th.png](CAP-05-sombra-09-th.png) | TH | R-4 | Sombra a las 09:00, c = 0,5 | 0/0 | sin desbordes | ok |
 | CAP-06 | [CAP-06-sombra-12-th.png](CAP-06-sombra-12-th.png) | TH | R-4 | Sombra a las 12:00, c = 0,5 | 0/0 | sin desbordes | ok |
 | CAP-07 | [CAP-07-sombra-17-th.png](CAP-07-sombra-17-th.png) | TH | R-4 | Sombra a las 17:00, c = 0,5 | 0/0 | sin desbordes | ok |

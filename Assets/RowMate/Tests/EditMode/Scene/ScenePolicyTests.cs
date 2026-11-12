@@ -57,13 +57,15 @@ namespace RowMate.Tests.EditMode.Scene
             Assert.That(actions[0].Resolution, Is.EqualTo(0.90));
         }
 
-        [Test, Category("AC-SCN-01-13")]
-        public void TheOrderIsResolutionShadowsVegetationTier()
+        // It. 6b (AC-6B-31): resolución → reflejo → sombras → vegetación → nivel → agua degradada (el último, pegado: DV-152). Nunca baja
+        // la tasa de cuadros y, después del último paso, nada más.
+        [Test, Category("AC-SCN-01-13"), Category("AC-6B-31")]
+        public void OrderEndsInDegradedWater()
         {
             var a = new ThermalAdaptation();
             var now = 0.0;
             var kinds = new List<QualityActionKind>();
-            foreach (var act in Run(a, ref now, 200, 20))
+            foreach (var act in Run(a, ref now, 300, 20))
             {
                 kinds.Add(act.Kind);
             }
@@ -71,10 +73,35 @@ namespace RowMate.Tests.EditMode.Scene
             Assert.That(kinds, Is.EqualTo(new[]
             {
                 QualityActionKind.LowerResolution, QualityActionKind.LowerResolution, QualityActionKind.LowerResolution, QualityActionKind.LowerResolution,
-                QualityActionKind.LowerResolution, QualityActionKind.LowerShadowDistance, QualityActionKind.LowerVegetationDensity, QualityActionKind.LowerTier,
-            }), "resolución hasta 0,75 de a 0,05 → (reflejo: no hay en la 6a) → sombras → vegetación → nivel");
+                QualityActionKind.LowerResolution, QualityActionKind.LowerReflection, QualityActionKind.LowerShadowDistance,
+                QualityActionKind.LowerVegetationDensity, QualityActionKind.LowerTier, QualityActionKind.DegradeWater,
+            }), "resolución hasta 0,75 de a 0,05 → reflejo → sombras → vegetación → nivel → agua degradada");
             Assert.That(a.Resolution, Is.EqualTo(0.75));
-            Assert.That(a.ShadowsLowered && a.VegetationLowered && a.TierLowered, Is.True);
+            Assert.That(a.ReflectionLowered && a.ShadowsLowered && a.VegetationLowered && a.TierLowered && a.WaterDegraded, Is.True);
+            Assert.That(Run(a, ref now, 120, 30), Is.Empty, "después del agua degradada no hay más pasos (y nunca baja la tasa)");
+            foreach (var name in Enum.GetNames(typeof(QualityActionKind)))
+            {
+                Assert.That(name.IndexOf("Frame", StringComparison.Ordinal), Is.LessThan(0), "ninguna acción toca la tasa de cuadros: " + name);
+            }
+        }
+
+        // Un cambio de resolución como mucho cada 10 s también con los pasos nuevos (AC-6B-31).
+        [Test, Category("AC-6B-31")]
+        public void ResolutionStillEveryTenSecondsAtMost()
+        {
+            var a = new ThermalAdaptation();
+            var now = 0.0;
+            var last = double.NegativeInfinity;
+            for (var i = 0; i < 60 * 300; i++)
+            {
+                now += 1.0 / 60;
+                var act = a.Sample(now, 20, true, true, false);
+                if (act.Kind == QualityActionKind.LowerResolution || act.Kind == QualityActionKind.RaiseResolution)
+                {
+                    Assert.That(now - last, Is.GreaterThanOrEqualTo(10 - 1e-9));
+                    last = now;
+                }
+            }
         }
 
         [Test, Category("AC-SCN-01-13")]
@@ -157,10 +184,17 @@ namespace RowMate.Tests.EditMode.Scene
         // La tabla de cotas del diseño (el objetivo de cada tipo de unidad). NO es la evidencia de AC-WKT-13-15 (QA-V6a-REN-06: compara la
         // tabla consigo misma): el costo real de cada unidad lo mide SceneHost (WorstUnitMs y su fase) y lo informan [PERF] y
         // SceneEntryTests.EachWarmupUnitIsMeasured. Por eso esta prueba no lleva la categoría del criterio.
+        // It. 6b: las unidades de la 6a siguen acotadas igual; las nuevas livianas, ≤ 4 ms (VisibleUnitsUnderFourMs) y las de primera
+        // vez del proceso son pesadas (HeavyOnlyWhenQuiet).
         [Test]
         public void NoIndivisibleStep()
         {
-            foreach (WarmupUnit unit in Enum.GetValues(typeof(WarmupUnit)))
+            var sixA = new[]
+            {
+                WarmupUnit.Slot, WarmupUnit.TextureRow, WarmupUnit.Mesh, WarmupUnit.Material, WarmupUnit.ShaderVariant, WarmupUnit.SyntheticTick,
+                WarmupUnit.WarmupDraw, WarmupUnit.CameraLightVolumeTarget,
+            };
+            foreach (var unit in sixA)
             {
                 Assert.That(SceneWarmupPolicy.UnitCostBoundMs(unit), Is.LessThanOrEqualTo(SceneWarmupPolicy.MaxUnitCostMs), unit + " acotada");
                 Assert.That(SceneWarmupPolicy.UnitCostBoundMs(unit), Is.LessThanOrEqualTo(SceneWarmupPolicy.ImmersiveSliceMs), unit + " entra en un tramo");
@@ -178,6 +212,122 @@ namespace RowMate.Tests.EditMode.Scene
             Assert.That(SceneWarmupPolicy.RunAnother(2, 1.5, 3), Is.True);
             Assert.That(SceneWarmupPolicy.RunAnother(2, 2.0, 3), Is.False);
             Assert.That(SceneWarmupPolicy.RunAnother(0, 0, 0), Is.False, "sin tramo, ninguna");
+        }
+
+        // ── It. 6b (#1; 06b-agua-avanzada/02-tech-design §2.1; DT6b-25, G6b-05) ──
+
+        private static readonly WarmupFrame QuietFrame = new WarmupFrame(true, true, false);
+
+        [Test, Category("AC-6B-01")]
+        public void HeavyOnlyWhenQuiet()
+        {
+            // Una pesada (lo de primera vez del proceso) nunca corre con el inmersivo a la vista; una liviana sí, con el tramo de 2 ms.
+            var visible = new WarmupFrame(SceneWarmupPolicy.IsQuiet(false, false, true, 0, false), true, false);
+            Assert.That(visible.Quiet, Is.False, "el inmersivo a la vista nunca es quieto");
+            Assert.That(SceneWarmupPolicy.RunAnother(2, 0, 0, true, visible), Is.False, "pesada con el inmersivo: no");
+            Assert.That(SceneWarmupPolicy.RunAnother(2, 0, 0, false, visible), Is.True, "liviana con el inmersivo: sí");
+            Assert.That(SceneWarmupPolicy.RunAnother(3, 0, 0, true, QuietFrame), Is.True, "pesada en reposo: sí");
+            Assert.That(SceneWarmupPolicy.RunAnother(0, 0, 0, true, QuietFrame), Is.False, "sin tramo, ninguna");
+            Assert.That(SceneWarmupPolicy.RunAnother(3, 3.5, 2, true, QuietFrame), Is.False, "también respeta el tramo");
+
+            Assert.That(SceneWarmupPolicy.IsQuiet(true, false, false, 0, false), Is.True, "Workout en reposo");
+            Assert.That(SceneWarmupPolicy.IsQuiet(false, true, false, 0, false), Is.True, "negro y quieto");
+            Assert.That(SceneWarmupPolicy.IsQuiet(true, false, false, 1, false), Is.False, "con un movimiento finito");
+            Assert.That(SceneWarmupPolicy.IsQuiet(false, true, true, 0, true), Is.False, "el cuadro del armado del HUD lo maneja el negro de la entrada");
+
+            foreach (var unit in new[] { WarmupUnit.CameraLightVolumeTarget, WarmupUnit.FirstUrpRequest, WarmupUnit.CoreJitPreamble, WarmupUnit.PostAtSessionSize })
+            {
+                Assert.That(SceneWarmupPolicy.Classify(unit), Is.EqualTo(UnitClass.Heavy), unit.ToString());
+            }
+        }
+
+        [Test, Category("AC-6B-01"), Category("AC-6B-02")]
+        public void HeavyNeedsPreviousQuietFrameAndNoInput()
+        {
+            // G6b-05: el cuadro del toque (con la entrada en curso) y el siguiente al primero quieto no corren pesadas, aunque el orden del
+            // player loop fuera otro.
+            Assert.That(SceneWarmupPolicy.RunAnother(3, 0, 0, true, new WarmupFrame(true, false, false)), Is.False, "el anterior no fue quieto");
+            Assert.That(SceneWarmupPolicy.RunAnother(3, 0, 0, true, new WarmupFrame(true, true, true)), Is.False, "un puntero, toque o tecla en curso");
+            Assert.That(SceneWarmupPolicy.RunAnother(3, 0, 0, false, new WarmupFrame(true, true, true)), Is.True, "las livianas no dependen de la entrada");
+            Assert.That(new WarmupFrame(true, true, false).AllowsHeavy, Is.True);
+            Assert.That(default(WarmupFrame).AllowsHeavy, Is.False);
+
+            // Una secuencia de cuadros armada con Next: reposo, reposo, el toque (entrada), el siguiente, el inmersivo (no quieto), el primero
+            // quieto después y recién el otro. Ni el cuadro del toque ni el siguiente corren pesadas.
+            var quiet = new[] { true, true, true, true, false, true, true };
+            var input = new[] { false, false, true, false, false, false, false };
+            var frame = new WarmupFrame(true, true, false);
+            var heavy = new bool[quiet.Length];
+            for (var i = 0; i < quiet.Length; i++)
+            {
+                frame = frame.Next(quiet[i], input[i]);
+                heavy[i] = SceneWarmupPolicy.RunAnother(3, 0, 0, true, frame);
+            }
+
+            Assert.That(heavy, Is.EqualTo(new[] { true, true, false, false, false, false, true }));
+        }
+
+        [Test, Category("AC-6B-01")]
+        public void PreambleBeforeWorld()
+        {
+            // El preámbulo de primera vez (0a la cámara, la luz y la RT; 0b el primer pedido de URP; 0c el JIT de Core en 5 unidades), después
+            // la sesión preparada, el mundo y, después de Ready, el agua avanzada (fase 10).
+            var preamble = new[] { WarmupUnit.CameraLightVolumeTarget, WarmupUnit.FirstUrpRequest, WarmupUnit.CoreJitPreamble };
+            var world = new[]
+            {
+                WarmupUnit.Slot, WarmupUnit.TextureRow, WarmupUnit.Mesh, WarmupUnit.Material, WarmupUnit.ShaderVariant, WarmupUnit.SyntheticTick,
+                WarmupUnit.WarmupDraw, WarmupUnit.WarmupSubDraw, WarmupUnit.PostAtSessionSize,
+            };
+            var water = new[] { WarmupUnit.WaterVariant, WarmupUnit.WaterResource, WarmupUnit.WaterSubDraw };
+            foreach (var p in preamble)
+            {
+                Assert.That(SceneWarmupPolicy.PhaseOf(p), Is.EqualTo(SceneWarmupPolicy.PreamblePhase), p.ToString());
+                Assert.That(SceneWarmupPolicy.PhaseOf(p), Is.LessThan(SceneWarmupPolicy.PhaseOf(WarmupUnit.NextSession)));
+                foreach (var w in world)
+                {
+                    Assert.That(SceneWarmupPolicy.PhaseOf(p), Is.LessThan(SceneWarmupPolicy.PhaseOf(w)), p + " antes que " + w);
+                }
+            }
+
+            foreach (var w in world)
+            {
+                Assert.That(SceneWarmupPolicy.PhaseOf(WarmupUnit.NextSession), Is.LessThan(SceneWarmupPolicy.PhaseOf(w)), "la sesión preparada antes que " + w);
+                foreach (var a in water)
+                {
+                    Assert.That(SceneWarmupPolicy.PhaseOf(w), Is.LessThan(SceneWarmupPolicy.PhaseOf(a)), "el agua avanzada después de Ready");
+                }
+            }
+
+            Assert.That(SceneWarmupPolicy.CoreJitPreambleUnits, Is.EqualTo(5));
+            foreach (WarmupUnit unit in Enum.GetValues(typeof(WarmupUnit)))
+            {
+                Assert.That(SceneWarmupPolicy.PhaseOf(unit), Is.InRange(SceneWarmupPolicy.PreamblePhase, SceneWarmupPolicy.WaterPhase), unit.ToString());
+            }
+        }
+
+        [Test, Category("AC-6B-01")]
+        public void VisibleUnitsUnderFourMs()
+        {
+            // Toda liviana (lo que puede caer en un cuadro visible) tiene cota ≤ 4 ms; lo que pasa de 4 ms es pesada.
+            Assert.That(SceneWarmupPolicy.VisibleUnitMaxMs, Is.EqualTo(4));
+            foreach (WarmupUnit unit in Enum.GetValues(typeof(WarmupUnit)))
+            {
+                var bound = SceneWarmupPolicy.UnitCostBoundMs(unit);
+                if (SceneWarmupPolicy.Classify(unit) == UnitClass.Light)
+                {
+                    Assert.That(bound, Is.LessThanOrEqualTo(SceneWarmupPolicy.VisibleUnitMaxMs), unit + " liviana");
+                }
+
+                if (bound > SceneWarmupPolicy.VisibleUnitMaxMs)
+                {
+                    Assert.That(SceneWarmupPolicy.Classify(unit), Is.EqualTo(UnitClass.Heavy), unit + " pasa de 4 ms");
+                }
+            }
+
+            foreach (var unit in new[] { WarmupUnit.NextSession, WarmupUnit.WarmupSubDraw, WarmupUnit.WaterVariant, WarmupUnit.WaterResource, WarmupUnit.WaterSubDraw })
+            {
+                Assert.That(SceneWarmupPolicy.Classify(unit), Is.EqualTo(UnitClass.Light), unit.ToString());
+            }
         }
     }
 

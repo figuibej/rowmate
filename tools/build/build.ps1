@@ -2,7 +2,7 @@
 # RowMate.EditorTools.BuildCli.Build. Archivo solo ASCII a proposito: Windows PowerShell 5.1 lee un .ps1 UTF-8 sin BOM como ANSI.
 #
 #   tools/build/build.ps1 -Target Windows|Android [-Simulator] [-Backend Mono|IL2CPP] [-SmokeTest] [-DbSmoke] [-BleSmoke] [-ExportSmoke] [-BootSmoke] [-CloseSmoke] [-Out <carpeta>]
-#                         [-PerfHistory] [-WindowSmoke] [-AllowNewFolder] [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
+#                         [-PerfHistory] [-WindowSmoke] [-PerfEarly [-EarlySeconds <s>]] [-PerfWater] [-AllowNewFolder] [-Unity <Unity.exe>] [-ArtifactsPath <carpeta>]
 #
 # - Builds de DESARROLLO (-Simulator, -SmokeTest o -DbSmoke) en Windows: SIEMPRE en la misma carpeta (QA-V3-08 de la It. 3).
 #   Un player de desarrollo abre el puerto de PlayerConnection de Unity y Windows pregunta por el Firewall una vez por cada
@@ -64,6 +64,9 @@ param(
     [switch]$CloseSmoke,
     [switch]$PerfHistory,
     [switch]$WindowSmoke,
+    [switch]$PerfEarly,
+    [switch]$PerfWater,
+    [double]$EarlySeconds = 0.3,
     [string]$Out = '',
     [switch]$AllowNewFolder,
     [string]$Unity = '',
@@ -105,6 +108,13 @@ function Test-ProjectLocked {
 function Quote-Arg([string]$Value) {
     if ($Value -match '[\s"]') { return '"' + ($Value -replace '"', '\"') + '"' }
     return $Value
+}
+
+# It. 6b (06b-agua-avanzada/02-tech-design Sec. 2.1 (5) y Sec. 6): -PerfEarly y -PerfWater miden en el build de DESARROLLO del simulador
+# (Builds/Windows/simulator: el remo simulado se conecta solo), siempre con ROWMATE_DATA_DIR en una carpeta temporal.
+if (($PerfEarly -or $PerfWater) -and -not $Simulator) {
+    Write-Host '[build] -PerfEarly y -PerfWater van con -Simulator (el remo simulado; Builds/Windows/simulator).'
+    exit 3
 }
 
 $variant = 'normal'
@@ -417,6 +427,102 @@ if ($PerfHistory -and $code -eq 0) {
     finally {
         Remove-Item -Recurse -Force -Path $perfDir -ErrorAction SilentlyContinue
     }
+}
+
+# It. 6b: la carga de los otros procesos (WMI: el total del procesador menos el de este player), sin nombres ni datos del equipo.
+# Nunca toca, pausa ni mata otros procesos: solo los mide.
+function Get-CpuLoad {
+    try {
+        # WMI: los nombres de Get-Counter cambian con el idioma de Windows.
+        Start-Sleep -Milliseconds 500
+        $cpu = Get-CimInstance -ClassName Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction Stop
+        return [math]::Round([double]$cpu.PercentProcessorTime, 1)
+    }
+    catch { return -1 }
+}
+
+function Invoke-PerfPlayer([string]$Exe, [string[]]$PlayerArgs, [string]$LogPath, [int]$TimeoutMs) {
+    $dataDir = Join-Path ([System.IO.Path]::GetTempPath()) ('RowMate.Tests\perf-6b-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+    $before = Get-CpuLoad
+    $during = -1
+    try {
+        $info = New-Object System.Diagnostics.ProcessStartInfo
+        $info.FileName = $Exe
+        $info.Arguments = ((@('-logFile', $LogPath, '-screen-fullscreen', '0', '-screen-width', '1280', '-screen-height', '720') + $PlayerArgs | ForEach-Object { Quote-Arg $_ }) -join ' ')
+        $info.UseShellExecute = $false
+        $info.EnvironmentVariables['ROWMATE_DATA_DIR'] = $dataDir
+        $info.EnvironmentVariables['ROWMATE_BLE'] = 'off'
+        $player = [System.Diagnostics.Process]::Start($info)
+        Start-Sleep -Seconds 4
+        $total = Get-CpuLoad
+        $own = 0
+        try { $p = Get-CimInstance -ClassName Win32_PerfFormattedData_PerfProc_Process -Filter "Name='RowMate'" -ErrorAction Stop; $own = [math]::Round([double]$p.PercentProcessorTime / [Environment]::ProcessorCount, 1) } catch { $own = 0 }
+        if ($total -ge 0) { $during = [math]::Max(0, $total - $own) }
+        if (-not $player.WaitForExit($TimeoutMs)) {
+            Write-Host '[build] el player no termino a tiempo (se cierra el que lanzo este script).'
+            $player.Kill()
+            return @{ Ok = $false; Before = $before; During = $during }
+        }
+        return @{ Ok = ($player.ExitCode -eq 0); Before = $before; During = $during }
+    }
+    finally {
+        Remove-Item -Recurse -Force -Path $dataDir -ErrorAction SilentlyContinue
+    }
+}
+
+# It. 6b (#1, AC-6B-01, -02): -PerfEarly. 5 arranques en frio con el lago y 1 con cada uno de los otros escenarios; cada uno entra a
+# Entrenamiento libre a los -EarlySeconds de que aparece Workout, sin esperar Ready. perf-log-check.ps1 -EarlyMaxMs 16.7 junta el toque
+# (minimo y maximo) y el peor cuadro con movimiento. La carga de los otros procesos queda en perf-early.txt (solo porcentajes).
+if ($PerfEarly -and $code -eq 0) {
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $runs = @('lake', 'lake', 'lake', 'lake', 'lake', 'river', 'coast', 'regatta')
+    $logs = @()
+    $loadLines = @()
+    for ($i = 0; $i -lt $runs.Count; $i++) {
+        $runLog = Join-Path $artifacts ('perf-early-' + ($i + 1) + '-' + $runs[$i] + '.log')
+        $playerArgs = @('-rowmate-perf-early', $EarlySeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture))
+        if ($runs[$i] -ne 'lake') { $playerArgs += @('-rowmate-perf-env', $runs[$i]) }
+        $r = Invoke-PerfPlayer $exe $playerArgs $runLog 120000
+        $loadLines += ('corrida ' + ($i + 1) + ' (' + $runs[$i] + '): carga total antes ' + $r.Before + ' %, de los otros procesos durante ' + $r.During + ' %')
+        if (-not $r.Ok) { Write-Host ('[build] -PerfEarly: la corrida ' + ($i + 1) + ' no salio con 0') }
+        $logs += $runLog
+    }
+    Set-Content -Path (Join-Path $artifacts 'perf-early.txt') -Value $loadLines -Encoding ASCII
+    foreach ($l in $loadLines) { Write-Host ('  ' + $l) }
+    & powershell -NoProfile -File (Join-Path $PSScriptRoot 'perf-log-check.ps1') -Log $logs[0] -EarlyLogs ($logs -join ';') -EarlyMaxMs 16.7
+    if ($LASTEXITCODE -ne 0) { $code = 15 }
+}
+
+# It. 6b (AC-6B-26, -28; Sec. 6): -PerfWater. La matriz del agua avanzada en el build: Alto y Medio x 4 escenarios x 12 y 22 h, libre con Fuerte
+# 20 s cada una (-rowmate-perf-scene), con el nivel forzado; las lineas [PERF] (p99, maximo, agua y vidrio) y la carga de los otros procesos
+# quedan en perf-water.txt. Un tope de CPU que falla con carga externa anotada no se relaja: se informa como no concluyente.
+if ($PerfWater -and $code -eq 0) {
+    $exe = Join-Path (Get-FullPath $Out) 'RowMate.exe'
+    $summary = @()
+    foreach ($tier in @('high', 'medium')) {
+        foreach ($envName in @('lake', 'river', 'coast', 'regatta')) {
+            foreach ($hour in @(12, 22)) {
+                $runLog = Join-Path $artifacts ('perf-water-' + $tier + '-' + $envName + '-' + $hour + '.log')
+                $playerArgs = @('-rowmate-perf-scene', '20', '-rowmate-perf-env', $envName, '-rowmate-perf-hour', [string]$hour, '-rowmate-quality', $tier)
+                $r = Invoke-PerfPlayer $exe $playerArgs $runLog 120000
+                $p99 = @(); $max = @(); $water = ''
+                if (Test-Path $runLog) {
+                    foreach ($m in (Select-String -Path $runLog -Pattern 'p99 ([\d.]+) ms' -AllMatches)) { $p99 += [double]::Parse($m.Matches[0].Groups[1].Value, [System.Globalization.CultureInfo]::InvariantCulture) }
+                    foreach ($m in (Select-String -Path $runLog -Pattern ': m.x ([\d.]+) ms, p99' -AllMatches)) { $max += [double]::Parse($m.Matches[0].Groups[1].Value, [System.Globalization.CultureInfo]::InvariantCulture) }
+                    $w = @(Select-String -Path $runLog -Pattern '\[PERF\] agua' | ForEach-Object { $_.Line }) | Select-Object -Last 1
+                    if ($null -ne $w) { $water = $w.Substring($w.IndexOf('agua')) }
+                }
+                $worstP99 = 0; foreach ($v in $p99) { if ($v -gt $worstP99) { $worstP99 = $v } }
+                $worstMax = 0; foreach ($v in $max) { if ($v -gt $worstMax) { $worstMax = $v } }
+                $line = $tier + ' ' + $envName + ' ' + $hour + ' h: p99 ' + $worstP99 + ' ms, max ' + $worstMax + ' ms; carga de los otros procesos ' + $r.During + ' %; ' + $water
+                $summary += $line
+                Write-Host ('  ' + $line)
+                if (-not $r.Ok) { $code = 16 }
+            }
+        }
+    }
+    Set-Content -Path (Join-Path $artifacts 'perf-water.txt') -Value $summary -Encoding UTF8
 }
 
 # It. 15 (AC-D15-19, gate m-09): -WindowSmoke. Ver el encabezado.

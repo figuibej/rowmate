@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-11 (coordinador, OK de la It. 15 y arranque de la 6b) |
-| Fase | **Plan completo**, salvo la 6b (postergada, issue #6) y la 10b (flotante hasta que haya Mac). Después del plan, la It. 15 (`15-deuda-pc`, deuda resoluble en la PC) quedó **cerrada** con el OK del usuario ([reporte](iterations/15-deuda-pc/REPORT.md), [01-po-spec §9](iterations/15-deuda-pc/01-po-spec.md)) |
-| Próximo paso | **It. 6b en curso** (pedida por el usuario después de la 15). Después, a pedido del usuario: cargar los secretos de Unity (cierra #10), instalar Android Build Support y probar en un teléfono (#7, #46), la 10b con una Mac y las demos con hardware (10a, 11, 12, P-17) |
+| Actualizado | 2026-11-12 (coordinador, OK de la It. 6b con la ronda del salto) |
+| Fase | **Plan completo**, salvo la 10b (flotante hasta que haya Mac). La 6b (agua avanzada) quedó **cerrada** con el OK del usuario ([reporte](iterations/06b-agua-avanzada/REPORT.md), [01-po-spec §10](iterations/06b-agua-avanzada/01-po-spec.md)). La It. 15 quedó cerrada con el OK del usuario |
+| Próximo paso | A pedido del usuario: cargar los secretos de Unity (cierra #10), instalar Android Build Support y probar en un teléfono (#7, #46), la 10b con una Mac y las demos con hardware (10a, 11, 12, P-17) |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs; desde el 2026-11-09, la 13 descartada y 25 IDs de Strava descartados (133 vivos). El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
 
 ## Iteraciones
@@ -19,7 +19,7 @@
 | 4b | HUD EXR: píldoras, transiciones, diálogos e inmersivo del sistema | **Cerrada** ([reporte](iterations/04b-hud-exr/REPORT.md)); el usuario aceptó los valores por defecto de su gate. Su deuda se resolvió al empezar la 5 ([00-deuda-4b](iterations/05-series-parciales/00-deuda-4b.md)) |
 | 5 | Series en vivo: parciales y repeticiones | **Cerrada** ([reporte](iterations/05-series-parciales/REPORT.md)); el usuario aceptó los valores por defecto de su gate (lo registra la [spec de la 6a §11](iterations/06a-escena-lago/01-po-spec.md)). La verificación en el build que quedaba se hizo al empezar la 6a y pasó ([00-deuda-5](iterations/06a-escena-lago/00-deuda-5.md)). Solo sigue la demo (c) del usuario (AC-WKT-02-11) |
 | 6a | Escena: cielo, luz, hora, Lago alpino y agua degradada | **Cerrada** ([reporte](iterations/06a-escena-lago/REPORT.md)); el usuario dio el OK. Su deuda quedó en los issues de GitHub #1 a #10 |
-| 6b | Agua avanzada, desenfoque del vidrio y rendimiento | **Postergada** por decisión del usuario (issue #6). La 7 se hizo sobre el agua degradada |
+| 6b | Agua avanzada, desenfoque del vidrio y rendimiento | **Cerrada** con el OK del usuario, después de la ronda del salto (AC-6B-20 b pasa: VID-01 1,41 ×; QA APROBADO CON OBSERVACIONES). Quedan 2 FAIL (AC-6B-01 y -02 → #1). Deuda en los issues #91 a #99 ([reporte](iterations/06b-agua-avanzada/REPORT.md), [spec §10](iterations/06b-agua-avanzada/01-po-spec.md), [verificación](iterations/06b-agua-avanzada/05-qa-verification.md)). QA: RECHAZADO en las rondas 1 y 2; el PO la acepta con **3 FAIL** de causa medida (AC-6B-01 y -02 → #1; AC-6B-20 b, el agua salta cada 16 m → issue nuevo). 31 PASS, 3 FAIL, 4 NO VERIFICABLE (-15, -26, -29 en la CPU de Alto con carga externa, -32 Android). Resuelve #2, #3, #12, #13, #22 y #85; en parte #1, #6 y #31. Decisiones DV-149 a DV-153 |
 | 7 | Remero, bote y palada | **Cerrada** ([reporte](iterations/07-remero-palada/REPORT.md)). Sin FAIL; AC-SCN-01-16 NO VERIFICABLE. El usuario siguió con la 8 sin cambiar nada de su gate: rigen los valores por defecto |
 | 8 | Río, Costa, Regata y selector | **Cerrada** ([reporte](iterations/08-entornos-selector/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). Sin FAIL; AC-SCN-01-19 NO VERIFICABLE solo en Android |
 | 9 | Historial y detalle | **Cerrada** ([reporte](iterations/09-historial/REPORT.md)); el usuario dio el OK ("pushea y pasa a la 10"): rigen los valores por defecto de su gate. Deuda en los issues #32 a #39. Sin FAIL; AC-HIS-19-05 NO VERIFICABLE en parte (cuadro de 50 ms y 60 fps en el build) |
@@ -50,9 +50,23 @@
 - **Gate de la It. 9**: el usuario dio el OK ("pushea y pasa a la 10"), así que rigen los valores por defecto de la tabla "Gate de la It. 9" de abajo (DV-90 a DV-95, tiempo y distancia del monitor, etiquetas X como `fl_chart` con issue prioritario).
 - **Gates de la It. 10a y la It. 11**: el usuario dio el OK; rigen los valores por defecto de sus tablas (abajo).
 
-### Para confirmar en el gate de la It. 15
+### Para confirmar en el gate de la It. 6b
 
-Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §6 y §9](iterations/15-deuda-pc/01-po-spec.md).
+Si el usuario no dice nada, se aplica "Por defecto". Detalle en [01-po-spec §7 y §10](iterations/06b-agua-avanzada/01-po-spec.md).
+
+| Decisión | Por defecto | Si se rechaza |
+|---|---|---|
+| DV-149: el agua refleja el cielo real y la orilla (en Alto, también el bote y el remero) con el peso del legacy | Se acepta | Color plano `skyHorizon` con el peso del legacy |
+| DV-150: oleaje con carácter por escenario | Se acepta | La fórmula del legacy en los 4 |
+| DV-151: la estela persiste 12 s y se abre | Se acepta | La V del legacy, sin memoria |
+| DV-152: la degradada también como último paso de la adaptación, sin volver hasta reiniciar | Se acepta | Solo si el agua avanzada no carga |
+| DV-153: umbrales de las sondas (1,3:1; 30 %; 15 %; 10 %; 1,15:1; 8 %) | Se acepta | Otros que proponga el Designer |
+| Popa (#85): rige la cubierta 0,80-0,95 de la 6a (media 0,897) | Se acepta | Tope ≤ 0,82 y otra vuelta de arte |
+| Cierre: AC-6B-01 y -02 a #1; AC-6B-20 b a un issue nuevo | Se acepta | Otra ronda de corrección antes del commit |
+
+### Gate de la It. 15 (valores que rigen)
+
+El usuario dio el OK ("ok"). Detalle en [01-po-spec §6 y §9](iterations/15-deuda-pc/01-po-spec.md).
 
 | Decisión | Por defecto | Si se rechaza |
 |---|---|---|
@@ -303,3 +317,6 @@ Riesgos:
 | 2026-11-10 | coordinador | Deuda de la It. 14 en los issues #74 a #83. El usuario dio el OK a la It. 14 ("ok"): rigen los valores por defecto de su gate (DV-128 a DV-139, DV-V14-03 y el aviso de vidrio de QA-V14-11). Se cerraron en GitHub #21, #36, #40, #41, #42, #44 y #69. Plan completo salvo la 6b (postergada) y la 10b (flotante) |
 | 2026-11-10 | rowmate-po | **Cierre de la It. 15** (deuda resoluble en la PC, fuera del plan): aceptada por el PO con 2 FAIL con la causa medida; esperando el OK del usuario. QA: RECHAZADO en la ronda 1 (5 mayores) y en la ronda 2 (2 mayores: AC-D15-04 y el intermitente del banner con otra causa) (dotnet `-Matrix` 4045/4084 pasan, 0 fallan; matriz 890 PASA, 0 FALLA, 18 EN EQUIPO; Unity EditMode 4163/4217 y con simulador 4357/4411, 0 fallan; PlayMode 731/732 y con simulador 811-812/813, con los topes de la escena fallando por la VM de WSL; builds normal, simulador y humos de desarrollo OK; 38 AC PASS, 2 FAIL, 0 NV). Cierra #32, #35, #37, #38, #39, #66, #71, #72, #75, #76, #79 y #82; el resto, a issues agrupados. Legacy sin cambios (`git status --porcelain` vacío) |
 | 2026-11-11 | coordinador | Deuda de la It. 15 en los issues #84 a #90. El usuario dio el OK a la It. 15 ("ok"): rigen los valores por defecto de su gate (DV-140 a DV-148 y los 2 FAIL a #34 y #78). Se cerraron en GitHub #32, #35, #37, #38, #39, #66, #71, #72, #75, #76, #79 y #82; los 9 en parte tienen un comentario con lo que queda. Empieza la It. 6b |
+| 2026-11-11 | rowmate-po | **Spec de la It. 6b** ([01-po-spec](iterations/06b-agua-avanzada/01-po-spec.md)): 38 AC; §3.0 la deuda de la 6a primero (AC-WKT-13-15 y AC-SCN-13-03 vuelven a PASA, QA-V6a-R2-04, QA-V6a-12 y Dispositivo bajo el inmersivo); agua avanzada y degradada en los 4 escenarios con la regla de elección por equipo y la caída sin cortar la sesión; olas sin salto a los 4096 m; vidrio con desenfoque ≤ 0,6 ms en Medio y el diálogo de completado con el bote detrás; set `it6b` (32 capturas, 5 videos). Issues: #1, #2, #3, #12, #13, #22, #31 y #85 enteros; #6 en parte (AC-6B-32, Android, a #7). DV-149 a DV-153 |
+| 2026-11-11 | rowmate-po | **Cierre de la It. 6b**: aceptada por el PO con 3 FAIL de causa medida; esperando el OK del usuario. QA: RECHAZADO en la ronda 1 (7 mayores) y en la ronda 2 (3 mayores: AC-6B-01, -02 y -20 b) (dotnet `-Matrix` 4138/4177 pasan, 0 fallan; matriz 919 PASA, 0 FALLA; Unity EditMode 4265/4320 y con simulador 4459/4514, 0 fallan; PlayMode 795/796 y con simulador 876/877 dos veces, la única falla es `SceneBudgetTests(High)` a 1,515-1,80 ms con 25-31 % de carga externa; builds normal, simulador y `-BleSmoke` OK; pantalla en su modo normal; 31 AC PASS, 3 FAIL, 4 NV). Decisiones del PO al cerrar: la popa con la cubierta de la 6a, #13 entero, `INDEX.md` de la 6b y de la 7 repuestos, spec corregida (QA-V6b-16, G6b-06) y la deuda a 8 issues agrupados ([01-po-spec §10](iterations/06b-agua-avanzada/01-po-spec.md)). Resuelve #2, #3, #12, #13, #22 y #85; en parte #1, #6 y #31. Legacy sin cambios (`git status --porcelain` vacío) |
+| 2026-11-12 | coordinador | Deuda de la 6b en los issues #91 a #98. El usuario pidió una ronda para el salto del agua cada 16 m antes del commit: la malla queda quieta y se apagan las ondas que el paso no alcanza (DT6b-27); QA APROBADO CON OBSERVACIONES (VID-01 1,41 ×, sonda de 400 m sin saltos, dotnet 4143/4182 y 0 fallan, EditMode 0 fallan, PlayMode 796/796 y con simulador 877/877). Restos menores en #99. El usuario dio el OK: rigen DV-149 a DV-153. Se cerraron #2, #3, #12, #13, #22, #85 y #91; #1, #6 y #31 siguen abiertos con su resto |

@@ -1171,6 +1171,9 @@ namespace RowMate.Tests.UiSupport
                 SynchronousStreaming = !options.ScenePlayerStreaming,
                 FixedSteps = true,
                 Character = options.SceneCharacter,
+                // It. 6b (DT6b-24, G6b-03): lo de antes con la degradada fija; las pruebas de la 6b piden Auto (o lo que prueban).
+                Water = options.SceneWater,
+                WaterForceAllowed = true,
             });
             return new SceneBridge(host, _logger);
         }
