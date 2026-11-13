@@ -20,9 +20,15 @@ namespace RowMate.Tests.UiSupport
     // veces por cuadro y el control positivo (un byte[64] por repintado) se pierde en esa variación. Medido solo adentro del dibujo y
     // del paso, el control positivo da 1 por repintado y lo limpio da 0, sin línea de base que restar (FrameAllocationsTests).
     // Bytes ("GC Allocated In Frame", todos los hilos) queda solo como dato.
+    // It. 16 (#78, #99; 16-tests-intermitentes/02-tech-design): cada tramo se cuenta con GcAllocCounter (un ProfilerRecorder de "GC.Alloc"
+    // con CollectOnlyOnCurrentThread), no con el Recorder de UnityEngine.Profiling con FilterToCurrentThread, que a veces se llevaba UNA
+    // muestra de otro hilo que asignaba justo al prender o apagar la medida (el intermitente de BleAllocationTests). El Recorder de antes
+    // sigue al lado solo como testigo (Foreign: lo que contó de más), sin entrar en ninguna cuenta.
     public sealed class FrameAllocations : IDisposable
     {
-        private readonly Recorder _recorder;
+        private readonly GcAllocCounter _counter;
+        private readonly GcAllocCounter _actionCounter;
+        private readonly Recorder _legacy;
         private readonly List<SeriesPanelView> _panels = new List<SeriesPanelView>();
         private readonly Action<bool> _observer;
         private ProfilerRecorder _bytes;
@@ -31,8 +37,10 @@ namespace RowMate.Tests.UiSupport
 
         private FrameAllocations()
         {
-            _recorder = Recorder.Get("GC.Alloc");
-            _recorder.enabled = false;
+            _counter = new GcAllocCounter();
+            _actionCounter = new GcAllocCounter();
+            _legacy = Recorder.Get("GC.Alloc");
+            _legacy.enabled = false;
             _observer = begin =>
             {
                 if (begin)
@@ -233,17 +241,56 @@ namespace RowMate.Tests.UiSupport
 
         private void StartRecorder()
         {
-            _recorder.enabled = false;
-            _recorder.FilterToCurrentThread();
-            _recorder.enabled = true;
+            _legacy.enabled = false;
+            _legacy.FilterToCurrentThread();
+            _legacy.enabled = true;
+            _counter.Begin();
         }
 
         private int StopRecorder()
         {
-            _recorder.enabled = false;
-            _recorder.CollectFromAllThreads();
-            return _recorder.sampleBlockCount;
+            var count = _counter.End();
+            _legacy.enabled = false;
+            _legacy.CollectFromAllThreads();
+            var legacy = _legacy.sampleBlockCount;
+            if (legacy > count)
+            {
+                Foreign += legacy - count;
+            }
+
+            return count;
         }
+
+        // El paso y el reloj (como GcAllocations.During), con su propio contador: un dibujo que corriera adentro del paso no lo corta.
+        private int MeasureAction(Action action)
+        {
+            var count = 0;
+            _legacy.enabled = false;
+            _legacy.FilterToCurrentThread();
+            _legacy.enabled = true;
+            _actionCounter.Begin();
+            try
+            {
+                action();
+            }
+            finally
+            {
+                count = _actionCounter.End();
+                _legacy.enabled = false;
+                _legacy.CollectFromAllThreads();
+                var legacy = _legacy.sampleBlockCount;
+                if (legacy > count)
+                {
+                    Foreign += legacy - count;
+                }
+            }
+
+            return count;
+        }
+
+        // Testigo (It. 16): las muestras que el Recorder de antes contó de más en los tramos de esta medida (asignaciones de otro hilo).
+        // No entra en Total: queda en ToString para ver en el registro que el intermitente de antes habría fallado.
+        public int Foreign { get; private set; }
 
         // Bytes de "GC Allocated In Frame" sumados por cuadro (solo como dato: es ruido del Editor y del corredor).
         public long Bytes { get; private set; }
@@ -392,7 +439,7 @@ namespace RowMate.Tests.UiSupport
             AllocationProfile.Measured.Begin();
             try
             {
-                count = GcAllocations.During(action);
+                count = MeasureAction(action);
             }
             finally
             {
@@ -426,9 +473,7 @@ namespace RowMate.Tests.UiSupport
             }
 
             _inDraw = true;
-            _recorder.enabled = false;
-            _recorder.FilterToCurrentThread();
-            _recorder.enabled = true;
+            StartRecorder();
         }
 
         public void EndDraw()
@@ -439,9 +484,7 @@ namespace RowMate.Tests.UiSupport
             }
 
             _inDraw = false;
-            _recorder.enabled = false;
-            _recorder.CollectFromAllThreads();
-            DrawAllocations += _recorder.sampleBlockCount;
+            DrawAllocations += StopRecorder();
             Draws++;
             if (_inPanel)
             {
@@ -466,7 +509,7 @@ namespace RowMate.Tests.UiSupport
             AllocationProfile.Measured.Begin();
             try
             {
-                StepAllocations += GcAllocations.During(action);
+                StepAllocations += MeasureAction(action);
             }
             finally
             {
@@ -531,6 +574,9 @@ namespace RowMate.Tests.UiSupport
             {
                 _bytes.Stop();
             }
+
+            _counter.Dispose();
+            _actionCounter.Dispose();
         }
 
         public void Dispose()
@@ -546,7 +592,8 @@ namespace RowMate.Tests.UiSupport
                    + " cuadros (" + Bytes + " B de GC Allocated In Frame, todo el proceso)"
                    + (_treeElements != null ? "; " + _treeElements.Length + " elementos con dibujo propio" + (AllocatingElements().Length > 0 ? " (asignan: " + AllocatingElements() + ")" : "") : "")
                    + (_panelStep != null ? "; el panel (estilos, layout y mallas) " + PanelAllocations + " en " + PanelSteps + " pasos, " + PanelFramesWithAllocations + " con alguna" : "")
-                   + (_clockUsed ? "; reloj de prueba " + ClockAllocations + " en " + ClockFramesWithAllocations + " cuadros" : "");
+                   + (_clockUsed ? "; reloj de prueba " + ClockAllocations + " en " + ClockFramesWithAllocations + " cuadros" : "")
+                   + "; ajenas que el Recorder de antes habría contado: " + Foreign;
         }
 
         private static ProfilerRecorder StartBytes()

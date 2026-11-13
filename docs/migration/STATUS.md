@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Actualizado | 2026-11-12 (coordinador, OK de la It. 6b con la ronda del salto) |
+| Actualizado | 2026-11-13 (coordinador, cierre de la ronda 16 de tests intermitentes) |
 | Fase | **Plan completo**, salvo la 10b (flotante hasta que haya Mac). La 6b (agua avanzada) quedó **cerrada** con el OK del usuario ([reporte](iterations/06b-agua-avanzada/REPORT.md), [01-po-spec §10](iterations/06b-agua-avanzada/01-po-spec.md)). La It. 15 quedó cerrada con el OK del usuario |
 | Próximo paso | A pedido del usuario: cargar los secretos de Unity (cierra #10), instalar Android Build Support y probar en un teléfono (#7, #46), la 10b con una Mac y las demos con hardware (10a, 11, 12, P-17) |
 | Plan | [ROADMAP.md](ROADMAP.md): 17 iteraciones + 1 *spike* opcional (que no se hace), 158 IDs; desde el 2026-11-09, la 13 descartada y 25 IDs de Strava descartados (133 vivos). El usuario decidió mantenerlo: todo con el simulador hasta la It. 9 y el Bluetooth real en la 10a y la 11 |
@@ -30,6 +30,7 @@
 | 13 | ~~Strava: sincronización y Perfil~~ | **Descartada** (Strava pago: decisión del usuario del 2026-11-09) |
 | 14 | Pulido, identidad, plataformas y CI | **Cerrada** ([reporte](iterations/14-pulido-plataformas/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate). QA: APROBADO CON OBSERVACIONES en la ronda 2. Sin FAIL; 38 PASS y 6 NO VERIFICABLE (DPI con dos monitores, 60 fps con la pantalla normal, la corrida real del CI y el arrastre de Android/Apple). Cerró los issues #21, #36, #40, #41, #42, #44 y #69; deuda en los issues #74 a #83 |
 | 15 | Deuda resoluble en la PC (fuera del plan de paridad, pedida por el usuario) | **Cerrada** ([reporte](iterations/15-deuda-pc/REPORT.md)); el usuario dio el OK (rigen los valores por defecto de su gate, DV-140 a DV-148). Deuda nueva en los issues #84 a #90 ([spec](iterations/15-deuda-pc/01-po-spec.md), [verificación](iterations/15-deuda-pc/05-qa-verification.md)). QA: RECHAZADO en las rondas 1 y 2; el PO la acepta con 2 FAIL con la causa medida (AC-D15-04 → #34, AC-D15-39 → #78). 38 PASS, 2 FAIL, 0 NO VERIFICABLE. Resuelve #32, #35, #37, #38, #39, #66, #71, #72, #75, #76, #79 y #82; en parte #33, #34, #67, #70, #73, #74, #78, #80 y #81; #77 fuera |
+| 16 | Tests intermitentes de asignaciones (ronda corta, fuera del plan, pedida por el usuario) | **Cerrada** ([reporte](iterations/16-tests-intermitentes/REPORT.md)). QA: APROBADO CON OBSERVACIONES; 8 PASS, 0 FAIL, 1 NO VERIFICABLE (EditMode, por el módulo iOS de esta PC). La causa era el `Recorder` con `FilterToCurrentThread`, que se llevaba asignaciones de otros hilos; el arnés ahora cuenta con `ProfilerRecorder` del hilo propio. Resuelve #99 y el resto de #78 |
 
 ## Decisiones
 
